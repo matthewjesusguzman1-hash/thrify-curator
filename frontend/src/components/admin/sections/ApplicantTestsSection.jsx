@@ -661,9 +661,12 @@ function CreateTestModal({ onClose, onCreated, defaultFields, getAuthHeader }) {
 
 // Invite Modal
 function InviteModal({ test, onClose, getAuthHeader }) {
+  const [mode, setMode] = useState("single"); // "single" or "bulk"
   const [applicantName, setApplicantName] = useState("");
   const [applicantEmail, setApplicantEmail] = useState("");
+  const [bulkInput, setBulkInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendingProgress, setSendingProgress] = useState({ current: 0, total: 0 });
   const [invites, setInvites] = useState([]);
   const [loadingInvites, setLoadingInvites] = useState(true);
   const [deletingInviteId, setDeletingInviteId] = useState(null);
@@ -740,6 +743,100 @@ function InviteModal({ test, onClose, getAuthHeader }) {
     }
   };
 
+  const parseBulkInput = () => {
+    // Parse bulk input - supports formats:
+    // name, email
+    // name <email>
+    // email (name extracted from email)
+    const lines = bulkInput.split('\n').filter(line => line.trim());
+    const applicants = [];
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      
+      // Try "name, email" format
+      if (trimmed.includes(',')) {
+        const [name, email] = trimmed.split(',').map(s => s.trim());
+        if (email && email.includes('@')) {
+          applicants.push({ name: name || email.split('@')[0], email });
+          continue;
+        }
+      }
+      
+      // Try "name <email>" format
+      const angleMatch = trimmed.match(/^(.+?)\s*<(.+@.+)>$/);
+      if (angleMatch) {
+        applicants.push({ name: angleMatch[1].trim(), email: angleMatch[2].trim() });
+        continue;
+      }
+      
+      // Just email - extract name from email
+      if (trimmed.includes('@')) {
+        const name = trimmed.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        applicants.push({ name, email: trimmed });
+      }
+    }
+    
+    return applicants;
+  };
+
+  const handleBulkSend = async () => {
+    const applicants = parseBulkInput();
+    
+    if (applicants.length === 0) {
+      toast.error("No valid applicants found. Use format: name, email (one per line)");
+      return;
+    }
+
+    setSending(true);
+    setSendingProgress({ current: 0, total: applicants.length });
+    
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < applicants.length; i++) {
+      const { name, email } = applicants[i];
+      setSendingProgress({ current: i + 1, total: applicants.length });
+      
+      try {
+        const formData = new FormData();
+        formData.append("applicant_name", name);
+        formData.append("applicant_email", email);
+
+        await axios.post(
+          `${API}/api/applicant-tests/${test.id}/invite`,
+          formData,
+          {
+            headers: {
+              ...getAuthHeader().headers,
+              "Content-Type": "multipart/form-data"
+            }
+          }
+        );
+        successCount++;
+      } catch (error) {
+        failCount++;
+        console.error(`Failed to send to ${email}:`, error);
+      }
+      
+      // Small delay to avoid overwhelming the server
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    setSending(false);
+    setSendingProgress({ current: 0, total: 0 });
+    
+    if (failCount === 0) {
+      toast.success(`Successfully sent ${successCount} invites!`);
+    } else {
+      toast.warning(`Sent ${successCount} invites, ${failCount} failed`);
+    }
+    
+    setBulkInput("");
+    fetchInvites();
+  };
+
   return ReactDOM.createPortal(
     <motion.div
       initial={{ opacity: 0 }}
@@ -753,12 +850,12 @@ function InviteModal({ test, onClose, getAuthHeader }) {
         initial={{ scale: 0.95 }}
         animate={{ scale: 1 }}
         exit={{ scale: 0.95 }}
-        className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+        <div className="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-[#333]">Send Invite</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-[#333]">Send Invites</h2>
             <p className="text-sm text-gray-500">{test.name}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
@@ -766,42 +863,101 @@ function InviteModal({ test, onClose, getAuthHeader }) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Send New Invite */}
-          <div className="space-y-4">
-            <div>
-              <Label className="block mb-2">Applicant Name *</Label>
-              <input
-                type="text"
-                value={applicantName}
-                onChange={e => setApplicantName(e.target.value)}
-                placeholder="John Doe"
-                className="w-full h-12 px-4 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
-              />
-            </div>
-            <div>
-              <Label className="block mb-2">Applicant Email *</Label>
-              <input
-                type="email"
-                value={applicantEmail}
-                onChange={e => setApplicantEmail(e.target.value)}
-                placeholder="john@example.com"
-                className="w-full h-12 px-4 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
-              />
-            </div>
-            <Button
-              onClick={handleSendInvite}
-              disabled={sending}
-              className="w-full bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white h-12"
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          {/* Mode Toggle */}
+          <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+            <button
+              onClick={() => setMode("single")}
+              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                mode === "single" 
+                  ? "bg-white text-[#333] shadow-sm" 
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
             >
-              <Send className="w-4 h-4 mr-2" />
-              {sending ? "Sending..." : "Send Invite"}
-            </Button>
+              Single Invite
+            </button>
+            <button
+              onClick={() => setMode("bulk")}
+              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                mode === "bulk" 
+                  ? "bg-white text-[#333] shadow-sm" 
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Bulk Invite
+            </button>
           </div>
+
+          {mode === "single" ? (
+            /* Single Invite Form */
+            <div className="space-y-4">
+              <div>
+                <Label className="block mb-2 text-sm">Applicant Name *</Label>
+                <input
+                  type="text"
+                  value={applicantName}
+                  onChange={e => setApplicantName(e.target.value)}
+                  placeholder="John Doe"
+                  className="w-full h-11 px-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
+                />
+              </div>
+              <div>
+                <Label className="block mb-2 text-sm">Applicant Email *</Label>
+                <input
+                  type="email"
+                  value={applicantEmail}
+                  onChange={e => setApplicantEmail(e.target.value)}
+                  placeholder="john@example.com"
+                  className="w-full h-11 px-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
+                />
+              </div>
+              <Button
+                onClick={handleSendInvite}
+                disabled={sending}
+                className="w-full bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white h-11"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                {sending ? "Sending..." : "Send Invite"}
+              </Button>
+            </div>
+          ) : (
+            /* Bulk Invite Form */
+            <div className="space-y-4">
+              <div>
+                <Label className="block mb-2 text-sm">Applicant List</Label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Enter one applicant per line. Formats accepted:
+                  <br />• Name, email@example.com
+                  <br />• email@example.com (name will be extracted)
+                </p>
+                <textarea
+                  value={bulkInput}
+                  onChange={e => setBulkInput(e.target.value)}
+                  placeholder={`John Doe, john@example.com\nJane Smith, jane@example.com\nsarah@example.com`}
+                  className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent resize-none font-mono"
+                  rows={6}
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  {parseBulkInput().length} applicants detected
+                </p>
+              </div>
+              <Button
+                onClick={handleBulkSend}
+                disabled={sending || parseBulkInput().length === 0}
+                className="w-full bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white h-11"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                {sending 
+                  ? `Sending ${sendingProgress.current}/${sendingProgress.total}...` 
+                  : `Send ${parseBulkInput().length} Invites`
+                }
+              </Button>
+            </div>
+          )}
 
           {/* Previous Invites */}
           <div>
-            <h3 className="font-medium text-[#333] mb-3">Sent Invites</h3>
+            <h3 className="font-medium text-[#333] mb-3 text-sm">Sent Invites ({invites.length})</h3>
             {loadingInvites ? (
               <div className="text-center py-4">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#8B5CF6] mx-auto" />
