@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Bell, BellOff, Loader2, CheckCircle, AlertCircle, Smartphone } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -248,33 +247,32 @@ export default function WebPushSettings() {
         <div className="flex gap-2 flex-shrink-0">
           {subscription ? (
             <>
-              <Button
+              <button
                 onClick={disableNotifications}
                 disabled={actionLoading}
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs text-gray-600 hover:bg-gray-100"
+                className="h-7 px-2 text-xs rounded-md bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+                style={{ color: '#374151' }}
               >
                 {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Disable"}
-              </Button>
-              <Button
+              </button>
+              <button
                 onClick={sendTestNotification}
                 disabled={actionLoading}
-                size="sm"
-                className="h-7 px-2 text-xs bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white hover:opacity-90"
+                className="h-7 px-3 text-xs rounded-md bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:opacity-90 disabled:opacity-50"
+                style={{ color: '#ffffff' }}
               >
                 {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Test"}
-              </Button>
+              </button>
             </>
           ) : (
-            <Button
+            <button
               onClick={enableNotifications}
               disabled={actionLoading}
-              size="sm"
-              className="h-7 px-3 text-xs bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white hover:opacity-90"
+              className="h-7 px-3 text-xs rounded-md bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:opacity-90 disabled:opacity-50"
+              style={{ color: '#ffffff' }}
             >
               {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Enable"}
-            </Button>
+            </button>
           )}
         </div>
       </div>
