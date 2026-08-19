@@ -165,6 +165,22 @@ export default function InterviewResponsePage() {
               <label className="block text-white font-medium mb-2">
                 Your Available Times *
               </label>
+              
+              {/* Highlighted PHT Instruction Box */}
+              <div className="bg-[#8B5CF6]/20 border-2 border-[#8B5CF6] rounded-xl p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#8B5CF6] flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-lg">Please enter times in Philippine Time (PHT)</p>
+                    <p className="text-white/80 text-sm mt-1">
+                      We will convert your times to our timezone (Central Time) automatically.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
               <textarea
                 value={availability}
                 onChange={(e) => setAvailability(e.target.value)}
@@ -173,8 +189,8 @@ export default function InterviewResponsePage() {
                 placeholder="Example:&#10;Monday, Jan 20 - 9:00 AM to 11:00 AM PHT&#10;Tuesday, Jan 21 - 2:00 PM to 5:00 PM PHT&#10;Wednesday, Jan 22 - 10:00 AM to 12:00 PM PHT"
                 required
               />
-              <p className="text-white/40 text-sm mt-2">
-                Please provide 2-3 time slots in Philippine Time (PHT)
+              <p className="text-[#8B5CF6] text-sm mt-2 font-medium">
+                Remember: Enter times in Philippine Time (PHT)
               </p>
             </div>
 

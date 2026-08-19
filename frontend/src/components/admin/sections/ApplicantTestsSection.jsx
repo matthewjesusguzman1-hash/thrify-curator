@@ -1565,7 +1565,7 @@ function SubmissionDetailModal({ submission, onClose, getAuthHeader }) {
       >
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-[#333]">{submission.applicant_name}'s Submission</h2>
+            <h2 className="text-xl font-bold text-[#333]">{submission.applicant_name}&apos;s Submission</h2>
             <p className="text-sm text-gray-500">{submission.applicant_email}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
@@ -2285,11 +2285,47 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
                     <h4 className="font-medium text-green-800 mb-3 flex items-center gap-2">
                       <CheckCircle className="w-4 h-4" />
-                      Applicant's Availability
+                      Applicant&apos;s Availability (Philippine Time)
                     </h4>
                     <div className="bg-white rounded-lg p-3 mb-3">
                       <p className="text-[#333] whitespace-pre-wrap">{selectedRequest.applicant_response.availability}</p>
                     </div>
+                    
+                    {/* CT Conversion Helper */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                      <h5 className="font-medium text-blue-800 text-sm mb-2 flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        Convert to Central Time (CT)
+                      </h5>
+                      <p className="text-xs text-blue-700 mb-2">PHT is 14 hours ahead of CT (15 during daylight saving)</p>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-white/80 rounded p-2">
+                          <span className="text-gray-500">If PHT is:</span>
+                          <span className="block font-medium text-blue-800">9:00 AM PHT</span>
+                        </div>
+                        <div className="bg-white/80 rounded p-2">
+                          <span className="text-gray-500">CT is:</span>
+                          <span className="block font-medium text-green-700">7:00 PM CT (prev day)</span>
+                        </div>
+                        <div className="bg-white/80 rounded p-2">
+                          <span className="text-gray-500">If PHT is:</span>
+                          <span className="block font-medium text-blue-800">2:00 PM PHT</span>
+                        </div>
+                        <div className="bg-white/80 rounded p-2">
+                          <span className="text-gray-500">CT is:</span>
+                          <span className="block font-medium text-green-700">12:00 AM CT (midnight)</span>
+                        </div>
+                        <div className="bg-white/80 rounded p-2">
+                          <span className="text-gray-500">If PHT is:</span>
+                          <span className="block font-medium text-blue-800">8:00 PM PHT</span>
+                        </div>
+                        <div className="bg-white/80 rounded p-2">
+                          <span className="text-gray-500">CT is:</span>
+                          <span className="block font-medium text-green-700">6:00 AM CT (same day)</span>
+                        </div>
+                      </div>
+                    </div>
+                    
                     {selectedRequest.applicant_response.notes && (
                       <div className="text-sm text-gray-600">
                         <p className="font-medium">Additional Notes:</p>
@@ -2425,7 +2461,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
         <div className="p-6 space-y-4">
           {/* Applicant's availability for reference */}
           <div className="bg-gray-50 rounded-lg p-3 text-sm">
-            <p className="font-medium text-gray-700 mb-1">Applicant's Availability:</p>
+            <p className="font-medium text-gray-700 mb-1">Applicant&apos;s Availability:</p>
             <p className="text-gray-600 whitespace-pre-wrap">{request.applicant_response?.availability}</p>
           </div>
 
@@ -2440,7 +2476,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
               placeholder="e.g., Tuesday, January 21, 2026 at 9:00 AM PHT"
               className="border-gray-300"
             />
-            <p className="text-xs text-gray-500 mt-1">Enter in the applicant's timezone (Philippine Time)</p>
+            <p className="text-xs text-gray-500 mt-1">Enter in the applicant&apos;s timezone (Philippine Time)</p>
           </div>
 
           <div>
