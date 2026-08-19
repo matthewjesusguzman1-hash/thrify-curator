@@ -21,15 +21,22 @@ const API = process.env.REACT_APP_BACKEND_URL || "";
 
 // Example listing to show applicants what we expect
 const EXAMPLE_LISTING = {
-  title: "Lululemon Define Jacket - Black - Size 6",
-  description: "Pre-owned Lululemon Define Jacket in excellent condition. Classic black color, size 6. Full zip closure with thumbholes. Stretchy, four-way stretch fabric that hugs your body. Perfect for yoga, running, or casual wear. No stains, tears, or pilling. Smoke-free home.",
+  title: "Lululemon Softstreme Pique Oversized Long-Sleeve Polo Shirt Warm Ash Grey Small",
+  description: `Lululemon Softstreme Pique Oversized Long-Sleeve Polo Shirt Warm Ash Grey Small
+In great condition from a smoke free home.
+
+Approximate flat lay measurements:
+Underarm to Underarm - 23"
+Length - 25"
+
+#QuietLuxury #CleanGirl #Minimalist #ElevatedAthleisure #SportyChic`,
   brand: "Lululemon",
   condition: "Like New",
-  primary_color: "Black",
+  primary_color: "Grey",
   secondary_color: "",
-  tags: "lululemon, define jacket, athletic wear, yoga, running, size 6, womens",
-  category: "Women's Clothing",
-  us_size: "6"
+  tags: "lululemon, polo shirt, softstreme, activewear, quiet luxury, clean girl, minimalist",
+  category: "Clothing, Shoes & Accessories > Women > Women's Clothing > Activewear > Activewear Tops",
+  us_size: "Small"
 };
 
 export default function ApplicantTestPage() {
