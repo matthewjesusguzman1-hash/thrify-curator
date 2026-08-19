@@ -1354,8 +1354,11 @@ function TestPreviewModal({ test, onClose }) {
       className="fixed inset-0 bg-black/90 flex flex-col"
       style={{ zIndex: 9999 }}
     >
-      {/* Header */}
-      <header className="bg-[#0a0a0f]/95 backdrop-blur-sm border-b border-white/10 flex-shrink-0">
+      {/* Header - with safe area padding for iOS */}
+      <header 
+        className="bg-[#0a0a0f]/95 backdrop-blur-sm border-b border-white/10 flex-shrink-0"
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}
+      >
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
@@ -1375,7 +1378,11 @@ function TestPreviewModal({ test, onClose }) {
                 <Lightbulb className="w-3 h-3 mr-1" />
                 {showExample ? "Hide" : "Example"}
               </Button>
-              <button onClick={onClose} className="text-white/80 hover:text-white p-2">
+              <button 
+                onClick={onClose} 
+                className="text-white/80 hover:text-white p-2 -mr-2"
+                data-testid="preview-close-btn"
+              >
                 <X className="w-6 h-6" />
               </button>
             </div>
