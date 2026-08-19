@@ -251,17 +251,17 @@ export default function WebPushSettings() {
                 onClick={disableNotifications}
                 disabled={actionLoading}
                 className="h-7 px-2 text-xs rounded-md bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-                style={{ color: '#374151' }}
+                style={{ color: '#374151', WebkitTextFillColor: '#374151' }}
               >
-                {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Disable"}
+                {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#374151' }} /> : <span style={{ color: '#374151' }}>Disable</span>}
               </button>
               <button
                 onClick={sendTestNotification}
                 disabled={actionLoading}
                 className="h-7 px-3 text-xs rounded-md bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:opacity-90 disabled:opacity-50"
-                style={{ color: '#ffffff' }}
+                style={{ color: '#ffffff', WebkitTextFillColor: '#ffffff' }}
               >
-                {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Test"}
+                {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#ffffff' }} /> : <span style={{ color: '#ffffff' }}>Test</span>}
               </button>
             </>
           ) : (
@@ -269,9 +269,9 @@ export default function WebPushSettings() {
               onClick={enableNotifications}
               disabled={actionLoading}
               className="h-7 px-3 text-xs rounded-md bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:opacity-90 disabled:opacity-50"
-              style={{ color: '#ffffff' }}
+              style={{ color: '#ffffff', WebkitTextFillColor: '#ffffff' }}
             >
-              {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Enable"}
+              {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#ffffff' }} /> : <span style={{ color: '#ffffff' }}>Enable</span>}
             </button>
           )}
         </div>
