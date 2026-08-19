@@ -1205,15 +1205,21 @@ function ScheduleInterviewModal({ test, selectedEmails, submissions, onClose, ge
   const [timezone, setTimezone] = useState("Pacific Time (PT)");
   const [subject, setSubject] = useState(`Interview Scheduling - ${test.name}`);
   
-  // Default message with timezone reference
+  // Default message with timezone reference for Philippines applicants
   const getDefaultMessage = () => `Thank you for completing our skills assessment! We were impressed with your work and would like to schedule a video interview with you.
 
 Please reply to this email with your availability within the date range below. Let us know 2-3 time slots that work best for you.
 
-When replying, please provide times in Pacific Time (PT). For reference:
-• PT to ET (Eastern): Add 3 hours (e.g., 10am PT = 1pm ET)
-• PT to CT (Central): Add 2 hours (e.g., 10am PT = 12pm CT)
-• PT to MT (Mountain): Add 1 hour (e.g., 10am PT = 11am MT)
+IMPORTANT - Time Zone Conversion:
+We are in Pacific Time (PT). Philippine Time (PHT) is 16 hours ahead of PT.
+
+Examples:
+• 8:00 AM PT = 12:00 AM (midnight) PHT next day
+• 10:00 AM PT = 2:00 AM PHT next day
+• 5:00 PM PT = 9:00 AM PHT next day
+• 6:00 PM PT = 10:00 AM PHT next day
+
+Please provide your availability in Philippine Time (PHT) and we will convert it on our end.
 
 We look forward to speaking with you!`;
 
@@ -1359,18 +1365,21 @@ We look forward to speaking with you!`;
           <div>
             <Label className="text-sm font-medium text-gray-700 mb-2 block">
               <Clock className="w-4 h-4 inline mr-1" />
-              Timezone
+              Your Timezone
             </Label>
             <select
               value={timezone}
               onChange={e => setTimezone(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent bg-white"
             >
-              <option value="Pacific Time (PT)">Pacific Time (PT)</option>
-              <option value="Mountain Time (MT)">Mountain Time (MT)</option>
-              <option value="Central Time (CT)">Central Time (CT)</option>
-              <option value="Eastern Time (ET)">Eastern Time (ET)</option>
+              <option value="Pacific Time (PT)">Pacific Time (PT) - Los Angeles</option>
+              <option value="Mountain Time (MT)">Mountain Time (MT) - Denver</option>
+              <option value="Central Time (CT)">Central Time (CT) - Chicago</option>
+              <option value="Eastern Time (ET)">Eastern Time (ET) - New York</option>
             </select>
+            <p className="text-xs text-gray-500 mt-1">
+              This is YOUR timezone. Applicants in Philippines are 16 hours ahead of PT.
+            </p>
           </div>
 
           {/* Meeting Link */}
