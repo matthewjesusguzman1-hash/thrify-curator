@@ -26,7 +26,8 @@ import {
   Play,
   ChevronLeft,
   ChevronRight,
-  Lightbulb
+  Lightbulb,
+  Pencil
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL || "";
@@ -39,6 +40,7 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(null);
   const [showSubmissionDetail, setShowSubmissionDetail] = useState(null);
   const [showPreviewModal, setShowPreviewModal] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(null);
   const [defaultFields, setDefaultFields] = useState([]);
 
   useEffect(() => {
@@ -122,6 +124,7 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
               onInvite={() => setShowInviteModal(test)}
               onViewSubmissions={() => setShowSubmissionsModal(test)}
               onPreview={() => setShowPreviewModal(test)}
+              onEdit={() => setShowEditModal(test)}
               getAuthHeader={getAuthHeader}
             />
           ))}
@@ -189,12 +192,27 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
           />
         )}
       </AnimatePresence>
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {showEditModal && (
+          <EditTestModal
+            test={showEditModal}
+            onClose={() => setShowEditModal(null)}
+            onUpdated={() => {
+              setShowEditModal(null);
+              fetchTests();
+            }}
+            getAuthHeader={getAuthHeader}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 // Test Card Component
-function TestCard({ test, onDelete, onInvite, onViewSubmissions, onPreview, getAuthHeader }) {
+function TestCard({ test, onDelete, onInvite, onViewSubmissions, onPreview, onEdit, getAuthHeader }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
       {/* Card content - stacks on mobile, side-by-side on larger screens */}
@@ -235,6 +253,16 @@ function TestCard({ test, onDelete, onInvite, onViewSubmissions, onPreview, getA
           >
             <Play className="w-4 h-4 mr-1" />
             Preview
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onEdit}
+            className="flex-1 sm:flex-none text-orange-600 border-orange-300 text-xs sm:text-sm h-9"
+            data-testid="test-card-edit-btn"
+          >
+            <Pencil className="w-4 h-4 mr-1" />
+            Edit
           </Button>
           <Button
             variant="outline"
@@ -1527,6 +1555,193 @@ function TestPreviewModal({ test, onClose }) {
           </div>
         </div>
       </main>
+    </motion.div>,
+    document.body
+  );
+}
+
+
+// Edit Test Modal - Edit test name, description, and fields
+function EditTestModal({ test, onClose, onUpdated, getAuthHeader }) {
+  const [name, setName] = useState(test.name || "");
+  const [description, setDescription] = useState(test.description || "");
+  const [fields, setFields] = useState(test.fields || []);
+  const [saving, setSaving] = useState(false);
+
+  const toggleField = (fieldId) => {
+    setFields(prev => prev.map(f => 
+      f.id === fieldId ? { ...f, enabled: !f.enabled } : f
+    ));
+  };
+
+  const toggleFieldRequired = (fieldId) => {
+    setFields(prev => prev.map(f => 
+      f.id === fieldId ? { ...f, required: !f.required } : f
+    ));
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      toast.error("Please enter a test name");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append("name", name.trim());
+      formData.append("description", description.trim());
+      formData.append("fields", JSON.stringify(fields));
+
+      await axios.put(`${API}/api/applicant-tests/${test.id}`, formData, {
+        headers: {
+          ...getAuthHeader().headers,
+          "Content-Type": "multipart/form-data"
+        }
+      });
+
+      toast.success("Test updated successfully");
+      onUpdated();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to update test");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return ReactDOM.createPortal(
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 9999 }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.95 }}
+        className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+          <div>
+            <h2 className="text-lg sm:text-xl font-bold text-[#333]">Edit Test</h2>
+            <p className="text-sm text-gray-500">Update test settings</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+          {/* Test Name */}
+          <div>
+            <Label className="text-sm font-medium block mb-2">Test Name *</Label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g., Listing Skills Assessment"
+              className="w-full h-11 px-4 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <Label className="text-sm font-medium block mb-2">Description (optional)</Label>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Brief description of the test..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent"
+              rows={2}
+            />
+          </div>
+
+          {/* Test Info */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-[#333] mb-2">Test Content</h3>
+            <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+              <span className="flex items-center gap-1">
+                <ImageIcon className="w-4 h-4" />
+                {test.items?.length || test.photos?.length || 0} {test.items?.length > 0 ? 'items' : 'photos'}
+              </span>
+              <span className="flex items-center gap-1">
+                <Mail className="w-4 h-4" />
+                {test.invites_sent || 0} invites sent
+              </span>
+              <span className="flex items-center gap-1">
+                <CheckCircle className="w-4 h-4" />
+                {test.submissions_count || 0} submissions
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Note: To change photos or items, create a new test.
+            </p>
+          </div>
+
+          {/* Fields Configuration */}
+          <div>
+            <Label className="text-sm font-medium block mb-2">Listing Fields</Label>
+            <p className="text-xs text-gray-500 mb-3">Toggle fields on/off and set which are required.</p>
+            <div className="space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-2">
+              {fields.map(field => (
+                <div
+                  key={field.id}
+                  className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
+                    field.enabled !== false
+                      ? "bg-[#8B5CF6]/10 border-2 border-[#8B5CF6]/30" 
+                      : "bg-gray-50 border-2 border-transparent hover:border-gray-200"
+                  }`}
+                  onClick={() => toggleField(field.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center ${
+                      field.enabled !== false ? "bg-[#8B5CF6] text-white" : "bg-gray-200"
+                    }`}>
+                      {field.enabled !== false && <CheckCircle className="w-3 h-3" />}
+                    </div>
+                    <span className={`text-sm font-medium ${field.enabled !== false ? "text-[#333]" : "text-gray-400"}`}>
+                      {field.name}
+                    </span>
+                  </div>
+                  {field.enabled !== false && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFieldRequired(field.id);
+                      }}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                        field.required 
+                          ? "bg-[#8B5CF6] text-white" 
+                          : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                      }`}
+                    >
+                      {field.required ? "Required" : "Optional"}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-6 border-t border-gray-200 flex justify-end gap-3">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white"
+          >
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+      </motion.div>
     </motion.div>,
     document.body
   );

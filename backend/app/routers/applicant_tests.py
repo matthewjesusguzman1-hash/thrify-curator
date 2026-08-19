@@ -326,6 +326,42 @@ async def delete_test(
     return {"message": "Test deleted successfully"}
 
 
+@router.put("/{test_id}")
+async def update_test(
+    test_id: str,
+    name: str = Form(...),
+    description: str = Form(None),
+    fields: str = Form(...),  # JSON string of field configurations
+    admin: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Update test name, description, and fields"""
+    test = await db.applicant_tests.find_one({"id": test_id})
+    if not test:
+        raise HTTPException(status_code=404, detail="Test not found")
+    
+    # Parse fields JSON
+    try:
+        field_config = json.loads(fields)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid fields JSON")
+    
+    # Update test
+    await db.applicant_tests.update_one(
+        {"id": test_id},
+        {"$set": {
+            "name": name,
+            "description": description,
+            "fields": field_config,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Test updated successfully"}
+
+
+
+
 @router.post("/{test_id}/invite")
 async def send_invite(
     test_id: str,
