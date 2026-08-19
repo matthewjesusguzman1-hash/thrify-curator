@@ -22,7 +22,11 @@ import {
   ChevronUp,
   Mail,
   ClipboardList,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Play,
+  ChevronLeft,
+  ChevronRight,
+  Lightbulb
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL || "";
@@ -34,6 +38,7 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
   const [showInviteModal, setShowInviteModal] = useState(null);
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(null);
   const [showSubmissionDetail, setShowSubmissionDetail] = useState(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(null);
   const [defaultFields, setDefaultFields] = useState([]);
 
   useEffect(() => {
@@ -116,6 +121,7 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
               onDelete={() => handleDeleteTest(test.id)}
               onInvite={() => setShowInviteModal(test)}
               onViewSubmissions={() => setShowSubmissionsModal(test)}
+              onPreview={() => setShowPreviewModal(test)}
               getAuthHeader={getAuthHeader}
             />
           ))}
@@ -173,12 +179,22 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
           />
         )}
       </AnimatePresence>
+
+      {/* Preview Modal */}
+      <AnimatePresence>
+        {showPreviewModal && (
+          <TestPreviewModal
+            test={showPreviewModal}
+            onClose={() => setShowPreviewModal(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 // Test Card Component
-function TestCard({ test, onDelete, onInvite, onViewSubmissions, getAuthHeader }) {
+function TestCard({ test, onDelete, onInvite, onViewSubmissions, onPreview, getAuthHeader }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
       {/* Card content - stacks on mobile, side-by-side on larger screens */}
@@ -195,7 +211,7 @@ function TestCard({ test, onDelete, onInvite, onViewSubmissions, getAuthHeader }
           <div className="flex flex-wrap items-center gap-3 mt-2 text-xs sm:text-sm text-gray-500">
             <span className="flex items-center gap-1">
               <ImageIcon className="w-3.5 h-3.5" />
-              {test.photos?.length || 0} photos
+              {test.items?.length || test.photos?.length || 0} {test.items?.length ? 'items' : 'photos'}
             </span>
             <span className="flex items-center gap-1">
               <Mail className="w-3.5 h-3.5" />
@@ -209,7 +225,17 @@ function TestCard({ test, onDelete, onInvite, onViewSubmissions, getAuthHeader }
         </div>
         
         {/* Action buttons - always visible, full width on mobile */}
-        <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onPreview}
+            className="flex-1 sm:flex-none text-green-600 border-green-300 text-xs sm:text-sm h-9"
+            data-testid="test-card-preview-btn"
+          >
+            <Play className="w-4 h-4 mr-1" />
+            Preview
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -1095,6 +1121,256 @@ function SubmissionDetailModal({ submission, onClose, getAuthHeader }) {
           ) : null}
         </div>
       </motion.div>
+    </motion.div>,
+    document.body
+  );
+}
+
+
+// Example listing for preview
+const EXAMPLE_LISTING = {
+  title: "Lululemon Softstreme Pique Oversized Long-Sleeve Polo Shirt Warm Ash Grey Small",
+  description: `Lululemon Softstreme Pique Oversized Long-Sleeve Polo Shirt Warm Ash Grey Small
+In great condition from a smoke free home.
+
+Approximate flat lay measurements:
+Underarm to Underarm - 23"
+Length - 25"
+
+#QuietLuxury #CleanGirl #Minimalist #ElevatedAthleisure #SportyChic`,
+  brand: "Lululemon",
+  condition: "Like New",
+  primary_color: "Grey",
+  tags: "lululemon, polo shirt, softstreme, activewear, quiet luxury",
+  category: "Clothing, Shoes & Accessories > Women > Women's Clothing > Activewear > Activewear Tops",
+  us_size: "Small"
+};
+
+// Test Preview Modal - Shows exactly what applicants will see
+function TestPreviewModal({ test, onClose }) {
+  const [currentItemIndex, setCurrentItemIndex] = useState(0);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+  const [showExample, setShowExample] = useState(false);
+  
+  // Get items - support both old and new structure
+  const items = (test.items && test.items.length > 0 && test.items[0].photos?.length > 0)
+    ? test.items
+    : (test.photos || []).map(photo => ({ id: photo.id, photos: [photo] }));
+  
+  const currentItem = items[currentItemIndex];
+  const currentPhotos = currentItem?.photos || [];
+  const currentPhoto = currentPhotos[selectedPhotoIndex];
+  const progress = ((currentItemIndex + 1) / items.length) * 100;
+
+  return ReactDOM.createPortal(
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/90 flex flex-col"
+      style={{ zIndex: 9999 }}
+    >
+      {/* Header */}
+      <header className="bg-[#0a0a0f]/95 backdrop-blur-sm border-b border-white/10 flex-shrink-0">
+        <div className="max-w-6xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">PREVIEW MODE</span>
+                <h1 className="text-base font-bold text-white truncate">{test.name}</h1>
+              </div>
+              <p className="text-xs text-white/60">This is how applicants will see the test</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowExample(!showExample)}
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20 text-xs"
+              >
+                <Lightbulb className="w-3 h-3 mr-1" />
+                {showExample ? "Hide" : "Example"}
+              </Button>
+              <button onClick={onClose} className="text-white/80 hover:text-white p-2">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+          {/* Progress bar */}
+          <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6]"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="text-xs text-white/60 mt-1 text-center">
+            Item {currentItemIndex + 1} of {items.length}
+          </p>
+        </div>
+      </header>
+
+      {/* Example Panel */}
+      <AnimatePresence>
+        {showExample && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-gradient-to-r from-yellow-50 to-amber-50 border-b border-yellow-200 overflow-hidden flex-shrink-0"
+          >
+            <div className="max-w-6xl mx-auto px-4 py-3">
+              <div className="flex items-start gap-2">
+                <Lightbulb className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0 text-xs">
+                  <h3 className="font-semibold text-yellow-800 mb-1">Example Listing</h3>
+                  <p><span className="font-medium">Title:</span> {EXAMPLE_LISTING.title}</p>
+                  <p className="mt-1"><span className="font-medium">Description:</span> {EXAMPLE_LISTING.description.substring(0, 100)}...</p>
+                </div>
+                <button onClick={() => setShowExample(false)} className="text-yellow-600 p-1">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="grid lg:grid-cols-2 gap-4">
+            {/* Photo Gallery */}
+            <div className="bg-white rounded-2xl overflow-hidden">
+              <div className="p-3 border-b border-gray-100">
+                <h2 className="font-semibold text-[#333] flex items-center gap-2 text-sm">
+                  <ImageIcon className="w-4 h-4 text-[#8B5CF6]" />
+                  Product Photos ({currentPhotos.length} reference images)
+                </h2>
+              </div>
+              <div className="p-3">
+                {currentPhoto ? (
+                  <img
+                    src={`${API}/api/applicant-tests/public/photo/${test.id}/${currentPhoto.filename}`}
+                    alt={`Product photo ${selectedPhotoIndex + 1}`}
+                    className="w-full h-auto max-h-[280px] object-contain bg-gray-50 rounded-xl"
+                  />
+                ) : (
+                  <div className="w-full h-[280px] bg-gray-100 rounded-xl flex items-center justify-center text-gray-400">
+                    No photos
+                  </div>
+                )}
+                {currentPhotos.length > 1 && (
+                  <>
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                      <button
+                        onClick={() => setSelectedPhotoIndex(prev => Math.max(0, prev - 1))}
+                        disabled={selectedPhotoIndex === 0}
+                        className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <span className="text-xs text-gray-600">Photo {selectedPhotoIndex + 1} of {currentPhotos.length}</span>
+                      <button
+                        onClick={() => setSelectedPhotoIndex(prev => Math.min(currentPhotos.length - 1, prev + 1))}
+                        disabled={selectedPhotoIndex === currentPhotos.length - 1}
+                        className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto py-2 mt-2">
+                      {currentPhotos.map((photo, index) => (
+                        <button
+                          key={photo.id}
+                          onClick={() => setSelectedPhotoIndex(index)}
+                          className={`flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 ${
+                            selectedPhotoIndex === index ? "border-[#8B5CF6]" : "border-gray-200"
+                          }`}
+                        >
+                          <img
+                            src={`${API}/api/applicant-tests/public/photo/${test.id}/${photo.filename}`}
+                            alt={`Thumbnail ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Form Preview */}
+            <div className="bg-white rounded-2xl overflow-hidden flex flex-col">
+              <div className="p-3 border-b border-gray-100">
+                <h2 className="font-semibold text-[#333] text-sm">Create Listing for Item {currentItemIndex + 1}</h2>
+                <p className="text-xs text-gray-500">Fields applicants will fill out</p>
+              </div>
+              <div className="p-3 space-y-3 flex-1 overflow-y-auto max-h-[350px]">
+                {test.fields?.map(field => (
+                  <div key={field.id}>
+                    <Label className="flex items-center gap-1 text-xs">
+                      {field.name}
+                      {field.required && <span className="text-red-500">*</span>}
+                    </Label>
+                    {field.type === "textarea" ? (
+                      <textarea
+                        placeholder={field.placeholder}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg resize-none text-sm bg-gray-50"
+                        rows={3}
+                        disabled
+                      />
+                    ) : field.type === "select" ? (
+                      <select
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50"
+                        disabled
+                      >
+                        <option>Select {field.name}...</option>
+                      </select>
+                    ) : (
+                      <Input
+                        placeholder={field.placeholder}
+                        className="mt-1 text-sm bg-gray-50"
+                        disabled
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              {/* Navigation */}
+              <div className="p-3 border-t border-gray-100 flex items-center justify-between gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => { setCurrentItemIndex(prev => prev - 1); setSelectedPhotoIndex(0); }}
+                  disabled={currentItemIndex === 0}
+                  className="flex-1 text-xs"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </Button>
+                {currentItemIndex === items.length - 1 ? (
+                  <Button
+                    disabled
+                    className="flex-1 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white text-xs"
+                  >
+                    <Send className="w-4 h-4 mr-1" />
+                    Submit All
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => { setCurrentItemIndex(prev => prev + 1); setSelectedPhotoIndex(0); }}
+                    className="flex-1 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white text-xs"
+                  >
+                    Next Item
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
     </motion.div>,
     document.body
   );
