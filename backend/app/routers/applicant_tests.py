@@ -805,3 +805,187 @@ async def submit_test(
         print(f"Failed to send push notification: {e}")
     
     return {"message": "Assessment submitted successfully", "submission_id": submission_doc["id"]}
+
+
+
+# ============================================
+# INTERVIEW SCHEDULING / FOLLOW-UP EMAILS
+# ============================================
+
+from pydantic import BaseModel
+
+class InterviewFollowUpRequest(BaseModel):
+    applicant_emails: List[str]  # List of emails to send to
+    subject: str
+    message: str
+    meeting_link: str
+    date_range_start: str  # ISO date string
+    date_range_end: str    # ISO date string
+
+
+@router.post("/{test_id}/send-interview-followup")
+async def send_interview_followup(
+    test_id: str,
+    request: InterviewFollowUpRequest,
+    admin: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Send follow-up emails to selected applicants to schedule interviews"""
+    import resend
+    
+    # Verify test exists
+    test = await db.applicant_tests.find_one({"id": test_id})
+    if not test:
+        raise HTTPException(status_code=404, detail="Test not found")
+    
+    # Get admin email for reply-to
+    admin_email = admin.get("email", "admin@thrifty-curator.com")
+    admin_name = admin.get("name", "Thrifty Curator Team")
+    
+    sent_count = 0
+    errors = []
+    
+    for email in request.applicant_emails:
+        # Find the submission for this email
+        submission = await db.applicant_test_submissions.find_one({
+            "test_id": test_id,
+            "applicant_email": email
+        })
+        
+        applicant_name = submission.get("applicant_name", "Applicant") if submission else "Applicant"
+        
+        # Build the email HTML
+        email_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%); padding: 30px; text-align: center;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Thrifty Curator</h1>
+                    <p style="color: #C5A065; margin: 10px 0 0 0; font-size: 14px;">Interview Invitation</p>
+                </div>
+                
+                <!-- Content -->
+                <div style="padding: 30px;">
+                    <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                        Hi {applicant_name},
+                    </p>
+                    
+                    <div style="color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 25px; white-space: pre-wrap;">
+{request.message}
+                    </div>
+                    
+                    <!-- Date Range Box -->
+                    <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 25px; border-left: 4px solid #8B5CF6;">
+                        <p style="margin: 0; color: #666; font-size: 14px;">
+                            <strong>Availability Window:</strong><br>
+                            {request.date_range_start} - {request.date_range_end}
+                        </p>
+                    </div>
+                    
+                    <!-- Meeting Link -->
+                    {f'''<div style="text-align: center; margin: 30px 0;">
+                        <a href="{request.meeting_link}" style="display: inline-block; background: linear-gradient(135deg, #8B5CF6 0%, #00D4FF 100%); color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                            Join Interview Meeting
+                        </a>
+                        <p style="color: #666; font-size: 12px; margin-top: 10px;">
+                            Meeting Link: {request.meeting_link}
+                        </p>
+                    </div>''' if request.meeting_link else ''}
+                    
+                    <!-- Reply Instructions -->
+                    <div style="background-color: #e8f4fd; border-radius: 8px; padding: 20px; margin-top: 25px;">
+                        <p style="margin: 0; color: #333; font-size: 14px;">
+                            <strong>To confirm your interview:</strong><br>
+                            Simply reply to this email with your preferred date and time from the availability window above.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                    <p style="color: #666; font-size: 12px; margin: 0;">
+                        Questions? Reply directly to this email.<br>
+                        &copy; 2026 Thrifty Curator
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Plain text version for fallback
+        plain_text = f"""
+Hi {applicant_name},
+
+{request.message}
+
+AVAILABILITY WINDOW:
+{request.date_range_start} - {request.date_range_end}
+
+{"MEETING LINK: " + request.meeting_link if request.meeting_link else ""}
+
+TO CONFIRM YOUR INTERVIEW:
+Simply reply to this email with your preferred date and time from the availability window above.
+
+Questions? Reply directly to this email.
+
+- {admin_name}
+Thrifty Curator
+        """
+        
+        try:
+            emails_client = resend.Emails()
+            emails_client.send({
+                "from": f"{admin_name} <noreply@thrifty-curator.com>",
+                "to": email,
+                "reply_to": admin_email,
+                "subject": request.subject,
+                "html": email_html,
+                "text": plain_text
+            })
+            sent_count += 1
+            
+            # Log the email sent
+            await db.interview_followup_logs.insert_one({
+                "id": str(uuid.uuid4()),
+                "test_id": test_id,
+                "applicant_email": email,
+                "applicant_name": applicant_name,
+                "subject": request.subject,
+                "sent_by": admin_email,
+                "sent_at": datetime.now(timezone.utc).isoformat(),
+                "meeting_link": request.meeting_link,
+                "date_range_start": request.date_range_start,
+                "date_range_end": request.date_range_end
+            })
+            
+        except Exception as e:
+            errors.append({"email": email, "error": str(e)})
+    
+    return {
+        "message": f"Sent {sent_count} of {len(request.applicant_emails)} emails",
+        "sent_count": sent_count,
+        "total": len(request.applicant_emails),
+        "errors": errors[:5] if errors else []
+    }
+
+
+@router.get("/{test_id}/followup-history")
+async def get_followup_history(
+    test_id: str,
+    admin: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Get history of follow-up emails sent for a test"""
+    logs = await db.interview_followup_logs.find(
+        {"test_id": test_id},
+        {"_id": 0}
+    ).sort("sent_at", -1).to_list(100)
+    
+    return {"history": logs}

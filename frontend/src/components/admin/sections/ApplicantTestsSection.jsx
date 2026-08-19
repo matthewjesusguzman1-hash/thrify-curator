@@ -27,7 +27,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Lightbulb,
-  Pencil
+  Pencil,
+  Calendar,
+  Link,
+  Video
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL || "";
@@ -1039,6 +1042,8 @@ function InviteModal({ test, onClose, getAuthHeader }) {
 function SubmissionsModal({ test, onClose, onViewDetail, getAuthHeader }) {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedEmails, setSelectedEmails] = useState([]);
 
   useEffect(() => {
     fetchSubmissions();
@@ -1052,6 +1057,23 @@ function SubmissionsModal({ test, onClose, onViewDetail, getAuthHeader }) {
       console.error("Failed to fetch submissions:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleEmailSelection = (email, e) => {
+    e.stopPropagation();
+    setSelectedEmails(prev => 
+      prev.includes(email) 
+        ? prev.filter(e => e !== email)
+        : [...prev, email]
+    );
+  };
+
+  const selectAllEmails = () => {
+    if (selectedEmails.length === submissions.length) {
+      setSelectedEmails([]);
+    } else {
+      setSelectedEmails(submissions.map(s => s.applicant_email));
     }
   };
 
@@ -1092,31 +1114,294 @@ function SubmissionsModal({ test, onClose, onViewDetail, getAuthHeader }) {
               <p className="text-gray-500">No submissions yet</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {submissions.map(sub => (
-                <div
-                  key={sub.id}
-                  className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors"
-                  onClick={() => onViewDetail(sub)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-[#333]">{sub.applicant_name}</p>
-                      <p className="text-sm text-gray-500">{sub.applicant_email}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500">
-                        {new Date(sub.submitted_at).toLocaleDateString()}
-                      </p>
-                      {sub.admin_notes && (
-                        <span className="text-xs text-[#8B5CF6]">Has notes</span>
-                      )}
+            <>
+              {/* Select All & Schedule Button */}
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedEmails.length === submissions.length && submissions.length > 0}
+                    onChange={selectAllEmails}
+                    className="w-4 h-4 rounded border-gray-300 text-[#8B5CF6] focus:ring-[#8B5CF6]"
+                  />
+                  <span className="text-sm text-gray-600">
+                    Select All ({submissions.length})
+                  </span>
+                </label>
+                
+                {selectedEmails.length > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={() => setShowScheduleModal(true)}
+                    className="bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] text-white"
+                  >
+                    <Video className="w-4 h-4 mr-1" />
+                    Schedule Interviews ({selectedEmails.length})
+                  </Button>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                {submissions.map(sub => (
+                  <div
+                    key={sub.id}
+                    className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors flex items-center gap-3"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedEmails.includes(sub.applicant_email)}
+                      onChange={(e) => toggleEmailSelection(sub.applicant_email, e)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-4 h-4 rounded border-gray-300 text-[#8B5CF6] focus:ring-[#8B5CF6]"
+                    />
+                    <div 
+                      className="flex-1 cursor-pointer"
+                      onClick={() => onViewDetail(sub)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-[#333]">{sub.applicant_name}</p>
+                          <p className="text-sm text-gray-500">{sub.applicant_email}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500">
+                            {new Date(sub.submitted_at).toLocaleDateString()}
+                          </p>
+                          {sub.admin_notes && (
+                            <span className="text-xs text-[#8B5CF6]">Has notes</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Schedule Interview Modal */}
+      {showScheduleModal && (
+        <ScheduleInterviewModal
+          test={test}
+          selectedEmails={selectedEmails}
+          submissions={submissions}
+          onClose={() => setShowScheduleModal(false)}
+          getAuthHeader={getAuthHeader}
+        />
+      )}
+    </motion.div>,
+    document.body
+  );
+}
+
+// Schedule Interview Modal
+function ScheduleInterviewModal({ test, selectedEmails, submissions, onClose, getAuthHeader }) {
+  const [sending, setSending] = useState(false);
+  const [meetingLink, setMeetingLink] = useState("");
+  const [dateStart, setDateStart] = useState("");
+  const [dateEnd, setDateEnd] = useState("");
+  const [subject, setSubject] = useState(`Interview Scheduling - ${test.name}`);
+  const [message, setMessage] = useState(
+`Thank you for completing our skills assessment! We were impressed with your work and would like to schedule a video interview with you.
+
+Please reply to this email with your availability within the date range below. Let us know 2-3 time slots that work best for you.
+
+We look forward to speaking with you!`
+  );
+
+  // Set default date range (next 7 days)
+  useEffect(() => {
+    const today = new Date();
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    setDateStart(today.toISOString().split('T')[0]);
+    setDateEnd(nextWeek.toISOString().split('T')[0]);
+  }, []);
+
+  const handleSend = async () => {
+    if (!dateStart || !dateEnd) {
+      toast.error("Please select a date range");
+      return;
+    }
+
+    setSending(true);
+    try {
+      const response = await axios.post(
+        `${API}/api/applicant-tests/${test.id}/send-interview-followup`,
+        {
+          applicant_emails: selectedEmails,
+          subject,
+          message,
+          meeting_link: meetingLink,
+          date_range_start: new Date(dateStart).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
+          date_range_end: new Date(dateEnd).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+        },
+        getAuthHeader()
+      );
+
+      toast.success(response.data.message);
+      onClose();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to send emails");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const selectedApplicants = submissions.filter(s => selectedEmails.includes(s.applicant_email));
+
+  return ReactDOM.createPortal(
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 10001 }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.95 }}
+        className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-[#8B5CF6]/10 to-[#00D4FF]/10">
+          <div>
+            <h2 className="text-xl font-bold text-[#333] flex items-center gap-2">
+              <Video className="w-5 h-5 text-[#8B5CF6]" />
+              Schedule Interviews
+            </h2>
+            <p className="text-sm text-gray-500">Send follow-up emails to {selectedEmails.length} applicant(s)</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Recipients Preview */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">Recipients</Label>
+            <div className="flex flex-wrap gap-2">
+              {selectedApplicants.map(app => (
+                <span 
+                  key={app.applicant_email}
+                  className="px-3 py-1 bg-[#8B5CF6]/10 text-[#8B5CF6] rounded-full text-sm"
+                >
+                  {app.applicant_name}
+                </span>
               ))}
             </div>
-          )}
+          </div>
+
+          {/* Date Range */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                <Calendar className="w-4 h-4 inline mr-1" />
+                Available From
+              </Label>
+              <Input
+                type="date"
+                value={dateStart}
+                onChange={e => setDateStart(e.target.value)}
+                className="border-gray-300"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                <Calendar className="w-4 h-4 inline mr-1" />
+                Available Until
+              </Label>
+              <Input
+                type="date"
+                value={dateEnd}
+                onChange={e => setDateEnd(e.target.value)}
+                className="border-gray-300"
+              />
+            </div>
+          </div>
+
+          {/* Meeting Link */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">
+              <Link className="w-4 h-4 inline mr-1" />
+              Meeting Link (Zoom, Google Meet, etc.) - Optional
+            </Label>
+            <Input
+              type="url"
+              value={meetingLink}
+              onChange={e => setMeetingLink(e.target.value)}
+              placeholder="https://zoom.us/j/..."
+              className="border-gray-300"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              You can add this later once the interview is confirmed
+            </p>
+          </div>
+
+          {/* Subject */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">
+              <Mail className="w-4 h-4 inline mr-1" />
+              Email Subject
+            </Label>
+            <Input
+              type="text"
+              value={subject}
+              onChange={e => setSubject(e.target.value)}
+              className="border-gray-300"
+            />
+          </div>
+
+          {/* Message */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">
+              Message
+            </Label>
+            <textarea
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              rows={6}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent resize-none"
+              placeholder="Enter your message..."
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              The email will include the date range and meeting link automatically. Recipients can reply directly to this email.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={sending}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSend}
+            disabled={sending || !dateStart || !dateEnd}
+            className="bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] text-white"
+          >
+            {sending ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                Send to {selectedEmails.length} Applicant(s)
+              </>
+            )}
+          </Button>
         </div>
       </motion.div>
     </motion.div>,
