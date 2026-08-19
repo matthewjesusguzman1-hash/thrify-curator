@@ -1202,7 +1202,7 @@ function ScheduleInterviewModal({ test, selectedEmails, submissions, onClose, ge
   const [meetingLink, setMeetingLink] = useState("");
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
-  const [timezone, setTimezone] = useState("Pacific Time (PT)");
+  const [timezone, setTimezone] = useState("Central Time (CT)");
   const [subject, setSubject] = useState(`Interview Scheduling - ${test.name}`);
   
   // Default message with timezone reference for Philippines applicants
@@ -1211,13 +1211,13 @@ function ScheduleInterviewModal({ test, selectedEmails, submissions, onClose, ge
 Please reply to this email with your availability within the date range below. Let us know 2-3 time slots that work best for you.
 
 IMPORTANT - Time Zone Conversion:
-We are in Pacific Time (PT). Philippine Time (PHT) is 16 hours ahead of PT.
+We are in Central Time (CT). Philippine Time (PHT) is 14 hours ahead of CT.
 
 Examples:
-• 8:00 AM PT = 12:00 AM (midnight) PHT next day
-• 10:00 AM PT = 2:00 AM PHT next day
-• 5:00 PM PT = 9:00 AM PHT next day
-• 6:00 PM PT = 10:00 AM PHT next day
+• 8:00 AM CT = 10:00 PM PHT same day
+• 10:00 AM CT = 12:00 AM (midnight) PHT next day
+• 5:00 PM CT = 7:00 AM PHT next day
+• 7:00 PM CT = 9:00 AM PHT next day
 
 Please provide your availability in Philippine Time (PHT) and we will convert it on our end.
 
@@ -1372,13 +1372,13 @@ We look forward to speaking with you!`;
               onChange={e => setTimezone(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent bg-white"
             >
+              <option value="Central Time (CT)">Central Time (CT) - Chicago</option>
               <option value="Pacific Time (PT)">Pacific Time (PT) - Los Angeles</option>
               <option value="Mountain Time (MT)">Mountain Time (MT) - Denver</option>
-              <option value="Central Time (CT)">Central Time (CT) - Chicago</option>
               <option value="Eastern Time (ET)">Eastern Time (ET) - New York</option>
             </select>
             <p className="text-xs text-gray-500 mt-1">
-              This is YOUR timezone. Applicants in Philippines are 16 hours ahead of PT.
+              Applicants in Philippines are 14 hours ahead of CT.
             </p>
           </div>
 
