@@ -213,24 +213,38 @@ async def create_test(
     # Save all photos first
     test_id = str(uuid.uuid4())
     all_photo_records = []
+    save_errors = []
     
     for i, photo in enumerate(photos):
-        # Generate unique filename
-        ext = os.path.splitext(photo.filename)[1] if photo.filename else ".jpg"
-        filename = f"{test_id}_{i}{ext}"
-        filepath = os.path.join(upload_dir, filename)
-        
-        # Save file
-        content = await photo.read()
-        with open(filepath, "wb") as f:
-            f.write(content)
-        
-        all_photo_records.append({
-            "id": str(uuid.uuid4()),
-            "filename": filename,
-            "original_name": photo.filename,
-            "index": i
-        })
+        try:
+            # Generate unique filename - normalize extension
+            ext = os.path.splitext(photo.filename)[1].lower() if photo.filename else ".jpg"
+            # Convert common variations
+            if ext == ".jpeg":
+                ext = ".jpg"
+            if ext not in [".jpg", ".png", ".gif", ".webp", ".heic"]:
+                ext = ".jpg"
+            
+            filename = f"{test_id}_{i}{ext}"
+            
+            # Read content
+            content = await photo.read()
+            
+            # Save to BOTH directories for maximum compatibility
+            for save_dir in [upload_dir, old_upload_dir]:
+                filepath = os.path.join(save_dir, filename)
+                with open(filepath, "wb") as f:
+                    f.write(content)
+            
+            all_photo_records.append({
+                "id": str(uuid.uuid4()),
+                "filename": filename,
+                "original_name": photo.filename,
+                "index": i,
+                "size": len(content)
+            })
+        except Exception as e:
+            save_errors.append(f"Photo {i}: {str(e)}")
     
     # Build items with their associated photos
     items = []
@@ -243,6 +257,10 @@ async def create_test(
             "order": item_idx,
             "photos": item_photos
         })
+    
+    # Check if we had any errors
+    if save_errors:
+        raise HTTPException(status_code=500, detail=f"Failed to save some photos: {'; '.join(save_errors)}")
     
     # Create test document with new items structure
     test_doc = {
@@ -612,18 +630,34 @@ async def get_test_photo(
     from fastapi.responses import FileResponse
     import logging
     
-    # Try multiple possible paths
-    possible_paths = [
-        f"/app/uploads/applicant_tests/{filename}",
-        f"/app/backend/uploads/applicant_tests/{filename}",
+    # Normalize the filename to handle extension variations
+    base_name = os.path.splitext(filename)[0]
+    original_ext = os.path.splitext(filename)[1].lower()
+    
+    # Extensions to try if original not found
+    extensions_to_try = [original_ext, ".jpg", ".jpeg", ".png", ".webp", ".heic"]
+    
+    # Paths to check
+    base_paths = [
+        "/app/uploads/applicant_tests",
+        "/app/backend/uploads/applicant_tests"
     ]
     
-    for filepath in possible_paths:
-        if os.path.exists(filepath):
-            return FileResponse(filepath)
+    # Try all combinations
+    for base_path in base_paths:
+        # First try exact filename
+        exact_path = os.path.join(base_path, filename)
+        if os.path.exists(exact_path):
+            return FileResponse(exact_path)
+        
+        # Then try with different extensions
+        for ext in extensions_to_try:
+            try_path = os.path.join(base_path, f"{base_name}{ext}")
+            if os.path.exists(try_path):
+                return FileResponse(try_path)
     
     # Log which paths were tried
-    logging.error(f"Photo not found. Tried paths: {possible_paths}")
+    logging.error(f"Photo not found: {filename}. Test ID: {test_id}")
     raise HTTPException(status_code=404, detail=f"Photo not found: {filename}")
 
 
