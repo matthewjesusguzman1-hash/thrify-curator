@@ -181,9 +181,9 @@ export default function WebPushSettings() {
 
   if (loading) {
     return (
-      <Card className="bg-white/5 border-white/10">
+      <Card className="bg-gray-50 border-gray-200">
         <CardContent className="p-6 flex items-center justify-center">
-          <Loader2 className="w-6 h-6 animate-spin text-white/60" />
+          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
         </CardContent>
       </Card>
     );
@@ -192,20 +192,20 @@ export default function WebPushSettings() {
   // Show instructions if not running as PWA
   if (!isStandalone && isSupported) {
     return (
-      <Card className="bg-gradient-to-br from-[#00D4FF]/10 to-[#8B5CF6]/10 border-white/10">
+      <Card className="bg-gradient-to-br from-[#00D4FF]/10 to-[#8B5CF6]/10 border-gray-200">
         <CardHeader className="pb-3">
-          <CardTitle className="text-white flex items-center gap-2 text-lg">
+          <CardTitle className="text-[#1A1A2E] flex items-center gap-2 text-base">
             <Smartphone className="w-5 h-5 text-[#00D4FF]" />
             Enable Push Notifications
           </CardTitle>
-          <CardDescription className="text-white/60">
+          <CardDescription className="text-gray-600">
             Add this app to your home screen to receive push notifications
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-white/5 rounded-lg p-4">
-            <h4 className="text-white font-medium mb-2">How to add to Home Screen:</h4>
-            <ol className="text-white/70 text-sm space-y-2 list-decimal list-inside">
+          <div className="bg-gray-100 rounded-lg p-4">
+            <h4 className="text-[#1A1A2E] font-medium mb-2 text-sm">How to add to Home Screen:</h4>
+            <ol className="text-gray-700 text-sm space-y-2 list-decimal list-inside">
               <li>Tap the <strong>Share</strong> button in Safari</li>
               <li>Scroll down and tap <strong>&quot;Add to Home Screen&quot;</strong></li>
               <li>Tap <strong>&quot;Add&quot;</strong> to confirm</li>
@@ -213,7 +213,7 @@ export default function WebPushSettings() {
               <li>Return here to enable notifications</li>
             </ol>
           </div>
-          <p className="text-white/50 text-xs">
+          <p className="text-gray-500 text-xs">
             Push notifications only work when the app is added to your home screen (iOS 16.4+)
           </p>
         </CardContent>
@@ -224,9 +224,9 @@ export default function WebPushSettings() {
   // Not supported message
   if (!isSupported) {
     return (
-      <Card className="bg-white/5 border-white/10">
+      <Card className="bg-gray-50 border-gray-200">
         <CardContent className="p-6">
-          <div className="flex items-center gap-3 text-white/60">
+          <div className="flex items-center gap-3 text-gray-600">
             <AlertCircle className="w-5 h-5" />
             <p className="text-sm">Push notifications are not supported on this device/browser.</p>
           </div>
@@ -236,13 +236,13 @@ export default function WebPushSettings() {
   }
 
   return (
-    <Card className="bg-gradient-to-br from-[#00D4FF]/10 to-[#8B5CF6]/10 border-white/10">
+    <Card className="bg-gradient-to-br from-[#00D4FF]/10 to-[#8B5CF6]/10 border-gray-200">
       <CardHeader className="pb-3">
-        <CardTitle className="text-white flex items-center gap-2 text-lg">
+        <CardTitle className="text-[#1A1A2E] flex items-center gap-2 text-base">
           <Bell className="w-5 h-5 text-[#00D4FF]" />
           Push Notifications
         </CardTitle>
-        <CardDescription className="text-white/60">
+        <CardDescription className="text-gray-600">
           {subscription 
             ? "You'll receive push notifications for important updates"
             : "Enable push notifications to stay updated"}
@@ -250,16 +250,16 @@ export default function WebPushSettings() {
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (
-          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-            <p className="text-red-200 text-sm">{error}</p>
+          <div className="bg-red-100 border border-red-300 rounded-lg p-3 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+            <p className="text-red-700 text-sm">{error}</p>
           </div>
         )}
         
         {success && (
-          <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-3 flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-            <p className="text-green-200 text-sm">{success}</p>
+          <div className="bg-green-100 border border-green-300 rounded-lg p-3 flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+            <p className="text-green-700 text-sm">{success}</p>
           </div>
         )}
 
@@ -270,7 +270,7 @@ export default function WebPushSettings() {
                 onClick={disableNotifications}
                 disabled={actionLoading}
                 variant="outline"
-                className="flex-1 bg-white/10 border-white/20 text-white hover:bg-white/20"
+                className="flex-1 bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200"
               >
                 {actionLoading ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -308,7 +308,7 @@ export default function WebPushSettings() {
           )}
         </div>
 
-        <p className="text-white/40 text-xs text-center">
+        <p className="text-gray-500 text-xs text-center">
           Notifications include: employee clock in/out, form submissions, messages, and test completions
         </p>
       </CardContent>
