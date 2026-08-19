@@ -117,4 +117,21 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - Transistorsoft Background Geolocation
 - Stripe (Payments) - requires user API key
 - Resend (Emails) - configured
-- Firebase (Push notifications) - configured
+- Firebase (Push notifications for native apps) - configured
+- **Web Push (Safari PWA)** - NEW: VAPID-based push notifications for iOS home screen web apps (iOS 16.4+)
+
+## Recent Updates (2026-08-19)
+
+### Safari Web Push Notifications
+- Implemented VAPID-based Web Push for Safari PWA (home screen bookmarked web app)
+- Backend service: `/app/backend/app/services/web_push_service.py`
+- Backend routes: `/app/backend/app/routers/web_push.py`
+- Frontend component: `/app/frontend/src/components/WebPushSettings.jsx`
+- Service worker updated with push event handlers: `/app/frontend/public/service-worker.js`
+- Added `applicant_test_submission` notification type for when applicants complete skills tests
+- WebPushSettings component appears in notification dropdown, shows instructions if not installed as PWA
+- All in-app notification types now trigger both FCM (native) and Web Push (Safari PWA) notifications
+
+### Preview Modal Safe Area Fix
+- Fixed close button positioning in test preview modal to respect iOS safe area (status bar)
+- Added `padding-top: max(env(safe-area-inset-top), 12px)` to modal header

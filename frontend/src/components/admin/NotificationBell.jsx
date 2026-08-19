@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Bell, CheckCheck, LogIn, LogOut, Briefcase, FileSignature, 
-  MessageSquare, Calendar, XCircle, RefreshCw, Package
+  MessageSquare, Calendar, XCircle, RefreshCw, Package, ClipboardCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -27,6 +27,8 @@ const getNotificationStyle = (type) => {
       return { icon: XCircle, bg: "bg-red-100", color: "text-red-600" };
     case "interview_rescheduled":
       return { icon: RefreshCw, bg: "bg-amber-100", color: "text-amber-600" };
+    case "applicant_test_submission":
+      return { icon: ClipboardCheck, bg: "bg-teal-100", color: "text-teal-600" };
     default:
       return { icon: Bell, bg: "bg-gray-100", color: "text-gray-600" };
   }

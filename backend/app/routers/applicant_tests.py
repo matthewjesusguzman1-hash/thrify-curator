@@ -792,4 +792,16 @@ async def submit_test(
         # Don't fail the submission if notification fails
         print(f"Failed to send notification email: {e}")
     
+    # Send in-app notification + push notification (FCM & Web Push)
+    try:
+        from app.services.notification_helper import notify_applicant_test_submission
+        await notify_applicant_test_submission(
+            submission_id=submission_doc["id"],
+            applicant_name=invite["applicant_name"],
+            applicant_email=invite["applicant_email"],
+            test_name=test["name"]
+        )
+    except Exception as e:
+        print(f"Failed to send push notification: {e}")
+    
     return {"message": "Assessment submitted successfully", "submission_id": submission_doc["id"]}

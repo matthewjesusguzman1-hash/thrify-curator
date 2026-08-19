@@ -1,7 +1,7 @@
 // Thrifty Curator Service Worker
-// Version 5 - Aggressive cache clearing for App Store review
+// Version 6 - Added Web Push support for Safari PWA
 
-const CACHE_VERSION = 'v5-' + Date.now(); // Unique version on each build
+const CACHE_VERSION = 'v6-' + Date.now(); // Unique version on each build
 const CACHE_NAME = 'thrifty-curator-' + CACHE_VERSION;
 const OFFLINE_URL = '/offline.html';
 
@@ -10,6 +10,72 @@ const STATIC_ASSETS = [
   '/offline.html',
   '/manifest.json'
 ];
+
+// ============================================
+// WEB PUSH NOTIFICATION HANDLERS
+// ============================================
+
+// Handle incoming push notifications
+self.addEventListener('push', (event) => {
+  console.log('[ServiceWorker] Push received:', event);
+  
+  let data = {
+    title: 'Thrifty Curator',
+    body: 'You have a new notification',
+    url: '/admin',
+    icon: 'https://customer-assets.emergentagent.com/job_5bad4b6e-1f45-47e6-8f7d-d2555a90922c/artifacts/zlyv9l51_IMG_0092.png',
+    badge: 'https://customer-assets.emergentagent.com/job_5bad4b6e-1f45-47e6-8f7d-d2555a90922c/artifacts/zlyv9l51_IMG_0092.png',
+    tag: 'default'
+  };
+
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      data = { ...data, ...payload };
+    } catch (e) {
+      data.body = event.data.text();
+    }
+  }
+
+  // Safari requires every push to show a notification immediately
+  const options = {
+    body: data.body,
+    icon: data.icon,
+    badge: data.badge,
+    tag: data.tag,
+    data: { url: data.url },
+    requireInteraction: false,
+    silent: false
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// Handle notification click - open the app to the relevant page
+self.addEventListener('notificationclick', (event) => {
+  console.log('[ServiceWorker] Notification clicked:', event);
+  
+  event.notification.close();
+  
+  const url = event.notification.data?.url || '/admin';
+  const fullUrl = new URL(url, self.location.origin).href;
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // Check if there's already a window open
+      for (const client of windowClients) {
+        if ('focus' in client) {
+          client.navigate(fullUrl);
+          return client.focus();
+        }
+      }
+      // If no window is open, open a new one
+      return clients.openWindow(fullUrl);
+    })
+  );
+});
 
 // Install event - immediately take over
 self.addEventListener('install', (event) => {

@@ -1,11 +1,15 @@
 """
 Notification helper module that creates both in-app notifications and sends push notifications
+Supports both:
+- Firebase Cloud Messaging (FCM) for native apps
+- Web Push (VAPID) for Safari PWA / bookmarked web apps
 """
 from datetime import datetime, timezone
 import uuid
 
 from app.database import db
 from app.services.push_notifications import get_push_service, NotificationTemplates
+from app.services.web_push_service import get_web_push_service
 
 
 async def create_notification_with_push(
@@ -15,10 +19,13 @@ async def create_notification_with_push(
     message: str,
     details: dict = None,
     push_title: str = None,
-    push_body: str = None
+    push_body: str = None,
+    push_url: str = "/admin"
 ):
     """
-    Create an in-app notification and optionally send a push notification
+    Create an in-app notification and send push notifications via both:
+    - FCM (for native Capacitor apps)
+    - Web Push (for Safari PWA / bookmarked web apps)
     
     Args:
         notification_type: Type of notification (e.g., 'job_application', 'clock_in')
@@ -28,6 +35,7 @@ async def create_notification_with_push(
         details: Additional details dict
         push_title: Push notification title (optional, will auto-generate if not provided)
         push_body: Push notification body (optional, will use message if not provided)
+        push_url: URL to open when notification is clicked
     """
     # Create in-app notification
     notification_doc = {
@@ -43,13 +51,13 @@ async def create_notification_with_push(
     
     await db.admin_notifications.insert_one(notification_doc)
     
-    # Send push notification if service is enabled
+    # Get title/body for push
+    title = push_title or get_push_title(notification_type, entity_name)
+    body = push_body or message
+    
+    # Send FCM push notification (native apps)
     push_service = get_push_service()
     if push_service.enabled:
-        # Use provided title/body or generate from template
-        title = push_title or get_push_title(notification_type, entity_name)
-        body = push_body or message
-        
         await push_service.send_to_admins(
             db=db,
             title=title,
@@ -59,6 +67,17 @@ async def create_notification_with_push(
                 "entity_id": entity_id,
                 "entity_name": entity_name
             }
+        )
+    
+    # Send Web Push notification (Safari PWA)
+    web_push_service = get_web_push_service()
+    if web_push_service.enabled:
+        await web_push_service.send_to_admins(
+            db=db,
+            title=title,
+            body=body,
+            url=push_url,
+            notification_type=notification_type
         )
     
     return notification_doc
@@ -76,7 +95,8 @@ def get_push_title(notification_type: str, entity_name: str) -> str:
         "consignment_agreement": "New Consignment Agreement",
         "payment_method_change": "Payment Method Updated",
         "consignment_items_added": "Items Added",
-        "new_message": "New Message"
+        "new_message": "New Message",
+        "applicant_test_submission": "Skills Test Submitted"
     }
     return titles.get(notification_type, "Thrifty Curator Alert")
 
@@ -193,4 +213,24 @@ async def notify_new_message(message_id: str, sender_name: str, sender_email: st
         details={"email": sender_email},
         push_title=template["title"],
         push_body=template["body"]
+    )
+
+
+
+async def notify_applicant_test_submission(
+    submission_id: str, 
+    applicant_name: str, 
+    applicant_email: str,
+    test_name: str
+):
+    """Notify admin when an applicant completes a skills test"""
+    await create_notification_with_push(
+        notification_type="applicant_test_submission",
+        entity_id=submission_id,
+        entity_name=applicant_name,
+        message=f"{applicant_name} has completed the skills test: {test_name}",
+        details={"email": applicant_email, "test_name": test_name},
+        push_title="Skills Test Submitted",
+        push_body=f"{applicant_name} completed '{test_name}'",
+        push_url="/admin#applicant-tests"
     )

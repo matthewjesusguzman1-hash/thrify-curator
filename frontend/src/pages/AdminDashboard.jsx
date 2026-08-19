@@ -56,7 +56,8 @@ import {
   Play,
   Pause,
   Square,
-  Car
+  Car,
+  ClipboardCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,6 +89,7 @@ import RejectionHistorySection from "@/components/admin/sections/RejectionHistor
 import EmailLogsSection from "@/components/admin/sections/EmailLogsSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
+import WebPushSettings from "@/components/WebPushSettings";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
 import PayrollModal from "@/components/admin/modals/PayrollModal";
 import TimeEntryModal from "@/components/admin/modals/TimeEntryModal";
@@ -2656,6 +2658,11 @@ export default function AdminDashboard() {
 
                   {/* Notification List */}
                   <div className="max-h-96 overflow-y-auto bg-white">
+                    {/* Web Push Settings */}
+                    <div className="p-3 border-b border-[#f0f0f0]">
+                      <WebPushSettings />
+                    </div>
+                    
                     {notifications.length === 0 ? (
                       <div className="p-8 text-center">
                         <div className="w-16 h-16 bg-[#F9F6F7] rounded-full flex items-center justify-center mx-auto mb-4">
@@ -2699,6 +2706,8 @@ export default function AdminDashboard() {
                                   ? 'bg-amber-500'
                                   : notification.type === 'consignment_items_added'
                                   ? 'bg-teal-500'
+                                  : notification.type === 'applicant_test_submission'
+                                  ? 'bg-violet-500'
                                   : 'bg-blue-500'
                               }`}>
                                 {notification.type === 'clock_in' 
@@ -2721,6 +2730,8 @@ export default function AdminDashboard() {
                                   ? <CreditCard className="w-5 h-5 text-white" />
                                   : notification.type === 'consignment_items_added'
                                   ? <Package className="w-5 h-5 text-white" />
+                                  : notification.type === 'applicant_test_submission'
+                                  ? <ClipboardCheck className="w-5 h-5 text-white" />
                                   : <Bell className="w-5 h-5 text-white" />
                                 }
                               </div>
@@ -2747,6 +2758,8 @@ export default function AdminDashboard() {
                                       ? 'bg-amber-100 text-amber-800'
                                       : notification.type === 'consignment_items_added'
                                       ? 'bg-teal-100 text-teal-800'
+                                      : notification.type === 'applicant_test_submission'
+                                      ? 'bg-violet-100 text-violet-800'
                                       : 'bg-blue-100 text-blue-800'
                                   }`}>
                                     {notification.type === 'clock_in' ? 'IN' 
@@ -2758,6 +2771,7 @@ export default function AdminDashboard() {
                                       : notification.type === 'consignment_agreement' ? 'AGR'
                                       : notification.type === 'payment_method_change' ? 'PAY'
                                       : notification.type === 'consignment_items_added' ? 'ITEM'
+                                      : notification.type === 'applicant_test_submission' ? 'TEST'
                                       : 'INFO'}
                                   </span>
                                   <span className="notification-time text-xs">
