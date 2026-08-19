@@ -995,59 +995,83 @@ function SubmissionDetailModal({ submission, onClose, getAuthHeader }) {
             </div>
           ) : detail ? (
             <div className="space-y-6">
-              {/* Responses by Item */}
-              {(detail.test.items || []).map((item, itemIndex) => {
-                const itemResponse = detail.submission.responses?.[item.id] || {};
-                const itemPhotos = item.photos || [];
-                return (
-                  <div key={item.id} className="border border-gray-200 rounded-xl overflow-hidden">
-                    <div className="bg-gray-50 p-3 font-medium text-[#333]">
-                      Item {itemIndex + 1}
-                    </div>
-                    <div className="p-4 grid md:grid-cols-2 gap-4">
-                      {/* Photos */}
-                      <div>
-                        {itemPhotos.length > 0 ? (
-                          <div className="space-y-2">
-                            <img
-                              src={`${API}/api/applicant-tests/public/photo/${detail.test.id}/${itemPhotos[0].filename}`}
-                              alt={`Item ${itemIndex + 1}`}
-                              className="w-full h-48 object-contain bg-gray-100 rounded-lg"
-                            />
-                            {itemPhotos.length > 1 && (
-                              <div className="flex gap-2 overflow-x-auto">
-                                {itemPhotos.slice(1).map((photo, pIdx) => (
-                                  <img
-                                    key={photo.id}
-                                    src={`${API}/api/applicant-tests/public/photo/${detail.test.id}/${photo.filename}`}
-                                    alt={`Item ${itemIndex + 1} photo ${pIdx + 2}`}
-                                    className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
-                                  />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="w-full h-48 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-                            No photos
-                          </div>
-                        )}
+              {/* Responses by Item - handle both old (photos) and new (items) structure */}
+              {(() => {
+                // Determine items to display
+                let displayItems = [];
+                const responses = detail.submission.responses || {};
+                
+                // Check if we have the new items structure with actual photos in items
+                if (detail.test.items && detail.test.items.length > 0 && detail.test.items[0].photos?.length > 0) {
+                  displayItems = detail.test.items.map(item => ({
+                    id: item.id,
+                    photos: item.photos || [],
+                    // Try item.id first, then first photo id as fallback
+                    response: responses[item.id] || (item.photos?.[0] ? responses[item.photos[0].id] : {}) || {}
+                  }));
+                } else {
+                  // Fall back to old structure - each photo is an item
+                  displayItems = (detail.test.photos || []).map(photo => ({
+                    id: photo.id,
+                    photos: [photo],
+                    response: responses[photo.id] || {}
+                  }));
+                }
+                
+                return displayItems.map((item, itemIndex) => {
+                  const itemResponse = item.response;
+                  const itemPhotos = item.photos || [];
+                  
+                  return (
+                    <div key={item.id} className="border border-gray-200 rounded-xl overflow-hidden">
+                      <div className="bg-gray-50 p-3 font-medium text-[#333]">
+                        Item {itemIndex + 1}
                       </div>
-                      {/* Responses */}
-                      <div className="space-y-2">
-                        {detail.test.fields.map(field => (
-                          <div key={field.id}>
-                            <p className="text-xs text-gray-500">{field.name}</p>
-                            <p className="text-sm text-[#333]">
-                              {itemResponse[field.id] || <span className="text-gray-400 italic">Not provided</span>}
-                            </p>
-                          </div>
-                        ))}
+                      <div className="p-4 grid md:grid-cols-2 gap-4">
+                        {/* Photos */}
+                        <div>
+                          {itemPhotos.length > 0 ? (
+                            <div className="space-y-2">
+                              <img
+                                src={`${API}/api/applicant-tests/public/photo/${detail.test.id}/${itemPhotos[0].filename}`}
+                                alt={`Item ${itemIndex + 1}`}
+                                className="w-full h-48 object-contain bg-gray-100 rounded-lg"
+                              />
+                              {itemPhotos.length > 1 && (
+                                <div className="flex gap-2 overflow-x-auto">
+                                  {itemPhotos.slice(1).map((photo, pIdx) => (
+                                    <img
+                                      key={photo.id}
+                                      src={`${API}/api/applicant-tests/public/photo/${detail.test.id}/${photo.filename}`}
+                                      alt={`Item ${itemIndex + 1} photo ${pIdx + 2}`}
+                                      className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="w-full h-48 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
+                              No photos
+                            </div>
+                          )}
+                        </div>
+                        {/* Responses */}
+                        <div className="space-y-2">
+                          {detail.test.fields.map(field => (
+                            <div key={field.id}>
+                              <p className="text-xs text-gray-500">{field.name}</p>
+                              <p className="text-sm text-[#333] whitespace-pre-wrap">
+                                {itemResponse[field.id] || <span className="text-gray-400 italic">Not provided</span>}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
 
               {/* Admin Notes */}
               <div className="border border-gray-200 rounded-xl p-4">
