@@ -244,7 +244,9 @@ async def send_invite(
         </div>
         """
         
-        resend.emails.send({
+        # Use Resend v2 class-based API
+        emails_client = resend.Emails()
+        emails_client.send({
             "from": "Thrifty Curator <noreply@thrifty-curator.com>",
             "to": applicant_email,
             "subject": f"Skills Assessment Invitation - {test['name']}",
@@ -276,6 +278,31 @@ async def get_test_invites(
     ).sort("sent_at", -1).to_list(100)
     
     return {"invites": invites}
+
+
+@router.delete("/{test_id}/invite/{invite_id}")
+async def delete_invite(
+    test_id: str,
+    invite_id: str,
+    admin: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Delete an invite"""
+    # Check if invite exists
+    invite = await db.applicant_test_invites.find_one({"id": invite_id, "test_id": test_id})
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invite not found")
+    
+    # Delete the invite
+    await db.applicant_test_invites.delete_one({"id": invite_id})
+    
+    # Decrement invite count on the test
+    await db.applicant_tests.update_one(
+        {"id": test_id},
+        {"$inc": {"invites_sent": -1}}
+    )
+    
+    return {"message": "Invite deleted successfully"}
 
 
 @router.get("/{test_id}/submissions")

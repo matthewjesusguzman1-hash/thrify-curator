@@ -489,6 +489,7 @@ function InviteModal({ test, onClose, getAuthHeader }) {
   const [sending, setSending] = useState(false);
   const [invites, setInvites] = useState([]);
   const [loadingInvites, setLoadingInvites] = useState(true);
+  const [deletingInviteId, setDeletingInviteId] = useState(null);
 
   useEffect(() => {
     fetchInvites();
@@ -502,6 +503,24 @@ function InviteModal({ test, onClose, getAuthHeader }) {
       console.error("Failed to fetch invites:", error);
     } finally {
       setLoadingInvites(false);
+    }
+  };
+
+  const handleDeleteInvite = async (inviteId) => {
+    if (!window.confirm("Delete this invite? The applicant will no longer be able to access the test.")) return;
+    
+    setDeletingInviteId(inviteId);
+    try {
+      await axios.delete(
+        `${API}/api/applicant-tests/${test.id}/invite/${inviteId}`,
+        getAuthHeader()
+      );
+      toast.success("Invite deleted");
+      fetchInvites();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to delete invite");
+    } finally {
+      setDeletingInviteId(null);
     }
   };
 
@@ -615,20 +634,34 @@ function InviteModal({ test, onClose, getAuthHeader }) {
             ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {invites.map(invite => (
-                  <div key={invite.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-sm text-[#333]">{invite.applicant_name}</p>
-                      <p className="text-xs text-gray-500">{invite.applicant_email}</p>
+                  <div key={invite.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-[#333] truncate">{invite.applicant_name}</p>
+                      <p className="text-xs text-gray-500 truncate">{invite.applicant_email}</p>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      invite.status === "completed" 
-                        ? "bg-green-100 text-green-700"
-                        : invite.status === "started"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-gray-100 text-gray-600"
-                    }`}>
-                      {invite.status}
-                    </span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        invite.status === "completed" 
+                          ? "bg-green-100 text-green-700"
+                          : invite.status === "started"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-gray-100 text-gray-600"
+                      }`}>
+                        {invite.status}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteInvite(invite.id)}
+                        disabled={deletingInviteId === invite.id}
+                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        data-testid={`delete-invite-${invite.id}`}
+                      >
+                        {deletingInviteId === invite.id ? (
+                          <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
