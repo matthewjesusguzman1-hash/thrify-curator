@@ -196,13 +196,18 @@ export default function WebPushSettings() {
   // Show instructions if not running as PWA
   if (!isStandalone && isSupported) {
     return (
-      <div className="bg-gradient-to-r from-[#00D4FF]/10 to-[#8B5CF6]/10 rounded-lg p-3 border border-gray-200">
-        <div className="flex items-start gap-3">
-          <Smartphone className="w-5 h-5 text-[#00D4FF] flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="text-[#1A1A2E] font-medium text-sm">Enable Push Notifications</p>
-            <p className="text-gray-500 text-xs mt-0.5">Add to Home Screen first (Share → Add to Home Screen)</p>
-          </div>
+      <div style={{ 
+        background: 'linear-gradient(to right, rgba(0,212,255,0.1), rgba(139,92,246,0.1))',
+        borderRadius: '8px',
+        padding: '8px',
+        border: '1px solid #e5e7eb'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Smartphone style={{ width: '16px', height: '16px', color: '#00D4FF', flexShrink: 0 }} />
+          <p style={{ fontSize: '12px', margin: 0, flex: 1 }}>
+            <span style={{ fontWeight: 600, color: '#1f2937' }}>Push Notifications</span>
+            <span style={{ color: '#6b7280', marginLeft: '6px' }}>• Add to Home Screen first</span>
+          </p>
         </div>
       </div>
     );
@@ -211,67 +216,115 @@ export default function WebPushSettings() {
   // Not supported message
   if (!isSupported) {
     return (
-      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+      <div className="bg-gray-50 rounded-lg p-2 border border-gray-200">
         <div className="flex items-center gap-2 text-gray-500">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <p className="text-xs">Push notifications not supported on this device.</p>
+          <p className="text-xs">Push not supported on this device</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gradient-to-r from-[#00D4FF]/10 to-[#8B5CF6]/10 rounded-lg p-3 border border-gray-200">
+    <div style={{ 
+      background: 'linear-gradient(to right, rgba(0,212,255,0.1), rgba(139,92,246,0.1))',
+      borderRadius: '8px',
+      padding: '8px',
+      border: '1px solid #e5e7eb'
+    }}>
       {error && (
-        <div className="bg-red-100 rounded p-2 mb-2 flex items-center gap-2">
-          <AlertCircle className="w-3 h-3 text-red-600 flex-shrink-0" />
-          <p className="text-red-700 text-xs">{error}</p>
+        <div style={{ 
+          background: '#fee2e2', 
+          borderRadius: '4px', 
+          padding: '6px 8px', 
+          marginBottom: '8px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '8px'
+        }}>
+          <AlertCircle style={{ width: '12px', height: '12px', color: '#dc2626', flexShrink: 0, marginTop: '2px' }} />
+          <p style={{ color: '#b91c1c', fontSize: '12px', margin: 0, lineHeight: '1.3' }}>{error}</p>
         </div>
       )}
       
       {success && (
-        <div className="bg-green-100 rounded p-2 mb-2 flex items-center gap-2">
-          <CheckCircle className="w-3 h-3 text-green-600 flex-shrink-0" />
-          <p className="text-green-700 text-xs">{success}</p>
+        <div style={{ 
+          background: '#dcfce7', 
+          borderRadius: '4px', 
+          padding: '6px 8px', 
+          marginBottom: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <CheckCircle style={{ width: '12px', height: '12px', color: '#16a34a', flexShrink: 0 }} />
+          <p style={{ color: '#15803d', fontSize: '12px', margin: 0 }}>{success}</p>
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <Bell className="w-4 h-4 text-[#00D4FF] flex-shrink-0" />
-          <span className="text-[#1A1A2E] font-medium text-sm truncate">
-            {subscription ? "Push Enabled" : "Push Notifications"}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+          <Bell style={{ width: '16px', height: '16px', color: '#00D4FF', flexShrink: 0 }} />
+          <span style={{ color: '#1f2937', fontWeight: 600, fontSize: '12px' }}>
+            {subscription ? "Push On" : "Push"}
           </span>
         </div>
         
-        <div className="flex gap-2 flex-shrink-0">
+        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
           {subscription ? (
             <>
               <button
                 onClick={disableNotifications}
                 disabled={actionLoading}
-                className="h-7 px-2 text-xs rounded-md bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-                style={{ color: '#374151', WebkitTextFillColor: '#374151' }}
+                style={{ 
+                  height: '24px', 
+                  padding: '0 8px', 
+                  fontSize: '12px', 
+                  borderRadius: '4px',
+                  background: '#f3f4f6',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#374151',
+                  WebkitTextFillColor: '#374151'
+                }}
               >
-                {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#374151' }} /> : <span style={{ color: '#374151' }}>Disable</span>}
+                {actionLoading ? <Loader2 style={{ width: '12px', height: '12px', color: '#374151' }} className="animate-spin" /> : "Off"}
               </button>
               <button
                 onClick={sendTestNotification}
                 disabled={actionLoading}
-                className="h-7 px-3 text-xs rounded-md bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:opacity-90 disabled:opacity-50"
-                style={{ color: '#ffffff', WebkitTextFillColor: '#ffffff' }}
+                style={{ 
+                  height: '24px', 
+                  padding: '0 8px', 
+                  fontSize: '12px', 
+                  borderRadius: '4px',
+                  background: 'linear-gradient(to right, #00D4FF, #8B5CF6)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#ffffff',
+                  WebkitTextFillColor: '#ffffff'
+                }}
               >
-                {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#ffffff' }} /> : <span style={{ color: '#ffffff' }}>Test</span>}
+                {actionLoading ? <Loader2 style={{ width: '12px', height: '12px', color: '#ffffff' }} className="animate-spin" /> : "Test"}
               </button>
             </>
           ) : (
             <button
               onClick={enableNotifications}
               disabled={actionLoading}
-              className="h-7 px-3 text-xs rounded-md bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:opacity-90 disabled:opacity-50"
-              style={{ color: '#ffffff', WebkitTextFillColor: '#ffffff' }}
+              style={{ 
+                height: '24px', 
+                padding: '0 8px', 
+                fontSize: '12px', 
+                borderRadius: '4px',
+                background: 'linear-gradient(to right, #00D4FF, #8B5CF6)',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#ffffff',
+                WebkitTextFillColor: '#ffffff'
+              }}
             >
-              {actionLoading ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: '#ffffff' }} /> : <span style={{ color: '#ffffff' }}>Enable</span>}
+              {actionLoading ? <Loader2 style={{ width: '12px', height: '12px', color: '#ffffff' }} className="animate-spin" /> : "Enable"}
             </button>
           )}
         </div>
