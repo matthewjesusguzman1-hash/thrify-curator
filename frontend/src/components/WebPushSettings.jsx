@@ -164,12 +164,20 @@ export default function WebPushSettings() {
         })
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.detail || 'Failed to send test');
       }
 
-      setSuccess('Test notification sent! Check your notifications.');
+      // Check if there were errors in the response
+      if (data.errors && data.errors.length > 0) {
+        setError(`Push failed: ${data.errors.join(', ')}`);
+      } else if (data.sent === 0) {
+        setError('No notifications were sent. Try disabling and re-enabling notifications.');
+      } else {
+        setSuccess(`Test sent! ${data.message || 'Check your notifications.'}`);
+      }
       
     } catch (err) {
       console.error('Error sending test:', err);
@@ -270,7 +278,8 @@ export default function WebPushSettings() {
                 onClick={disableNotifications}
                 disabled={actionLoading}
                 variant="outline"
-                className="flex-1 bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200"
+                className="flex-1 border-gray-300 hover:bg-gray-100"
+                style={{ backgroundColor: '#f3f4f6', color: '#374151' }}
               >
                 {actionLoading ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

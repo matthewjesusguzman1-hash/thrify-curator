@@ -108,11 +108,15 @@ async def send_test_notification(
     service = get_web_push_service()
     admin_id = admin.get("user_id") or admin.get("id")
     
+    print(f"[WebPush Test] Admin ID: {admin_id}")
+    
     # Get admin's subscriptions
     subscriptions = await db.web_push_subscriptions.find(
         {"user_id": admin_id},
         {"_id": 0}
     ).to_list(10)
+    
+    print(f"[WebPush Test] Found {len(subscriptions)} subscriptions")
     
     if not subscriptions:
         raise HTTPException(
@@ -124,6 +128,7 @@ async def send_test_notification(
     errors = []
     
     for sub in subscriptions:
+        print(f"[WebPush Test] Sending to subscription endpoint: {sub.get('endpoint', 'unknown')[:60]}...")
         result = await service.send_notification(
             subscription_info={"endpoint": sub["endpoint"], "keys": sub["keys"]},
             title=request.title,
@@ -131,6 +136,8 @@ async def send_test_notification(
             url="/admin",
             tag="test"
         )
+        
+        print(f"[WebPush Test] Result: {result}")
         
         if result.get("success"):
             sent += 1
@@ -140,7 +147,8 @@ async def send_test_notification(
     return {
         "sent": sent,
         "total_subscriptions": len(subscriptions),
-        "errors": errors[:3] if errors else []
+        "errors": errors[:3] if errors else [],
+        "message": f"Sent {sent} of {len(subscriptions)} notifications" + (f" - Errors: {errors}" if errors else "")
     }
 
 

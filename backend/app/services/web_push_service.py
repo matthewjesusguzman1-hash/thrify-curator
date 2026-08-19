@@ -74,6 +74,8 @@ class WebPushService:
         try:
             # Run webpush in thread pool to avoid blocking
             loop = asyncio.get_event_loop()
+            print(f"[WebPush] Sending notification to endpoint: {subscription_info.get('endpoint', 'unknown')[:50]}...")
+            print(f"[WebPush] Payload: {payload}")
             await loop.run_in_executor(
                 None,
                 partial(
@@ -85,11 +87,13 @@ class WebPushService:
                     ttl=3600  # 1 hour TTL
                 )
             )
+            print(f"[WebPush] Successfully sent notification")
             return {"success": True}
             
         except WebPushException as e:
             error_msg = str(e)
             status = getattr(getattr(e, "response", None), "status_code", None)
+            print(f"[WebPush] WebPushException: status={status}, error={error_msg}")
             
             # 404/410 means subscription is expired/invalid
             if status in (404, 410) or "404" in error_msg or "410" in error_msg:
@@ -97,6 +101,7 @@ class WebPushService:
             
             return {"success": False, "error": error_msg}
         except Exception as e:
+            print(f"[WebPush] Exception: {str(e)}")
             return {"success": False, "error": str(e)}
     
     async def send_to_all_subscriptions(
