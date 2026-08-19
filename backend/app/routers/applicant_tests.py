@@ -202,49 +202,37 @@ async def create_test(
     if not items_data or len(items_data) == 0:
         raise HTTPException(status_code=400, detail="At least one item is required")
     
-    # Use the shared uploads directory - try to create both paths for compatibility
-    upload_dir = "/app/uploads/applicant_tests"
-    os.makedirs(upload_dir, exist_ok=True)
-    
-    # Also create the old path for backward compatibility
-    old_upload_dir = "/app/backend/uploads/applicant_tests"
-    os.makedirs(old_upload_dir, exist_ok=True)
-    
-    # Save all photos first
+    # Save photos as base64 in the database (more reliable than file storage)
     test_id = str(uuid.uuid4())
     all_photo_records = []
-    save_errors = []
     
     for i, photo in enumerate(photos):
         try:
-            # Generate unique filename - normalize extension
-            ext = os.path.splitext(photo.filename)[1].lower() if photo.filename else ".jpg"
-            # Convert common variations
-            if ext == ".jpeg":
-                ext = ".jpg"
-            if ext not in [".jpg", ".png", ".gif", ".webp", ".heic"]:
-                ext = ".jpg"
-            
-            filename = f"{test_id}_{i}{ext}"
-            
-            # Read content
+            # Read and encode photo as base64
             content = await photo.read()
+            import base64
+            base64_data = base64.b64encode(content).decode('utf-8')
             
-            # Save to BOTH directories for maximum compatibility
-            for save_dir in [upload_dir, old_upload_dir]:
-                filepath = os.path.join(save_dir, filename)
-                with open(filepath, "wb") as f:
-                    f.write(content)
+            # Determine content type
+            ext = os.path.splitext(photo.filename)[1].lower() if photo.filename else ".jpg"
+            content_type = "image/jpeg"
+            if ext in [".png"]:
+                content_type = "image/png"
+            elif ext in [".gif"]:
+                content_type = "image/gif"
+            elif ext in [".webp"]:
+                content_type = "image/webp"
             
             all_photo_records.append({
                 "id": str(uuid.uuid4()),
-                "filename": filename,
+                "filename": f"{test_id}_{i}{ext}",
                 "original_name": photo.filename,
                 "index": i,
-                "size": len(content)
+                "data": base64_data,
+                "content_type": content_type
             })
         except Exception as e:
-            save_errors.append(f"Photo {i}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to process photo {i}: {str(e)}")
     
     # Build items with their associated photos
     items = []
@@ -257,10 +245,6 @@ async def create_test(
             "order": item_idx,
             "photos": item_photos
         })
-    
-    # Check if we had any errors
-    if save_errors:
-        raise HTTPException(status_code=500, detail=f"Failed to save some photos: {'; '.join(save_errors)}")
     
     # Create test document with new items structure
     test_doc = {
@@ -624,41 +608,43 @@ async def get_test_by_token(
 @public_router.get("/photo/{test_id}/{filename}")
 async def get_test_photo(
     test_id: str,
-    filename: str
+    filename: str,
+    db = Depends(get_db)
 ):
-    """Serve test photos (public endpoint)"""
-    from fastapi.responses import FileResponse
-    import logging
+    """Serve test photos from database"""
+    from fastapi.responses import Response
+    import base64
     
-    # Normalize the filename to handle extension variations
-    base_name = os.path.splitext(filename)[0]
-    original_ext = os.path.splitext(filename)[1].lower()
+    # Find the test
+    test = await db.applicant_tests.find_one({"id": test_id})
+    if not test:
+        raise HTTPException(status_code=404, detail="Test not found")
     
-    # Extensions to try if original not found
-    extensions_to_try = [original_ext, ".jpg", ".jpeg", ".png", ".webp", ".heic"]
+    # Find the photo in the test's photos array
+    photo_data = None
+    for photo in test.get("photos", []):
+        if photo.get("filename") == filename:
+            photo_data = photo
+            break
     
-    # Paths to check
-    base_paths = [
-        "/app/uploads/applicant_tests",
-        "/app/backend/uploads/applicant_tests"
-    ]
+    # Also check in items
+    if not photo_data:
+        for item in test.get("items", []):
+            for photo in item.get("photos", []):
+                if photo.get("filename") == filename:
+                    photo_data = photo
+                    break
+            if photo_data:
+                break
     
-    # Try all combinations
-    for base_path in base_paths:
-        # First try exact filename
-        exact_path = os.path.join(base_path, filename)
-        if os.path.exists(exact_path):
-            return FileResponse(exact_path)
-        
-        # Then try with different extensions
-        for ext in extensions_to_try:
-            try_path = os.path.join(base_path, f"{base_name}{ext}")
-            if os.path.exists(try_path):
-                return FileResponse(try_path)
+    if not photo_data or not photo_data.get("data"):
+        raise HTTPException(status_code=404, detail="Photo not found")
     
-    # Log which paths were tried
-    logging.error(f"Photo not found: {filename}. Test ID: {test_id}")
-    raise HTTPException(status_code=404, detail=f"Photo not found: {filename}")
+    # Decode base64 and return as image
+    image_bytes = base64.b64decode(photo_data["data"])
+    content_type = photo_data.get("content_type", "image/jpeg")
+    
+    return Response(content=image_bytes, media_type=content_type)
 
 
 @public_router.post("/submit/{token}")
