@@ -743,4 +743,53 @@ async def submit_test(
         {"$inc": {"submissions_count": 1}}
     )
     
+    # Send notification email to admin
+    try:
+        import resend
+        resend.api_key = os.environ.get("RESEND_API_KEY")
+        
+        frontend_url = os.environ.get("FRONTEND_URL", "https://thrifty-curator.com")
+        
+        notification_html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #00D4FF, #8B5CF6); padding: 30px; text-align: center;">
+                <h1 style="color: white; margin: 0;">New Test Submission!</h1>
+            </div>
+            <div style="padding: 30px; background: #f9f9f9;">
+                <p style="font-size: 16px; color: #333;">
+                    <strong>{invite['applicant_name']}</strong> has submitted their skills assessment.
+                </p>
+                <p style="font-size: 14px; color: #666;">
+                    <strong>Test:</strong> {test['name']}<br>
+                    <strong>Email:</strong> {invite['applicant_email']}<br>
+                    <strong>Submitted:</strong> {datetime.now().strftime('%B %d, %Y at %I:%M %p')}
+                </p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{frontend_url}/admin" style="display: inline-block; background: linear-gradient(135deg, #00D4FF, #8B5CF6); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                        Review Submission
+                    </a>
+                </div>
+            </div>
+            <div style="padding: 20px; text-align: center; background: #1A1A2E;">
+                <p style="color: #888; font-size: 12px; margin: 0;">
+                    © {datetime.now().year} Thrifty Curator
+                </p>
+            </div>
+        </div>
+        """
+        
+        # Send to test creator
+        admin_email = test.get("created_by", "matthewjesusguzman1@gmail.com")
+        
+        emails_client = resend.Emails()
+        emails_client.send({
+            "from": "Thrifty Curator <noreply@thrifty-curator.com>",
+            "to": admin_email,
+            "subject": f"New Submission: {invite['applicant_name']} completed {test['name']}",
+            "html": notification_html
+        })
+    except Exception as e:
+        # Don't fail the submission if notification fails
+        print(f"Failed to send notification email: {e}")
+    
     return {"message": "Assessment submitted successfully", "submission_id": submission_doc["id"]}
