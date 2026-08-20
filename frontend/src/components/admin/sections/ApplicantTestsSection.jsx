@@ -3078,12 +3078,23 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                 {selectedRequest.status === "confirmed" && (
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
                     <h4 className="font-medium text-blue-800 mb-2">Meeting Confirmed</h4>
-                    <p className="text-blue-700">{selectedRequest.confirmed_datetime}</p>
+                    
+                    {/* CT Time - Primary */}
+                    <div className="bg-white rounded-lg p-3 border border-blue-100 mb-2">
+                      <p className="text-xs text-blue-600 font-medium">Your Time (Central)</p>
+                      <p className="text-blue-800 font-bold text-lg">
+                        {selectedRequest.confirmed_datetime_ct || convertPHTStringToCT(selectedRequest.confirmed_datetime) || 'Converting...'}
+                      </p>
+                    </div>
+                    
+                    {/* PHT Time - Secondary */}
+                    <p className="text-sm text-gray-500">PHT: {selectedRequest.confirmed_datetime}</p>
+                    
                     <a 
                       href={selectedRequest.meeting_link} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-blue-600 text-sm flex items-center gap-1 mt-2 hover:underline"
+                      className="text-blue-600 text-sm flex items-center gap-1 mt-3 hover:underline"
                     >
                       <ExternalLink className="w-3 h-3" />
                       {selectedRequest.meeting_link}
