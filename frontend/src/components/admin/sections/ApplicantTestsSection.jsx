@@ -2458,6 +2458,7 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
 function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
   const [sending, setSending] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [specificTime, setSpecificTime] = useState("");
   const [customDateTime, setCustomDateTime] = useState("");
   const [useCustom, setUseCustom] = useState(false);
   const [additionalMessage, setAdditionalMessage] = useState("");
@@ -2474,6 +2475,27 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
       localStorage.setItem('thrifty_default_meeting_link', meetingLink.trim());
       toast.success("Meeting link saved as default!");
     }
+  };
+
+  // Add minutes to a time string (HH:MM format)
+  const addMinutesToTime = (time, mins) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + mins;
+    const newHours = Math.floor(totalMinutes / 60) % 24;
+    const newMins = totalMinutes % 60;
+    const period = newHours >= 12 ? 'PM' : 'AM';
+    const hours12 = newHours % 12 || 12;
+    return `${hours12}:${String(newMins).padStart(2, '0')} ${period}`;
+  };
+
+  // Format time for display (24h to 12h)
+  const formatTime12h = (time24) => {
+    if (!time24) return '';
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
   };
 
   // Get the time slots from the applicant's response
@@ -2522,19 +2544,25 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
 
   const getConfirmedDateTime = () => {
     if (useCustom) return customDateTime;
-    if (!selectedSlot) return "";
+    if (!selectedSlot || !specificTime) return "";
     
-    // Format: "Tuesday, January 21, 2026 at 9:00 AM PHT (7:00 PM CT prev day)"
+    // Format: "Tuesday, January 21, 2026 at 9:00 AM - 9:30 AM PHT"
     const date = new Date(selectedSlot.date + 'T12:00:00');
     const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    return `${dateStr} at ${selectedSlot.start_time_pht}${selectedSlot.end_time_pht ? ' - ' + selectedSlot.end_time_pht : ''} PHT`;
+    const startTime12h = formatTime12h(specificTime);
+    const endTime12h = addMinutesToTime(specificTime, 30);
+    return `${dateStr} at ${startTime12h} - ${endTime12h} PHT`;
   };
 
   const handleSend = async () => {
     const confirmedDateTime = getConfirmedDateTime();
     
     if (!confirmedDateTime.trim()) {
-      toast.error("Please select or enter the confirmed date and time");
+      if (selectedSlot && !specificTime) {
+        toast.error("Please enter the specific meeting time within the selected window");
+      } else {
+        toast.error("Please select or enter the confirmed date and time");
+      }
       return;
     }
     if (!meetingLink.trim()) {
@@ -2588,17 +2616,17 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
         </div>
 
         <div className="p-6 space-y-4 overflow-y-auto flex-1">
-          {/* Time Slot Selection */}
+          {/* Applicant's Availability Blocks */}
           <div>
             <Label className="text-sm font-medium text-gray-700 mb-2 block">
-              Select Confirmed Time *
+              Applicant&apos;s Available Windows
             </Label>
             
             {timeSlots.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-2 mb-4">
                 {timeSlots.map((slot, idx) => {
                   const conflict = checkConflict(slot);
-                  const isSelected = selectedSlot === slot && !useCustom;
+                  const isSelected = selectedSlot === slot;
                   
                   return (
                     <button
@@ -2619,13 +2647,13 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="font-medium text-[#333] text-sm">
-                            {new Date(slot.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                            {new Date(slot.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                           </p>
                           <p className="text-sm text-gray-600">
-                            {slot.start_time_pht}{slot.end_time_pht ? ` - ${slot.end_time_pht}` : ''} PHT
+                            Available: {slot.start_time_pht} - {slot.end_time_pht} PHT
                           </p>
                           <p className="text-xs text-blue-600 mt-1">
-                            Your time: {slot.start_time_ct}{slot.end_time_ct ? ` - ${slot.end_time_ct.split(', ').pop()}` : ''}
+                            Your time: {slot.start_time_ct?.split(', ')[1]} - {slot.end_time_ct?.split(', ')[1]}
                           </p>
                         </div>
                         {isSelected && (
@@ -2641,41 +2669,54 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                     </button>
                   );
                 })}
-                
-                {/* Custom option */}
+              </div>
+            ) : (
+              <div className="bg-gray-50 rounded-lg p-3 text-sm mb-4">
+                <p className="font-medium text-gray-700 mb-1">Applicant&apos;s Availability:</p>
+                <p className="text-gray-600 whitespace-pre-wrap">{request.applicant_response?.availability}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Specific Meeting Time */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">
+              Confirm 30-Minute Meeting Time *
+            </Label>
+            {selectedSlot && !useCustom ? (
+              <div className="space-y-2">
+                <div className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-lg p-3">
+                  <p className="text-sm text-[#10B981] font-medium">
+                    Selected: {new Date(selectedSlot.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Window: {selectedSlot.start_time_pht} - {selectedSlot.end_time_pht} PHT
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Enter specific start time (PHT) within this window:</label>
+                  <Input
+                    type="time"
+                    value={specificTime}
+                    onChange={e => setSpecificTime(e.target.value)}
+                    className="border-gray-300"
+                  />
+                  {specificTime && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      Meeting: {specificTime} - {addMinutesToTime(specificTime, 30)} PHT
+                    </p>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => setUseCustom(true)}
-                  className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
-                    useCustom 
-                      ? 'border-[#10B981] bg-[#10B981]/10' 
-                      : 'border-gray-200 hover:border-gray-300 border-dashed'
-                  }`}
+                  className="text-xs text-gray-500 hover:text-gray-700 underline"
                 >
-                  <p className="text-sm text-gray-600">
-                    <Edit className="w-4 h-4 inline mr-1" />
-                    Enter custom time...
-                  </p>
+                  Or enter completely custom time
                 </button>
-                
-                {useCustom && (
-                  <Input
-                    type="text"
-                    value={customDateTime}
-                    onChange={e => setCustomDateTime(e.target.value)}
-                    placeholder="e.g., Tuesday, January 21, 2026 at 9:00 AM PHT"
-                    className="border-gray-300 mt-2"
-                    autoFocus
-                  />
-                )}
               </div>
             ) : (
-              /* Fallback to manual entry if no structured time slots */
-              <div>
-                <div className="bg-gray-50 rounded-lg p-3 text-sm mb-3">
-                  <p className="font-medium text-gray-700 mb-1">Applicant&apos;s Availability:</p>
-                  <p className="text-gray-600 whitespace-pre-wrap">{request.applicant_response?.availability}</p>
-                </div>
+              <div className="space-y-2">
                 <Input
                   type="text"
                   value={customDateTime}
@@ -2686,7 +2727,16 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                   placeholder="e.g., Tuesday, January 21, 2026 at 9:00 AM PHT"
                   className="border-gray-300"
                 />
-                <p className="text-xs text-gray-500 mt-1">Enter in Philippine Time (PHT)</p>
+                <p className="text-xs text-gray-500">Enter the full date and time in Philippine Time (PHT)</p>
+                {selectedSlot && (
+                  <button
+                    type="button"
+                    onClick={() => setUseCustom(false)}
+                    className="text-xs text-[#8B5CF6] hover:underline"
+                  >
+                    ← Back to selected window
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -2763,7 +2813,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
           </Button>
           <Button
             onClick={handleSend}
-            disabled={sending || (!selectedSlot && !customDateTime) || !meetingLink}
+            disabled={sending || ((!selectedSlot || !specificTime) && !customDateTime) || !meetingLink}
             className="bg-gradient-to-r from-[#10B981] to-[#059669] text-white"
           >
             {sending ? (

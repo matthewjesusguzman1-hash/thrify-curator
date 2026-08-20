@@ -12,7 +12,6 @@ const API = process.env.REACT_APP_BACKEND_URL;
 function convertPHTtoCT(date, time) {
   if (!date || !time) return null;
   
-  const [hours, minutes] = time.split(':').map(Number);
   const year = date.split('-')[0];
   const month = date.split('-')[1];
   const day = date.split('-')[2];
@@ -33,42 +32,11 @@ function convertPHTtoCT(date, time) {
   return utcDate.toLocaleString('en-US', ctOptions);
 }
 
-function formatPHTDisplay(date, time) {
-  if (!date || !time) return '';
-  
-  const [hours, minutes] = time.split(':').map(Number);
-  const dateObj = new Date(date);
-  dateObj.setHours(hours, minutes, 0, 0);
-  
-  const options = {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  };
-  
-  return dateObj.toLocaleString('en-US', options) + ' PHT';
-}
-
-// Add 30 minutes to a time string (HH:MM format)
-function addMinutes(time, mins) {
-  if (!time) return '';
-  const [hours, minutes] = time.split(':').map(Number);
-  const totalMinutes = hours * 60 + minutes + mins;
-  const newHours = Math.floor(totalMinutes / 60) % 24;
-  const newMins = totalMinutes % 60;
-  return `${String(newHours).padStart(2, '0')}:${String(newMins).padStart(2, '0')}`;
-}
-
-// Parse date string like "January 20, 2026" or "2026-01-20" to YYYY-MM-DD
+// Parse date string to YYYY-MM-DD
 function parseDateToISO(dateStr) {
   if (!dateStr) return null;
-  // If already ISO format
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
   
-  // Try parsing natural date format
   const parsed = new Date(dateStr);
   if (!isNaN(parsed.getTime())) {
     return parsed.toISOString().split('T')[0];
@@ -95,6 +63,15 @@ function getDateRange(startStr, endStr) {
   return dates;
 }
 
+// Format time for display (24h to 12h)
+function formatTime12h(time24) {
+  if (!time24) return '';
+  const [hours, minutes] = time24.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hours12 = hours % 12 || 12;
+  return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
+}
+
 export default function InterviewResponsePage() {
   const { token } = useParams();
   const [loading, setLoading] = useState(true);
@@ -102,7 +79,7 @@ export default function InterviewResponsePage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
   const [interviewData, setInterviewData] = useState(null);
-  const [timeSlots, setTimeSlots] = useState([{ date: '', startTime: '', endTime: '' }]);
+  const [availabilityBlocks, setAvailabilityBlocks] = useState([{ date: '', startTime: '', endTime: '' }]);
   const [notes, setNotes] = useState("");
   const [availableDates, setAvailableDates] = useState([]);
 
@@ -115,7 +92,6 @@ export default function InterviewResponsePage() {
       const response = await axios.get(`${API}/api/applicant-tests/public/interview-response/${token}`);
       setInterviewData(response.data);
       
-      // Generate available dates from the range
       const dates = getDateRange(response.data.date_range_start, response.data.date_range_end);
       setAvailableDates(dates);
       
@@ -129,62 +105,54 @@ export default function InterviewResponsePage() {
     }
   };
 
-  const addTimeSlot = () => {
-    if (timeSlots.length < 5) {
-      setTimeSlots([...timeSlots, { date: '', startTime: '', endTime: '' }]);
+  const addBlock = () => {
+    if (availabilityBlocks.length < 5) {
+      setAvailabilityBlocks([...availabilityBlocks, { date: '', startTime: '', endTime: '' }]);
     }
   };
 
-  const removeTimeSlot = (index) => {
-    if (timeSlots.length > 1) {
-      setTimeSlots(timeSlots.filter((_, i) => i !== index));
+  const removeBlock = (index) => {
+    if (availabilityBlocks.length > 1) {
+      setAvailabilityBlocks(availabilityBlocks.filter((_, i) => i !== index));
     }
   };
 
-  const updateTimeSlot = (index, field, value) => {
-    const updated = [...timeSlots];
+  const updateBlock = (index, field, value) => {
+    const updated = [...availabilityBlocks];
     updated[index][field] = value;
-    
-    // Auto-populate end time when start time is selected (30 mins later)
-    if (field === 'startTime' && value) {
-      updated[index].endTime = addMinutes(value, 30);
-    }
-    
-    setTimeSlots(updated);
+    setAvailabilityBlocks(updated);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const validSlots = timeSlots.filter(slot => slot.date && slot.startTime);
-    if (validSlots.length === 0) {
-      toast.error("Please select at least one available time slot");
+    const validBlocks = availabilityBlocks.filter(block => block.date && block.startTime && block.endTime);
+    if (validBlocks.length === 0) {
+      toast.error("Please select at least one availability block");
       return;
     }
 
-    const formattedSlots = validSlots.map(slot => {
-      const phtStart = formatPHTDisplay(slot.date, slot.startTime);
-      const ctStart = convertPHTtoCT(slot.date, slot.startTime);
-      const phtEnd = slot.endTime ? formatPHTDisplay(slot.date, slot.endTime) : null;
-      const ctEnd = slot.endTime ? convertPHTtoCT(slot.date, slot.endTime) : null;
+    // Format the availability text
+    const formattedBlocks = validBlocks.map(block => {
+      const dateObj = new Date(block.date + 'T12:00:00');
+      const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const ctStart = convertPHTtoCT(block.date, block.startTime);
+      const ctEnd = convertPHTtoCT(block.date, block.endTime);
       
-      if (phtEnd && ctEnd) {
-        return `${phtStart} to ${slot.endTime} PHT\n→ Central Time: ${ctStart} to ${ctEnd.split(', ')[1]}`;
-      }
-      return `${phtStart}\n→ Central Time: ${ctStart}`;
+      return `${dateStr}: ${formatTime12h(block.startTime)} - ${formatTime12h(block.endTime)} PHT\n→ Central Time: ${ctStart?.split(', ')[1] || ''} - ${ctEnd?.split(', ')[1] || ''}`;
     }).join('\n\n');
 
     setSubmitting(true);
     try {
       await axios.post(`${API}/api/applicant-tests/public/interview-response/${token}`, {
-        availability_text: formattedSlots,
+        availability_text: formattedBlocks,
         additional_notes: notes,
-        time_slots: validSlots.map(slot => ({
-          date: slot.date,
-          start_time_pht: slot.startTime,
-          end_time_pht: slot.endTime || null,
-          start_time_ct: convertPHTtoCT(slot.date, slot.startTime),
-          end_time_ct: slot.endTime ? convertPHTtoCT(slot.date, slot.endTime) : null
+        time_slots: validBlocks.map(block => ({
+          date: block.date,
+          start_time_pht: block.startTime,
+          end_time_pht: block.endTime,
+          start_time_ct: convertPHTtoCT(block.date, block.startTime),
+          end_time_ct: convertPHTtoCT(block.date, block.endTime)
         }))
       });
       
@@ -197,7 +165,6 @@ export default function InterviewResponsePage() {
     }
   };
 
-  // Format date for display
   const formatDateForDisplay = (isoDate) => {
     if (!isoDate) return '';
     const date = new Date(isoDate + 'T12:00:00');
@@ -273,7 +240,7 @@ export default function InterviewResponsePage() {
               Hi <span className="font-semibold">{interviewData?.applicant_name}</span>,
             </p>
             <p className="text-white/70 mt-2">
-              Please select your available times for the interview.
+              Please select when you&apos;re available for a 30-minute interview.
             </p>
           </div>
 
@@ -282,26 +249,31 @@ export default function InterviewResponsePage() {
             <div className="bg-[#8B5CF6]/20 border border-[#8B5CF6]/50 rounded-xl p-4">
               <p className="text-white font-medium text-sm">
                 <Clock className="w-4 h-4 inline mr-2" />
-                Select times in Philippine Time (PHT) — We&apos;ll automatically convert to Central Time (CT)
+                Select your available time blocks in Philippine Time (PHT)
+              </p>
+              <p className="text-white/60 text-xs mt-1">
+                We&apos;ll pick a 30-minute slot within your available window and send you a confirmation.
               </p>
             </div>
           </div>
 
-          {/* Time Slot Picker */}
+          {/* Availability Form */}
           <form onSubmit={handleSubmit} className="p-6">
             <label className="block text-white font-medium mb-4">
-              Select Your Available Time Slots *
+              When are you available? *
             </label>
             
             <div className="space-y-4 mb-6">
-              {timeSlots.map((slot, index) => (
+              {availabilityBlocks.map((block, index) => (
                 <div key={index} className="bg-white/5 rounded-xl p-4 border border-white/10">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-white/70 text-sm font-medium">Time Slot {index + 1}</span>
-                    {timeSlots.length > 1 && (
+                    <span className="text-white/70 text-sm font-medium">
+                      {availabilityBlocks.length > 1 ? `Option ${index + 1}` : 'Your Availability'}
+                    </span>
+                    {availabilityBlocks.length > 1 && (
                       <button
                         type="button"
-                        onClick={() => removeTimeSlot(index)}
+                        onClick={() => removeBlock(index)}
                         className="text-red-400 hover:text-red-300 p-1"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -309,17 +281,17 @@ export default function InterviewResponsePage() {
                     )}
                   </div>
                   
-                  {/* Date Selector - Only available dates */}
-                  <div className="mb-3">
+                  {/* Date Selector */}
+                  <div className="mb-4">
                     <label className="block text-white/50 text-xs mb-2">Select Date</label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {availableDates.map((date) => (
                         <button
                           key={date}
                           type="button"
-                          onClick={() => updateTimeSlot(index, 'date', date)}
+                          onClick={() => updateBlock(index, 'date', date)}
                           className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                            slot.date === date 
+                            block.date === date 
                               ? 'bg-[#8B5CF6] text-white' 
                               : 'bg-white/10 text-white/70 hover:bg-white/20'
                           }`}
@@ -330,55 +302,59 @@ export default function InterviewResponsePage() {
                     </div>
                   </div>
                   
-                  {/* Time Pickers - Only show after date is selected */}
-                  {slot.date && (
-                    <div className="grid grid-cols-2 gap-3 mt-4">
-                      <div>
-                        <label className="block text-white/50 text-xs mb-1">Start Time (PHT)</label>
-                        <input
-                          type="time"
-                          value={slot.startTime}
-                          onChange={(e) => updateTimeSlot(index, 'startTime', e.target.value)}
-                          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-white/50 text-xs mb-1">End Time (PHT)</label>
-                        <input
-                          type="time"
-                          value={slot.endTime}
-                          onChange={(e) => updateTimeSlot(index, 'endTime', e.target.value)}
-                          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
-                        />
-                        <p className="text-white/40 text-xs mt-1">Auto-filled +30 min</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Live CT Conversion */}
-                  {slot.date && slot.startTime && (
-                    <div className="mt-3 bg-green-500/20 border border-green-500/50 rounded-lg p-3">
-                      <p className="text-green-300 text-sm font-medium">
-                        <Clock className="w-4 h-4 inline mr-1" />
-                        Central Time: {convertPHTtoCT(slot.date, slot.startTime)}
-                        {slot.endTime && ` to ${convertPHTtoCT(slot.date, slot.endTime)?.split(', ')[1] || ''}`}
+                  {/* Time Range - Only show after date is selected */}
+                  {block.date && (
+                    <div className="space-y-3">
+                      <p className="text-white/60 text-xs">
+                        Select your available window (we&apos;ll schedule a 30-min meeting within this time)
                       </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-white/50 text-xs mb-1">From (PHT)</label>
+                          <input
+                            type="time"
+                            value={block.startTime}
+                            onChange={(e) => updateBlock(index, 'startTime', e.target.value)}
+                            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-white/50 text-xs mb-1">To (PHT)</label>
+                          <input
+                            type="time"
+                            value={block.endTime}
+                            onChange={(e) => updateBlock(index, 'endTime', e.target.value)}
+                            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Live CT Conversion */}
+                      {block.startTime && block.endTime && (
+                        <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-3">
+                          <p className="text-green-300 text-sm font-medium">
+                            <Clock className="w-4 h-4 inline mr-1" />
+                            Your Time (CT): {convertPHTtoCT(block.date, block.startTime)?.split(', ')[1]} - {convertPHTtoCT(block.date, block.endTime)?.split(', ')[1]}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               ))}
             </div>
             
-            {/* Add More Button */}
-            {timeSlots.length < 5 && (
+            {/* Add Another Option */}
+            {availabilityBlocks.length < 5 && (
               <button
                 type="button"
-                onClick={addTimeSlot}
+                onClick={addBlock}
                 className="w-full py-3 border-2 border-dashed border-white/30 rounded-xl text-white/70 hover:text-white hover:border-white/50 transition-colors flex items-center justify-center gap-2 mb-6"
               >
                 <Plus className="w-5 h-5" />
-                Add Another Time Slot
+                Add Another Day/Time Option
               </button>
             )}
 
