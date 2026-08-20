@@ -328,6 +328,21 @@ async def get_interview_request_detail(
     return request
 
 
+@router.delete("/interview-inbox/{request_id}")
+async def delete_interview_request(
+    request_id: str,
+    admin: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Delete an interview request from the inbox"""
+    result = await db.interview_requests.delete_one({"id": request_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Interview request not found")
+    
+    return {"message": "Interview request deleted"}
+
+
 @router.post("/interview-inbox/{request_id}/send-meeting-link")
 async def send_meeting_link(
     request_id: str,

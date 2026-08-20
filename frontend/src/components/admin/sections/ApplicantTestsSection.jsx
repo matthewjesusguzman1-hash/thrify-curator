@@ -2180,6 +2180,24 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
     }
   };
 
+  const handleDelete = async (requestId, e) => {
+    e.stopPropagation();
+    if (!window.confirm("Delete this interview request? This cannot be undone.")) return;
+    
+    try {
+      await axios.delete(`${API}/api/applicant-tests/interview-inbox/${requestId}`, getAuthHeader());
+      toast.success("Interview request deleted");
+      // Remove from local state
+      setRequests(requests.filter(r => r.id !== requestId));
+      // Clear selection if deleted item was selected
+      if (selectedRequest?.id === requestId) {
+        setSelectedRequest(null);
+      }
+    } catch (error) {
+      toast.error("Failed to delete interview request");
+    }
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
       case "responded":
@@ -2242,13 +2260,22 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                     className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${selectedRequest?.id === req.id ? 'bg-[#8B5CF6]/5 border-l-4 border-[#8B5CF6]' : ''}`}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="font-medium text-[#333] truncate">{req.applicant_name}</p>
                         <p className="text-sm text-gray-500 truncate">{req.applicant_email}</p>
                         <p className="text-xs text-gray-400 mt-1">{req.test_name}</p>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        {getStatusBadge(req.status)}
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(req.status)}
+                          <button
+                            onClick={(e) => handleDelete(req.id, e)}
+                            className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                         {req.applicant_response && (
                           <span className="text-xs text-green-600">
                             <MessageSquare className="w-3 h-3 inline mr-1" />
@@ -2281,7 +2308,16 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                     <h3 className="text-lg font-bold text-[#333]">{selectedRequest.applicant_name}</h3>
                     <p className="text-sm text-gray-500">{selectedRequest.applicant_email}</p>
                   </div>
-                  {getStatusBadge(selectedRequest.status)}
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(selectedRequest.status)}
+                    <button
+                      onClick={(e) => handleDelete(selectedRequest.id, e)}
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete this request"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Interview Details */}
