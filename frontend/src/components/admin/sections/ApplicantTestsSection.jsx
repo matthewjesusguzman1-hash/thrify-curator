@@ -2710,8 +2710,32 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
     return startCT || "";
   };
 
-  // Generate 30-minute time slots from an availability window
-  const generate30MinSlots = (startTime, endTime) => {
+  // Check if a time range crosses midnight (overnight)
+  const isOvernight = (startTime, endTime) => {
+    if (!startTime || !endTime) return false;
+    const start = startTime.includes(':') ? startTime : `${startTime.slice(0,2)}:${startTime.slice(2,4)}`;
+    const end = endTime.includes(':') ? endTime : `${endTime.slice(0,2)}:${endTime.slice(2,4)}`;
+    const [startH] = start.split(':').map(Number);
+    const [endH] = end.split(':').map(Number);
+    return endH < startH; // End hour is less than start hour = crosses midnight
+  };
+
+  // Get the next day's date string
+  const getNextDay = (dateStr) => {
+    const date = new Date(dateStr + 'T12:00:00');
+    date.setDate(date.getDate() + 1);
+    return date.toISOString().split('T')[0];
+  };
+
+  // Convert PHT time to CT, handling overnight slots
+  const convertPHTtoCTWithDate = (date, time, isEndOfOvernight = false) => {
+    if (!date || !time) return null;
+    const actualDate = isEndOfOvernight ? getNextDay(date) : date;
+    return convertPHTtoCT(actualDate, time);
+  };
+
+  // Generate 30-minute time slots from an availability window (handles overnight)
+  const generate30MinSlots = (startTime, endTime, baseDate) => {
     if (!startTime || !endTime) return [];
     const slots = [];
     
@@ -2723,18 +2747,29 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
     const [endH, endM] = end.split(':').map(Number);
     
     let currentMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
+    let endMinutes = endH * 60 + endM;
+    
+    // Handle overnight: if end < start, add 24 hours to end
+    if (endMinutes < currentMinutes) {
+      endMinutes += 24 * 60;
+    }
     
     // Generate slots until we can't fit another 30-min meeting
     while (currentMinutes + 30 <= endMinutes) {
-      const slotStartH = Math.floor(currentMinutes / 60);
+      const slotStartH = Math.floor(currentMinutes / 60) % 24;
       const slotStartM = currentMinutes % 60;
-      const slotEndH = Math.floor((currentMinutes + 30) / 60);
+      const slotEndH = Math.floor((currentMinutes + 30) / 60) % 24;
       const slotEndM = (currentMinutes + 30) % 60;
+      
+      // Determine if this slot is on the next day
+      const startsNextDay = currentMinutes >= 24 * 60;
+      const endsNextDay = (currentMinutes + 30) >= 24 * 60;
       
       slots.push({
         start: `${String(slotStartH).padStart(2, '0')}:${String(slotStartM).padStart(2, '0')}`,
-        end: `${String(slotEndH).padStart(2, '0')}:${String(slotEndM).padStart(2, '0')}`
+        end: `${String(slotEndH).padStart(2, '0')}:${String(slotEndM).padStart(2, '0')}`,
+        startDate: startsNextDay ? getNextDay(baseDate) : baseDate,
+        endDate: endsNextDay ? getNextDay(baseDate) : baseDate
       });
       
       currentMinutes += 30; // Move to next 30-min slot
@@ -3014,9 +3049,10 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                           </p>
                           <p className="text-sm text-gray-600">
                             Available: {slot.start_time_pht} - {slot.end_time_pht} PHT
+                            {isOvernight(slot.start_time_pht, slot.end_time_pht) && <span className="text-orange-500 ml-1">(overnight)</span>}
                           </p>
                           <p className="text-xs text-blue-600 mt-1">
-                            Your time (CT): {convertPHTtoCT(slot.date, slot.start_time_pht)} → {convertPHTtoCT(slot.date, slot.end_time_pht)?.split(', ').pop()}
+                            Your time (CT): {convertPHTtoCT(slot.date, slot.start_time_pht)} → {convertPHTtoCTWithDate(slot.date, slot.end_time_pht, isOvernight(slot.start_time_pht, slot.end_time_pht))?.split(', ').pop()}
                           </p>
                         </div>
                         {isSelected && (
@@ -3051,21 +3087,22 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                 <div className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-lg p-3">
                   <p className="text-sm text-[#10B981] font-medium">
                     Selected: {new Date(selectedSlot.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                    {isOvernight(selectedSlot.start_time_pht, selectedSlot.end_time_pht) && <span className="text-orange-500 ml-1">(overnight into next day)</span>}
                   </p>
                   <p className="text-xs text-gray-600 mt-1">
                     PHT Window: {selectedSlot.start_time_pht} - {selectedSlot.end_time_pht}
                   </p>
                   <p className="text-xs text-blue-600 font-medium mt-1">
-                    Your Time (CT): {convertPHTtoCT(selectedSlot.date, selectedSlot.start_time_pht)} - {convertPHTtoCT(selectedSlot.date, selectedSlot.end_time_pht)?.split(', ').pop()}
+                    Your Time (CT): {convertPHTtoCT(selectedSlot.date, selectedSlot.start_time_pht)} - {convertPHTtoCTWithDate(selectedSlot.date, selectedSlot.end_time_pht, isOvernight(selectedSlot.start_time_pht, selectedSlot.end_time_pht))?.split(', ').pop()}
                   </p>
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-2">Select a 30-minute time slot:</label>
                   <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                    {generate30MinSlots(selectedSlot.start_time_pht, selectedSlot.end_time_pht).map((slot, idx) => {
+                    {generate30MinSlots(selectedSlot.start_time_pht, selectedSlot.end_time_pht, selectedSlot.date).map((slot, idx) => {
                       const isSelected = specificTime === slot.start;
-                      const slotCT = convertPHTtoCT(selectedSlot.date, slot.start);
-                      const slotEndCT = convertPHTtoCT(selectedSlot.date, slot.end)?.split(', ').pop();
+                      const slotCT = convertPHTtoCT(slot.startDate, slot.start);
+                      const slotEndCT = convertPHTtoCT(slot.endDate, slot.end)?.split(', ').pop();
                       
                       return (
                         <button
