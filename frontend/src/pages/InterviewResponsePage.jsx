@@ -9,25 +9,17 @@ import axios from "axios";
 const API = process.env.REACT_APP_BACKEND_URL;
 
 // Convert PHT to CT (PHT is UTC+8, CT is UTC-6 standard / UTC-5 DST)
-// PHT is typically 14 hours ahead of CT (13 during DST)
 function convertPHTtoCT(date, time) {
   if (!date || !time) return null;
   
-  // Parse the PHT datetime
   const [hours, minutes] = time.split(':').map(Number);
-  const phtDate = new Date(date);
-  phtDate.setHours(hours, minutes, 0, 0);
-  
-  // PHT is UTC+8, we need to convert to UTC first, then to CT
-  // Create a date string that represents PHT time
-  const year = phtDate.getFullYear();
-  const month = String(phtDate.getMonth() + 1).padStart(2, '0');
-  const day = String(phtDate.getDate()).padStart(2, '0');
+  const year = date.split('-')[0];
+  const month = date.split('-')[1];
+  const day = date.split('-')[2];
   const phtString = `${year}-${month}-${day}T${time}:00+08:00`;
   
   const utcDate = new Date(phtString);
   
-  // Format in Central Time
   const ctOptions = {
     timeZone: 'America/Chicago',
     weekday: 'short',
@@ -60,6 +52,49 @@ function formatPHTDisplay(date, time) {
   return dateObj.toLocaleString('en-US', options) + ' PHT';
 }
 
+// Add 30 minutes to a time string (HH:MM format)
+function addMinutes(time, mins) {
+  if (!time) return '';
+  const [hours, minutes] = time.split(':').map(Number);
+  const totalMinutes = hours * 60 + minutes + mins;
+  const newHours = Math.floor(totalMinutes / 60) % 24;
+  const newMins = totalMinutes % 60;
+  return `${String(newHours).padStart(2, '0')}:${String(newMins).padStart(2, '0')}`;
+}
+
+// Parse date string like "January 20, 2026" or "2026-01-20" to YYYY-MM-DD
+function parseDateToISO(dateStr) {
+  if (!dateStr) return null;
+  // If already ISO format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  
+  // Try parsing natural date format
+  const parsed = new Date(dateStr);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().split('T')[0];
+  }
+  return null;
+}
+
+// Generate array of dates between start and end
+function getDateRange(startStr, endStr) {
+  const start = parseDateToISO(startStr);
+  const end = parseDateToISO(endStr);
+  
+  if (!start || !end) return [];
+  
+  const dates = [];
+  const current = new Date(start);
+  const endDate = new Date(end);
+  
+  while (current <= endDate) {
+    dates.push(current.toISOString().split('T')[0]);
+    current.setDate(current.getDate() + 1);
+  }
+  
+  return dates;
+}
+
 export default function InterviewResponsePage() {
   const { token } = useParams();
   const [loading, setLoading] = useState(true);
@@ -69,6 +104,7 @@ export default function InterviewResponsePage() {
   const [interviewData, setInterviewData] = useState(null);
   const [timeSlots, setTimeSlots] = useState([{ date: '', startTime: '', endTime: '' }]);
   const [notes, setNotes] = useState("");
+  const [availableDates, setAvailableDates] = useState([]);
 
   useEffect(() => {
     fetchInterviewData();
@@ -78,6 +114,11 @@ export default function InterviewResponsePage() {
     try {
       const response = await axios.get(`${API}/api/applicant-tests/public/interview-response/${token}`);
       setInterviewData(response.data);
+      
+      // Generate available dates from the range
+      const dates = getDateRange(response.data.date_range_start, response.data.date_range_end);
+      setAvailableDates(dates);
+      
       if (response.data.already_responded) {
         setSubmitted(true);
       }
@@ -103,20 +144,24 @@ export default function InterviewResponsePage() {
   const updateTimeSlot = (index, field, value) => {
     const updated = [...timeSlots];
     updated[index][field] = value;
+    
+    // Auto-populate end time when start time is selected (30 mins later)
+    if (field === 'startTime' && value) {
+      updated[index].endTime = addMinutes(value, 30);
+    }
+    
     setTimeSlots(updated);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate at least one complete time slot
     const validSlots = timeSlots.filter(slot => slot.date && slot.startTime);
     if (validSlots.length === 0) {
       toast.error("Please select at least one available time slot");
       return;
     }
 
-    // Format the availability text with both PHT and CT times
     const formattedSlots = validSlots.map(slot => {
       const phtStart = formatPHTDisplay(slot.date, slot.startTime);
       const ctStart = convertPHTtoCT(slot.date, slot.startTime);
@@ -150,6 +195,13 @@ export default function InterviewResponsePage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Format date for display
+  const formatDateForDisplay = (isoDate) => {
+    if (!isoDate) return '';
+    const date = new Date(isoDate + 'T12:00:00');
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
   if (loading) {
@@ -225,21 +277,8 @@ export default function InterviewResponsePage() {
             </p>
           </div>
 
-          {/* Interview Details */}
+          {/* Timezone Info */}
           <div className="p-6 bg-white/5">
-            <div className="flex items-start gap-4 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-[#8B5CF6]/20 flex items-center justify-center flex-shrink-0">
-                <Calendar className="w-5 h-5 text-[#8B5CF6]" />
-              </div>
-              <div>
-                <p className="text-white/50 text-sm">Availability Window</p>
-                <p className="text-white font-medium">
-                  {interviewData?.date_range_start} - {interviewData?.date_range_end}
-                </p>
-              </div>
-            </div>
-            
-            {/* Timezone Info */}
             <div className="bg-[#8B5CF6]/20 border border-[#8B5CF6]/50 rounded-xl p-4">
               <p className="text-white font-medium text-sm">
                 <Clock className="w-4 h-4 inline mr-2" />
@@ -270,40 +309,52 @@ export default function InterviewResponsePage() {
                     )}
                   </div>
                   
-                  {/* Date Picker */}
+                  {/* Date Selector - Only available dates */}
                   <div className="mb-3">
-                    <label className="block text-white/50 text-xs mb-1">Date</label>
-                    <input
-                      type="date"
-                      value={slot.date}
-                      onChange={(e) => updateTimeSlot(index, 'date', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
-                      required
-                    />
+                    <label className="block text-white/50 text-xs mb-2">Select Date</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {availableDates.map((date) => (
+                        <button
+                          key={date}
+                          type="button"
+                          onClick={() => updateTimeSlot(index, 'date', date)}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            slot.date === date 
+                              ? 'bg-[#8B5CF6] text-white' 
+                              : 'bg-white/10 text-white/70 hover:bg-white/20'
+                          }`}
+                        >
+                          {formatDateForDisplay(date)}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   
-                  {/* Time Pickers */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-white/50 text-xs mb-1">Start Time (PHT)</label>
-                      <input
-                        type="time"
-                        value={slot.startTime}
-                        onChange={(e) => updateTimeSlot(index, 'startTime', e.target.value)}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
-                        required
-                      />
+                  {/* Time Pickers - Only show after date is selected */}
+                  {slot.date && (
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                      <div>
+                        <label className="block text-white/50 text-xs mb-1">Start Time (PHT)</label>
+                        <input
+                          type="time"
+                          value={slot.startTime}
+                          onChange={(e) => updateTimeSlot(index, 'startTime', e.target.value)}
+                          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-white/50 text-xs mb-1">End Time (PHT)</label>
+                        <input
+                          type="time"
+                          value={slot.endTime}
+                          onChange={(e) => updateTimeSlot(index, 'endTime', e.target.value)}
+                          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
+                        />
+                        <p className="text-white/40 text-xs mt-1">Auto-filled +30 min</p>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-white/50 text-xs mb-1">End Time (PHT)</label>
-                      <input
-                        type="time"
-                        value={slot.endTime}
-                        onChange={(e) => updateTimeSlot(index, 'endTime', e.target.value)}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
-                      />
-                    </div>
-                  </div>
+                  )}
                   
                   {/* Live CT Conversion */}
                   {slot.date && slot.startTime && (

@@ -1230,25 +1230,36 @@ function ScheduleInterviewModal({ test, selectedEmails, submissions, onClose, ge
   const [timezone, setTimezone] = useState("Central Time (CT)");
   const [subject, setSubject] = useState(`Interview Scheduling - ${test.name}`);
   
-  // Default message with timezone reference for Philippines applicants
-  const getDefaultMessage = () => `Thank you for completing our skills assessment! We were impressed with your work and would like to schedule a video interview with you.
+  // Built-in default message
+  const BUILT_IN_DEFAULT = `Thank you for completing our skills assessment! We were impressed with your work and would like to schedule a video interview with you.
 
-Please reply to this email with your availability within the date range below. Let us know 2-3 time slots that work best for you.
+Please click the link in this email to select your available times from the date range below.
 
-IMPORTANT - Time Zone Conversion:
-We are in Central Time (CT). Philippine Time (PHT) is 14 hours ahead of CT.
-
-Examples:
-• 8:00 AM CT = 10:00 PM PHT same day
-• 10:00 AM CT = 12:00 AM (midnight) PHT next day
-• 5:00 PM CT = 7:00 AM PHT next day
-• 7:00 PM CT = 9:00 AM PHT next day
-
-Please provide your availability in Philippine Time (PHT) and we will convert it on our end.
+IMPORTANT - Time Zone:
+Select your times in Philippine Time (PHT). The system will automatically convert to our time (Central Time).
 
 We look forward to speaking with you!`;
 
+  // Get the saved custom default or fall back to built-in
+  const getDefaultMessage = () => {
+    const saved = localStorage.getItem('thrifty_scheduling_default_message');
+    return saved || BUILT_IN_DEFAULT;
+  };
+
   const [message, setMessage] = useState(getDefaultMessage());
+
+  // Save current message as the new default
+  const saveAsDefault = () => {
+    localStorage.setItem('thrifty_scheduling_default_message', message);
+    toast.success("Message saved as your default!");
+  };
+
+  // Reset to built-in default
+  const resetToBuiltIn = () => {
+    setMessage(BUILT_IN_DEFAULT);
+    localStorage.removeItem('thrifty_scheduling_default_message');
+    toast.success("Reset to original default");
+  };
 
   // Set default date range (next 7 days) - use local dates to avoid timezone shift
   useEffect(() => {
@@ -1445,13 +1456,29 @@ We look forward to speaking with you!`;
               <Label className="text-sm font-medium text-gray-700">
                 Message
               </Label>
-              <button
-                type="button"
-                onClick={() => setMessage(getDefaultMessage())}
-                className="text-xs text-[#8B5CF6] hover:underline"
-              >
-                Reset to Default
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={saveAsDefault}
+                  className="text-xs text-green-600 hover:underline font-medium"
+                >
+                  Save as My Default
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMessage(getDefaultMessage())}
+                  className="text-xs text-[#8B5CF6] hover:underline"
+                >
+                  Load My Default
+                </button>
+                <button
+                  type="button"
+                  onClick={resetToBuiltIn}
+                  className="text-xs text-gray-500 hover:underline"
+                >
+                  Reset to Original
+                </button>
+              </div>
             </div>
             <textarea
               value={message}
@@ -1461,7 +1488,7 @@ We look forward to speaking with you!`;
               placeholder="Enter your message..."
             />
             <p className="text-xs text-gray-500 mt-1">
-              The email will include the date range and meeting link automatically. Recipients can reply directly to this email.
+              The email will include the date range and a link for applicants to select their available times.
             </p>
           </div>
         </div>
