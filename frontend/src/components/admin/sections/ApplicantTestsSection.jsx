@@ -2285,54 +2285,47 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
                     <h4 className="font-medium text-green-800 mb-3 flex items-center gap-2">
                       <CheckCircle className="w-4 h-4" />
-                      Applicant&apos;s Availability (Philippine Time)
+                      Applicant&apos;s Available Times
                     </h4>
-                    <div className="bg-white rounded-lg p-3 mb-3">
-                      <p className="text-[#333] whitespace-pre-wrap">{selectedRequest.applicant_response.availability}</p>
-                    </div>
                     
-                    {/* CT Conversion Helper */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-                      <h5 className="font-medium text-blue-800 text-sm mb-2 flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        Convert to Central Time (CT)
-                      </h5>
-                      <p className="text-xs text-blue-700 mb-2">PHT is 14 hours ahead of CT (15 during daylight saving)</p>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="bg-white/80 rounded p-2">
-                          <span className="text-gray-500">If PHT is:</span>
-                          <span className="block font-medium text-blue-800">9:00 AM PHT</span>
-                        </div>
-                        <div className="bg-white/80 rounded p-2">
-                          <span className="text-gray-500">CT is:</span>
-                          <span className="block font-medium text-green-700">7:00 PM CT (prev day)</span>
-                        </div>
-                        <div className="bg-white/80 rounded p-2">
-                          <span className="text-gray-500">If PHT is:</span>
-                          <span className="block font-medium text-blue-800">2:00 PM PHT</span>
-                        </div>
-                        <div className="bg-white/80 rounded p-2">
-                          <span className="text-gray-500">CT is:</span>
-                          <span className="block font-medium text-green-700">12:00 AM CT (midnight)</span>
-                        </div>
-                        <div className="bg-white/80 rounded p-2">
-                          <span className="text-gray-500">If PHT is:</span>
-                          <span className="block font-medium text-blue-800">8:00 PM PHT</span>
-                        </div>
-                        <div className="bg-white/80 rounded p-2">
-                          <span className="text-gray-500">CT is:</span>
-                          <span className="block font-medium text-green-700">6:00 AM CT (same day)</span>
-                        </div>
+                    {/* Display converted time slots if available */}
+                    {selectedRequest.applicant_response.time_slots && selectedRequest.applicant_response.time_slots.length > 0 ? (
+                      <div className="space-y-3 mb-3">
+                        {selectedRequest.applicant_response.time_slots.map((slot, idx) => (
+                          <div key={idx} className="bg-white rounded-lg p-3 border border-green-100">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <p className="text-xs text-gray-500 mb-1">Philippine Time (PHT)</p>
+                                <p className="text-[#333] font-medium">
+                                  {slot.date} at {slot.start_time_pht}
+                                  {slot.end_time_pht && ` - ${slot.end_time_pht}`}
+                                </p>
+                              </div>
+                              <div className="text-right flex-1">
+                                <p className="text-xs text-blue-600 mb-1">Your Time (Central)</p>
+                                <p className="text-blue-700 font-semibold">
+                                  {slot.start_time_ct}
+                                  {slot.end_time_ct && ` - ${slot.end_time_ct.split(', ').pop()}`}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
+                    ) : (
+                      /* Fallback to plain text display */
+                      <div className="bg-white rounded-lg p-3 mb-3">
+                        <p className="text-[#333] whitespace-pre-wrap">{selectedRequest.applicant_response.availability}</p>
+                      </div>
+                    )}
                     
                     {selectedRequest.applicant_response.notes && (
-                      <div className="text-sm text-gray-600">
-                        <p className="font-medium">Additional Notes:</p>
+                      <div className="text-sm text-gray-600 bg-white rounded-lg p-3">
+                        <p className="font-medium text-gray-700">Additional Notes:</p>
                         <p>{selectedRequest.applicant_response.notes}</p>
                       </div>
                     )}
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-xs text-gray-500 mt-3">
                       Responded: {new Date(selectedRequest.applicant_response.responded_at).toLocaleString()}
                     </p>
                   </div>

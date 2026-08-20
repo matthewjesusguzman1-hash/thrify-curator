@@ -1,22 +1,73 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Calendar, Clock, Send, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Calendar, Clock, Send, CheckCircle, AlertCircle, Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import axios from "axios";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
+// Convert PHT to CT (PHT is UTC+8, CT is UTC-6 standard / UTC-5 DST)
+// PHT is typically 14 hours ahead of CT (13 during DST)
+function convertPHTtoCT(date, time) {
+  if (!date || !time) return null;
+  
+  // Parse the PHT datetime
+  const [hours, minutes] = time.split(':').map(Number);
+  const phtDate = new Date(date);
+  phtDate.setHours(hours, minutes, 0, 0);
+  
+  // PHT is UTC+8, we need to convert to UTC first, then to CT
+  // Create a date string that represents PHT time
+  const year = phtDate.getFullYear();
+  const month = String(phtDate.getMonth() + 1).padStart(2, '0');
+  const day = String(phtDate.getDate()).padStart(2, '0');
+  const phtString = `${year}-${month}-${day}T${time}:00+08:00`;
+  
+  const utcDate = new Date(phtString);
+  
+  // Format in Central Time
+  const ctOptions = {
+    timeZone: 'America/Chicago',
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  };
+  
+  return utcDate.toLocaleString('en-US', ctOptions);
+}
+
+function formatPHTDisplay(date, time) {
+  if (!date || !time) return '';
+  
+  const [hours, minutes] = time.split(':').map(Number);
+  const dateObj = new Date(date);
+  dateObj.setHours(hours, minutes, 0, 0);
+  
+  const options = {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  };
+  
+  return dateObj.toLocaleString('en-US', options) + ' PHT';
+}
+
 export default function InterviewResponsePage() {
   const { token } = useParams();
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
   const [interviewData, setInterviewData] = useState(null);
-  const [availability, setAvailability] = useState("");
+  const [timeSlots, setTimeSlots] = useState([{ date: '', startTime: '', endTime: '' }]);
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
@@ -37,19 +88,59 @@ export default function InterviewResponsePage() {
     }
   };
 
+  const addTimeSlot = () => {
+    if (timeSlots.length < 5) {
+      setTimeSlots([...timeSlots, { date: '', startTime: '', endTime: '' }]);
+    }
+  };
+
+  const removeTimeSlot = (index) => {
+    if (timeSlots.length > 1) {
+      setTimeSlots(timeSlots.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateTimeSlot = (index, field, value) => {
+    const updated = [...timeSlots];
+    updated[index][field] = value;
+    setTimeSlots(updated);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!availability.trim()) {
-      toast.error("Please enter your available times");
+    // Validate at least one complete time slot
+    const validSlots = timeSlots.filter(slot => slot.date && slot.startTime);
+    if (validSlots.length === 0) {
+      toast.error("Please select at least one available time slot");
       return;
     }
+
+    // Format the availability text with both PHT and CT times
+    const formattedSlots = validSlots.map(slot => {
+      const phtStart = formatPHTDisplay(slot.date, slot.startTime);
+      const ctStart = convertPHTtoCT(slot.date, slot.startTime);
+      const phtEnd = slot.endTime ? formatPHTDisplay(slot.date, slot.endTime) : null;
+      const ctEnd = slot.endTime ? convertPHTtoCT(slot.date, slot.endTime) : null;
+      
+      if (phtEnd && ctEnd) {
+        return `${phtStart} to ${slot.endTime} PHT\n→ Central Time: ${ctStart} to ${ctEnd.split(', ')[1]}`;
+      }
+      return `${phtStart}\n→ Central Time: ${ctStart}`;
+    }).join('\n\n');
 
     setSubmitting(true);
     try {
       await axios.post(`${API}/api/applicant-tests/public/interview-response/${token}`, {
-        availability_text: availability,
-        additional_notes: notes
+        availability_text: formattedSlots,
+        additional_notes: notes,
+        time_slots: validSlots.map(slot => ({
+          date: slot.date,
+          start_time_pht: slot.startTime,
+          end_time_pht: slot.endTime || null,
+          start_time_ct: convertPHTtoCT(slot.date, slot.startTime),
+          end_time_ct: slot.endTime ? convertPHTtoCT(slot.date, slot.endTime) : null
+        }))
       });
       
       setSubmitted(true);
@@ -130,7 +221,7 @@ export default function InterviewResponsePage() {
               Hi <span className="font-semibold">{interviewData?.applicant_name}</span>,
             </p>
             <p className="text-white/70 mt-2">
-              Please let us know your available times for the interview.
+              Please select your available times for the interview.
             </p>
           </div>
 
@@ -148,52 +239,99 @@ export default function InterviewResponsePage() {
               </div>
             </div>
             
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-lg bg-[#00D4FF]/20 flex items-center justify-center flex-shrink-0">
-                <Clock className="w-5 h-5 text-[#00D4FF]" />
-              </div>
-              <div>
-                <p className="text-white/50 text-sm">Timezone</p>
-                <p className="text-white font-medium">{interviewData?.timezone}</p>
-              </div>
+            {/* Timezone Info */}
+            <div className="bg-[#8B5CF6]/20 border border-[#8B5CF6]/50 rounded-xl p-4">
+              <p className="text-white font-medium text-sm">
+                <Clock className="w-4 h-4 inline mr-2" />
+                Select times in Philippine Time (PHT) — We&apos;ll automatically convert to Central Time (CT)
+              </p>
             </div>
           </div>
 
-          {/* Response Form */}
+          {/* Time Slot Picker */}
           <form onSubmit={handleSubmit} className="p-6">
-            <div className="mb-6">
-              <label className="block text-white font-medium mb-2">
-                Your Available Times *
-              </label>
-              
-              {/* Highlighted PHT Instruction Box */}
-              <div className="bg-[#8B5CF6]/20 border-2 border-[#8B5CF6] rounded-xl p-4 mb-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#8B5CF6] flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-5 h-5 text-white" />
+            <label className="block text-white font-medium mb-4">
+              Select Your Available Time Slots *
+            </label>
+            
+            <div className="space-y-4 mb-6">
+              {timeSlots.map((slot, index) => (
+                <div key={index} className="bg-white/5 rounded-xl p-4 border border-white/10">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-white/70 text-sm font-medium">Time Slot {index + 1}</span>
+                    {timeSlots.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeTimeSlot(index)}
+                        className="text-red-400 hover:text-red-300 p-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
-                  <div>
-                    <p className="text-white font-bold text-lg">Please enter times in Philippine Time (PHT)</p>
-                    <p className="text-white/80 text-sm mt-1">
-                      We will convert your times to our timezone (Central Time) automatically.
-                    </p>
+                  
+                  {/* Date Picker */}
+                  <div className="mb-3">
+                    <label className="block text-white/50 text-xs mb-1">Date</label>
+                    <input
+                      type="date"
+                      value={slot.date}
+                      onChange={(e) => updateTimeSlot(index, 'date', e.target.value)}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
+                      required
+                    />
                   </div>
+                  
+                  {/* Time Pickers */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-white/50 text-xs mb-1">Start Time (PHT)</label>
+                      <input
+                        type="time"
+                        value={slot.startTime}
+                        onChange={(e) => updateTimeSlot(index, 'startTime', e.target.value)}
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-white/50 text-xs mb-1">End Time (PHT)</label>
+                      <input
+                        type="time"
+                        value={slot.endTime}
+                        onChange={(e) => updateTimeSlot(index, 'endTime', e.target.value)}
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Live CT Conversion */}
+                  {slot.date && slot.startTime && (
+                    <div className="mt-3 bg-green-500/20 border border-green-500/50 rounded-lg p-3">
+                      <p className="text-green-300 text-sm font-medium">
+                        <Clock className="w-4 h-4 inline mr-1" />
+                        Central Time: {convertPHTtoCT(slot.date, slot.startTime)}
+                        {slot.endTime && ` to ${convertPHTtoCT(slot.date, slot.endTime)?.split(', ')[1] || ''}`}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
-              
-              <textarea
-                value={availability}
-                onChange={(e) => setAvailability(e.target.value)}
-                rows={5}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] focus:border-transparent resize-none"
-                placeholder="Example:&#10;Monday, Jan 20 - 9:00 AM to 11:00 AM PHT&#10;Tuesday, Jan 21 - 2:00 PM to 5:00 PM PHT&#10;Wednesday, Jan 22 - 10:00 AM to 12:00 PM PHT"
-                required
-              />
-              <p className="text-[#8B5CF6] text-sm mt-2 font-medium">
-                Remember: Enter times in Philippine Time (PHT)
-              </p>
+              ))}
             </div>
+            
+            {/* Add More Button */}
+            {timeSlots.length < 5 && (
+              <button
+                type="button"
+                onClick={addTimeSlot}
+                className="w-full py-3 border-2 border-dashed border-white/30 rounded-xl text-white/70 hover:text-white hover:border-white/50 transition-colors flex items-center justify-center gap-2 mb-6"
+              >
+                <Plus className="w-5 h-5" />
+                Add Another Time Slot
+              </button>
+            )}
 
+            {/* Notes */}
             <div className="mb-6">
               <label className="block text-white font-medium mb-2">
                 Additional Notes (Optional)

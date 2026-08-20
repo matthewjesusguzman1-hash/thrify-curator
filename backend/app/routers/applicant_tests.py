@@ -1194,9 +1194,17 @@ async def get_followup_history(
 # IN-APP INTERVIEW MESSAGING SYSTEM
 # ============================================
 
+class TimeSlot(BaseModel):
+    date: str
+    start_time_pht: str
+    end_time_pht: Optional[str] = None
+    start_time_ct: str
+    end_time_ct: Optional[str] = None
+
 class ApplicantAvailabilityResponse(BaseModel):
-    availability_text: str  # Their available times
+    availability_text: str  # Their available times as formatted text
     additional_notes: str = ""
+    time_slots: Optional[List[TimeSlot]] = None  # Structured time slots with CT conversion
 
 
 @public_router.get("/interview-response/{response_token}")
@@ -1241,15 +1249,31 @@ async def submit_interview_availability(
     if not interview_request:
         raise HTTPException(status_code=404, detail="Interview request not found")
     
+    # Build the applicant response with time slots
+    applicant_response_data = {
+        "availability": response.availability_text,
+        "notes": response.additional_notes,
+        "responded_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Add structured time slots if provided
+    if response.time_slots:
+        applicant_response_data["time_slots"] = [
+            {
+                "date": slot.date,
+                "start_time_pht": slot.start_time_pht,
+                "end_time_pht": slot.end_time_pht,
+                "start_time_ct": slot.start_time_ct,
+                "end_time_ct": slot.end_time_ct
+            }
+            for slot in response.time_slots
+        ]
+    
     # Update with applicant's response
     await db.interview_requests.update_one(
         {"response_token": response_token},
         {"$set": {
-            "applicant_response": {
-                "availability": response.availability_text,
-                "notes": response.additional_notes,
-                "responded_at": datetime.now(timezone.utc).isoformat()
-            },
+            "applicant_response": applicant_response_data,
             "status": "responded"
         }}
     )
