@@ -2241,7 +2241,7 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
 
   // Get scheduled (draft) interviews for the summary view
   const scheduledInterviews = requests.filter(r => r.status === 'scheduled');
-  const [showScheduledSummary, setShowScheduledSummary] = useState(false);
+  const [showScheduledModal, setShowScheduledModal] = useState(false);
   const [sendingAll, setSendingAll] = useState(false);
 
   const handleSendAllScheduled = async () => {
@@ -2315,9 +2315,9 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
           <div className="flex items-center gap-3">
             {scheduledInterviews.length > 0 && (
               <Button
-                onClick={() => setShowScheduledSummary(!showScheduledSummary)}
-                variant={showScheduledSummary ? "default" : "outline"}
-                className={showScheduledSummary ? "bg-purple-600 text-white" : "border-purple-400 text-purple-600"}
+                onClick={() => setShowScheduledModal(true)}
+                variant="outline"
+                className="border-purple-400 text-purple-600 hover:bg-purple-50"
                 size="sm"
               >
                 <Calendar className="w-4 h-4 mr-1" />
@@ -2330,66 +2330,119 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
           </div>
         </div>
 
-        {/* Scheduled Summary View */}
-        {showScheduledSummary && scheduledInterviews.length > 0 && (
-          <div className="bg-purple-50 border-b border-purple-200 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-purple-900 flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Scheduled Interviews - Review Before Sending
-              </h3>
-              <Button
-                onClick={handleSendAllScheduled}
-                disabled={sendingAll}
-                className="bg-green-600 hover:bg-green-700 text-white"
-                size="sm"
-              >
-                {sendingAll ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4 mr-1" />
-                    Send All ({scheduledInterviews.length})
-                  </>
-                )}
-              </Button>
-            </div>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {scheduledInterviews.map(interview => (
-                <div key={interview.id} className="bg-white rounded-lg p-3 border border-purple-200 flex items-center justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-[#333] truncate">{interview.applicant_name}</p>
-                    <p className="text-sm text-purple-700">{interview.scheduled_datetime}</p>
-                    {interview.scheduled_datetime_ct && (
-                      <p className="text-xs text-blue-600">Your time: {interview.scheduled_datetime_ct}</p>
-                    )}
+        {/* Scheduled Interviews Modal - Separate Popup */}
+        {showScheduledModal && scheduledInterviews.length > 0 && ReactDOM.createPortal(
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 flex items-center justify-center p-4"
+            style={{ zIndex: 10001 }}
+            onClick={() => setShowScheduledModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-purple-200 bg-gradient-to-r from-purple-600 to-purple-700">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <Calendar className="w-5 h-5" />
+                      Review Scheduled Interviews
+                    </h2>
+                    <p className="text-purple-200 text-sm mt-1">
+                      Review all times before sending confirmations
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      onClick={() => handleSendSingleScheduled(interview.id)}
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <Send className="w-3 h-3 mr-1" />
-                      Send
-                    </Button>
-                    <button
-                      onClick={(e) => handleDelete(interview.id, e)}
-                      className="p-1 text-gray-400 hover:text-red-500"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <button 
+                    onClick={() => setShowScheduledModal(false)} 
+                    className="text-white/80 hover:text-white p-2"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
                 </div>
-              ))}
-            </div>
-            <p className="text-xs text-purple-600 mt-2">
-              Review all times above, then click &quot;Send All&quot; or send individually.
-            </p>
-          </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-3">
+                  {scheduledInterviews.map(interview => (
+                    <div key={interview.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <p className="font-semibold text-[#333] text-lg">{interview.applicant_name}</p>
+                          
+                          {/* CT Time - Primary */}
+                          <div className="mt-2 bg-blue-50 rounded-lg p-3 border border-blue-200">
+                            <p className="text-xs text-blue-600 font-medium mb-1">Your Time (Central)</p>
+                            <p className="text-blue-800 font-bold text-lg">
+                              {interview.scheduled_datetime_ct || 'Not available'}
+                            </p>
+                          </div>
+                          
+                          {/* PHT Time - Secondary */}
+                          <p className="text-sm text-gray-500 mt-2">
+                            PHT: {interview.scheduled_datetime}
+                          </p>
+                        </div>
+                        
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            onClick={() => handleSendSingleScheduled(interview.id)}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            <Send className="w-4 h-4 mr-1" />
+                            Send
+                          </Button>
+                          <button
+                            onClick={(e) => handleDelete(interview.id, e)}
+                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  {scheduledInterviews.length} interview{scheduledInterviews.length !== 1 ? 's' : ''} ready to send
+                </p>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowScheduledModal(false)}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    onClick={handleSendAllScheduled}
+                    disabled={sendingAll}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {sendingAll ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Send All ({scheduledInterviews.length})
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>,
+          document.body
         )}
 
         <div className="flex-1 overflow-hidden flex">
@@ -2510,22 +2563,19 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                       <div className="space-y-3 mb-3">
                         {selectedRequest.applicant_response.time_slots.map((slot, idx) => (
                           <div key={idx} className="bg-white rounded-lg p-3 border border-green-100">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1">
-                                <p className="text-xs text-gray-500 mb-1">Philippine Time (PHT)</p>
-                                <p className="text-[#333] font-medium">
-                                  {slot.date} at {slot.start_time_pht}
-                                  {slot.end_time_pht && ` - ${slot.end_time_pht}`}
-                                </p>
-                              </div>
-                              <div className="text-right flex-1">
-                                <p className="text-xs text-blue-600 mb-1">Your Time (Central)</p>
-                                <p className="text-blue-700 font-semibold">
-                                  {slot.start_time_ct}
-                                  {slot.end_time_ct && ` - ${slot.end_time_ct.split(', ').pop()}`}
-                                </p>
-                              </div>
+                            {/* CT Time - Primary */}
+                            <div className="bg-blue-50 rounded-lg p-2 mb-2 border border-blue-100">
+                              <p className="text-xs text-blue-600 font-medium">Your Time (Central)</p>
+                              <p className="text-blue-800 font-bold">
+                                {slot.start_time_ct}
+                                {slot.end_time_ct && ` - ${slot.end_time_ct.split(', ').pop()}`}
+                              </p>
                             </div>
+                            {/* PHT Time - Secondary */}
+                            <p className="text-xs text-gray-500">
+                              PHT: {slot.date} at {slot.start_time_pht}
+                              {slot.end_time_pht && ` - ${slot.end_time_pht}`}
+                            </p>
                           </div>
                         ))}
                       </div>
@@ -2736,7 +2786,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
 
   // Generate 30-minute time slots from an availability window (handles overnight)
   const generate30MinSlots = (startTime, endTime, baseDate) => {
-    if (!startTime || !endTime) return [];
+    if (!startTime || !endTime || !baseDate) return [];
     const slots = [];
     
     // Parse start and end times (handle both HH:MM and HHMM formats)
@@ -2746,16 +2796,23 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
     const [startH, startM] = start.split(':').map(Number);
     const [endH, endM] = end.split(':').map(Number);
     
+    // Validate parsed values
+    if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) return [];
+    
     let currentMinutes = startH * 60 + startM;
     let endMinutes = endH * 60 + endM;
     
     // Handle overnight: if end < start, add 24 hours to end
-    if (endMinutes < currentMinutes) {
+    if (endMinutes <= currentMinutes) {
       endMinutes += 24 * 60;
     }
     
+    // Limit to prevent too many slots (max 12 hours = 24 slots)
+    const maxSlots = 24;
+    let slotCount = 0;
+    
     // Generate slots until we can't fit another 30-min meeting
-    while (currentMinutes + 30 <= endMinutes) {
+    while (currentMinutes + 30 <= endMinutes && slotCount < maxSlots) {
       const slotStartH = Math.floor(currentMinutes / 60) % 24;
       const slotStartM = currentMinutes % 60;
       const slotEndH = Math.floor((currentMinutes + 30) / 60) % 24;
@@ -2773,6 +2830,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
       });
       
       currentMinutes += 30; // Move to next 30-min slot
+      slotCount++;
     }
     
     return slots;
@@ -3043,16 +3101,20 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                       }`}
                     >
                       <div className="flex items-start justify-between">
-                        <div>
+                        <div className="flex-1">
                           <p className="font-medium text-[#333] text-sm">
                             {new Date(slot.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                           </p>
-                          <p className="text-sm text-gray-600">
-                            Available: {slot.start_time_pht} - {slot.end_time_pht} PHT
+                          {/* CT Time - Primary */}
+                          <div className="bg-blue-50 rounded px-2 py-1 mt-1 inline-block">
+                            <p className="text-sm text-blue-800 font-semibold">
+                              CT: {convertPHTtoCT(slot.date, slot.start_time_pht)?.split(', ').slice(-1)[0]} - {convertPHTtoCTWithDate(slot.date, slot.end_time_pht, isOvernight(slot.start_time_pht, slot.end_time_pht))?.split(', ').pop()}
+                            </p>
+                          </div>
+                          {/* PHT Time - Secondary */}
+                          <p className="text-xs text-gray-500 mt-1">
+                            PHT: {slot.start_time_pht} - {slot.end_time_pht}
                             {isOvernight(slot.start_time_pht, slot.end_time_pht) && <span className="text-orange-500 ml-1">(overnight)</span>}
-                          </p>
-                          <p className="text-xs text-blue-600 mt-1">
-                            Your time (CT): {convertPHTtoCT(slot.date, slot.start_time_pht)} → {convertPHTtoCTWithDate(slot.date, slot.end_time_pht, isOvernight(slot.start_time_pht, slot.end_time_pht))?.split(', ').pop()}
                           </p>
                         </div>
                         {isSelected && (
@@ -3089,50 +3151,75 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                     Selected: {new Date(selectedSlot.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                     {isOvernight(selectedSlot.start_time_pht, selectedSlot.end_time_pht) && <span className="text-orange-500 ml-1">(overnight into next day)</span>}
                   </p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    PHT Window: {selectedSlot.start_time_pht} - {selectedSlot.end_time_pht}
+                  {/* CT Time - Primary */}
+                  <p className="text-sm text-blue-700 font-semibold mt-1">
+                    CT: {convertPHTtoCT(selectedSlot.date, selectedSlot.start_time_pht)?.split(', ').slice(-1)[0]} - {convertPHTtoCTWithDate(selectedSlot.date, selectedSlot.end_time_pht, isOvernight(selectedSlot.start_time_pht, selectedSlot.end_time_pht))?.split(', ').pop()}
                   </p>
-                  <p className="text-xs text-blue-600 font-medium mt-1">
-                    Your Time (CT): {convertPHTtoCT(selectedSlot.date, selectedSlot.start_time_pht)} - {convertPHTtoCTWithDate(selectedSlot.date, selectedSlot.end_time_pht, isOvernight(selectedSlot.start_time_pht, selectedSlot.end_time_pht))?.split(', ').pop()}
+                  {/* PHT Time - Secondary */}
+                  <p className="text-xs text-gray-500 mt-1">
+                    PHT: {selectedSlot.start_time_pht} - {selectedSlot.end_time_pht}
                   </p>
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-2">Select a 30-minute time slot:</label>
-                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                    {generate30MinSlots(selectedSlot.start_time_pht, selectedSlot.end_time_pht, selectedSlot.date).map((slot, idx) => {
-                      const isSelected = specificTime === slot.start;
-                      const slotCT = convertPHTtoCT(slot.startDate, slot.start);
-                      const slotEndCT = convertPHTtoCT(slot.endDate, slot.end)?.split(', ').pop();
-                      
+                  {(() => {
+                    const slots = generate30MinSlots(selectedSlot.start_time_pht, selectedSlot.end_time_pht, selectedSlot.date);
+                    if (slots.length === 0) {
                       return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setSpecificTime(slot.start)}
-                          className={`p-2 rounded-lg border-2 text-left transition-all ${
-                            isSelected 
-                              ? 'border-blue-500 bg-blue-50' 
-                              : 'border-gray-200 hover:border-gray-300 bg-white'
-                          }`}
-                        >
-                          <p className={`text-sm font-medium ${isSelected ? 'text-blue-700' : 'text-gray-700'}`}>
-                            {formatTime12h(slot.start)} - {formatTime12h(slot.end)}
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-2">
+                          <p className="text-sm text-orange-700">
+                            Unable to generate time slots. Please use custom time entry below.
                           </p>
-                          <p className={`text-xs ${isSelected ? 'text-blue-600' : 'text-gray-500'}`}>
-                            CT: {slotCT?.split(', ').slice(-1)[0]} - {slotEndCT}
-                          </p>
-                        </button>
+                        </div>
                       );
-                    })}
-                  </div>
+                    }
+                    return (
+                      <>
+                        <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                          {slots.map((slot, idx) => {
+                            const isSelected = specificTime === slot.start;
+                            const slotCT = convertPHTtoCT(slot.startDate, slot.start);
+                            const slotEndCT = convertPHTtoCT(slot.endDate, slot.end)?.split(', ').pop();
+                            
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setSpecificTime(slot.start)}
+                                className={`p-2 rounded-lg border-2 text-left transition-all ${
+                                  isSelected 
+                                    ? 'border-blue-500 bg-blue-50' 
+                                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                                }`}
+                              >
+                                {/* CT Time - Primary */}
+                                <p className={`text-sm font-bold ${isSelected ? 'text-blue-700' : 'text-blue-600'}`}>
+                                  {slotCT?.split(', ').slice(-1)[0]} - {slotEndCT}
+                                </p>
+                                {/* PHT Time - Secondary */}
+                                <p className={`text-xs ${isSelected ? 'text-gray-600' : 'text-gray-400'}`}>
+                                  PHT: {formatTime12h(slot.start)} - {formatTime12h(slot.end)}
+                                </p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {slots.length >= 24 && (
+                          <p className="text-xs text-orange-600 mt-2">Showing first 24 slots. Use custom time for later times.</p>
+                        )}
+                      </>
+                    );
+                  })()}
                   {specificTime && (
                     <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-xs text-blue-600 font-medium">Selected Meeting Time:</p>
-                      <p className="text-sm text-gray-700">
-                        PHT: {formatTime12h(specificTime)} - {addMinutesToTime(specificTime, 30)}
-                      </p>
+                      {/* CT Time - Primary */}
                       <p className="text-sm text-blue-800 font-bold">
-                        Your Time (CT): {getConfirmedDateTimeCT()}
+                        CT: {getConfirmedDateTimeCT()}
+                      </p>
+                      {/* PHT Time - Secondary */}
+                      <p className="text-xs text-gray-500">
+                        PHT: {formatTime12h(specificTime)} - {addMinutesToTime(specificTime, 30)}
                       </p>
                     </div>
                   )}
