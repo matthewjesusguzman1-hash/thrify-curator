@@ -1227,10 +1227,52 @@ function SubmissionsModal({ test, onClose, onViewDetail, getAuthHeader }) {
 function ScheduleInterviewModal({ test, selectedEmails, submissions, onClose, getAuthHeader }) {
   const [sending, setSending] = useState(false);
   const [meetingLink, setMeetingLink] = useState("");
-  const [dateStart, setDateStart] = useState("");
-  const [dateEnd, setDateEnd] = useState("");
   const [timezone, setTimezone] = useState("Central Time (CT)");
   const [subject, setSubject] = useState(`Interview Scheduling - ${test.name}`);
+  
+  // Get saved dates or use defaults
+  const getSavedDates = () => {
+    const saved = localStorage.getItem('thrifty_scheduling_dates');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  };
+
+  // Initialize dates - use saved or default to next 7 days
+  const [dateStart, setDateStart] = useState(() => {
+    const saved = getSavedDates();
+    if (saved?.start) return saved.start;
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  });
+  
+  const [dateEnd, setDateEnd] = useState(() => {
+    const saved = getSavedDates();
+    if (saved?.end) return saved.end;
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    return `${nextWeek.getFullYear()}-${String(nextWeek.getMonth() + 1).padStart(2, '0')}-${String(nextWeek.getDate()).padStart(2, '0')}`;
+  });
+
+  // Save dates when they change
+  const saveDates = (start, end) => {
+    localStorage.setItem('thrifty_scheduling_dates', JSON.stringify({ start, end }));
+  };
+
+  const handleDateStartChange = (value) => {
+    setDateStart(value);
+    saveDates(value, dateEnd);
+  };
+
+  const handleDateEndChange = (value) => {
+    setDateEnd(value);
+    saveDates(dateStart, value);
+  };
   
   // Built-in default message
   const BUILT_IN_DEFAULT = `Thank you for completing our skills assessment! We were impressed with your work and would like to schedule a video interview with you.
@@ -1262,24 +1304,6 @@ We look forward to speaking with you!`;
     localStorage.removeItem('thrifty_scheduling_default_message');
     toast.success("Reset to original default");
   };
-
-  // Set default date range (next 7 days) - use local dates to avoid timezone shift
-  useEffect(() => {
-    const today = new Date();
-    const nextWeek = new Date(today);
-    nextWeek.setDate(nextWeek.getDate() + 7);
-    
-    // Format as YYYY-MM-DD without timezone conversion
-    const formatLocalDate = (date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-    
-    setDateStart(formatLocalDate(today));
-    setDateEnd(formatLocalDate(nextWeek));
-  }, []);
 
   // Format date for display without timezone issues
   const formatDateForEmail = (dateStr) => {
@@ -1381,7 +1405,7 @@ We look forward to speaking with you!`;
               <Input
                 type="date"
                 value={dateStart}
-                onChange={e => setDateStart(e.target.value)}
+                onChange={e => handleDateStartChange(e.target.value)}
                 className="border-gray-300"
               />
             </div>
@@ -1393,7 +1417,7 @@ We look forward to speaking with you!`;
               <Input
                 type="date"
                 value={dateEnd}
-                onChange={e => setDateEnd(e.target.value)}
+                onChange={e => handleDateEndChange(e.target.value)}
                 className="border-gray-300"
               />
             </div>
@@ -2417,6 +2441,24 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                       <ExternalLink className="w-3 h-3" />
                       {selectedRequest.meeting_link}
                     </a>
+                  </div>
+                )}
+
+                {/* Message History - Show if admin sent a message requesting different times */}
+                {selectedRequest.message_sent && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6">
+                    <h4 className="font-medium text-orange-800 mb-2 flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4" />
+                      Message Sent
+                    </h4>
+                    <div className="bg-white rounded-lg p-3">
+                      <p className="text-gray-700 whitespace-pre-wrap text-sm">{selectedRequest.message_sent}</p>
+                    </div>
+                    {selectedRequest.message_sent_at && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Sent: {new Date(selectedRequest.message_sent_at).toLocaleString()}
+                      </p>
+                    )}
                   </div>
                 )}
 

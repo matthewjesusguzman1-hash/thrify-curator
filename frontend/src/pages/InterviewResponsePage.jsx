@@ -415,21 +415,20 @@ export default function InterviewResponsePage() {
                           </div>
                         </div>
                         
-                        {/* Live CT Conversion */}
+                        {/* Live CT Conversion - Show what time it is for the interviewer */}
                         {block.startTime && block.endTime && (
-                          <>
-                            <div className={`rounded-lg p-3 ${withinRange ? 'bg-green-500/20 border border-green-500/50' : 'bg-red-500/20 border border-red-500/50'}`}>
-                              <p className={`text-sm font-medium ${withinRange ? 'text-green-300' : 'text-red-300'}`}>
-                                <Clock className="w-4 h-4 inline mr-1" />
-                                Central Time: {convertPHTtoCT(block.date, block.startTime)?.split(', ')[1]} - {convertPHTtoCT(block.date, block.endTime)?.split(', ')[1]}
-                                {!withinRange && (
-                                  <span className="block text-xs mt-1">
-                                    ⚠️ This falls outside the requested date range ({interviewData?.date_range_start} - {interviewData?.date_range_end})
-                                  </span>
-                                )}
+                          <div className={`rounded-xl p-4 ${withinRange ? 'bg-green-500/20 border border-green-500/50' : 'bg-red-500/20 border border-red-500/50'}`}>
+                            <p className="text-white/60 text-xs mb-1">This is what time it will be for your interviewer:</p>
+                            <p className={`text-lg font-bold ${withinRange ? 'text-green-300' : 'text-red-300'}`}>
+                              {convertPHTtoCT(block.date, block.startTime)} - {convertPHTtoCT(block.date, block.endTime)?.split(', ')[1]}
+                            </p>
+                            <p className="text-white/50 text-xs mt-1">(Central Time - Texas, USA)</p>
+                            {!withinRange && (
+                              <p className="text-red-300 text-sm mt-2 font-medium">
+                                ⚠️ This falls outside the requested date range ({interviewData?.date_range_start} - {interviewData?.date_range_end})
                               </p>
-                            </div>
-                          </>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
