@@ -3571,11 +3571,6 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* Hiring Section: Applicant Tests */}
-              <div data-testid="applicant-tests-section" className="mb-4">
-                <ApplicantTestsSection getAuthHeader={getAuthHeader} />
-              </div>
-
               {/* Messaging Section: Side by Side */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
                 <div data-testid="conversations-section">
@@ -3586,7 +3581,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Less Used Sections - Collapsed by Default */}
+              {/* Additional Tools - Collapsed by Default */}
               <details className="group border-t border-gray-200 pt-4">
                 <summary className="flex items-center gap-2 cursor-pointer text-gray-500 hover:text-gray-700 text-sm font-medium py-2 select-none">
                   <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
@@ -3604,6 +3599,20 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </details>
+            </DashboardGroup>
+
+            {/* GROUP 4: Hiring / Applicant Tests - Separate Section */}
+            <DashboardGroup
+              title="Hiring"
+              icon={ClipboardCheck}
+              gradient="from-[#8B5CF6] to-[#6D28D9]"
+              defaultOpen={false}
+              badge="Applicant Tests"
+              testId="group-hiring"
+            >
+              <div data-testid="applicant-tests-section">
+                <ApplicantTestsSection getAuthHeader={getAuthHeader} />
+              </div>
             </DashboardGroup>
 
             {/* GROUP 4: Reports & Operations */}

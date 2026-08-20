@@ -94,11 +94,11 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
       {/* Header - responsive layout */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-lg sm:text-xl font-bold text-[#333] flex items-center gap-2">
+          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
             <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B5CF6] flex-shrink-0" />
             <span className="truncate">Applicant Skills Tests</span>
           </h2>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+          <p className="text-xs sm:text-sm text-gray-300 mt-1">
             Create listing tests to evaluate job applicants
           </p>
         </div>
@@ -129,9 +129,9 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B5CF6] mx-auto" />
         </div>
       ) : tests.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
-          <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500">No tests created yet</p>
+        <div className="text-center py-12 bg-white/10 rounded-xl border border-white/20">
+          <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-200">No tests created yet</p>
           <p className="text-sm text-gray-400 mt-1">Create a test to start evaluating applicants</p>
         </div>
       ) : (
