@@ -33,7 +33,9 @@ import {
   Video,
   Inbox,
   MessageSquare,
-  ExternalLink
+  ExternalLink,
+  Edit,
+  AlertTriangle
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL || "";
@@ -2455,13 +2457,73 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
 // Send Meeting Link Modal
 function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
   const [sending, setSending] = useState(false);
-  const [confirmedDateTime, setConfirmedDateTime] = useState("");
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [customDateTime, setCustomDateTime] = useState("");
+  const [useCustom, setUseCustom] = useState(false);
   const [meetingLink, setMeetingLink] = useState("");
   const [additionalMessage, setAdditionalMessage] = useState("");
+  const [conflicts, setConflicts] = useState([]);
+  const [loadingConflicts, setLoadingConflicts] = useState(true);
+
+  // Get the time slots from the applicant's response
+  const timeSlots = request.applicant_response?.time_slots || [];
+
+  // Fetch existing confirmed interviews to check for conflicts
+  useEffect(() => {
+    fetchConflicts();
+  }, []);
+
+  const fetchConflicts = async () => {
+    try {
+      const response = await axios.get(`${API}/api/applicant-tests/interview-inbox`, getAuthHeader());
+      const confirmedInterviews = (response.data.requests || [])
+        .filter(r => r.status === 'confirmed' && r.id !== request.id)
+        .map(r => ({
+          id: r.id,
+          name: r.applicant_name,
+          datetime: r.confirmed_datetime,
+          date: r.applicant_response?.time_slots?.[0]?.date
+        }));
+      setConflicts(confirmedInterviews);
+    } catch (error) {
+      console.error("Failed to fetch conflicts:", error);
+    } finally {
+      setLoadingConflicts(false);
+    }
+  };
+
+  // Check if a slot conflicts with existing confirmed interviews
+  const checkConflict = (slot) => {
+    if (!slot || conflicts.length === 0) return null;
+    
+    // Simple date-based conflict check
+    const slotDate = slot.date;
+    const conflicting = conflicts.find(c => {
+      // Check if same date
+      if (c.date === slotDate) return true;
+      // Check if datetime contains the date
+      if (c.datetime && c.datetime.includes(slotDate)) return true;
+      return false;
+    });
+    
+    return conflicting;
+  };
+
+  const getConfirmedDateTime = () => {
+    if (useCustom) return customDateTime;
+    if (!selectedSlot) return "";
+    
+    // Format: "Tuesday, January 21, 2026 at 9:00 AM PHT (7:00 PM CT prev day)"
+    const date = new Date(selectedSlot.date + 'T12:00:00');
+    const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    return `${dateStr} at ${selectedSlot.start_time_pht}${selectedSlot.end_time_pht ? ' - ' + selectedSlot.end_time_pht : ''} PHT`;
+  };
 
   const handleSend = async () => {
+    const confirmedDateTime = getConfirmedDateTime();
+    
     if (!confirmedDateTime.trim()) {
-      toast.error("Please enter the confirmed date and time");
+      toast.error("Please select or enter the confirmed date and time");
       return;
     }
     if (!meetingLink.trim()) {
@@ -2503,7 +2565,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
         initial={{ scale: 0.95 }}
         animate={{ scale: 1 }}
         exit={{ scale: 0.95 }}
-        className="bg-white rounded-2xl w-full max-w-lg overflow-hidden"
+        className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-[#10B981]/10 to-[#059669]/10">
@@ -2514,26 +2576,125 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
           <p className="text-sm text-gray-500">to {request.applicant_name}</p>
         </div>
 
-        <div className="p-6 space-y-4">
-          {/* Applicant's availability for reference */}
-          <div className="bg-gray-50 rounded-lg p-3 text-sm">
-            <p className="font-medium text-gray-700 mb-1">Applicant&apos;s Availability:</p>
-            <p className="text-gray-600 whitespace-pre-wrap">{request.applicant_response?.availability}</p>
-          </div>
-
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          {/* Time Slot Selection */}
           <div>
             <Label className="text-sm font-medium text-gray-700 mb-2 block">
-              Confirmed Date & Time *
+              Select Confirmed Time *
             </Label>
-            <Input
-              type="text"
-              value={confirmedDateTime}
-              onChange={e => setConfirmedDateTime(e.target.value)}
-              placeholder="e.g., Tuesday, January 21, 2026 at 9:00 AM PHT"
-              className="border-gray-300"
-            />
-            <p className="text-xs text-gray-500 mt-1">Enter in the applicant&apos;s timezone (Philippine Time)</p>
+            
+            {timeSlots.length > 0 ? (
+              <div className="space-y-2">
+                {timeSlots.map((slot, idx) => {
+                  const conflict = checkConflict(slot);
+                  const isSelected = selectedSlot === slot && !useCustom;
+                  
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSlot(slot);
+                        setUseCustom(false);
+                      }}
+                      className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
+                        isSelected 
+                          ? 'border-[#10B981] bg-[#10B981]/10' 
+                          : conflict 
+                            ? 'border-orange-300 bg-orange-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium text-[#333] text-sm">
+                            {new Date(slot.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {slot.start_time_pht}{slot.end_time_pht ? ` - ${slot.end_time_pht}` : ''} PHT
+                          </p>
+                          <p className="text-xs text-blue-600 mt-1">
+                            Your time: {slot.start_time_ct}{slot.end_time_ct ? ` - ${slot.end_time_ct.split(', ').pop()}` : ''}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <CheckCircle className="w-5 h-5 text-[#10B981]" />
+                        )}
+                      </div>
+                      {conflict && (
+                        <div className="mt-2 flex items-center gap-1 text-xs text-orange-600">
+                          <AlertTriangle className="w-3 h-3" />
+                          Conflict: {conflict.name} already scheduled on this date
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+                
+                {/* Custom option */}
+                <button
+                  type="button"
+                  onClick={() => setUseCustom(true)}
+                  className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
+                    useCustom 
+                      ? 'border-[#10B981] bg-[#10B981]/10' 
+                      : 'border-gray-200 hover:border-gray-300 border-dashed'
+                  }`}
+                >
+                  <p className="text-sm text-gray-600">
+                    <Edit className="w-4 h-4 inline mr-1" />
+                    Enter custom time...
+                  </p>
+                </button>
+                
+                {useCustom && (
+                  <Input
+                    type="text"
+                    value={customDateTime}
+                    onChange={e => setCustomDateTime(e.target.value)}
+                    placeholder="e.g., Tuesday, January 21, 2026 at 9:00 AM PHT"
+                    className="border-gray-300 mt-2"
+                    autoFocus
+                  />
+                )}
+              </div>
+            ) : (
+              /* Fallback to manual entry if no structured time slots */
+              <div>
+                <div className="bg-gray-50 rounded-lg p-3 text-sm mb-3">
+                  <p className="font-medium text-gray-700 mb-1">Applicant&apos;s Availability:</p>
+                  <p className="text-gray-600 whitespace-pre-wrap">{request.applicant_response?.availability}</p>
+                </div>
+                <Input
+                  type="text"
+                  value={customDateTime}
+                  onChange={e => {
+                    setCustomDateTime(e.target.value);
+                    setUseCustom(true);
+                  }}
+                  placeholder="e.g., Tuesday, January 21, 2026 at 9:00 AM PHT"
+                  className="border-gray-300"
+                />
+                <p className="text-xs text-gray-500 mt-1">Enter in Philippine Time (PHT)</p>
+              </div>
+            )}
           </div>
+
+          {/* Conflict Warning Summary */}
+          {!loadingConflicts && conflicts.length > 0 && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <p className="text-xs text-orange-700 font-medium flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                {conflicts.length} other interview{conflicts.length > 1 ? 's' : ''} already confirmed
+              </p>
+              <div className="mt-1 text-xs text-orange-600">
+                {conflicts.slice(0, 3).map((c, i) => (
+                  <span key={i}>{c.name}{i < Math.min(conflicts.length, 3) - 1 ? ', ' : ''}</span>
+                ))}
+                {conflicts.length > 3 && <span> +{conflicts.length - 3} more</span>}
+              </div>
+            </div>
+          )}
 
           <div>
             <Label className="text-sm font-medium text-gray-700 mb-2 block">
@@ -2568,7 +2729,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
           </Button>
           <Button
             onClick={handleSend}
-            disabled={sending || !confirmedDateTime || !meetingLink}
+            disabled={sending || (!selectedSlot && !customDateTime) || !meetingLink}
             className="bg-gradient-to-r from-[#10B981] to-[#059669] text-white"
           >
             {sending ? (
