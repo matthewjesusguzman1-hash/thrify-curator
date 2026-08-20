@@ -2673,8 +2673,14 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
   // Convert PHT time to Central Time
   const convertPHTtoCT = (date, time) => {
     if (!date || !time) return null;
-    const phtString = `${date}T${time}:00+08:00`;
+    // Handle both "HH:MM" and "HHMM" formats
+    let normalizedTime = time;
+    if (time && !time.includes(':') && time.length === 4) {
+      normalizedTime = `${time.slice(0,2)}:${time.slice(2,4)}`;
+    }
+    const phtString = `${date}T${normalizedTime}:00+08:00`;
     const utcDate = new Date(phtString);
+    if (isNaN(utcDate.getTime())) return null;
     return utcDate.toLocaleString('en-US', {
       timeZone: 'America/Chicago',
       weekday: 'short',
@@ -2977,7 +2983,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                             Available: {slot.start_time_pht} - {slot.end_time_pht} PHT
                           </p>
                           <p className="text-xs text-blue-600 mt-1">
-                            Your time: {slot.start_time_ct?.split(', ')[1]} - {slot.end_time_ct?.split(', ')[1]}
+                            Your time (CT): {convertPHTtoCT(slot.date, slot.start_time_pht)} → {convertPHTtoCT(slot.date, slot.end_time_pht)?.split(', ').pop()}
                           </p>
                         </div>
                         {isSelected && (
@@ -3014,7 +3020,10 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                     Selected: {new Date(selectedSlot.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                   </p>
                   <p className="text-xs text-gray-600 mt-1">
-                    Window: {selectedSlot.start_time_pht} - {selectedSlot.end_time_pht} PHT
+                    PHT Window: {selectedSlot.start_time_pht} - {selectedSlot.end_time_pht}
+                  </p>
+                  <p className="text-xs text-blue-600 font-medium mt-1">
+                    Your Time (CT): {convertPHTtoCT(selectedSlot.date, selectedSlot.start_time_pht)} - {convertPHTtoCT(selectedSlot.date, selectedSlot.end_time_pht)?.split(', ').pop()}
                   </p>
                 </div>
                 <div>
