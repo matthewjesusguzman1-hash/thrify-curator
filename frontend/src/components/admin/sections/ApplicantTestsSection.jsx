@@ -2332,20 +2332,82 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
   const [showAllInterviewsModal, setShowAllInterviewsModal] = useState(false);
   const [sendingAll, setSendingAll] = useState(false);
 
+  // Convert PHT datetime string to CT (for interviews missing CT field)
+  const convertPHTStringToCT = (phtString) => {
+    if (!phtString) return null;
+    // Parse format like "Saturday, August 22, 2026 at 8:30 PM - 9:00 PM PHT"
+    const match = phtString.match(/(\w+),\s*(\w+)\s+(\d+),\s*(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)\s*-\s*(\d+):(\d+)\s*(AM|PM)/i);
+    if (match) {
+      const [, , month, day, year, startH, startM, startAMPM, endH, endM, endAMPM] = match;
+      const months = { January: 0, February: 1, March: 2, April: 3, May: 4, June: 5, July: 6, August: 7, September: 8, October: 9, November: 10, December: 11 };
+      
+      let sh = parseInt(startH);
+      if (startAMPM.toUpperCase() === 'PM' && sh !== 12) sh += 12;
+      if (startAMPM.toUpperCase() === 'AM' && sh === 12) sh = 0;
+      
+      let eh = parseInt(endH);
+      if (endAMPM.toUpperCase() === 'PM' && eh !== 12) eh += 12;
+      if (endAMPM.toUpperCase() === 'AM' && eh === 12) eh = 0;
+      
+      // Create PHT dates and convert to CT
+      const startPHT = new Date(parseInt(year), months[month] || 0, parseInt(day), sh, parseInt(startM));
+      const endPHT = new Date(parseInt(year), months[month] || 0, parseInt(day), eh, parseInt(endM));
+      
+      // PHT is UTC+8, CT is UTC-5 (or UTC-6 during standard time)
+      // For simplicity, use toLocaleString with timezone
+      const startCT = startPHT.toLocaleString('en-US', {
+        timeZone: 'America/Chicago',
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      const endCT = endPHT.toLocaleString('en-US', {
+        timeZone: 'America/Chicago',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      return `${startCT} - ${endCT} CT`;
+    }
+    return null;
+  };
+
   // Get ALL interviews with times (scheduled + confirmed) for the master schedule view
   const allInterviewsWithTimes = requests
     .filter(r => r.status === 'scheduled' || r.status === 'confirmed')
-    .map(r => ({
-      ...r,
-      datetime_ct: r.scheduled_datetime_ct || r.confirmed_datetime_ct,
-      datetime_pht: r.scheduled_datetime || r.confirmed_datetime,
-      meeting_link: r.scheduled_meeting_link || r.meeting_link
-    }))
+    .map(r => {
+      const phtTime = r.scheduled_datetime || r.confirmed_datetime;
+      const ctTime = r.scheduled_datetime_ct || r.confirmed_datetime_ct || convertPHTStringToCT(phtTime);
+      return {
+        ...r,
+        datetime_ct: ctTime,
+        datetime_pht: phtTime,
+        meeting_link: r.scheduled_meeting_link || r.meeting_link
+      };
+    })
     .sort((a, b) => {
       // Parse CT datetime for sorting
       const parseDateTime = (interview) => {
-        const ct = interview.datetime_ct || '';
-        const match = ct.match(/(\w+),?\s*(\w+)\s+(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)/i);
+        const ct = interview.datetime_ct || interview.datetime_pht || '';
+        // Try CT format first: "Fri, Aug 21 at 9:00 AM - 9:30 AM CT"
+        let match = ct.match(/(\w+),?\s*(\w+)\s+(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)/i);
+        if (!match) {
+          // Try PHT format: "Saturday, August 22, 2026 at 8:30 PM - 9:00 PM PHT"
+          match = ct.match(/(\w+),\s*(\w+)\s+(\d+),\s*(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)/i);
+          if (match) {
+            const [, , month, day, year, hour, min, ampm] = match;
+            const months = { January: 0, February: 1, March: 2, April: 3, May: 4, June: 5, July: 6, August: 7, September: 8, October: 9, November: 10, December: 11 };
+            let h = parseInt(hour);
+            if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
+            if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
+            return new Date(parseInt(year), months[month] || 0, parseInt(day), h, parseInt(min));
+          }
+        }
         if (match) {
           const [, , month, day, hour, min, ampm] = match;
           const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
