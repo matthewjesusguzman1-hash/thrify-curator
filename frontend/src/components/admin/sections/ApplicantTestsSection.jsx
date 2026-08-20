@@ -2710,6 +2710,39 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
     return startCT || "";
   };
 
+  // Generate 30-minute time slots from an availability window
+  const generate30MinSlots = (startTime, endTime) => {
+    if (!startTime || !endTime) return [];
+    const slots = [];
+    
+    // Parse start and end times (handle both HH:MM and HHMM formats)
+    let start = startTime.includes(':') ? startTime : `${startTime.slice(0,2)}:${startTime.slice(2,4)}`;
+    let end = endTime.includes(':') ? endTime : `${endTime.slice(0,2)}:${endTime.slice(2,4)}`;
+    
+    const [startH, startM] = start.split(':').map(Number);
+    const [endH, endM] = end.split(':').map(Number);
+    
+    let currentMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    
+    // Generate slots until we can't fit another 30-min meeting
+    while (currentMinutes + 30 <= endMinutes) {
+      const slotStartH = Math.floor(currentMinutes / 60);
+      const slotStartM = currentMinutes % 60;
+      const slotEndH = Math.floor((currentMinutes + 30) / 60);
+      const slotEndM = (currentMinutes + 30) % 60;
+      
+      slots.push({
+        start: `${String(slotStartH).padStart(2, '0')}:${String(slotStartM).padStart(2, '0')}`,
+        end: `${String(slotEndH).padStart(2, '0')}:${String(slotEndM).padStart(2, '0')}`
+      });
+      
+      currentMinutes += 30; // Move to next 30-min slot
+    }
+    
+    return slots;
+  };
+
   // Get the time slots from the applicant's response
   const timeSlots = request.applicant_response?.time_slots || [];
 
@@ -3027,25 +3060,44 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                   </p>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Enter specific start time (PHT) within this window:</label>
-                  <Input
-                    type="time"
-                    value={specificTime}
-                    onChange={e => setSpecificTime(e.target.value)}
-                    className="border-gray-300"
-                  />
+                  <label className="block text-xs text-gray-500 mb-2">Select a 30-minute time slot:</label>
+                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                    {generate30MinSlots(selectedSlot.start_time_pht, selectedSlot.end_time_pht).map((slot, idx) => {
+                      const isSelected = specificTime === slot.start;
+                      const slotCT = convertPHTtoCT(selectedSlot.date, slot.start);
+                      const slotEndCT = convertPHTtoCT(selectedSlot.date, slot.end)?.split(', ').pop();
+                      
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setSpecificTime(slot.start)}
+                          className={`p-2 rounded-lg border-2 text-left transition-all ${
+                            isSelected 
+                              ? 'border-blue-500 bg-blue-50' 
+                              : 'border-gray-200 hover:border-gray-300 bg-white'
+                          }`}
+                        >
+                          <p className={`text-sm font-medium ${isSelected ? 'text-blue-700' : 'text-gray-700'}`}>
+                            {formatTime12h(slot.start)} - {formatTime12h(slot.end)}
+                          </p>
+                          <p className={`text-xs ${isSelected ? 'text-blue-600' : 'text-gray-500'}`}>
+                            CT: {slotCT?.split(', ').slice(-1)[0]} - {slotEndCT}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
                   {specificTime && (
-                    <>
-                      <p className="text-xs text-gray-600 mt-2">
+                    <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-xs text-blue-600 font-medium">Selected Meeting Time:</p>
+                      <p className="text-sm text-gray-700">
                         PHT: {formatTime12h(specificTime)} - {addMinutesToTime(specificTime, 30)}
                       </p>
-                      <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <p className="text-xs text-blue-600 font-medium">Your Time (Central):</p>
-                        <p className="text-sm text-blue-800 font-bold">
-                          {getConfirmedDateTimeCT()}
-                        </p>
-                      </div>
-                    </>
+                      <p className="text-sm text-blue-800 font-bold">
+                        Your Time (CT): {getConfirmedDateTimeCT()}
+                      </p>
+                    </div>
                   )}
                 </div>
                 <button
