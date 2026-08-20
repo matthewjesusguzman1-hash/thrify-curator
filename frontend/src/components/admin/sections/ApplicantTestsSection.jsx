@@ -2224,6 +2224,24 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
     }
   };
 
+  // Remove scheduled time but keep the interview request (returns to "responded" status)
+  const handleRemoveScheduled = async (requestId, applicantName, e) => {
+    e?.stopPropagation();
+    if (!window.confirm(`Remove scheduled time for ${applicantName}?\n\nThis will NOT delete their availability - you can reschedule them later.`)) return;
+    
+    try {
+      await axios.post(
+        `${API}/api/applicant-tests/interview-inbox/${requestId}/unschedule`,
+        {},
+        getAuthHeader()
+      );
+      toast.success(`Removed scheduled time for ${applicantName}. They're back in your inbox.`);
+      fetchRequests();
+    } catch (error) {
+      toast.error("Failed to remove scheduled time");
+    }
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
       case "responded":
@@ -2311,7 +2329,35 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
   const scheduledOverlaps = checkScheduledOverlaps();
   
   const [showScheduledModal, setShowScheduledModal] = useState(false);
+  const [showAllInterviewsModal, setShowAllInterviewsModal] = useState(false);
   const [sendingAll, setSendingAll] = useState(false);
+
+  // Get ALL interviews with times (scheduled + confirmed) for the master schedule view
+  const allInterviewsWithTimes = requests
+    .filter(r => r.status === 'scheduled' || r.status === 'confirmed')
+    .map(r => ({
+      ...r,
+      datetime_ct: r.scheduled_datetime_ct || r.confirmed_datetime_ct,
+      datetime_pht: r.scheduled_datetime || r.confirmed_datetime,
+      meeting_link: r.scheduled_meeting_link || r.meeting_link
+    }))
+    .sort((a, b) => {
+      // Parse CT datetime for sorting
+      const parseDateTime = (interview) => {
+        const ct = interview.datetime_ct || '';
+        const match = ct.match(/(\w+),?\s*(\w+)\s+(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)/i);
+        if (match) {
+          const [, , month, day, hour, min, ampm] = match;
+          const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+          let h = parseInt(hour);
+          if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
+          if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
+          return new Date(2026, months[month] || 0, parseInt(day), h, parseInt(min));
+        }
+        return new Date(0);
+      };
+      return parseDateTime(a) - parseDateTime(b);
+    });
 
   const handleSendAllScheduled = async () => {
     if (!window.confirm(`Send meeting confirmations to ${scheduledInterviews.length} applicant(s)?`)) return;
@@ -2382,6 +2428,18 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
             <p className="text-sm text-gray-500">View and respond to applicant availability</p>
           </div>
           <div className="flex items-center gap-3">
+            {/* View All Interviews Button */}
+            {allInterviewsWithTimes.length > 0 && (
+              <Button
+                onClick={() => setShowAllInterviewsModal(true)}
+                variant="outline"
+                className="border-blue-400 text-blue-600 hover:bg-blue-50"
+                size="sm"
+              >
+                <Calendar className="w-4 h-4 mr-1" />
+                View Schedule ({allInterviewsWithTimes.length})
+              </Button>
+            )}
             {scheduledInterviews.length > 0 && (
               <Button
                 onClick={() => setShowScheduledModal(true)}
@@ -2389,8 +2447,8 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                 className="border-purple-400 text-purple-600 hover:bg-purple-50"
                 size="sm"
               >
-                <Calendar className="w-4 h-4 mr-1" />
-                Review Scheduled ({scheduledInterviews.length})
+                <Send className="w-4 h-4 mr-1" />
+                Send Pending ({scheduledInterviews.length})
               </Button>
             )}
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
@@ -2398,6 +2456,129 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
             </button>
           </div>
         </div>
+
+        {/* ALL INTERVIEWS SCHEDULE MODAL */}
+        {showAllInterviewsModal && ReactDOM.createPortal(
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 flex items-center justify-center p-4"
+            style={{ zIndex: 10001 }}
+            onClick={() => setShowAllInterviewsModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-blue-200 bg-gradient-to-r from-blue-600 to-blue-700">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <Calendar className="w-5 h-5" />
+                      Interview Schedule
+                    </h2>
+                    <p className="text-blue-200 text-sm mt-1">
+                      All scheduled and confirmed interviews
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setShowAllInterviewsModal(false)} 
+                    className="text-white/80 hover:text-white p-2"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4">
+                {allInterviewsWithTimes.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">No interviews scheduled yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {allInterviewsWithTimes.map((interview, idx) => (
+                      <div 
+                        key={interview.id} 
+                        className={`rounded-xl p-4 border ${
+                          interview.status === 'confirmed' 
+                            ? 'bg-blue-50 border-blue-200' 
+                            : 'bg-purple-50 border-purple-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <p className="font-semibold text-[#333] text-lg">{interview.applicant_name}</p>
+                              {interview.status === 'confirmed' ? (
+                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                  Sent
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                  Pending
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* CT Time - Primary */}
+                            <div className="bg-white rounded-lg p-3 border border-gray-200">
+                              <p className="text-xs text-blue-600 font-medium mb-1">Your Time (Central)</p>
+                              <p className="text-blue-800 font-bold text-lg">
+                                {interview.datetime_ct || 'Not available'}
+                              </p>
+                            </div>
+                            
+                            {/* PHT Time - Secondary */}
+                            <p className="text-sm text-gray-500 mt-2">
+                              PHT: {interview.datetime_pht}
+                            </p>
+                            
+                            {/* Meeting Link */}
+                            {interview.meeting_link && (
+                              <a 
+                                href={interview.meeting_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline mt-2"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                Join Meeting
+                              </a>
+                            )}
+                          </div>
+                          
+                          <div className="text-right text-sm text-gray-400">
+                            #{idx + 1}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  {allInterviewsWithTimes.filter(i => i.status === 'confirmed').length} confirmed, {' '}
+                  {allInterviewsWithTimes.filter(i => i.status === 'scheduled').length} pending
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAllInterviewsModal(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>,
+          document.body
+        )}
 
         {/* Scheduled Interviews Modal - Separate Popup */}
         {showScheduledModal && scheduledInterviews.length > 0 && ReactDOM.createPortal(
@@ -2489,10 +2670,11 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                             Send
                           </Button>
                           <button
-                            onClick={(e) => handleDelete(interview.id, e)}
-                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            onClick={(e) => handleRemoveScheduled(interview.id, interview.applicant_name, e)}
+                            className="p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+                            title="Remove from schedule (keeps availability)"
                           >
-                            <Trash2 className="w-5 h-5" />
+                            <X className="w-5 h-5" />
                           </button>
                         </div>
                       </div>

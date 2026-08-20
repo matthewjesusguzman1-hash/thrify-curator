@@ -584,6 +584,38 @@ async def schedule_interview(
     return {"message": "Interview scheduled! Review in the summary before sending."}
 
 
+@router.post("/interview-inbox/{request_id}/unschedule")
+async def unschedule_interview(
+    request_id: str,
+    admin: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Remove scheduled time and return interview to 'responded' status (keeps applicant availability)"""
+    interview_request = await db.interview_requests.find_one({"id": request_id})
+    
+    if not interview_request:
+        raise HTTPException(status_code=404, detail="Interview request not found")
+    
+    if interview_request.get("status") != "scheduled":
+        raise HTTPException(status_code=400, detail="Interview is not in scheduled status")
+    
+    # Update status back to responded and clear scheduled fields
+    await db.interview_requests.update_one(
+        {"id": request_id},
+        {
+            "$set": {"status": "responded"},
+            "$unset": {
+                "scheduled_datetime": "",
+                "scheduled_datetime_ct": "",
+                "scheduled_meeting_link": "",
+                "scheduled_at": ""
+            }
+        }
+    )
+    
+    return {"message": "Scheduled time removed. Applicant is back in your inbox."}
+
+
 @router.post("/interview-inbox/{request_id}/send-scheduled")
 async def send_scheduled_interview(
     request_id: str,
