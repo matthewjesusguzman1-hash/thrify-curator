@@ -2460,10 +2460,21 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [customDateTime, setCustomDateTime] = useState("");
   const [useCustom, setUseCustom] = useState(false);
-  const [meetingLink, setMeetingLink] = useState("");
   const [additionalMessage, setAdditionalMessage] = useState("");
   const [conflicts, setConflicts] = useState([]);
   const [loadingConflicts, setLoadingConflicts] = useState(true);
+
+  // Get saved meeting link from localStorage
+  const getSavedMeetingLink = () => localStorage.getItem('thrifty_default_meeting_link') || "";
+  const [meetingLink, setMeetingLink] = useState(getSavedMeetingLink());
+
+  // Save meeting link as default
+  const saveMeetingLink = () => {
+    if (meetingLink.trim()) {
+      localStorage.setItem('thrifty_default_meeting_link', meetingLink.trim());
+      toast.success("Meeting link saved as default!");
+    }
+  };
 
   // Get the time slots from the applicant's response
   const timeSlots = request.applicant_response?.time_slots || [];
@@ -2697,9 +2708,23 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
           )}
 
           <div>
-            <Label className="text-sm font-medium text-gray-700 mb-2 block">
-              Google Meet Link *
-            </Label>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm font-medium text-gray-700">
+                Google Meet Link *
+              </Label>
+              {meetingLink.trim() && meetingLink !== getSavedMeetingLink() && (
+                <button
+                  type="button"
+                  onClick={saveMeetingLink}
+                  className="text-xs text-green-600 hover:underline font-medium"
+                >
+                  Save as Default
+                </button>
+              )}
+              {meetingLink === getSavedMeetingLink() && meetingLink.trim() && (
+                <span className="text-xs text-gray-400">✓ Using saved link</span>
+              )}
+            </div>
             <Input
               type="url"
               value={meetingLink}
@@ -2707,6 +2732,15 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
               placeholder="https://meet.google.com/xxx-xxxx-xxx"
               className="border-gray-300"
             />
+            {!meetingLink.trim() && getSavedMeetingLink() && (
+              <button
+                type="button"
+                onClick={() => setMeetingLink(getSavedMeetingLink())}
+                className="text-xs text-[#8B5CF6] hover:underline mt-1"
+              >
+                Use saved link: {getSavedMeetingLink().substring(0, 35)}...
+              </button>
+            )}
           </div>
 
           <div>
