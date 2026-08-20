@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Calendar, Clock, Send, CheckCircle, AlertCircle, Loader2, Plus, Trash2 } from "lucide-react";
+import { Calendar, Clock, Send, CheckCircle, AlertCircle, Loader2, Plus, Trash2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import axios from "axios";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-// Convert PHT to CT (PHT is UTC+8, CT is UTC-6 standard / UTC-5 DST)
+// Convert PHT to CT and return both formatted string and Date object
 function convertPHTtoCT(date, time) {
   if (!date || !time) return null;
   
@@ -30,6 +30,30 @@ function convertPHTtoCT(date, time) {
   };
   
   return utcDate.toLocaleString('en-US', ctOptions);
+}
+
+// Get the CT date for a given PHT date and time
+function getCTDate(phtDate, phtTime) {
+  if (!phtDate || !phtTime) return null;
+  
+  const year = phtDate.split('-')[0];
+  const month = phtDate.split('-')[1];
+  const day = phtDate.split('-')[2];
+  const phtString = `${year}-${month}-${day}T${phtTime}:00+08:00`;
+  
+  const utcDate = new Date(phtString);
+  
+  // Get the date in CT timezone
+  const ctDateStr = utcDate.toLocaleDateString('en-US', { 
+    timeZone: 'America/Chicago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  
+  // Parse MM/DD/YYYY to YYYY-MM-DD
+  const [m, d, y] = ctDateStr.split('/');
+  return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 }
 
 // Parse date string to YYYY-MM-DD
@@ -82,6 +106,7 @@ export default function InterviewResponsePage() {
   const [availabilityBlocks, setAvailabilityBlocks] = useState([{ date: '', startTime: '', endTime: '' }]);
   const [notes, setNotes] = useState("");
   const [availableDates, setAvailableDates] = useState([]);
+  const [ctDateRange, setCTDateRange] = useState({ start: null, end: null });
 
   useEffect(() => {
     fetchInterviewData();
@@ -92,7 +117,29 @@ export default function InterviewResponsePage() {
       const response = await axios.get(`${API}/api/applicant-tests/public/interview-response/${token}`);
       setInterviewData(response.data);
       
-      const dates = getDateRange(response.data.date_range_start, response.data.date_range_end);
+      // Parse the admin's date range
+      const startDate = parseDateToISO(response.data.date_range_start);
+      const endDate = parseDateToISO(response.data.date_range_end);
+      
+      // Store the CT date range for validation
+      setCTDateRange({ start: startDate, end: endDate });
+      
+      // Generate PHT dates that could potentially fall within the CT date range
+      // Since PHT is ahead of CT, we need to include extra days
+      // PHT dates that map to CT dates within the range
+      const extendedStart = new Date(startDate);
+      extendedStart.setDate(extendedStart.getDate()); // Same day in PHT could be prev day in CT
+      
+      const extendedEnd = new Date(endDate);
+      extendedEnd.setDate(extendedEnd.getDate() + 1); // Need next day in PHT to cover end of CT range
+      
+      const dates = [];
+      const current = new Date(extendedStart);
+      while (current <= extendedEnd) {
+        dates.push(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+      }
+      
       setAvailableDates(dates);
       
       if (response.data.already_responded) {
@@ -123,12 +170,35 @@ export default function InterviewResponsePage() {
     setAvailabilityBlocks(updated);
   };
 
+  // Check if a time block falls within the CT date range
+  const isWithinCTRange = (block) => {
+    if (!block.date || !block.startTime || !ctDateRange.start || !ctDateRange.end) return true;
+    
+    const ctDateForStart = getCTDate(block.date, block.startTime);
+    const ctDateForEnd = block.endTime ? getCTDate(block.date, block.endTime) : ctDateForStart;
+    
+    if (!ctDateForStart) return true;
+    
+    // Check if CT date falls within the admin's range
+    const isStartInRange = ctDateForStart >= ctDateRange.start && ctDateForStart <= ctDateRange.end;
+    const isEndInRange = ctDateForEnd >= ctDateRange.start && ctDateForEnd <= ctDateRange.end;
+    
+    return isStartInRange || isEndInRange;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     const validBlocks = availabilityBlocks.filter(block => block.date && block.startTime && block.endTime);
     if (validBlocks.length === 0) {
       toast.error("Please select at least one availability block");
+      return;
+    }
+
+    // Check if any blocks are outside CT range
+    const outOfRangeBlocks = validBlocks.filter(block => !isWithinCTRange(block));
+    if (outOfRangeBlocks.length > 0) {
+      toast.error("Some of your selected times fall outside the requested date range when converted to Central Time. Please adjust.");
       return;
     }
 
@@ -246,13 +316,24 @@ export default function InterviewResponsePage() {
 
           {/* Timezone Info */}
           <div className="p-6 bg-white/5">
-            <div className="bg-[#8B5CF6]/20 border border-[#8B5CF6]/50 rounded-xl p-4">
+            <div className="bg-[#8B5CF6]/20 border border-[#8B5CF6]/50 rounded-xl p-4 mb-3">
               <p className="text-white font-medium text-sm">
                 <Clock className="w-4 h-4 inline mr-2" />
                 Select your available time blocks in Philippine Time (PHT)
               </p>
               <p className="text-white/60 text-xs mt-1">
                 We&apos;ll pick a 30-minute slot within your available window and send you a confirmation.
+              </p>
+            </div>
+            
+            {/* Important CT Range Notice */}
+            <div className="bg-amber-500/20 border border-amber-500/50 rounded-xl p-4">
+              <p className="text-amber-200 font-medium text-sm flex items-start gap-2">
+                <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>
+                  Please choose times that fall within <strong>{interviewData?.date_range_start} - {interviewData?.date_range_end}</strong> in Central Time (CT). 
+                  The system will check this for you.
+                </span>
               </p>
             </div>
           </div>
@@ -264,86 +345,97 @@ export default function InterviewResponsePage() {
             </label>
             
             <div className="space-y-4 mb-6">
-              {availabilityBlocks.map((block, index) => (
-                <div key={index} className="bg-white/5 rounded-xl p-4 border border-white/10">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-white/70 text-sm font-medium">
-                      {availabilityBlocks.length > 1 ? `Option ${index + 1}` : 'Your Availability'}
-                    </span>
-                    {availabilityBlocks.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeBlock(index)}
-                        className="text-red-400 hover:text-red-300 p-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                  
-                  {/* Date Selector */}
-                  <div className="mb-4">
-                    <label className="block text-white/50 text-xs mb-2">Select Date</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {availableDates.map((date) => (
+              {availabilityBlocks.map((block, index) => {
+                const withinRange = isWithinCTRange(block);
+                
+                return (
+                  <div key={index} className={`bg-white/5 rounded-xl p-4 border ${!withinRange && block.startTime && block.endTime ? 'border-red-500/50' : 'border-white/10'}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-white/70 text-sm font-medium">
+                        {availabilityBlocks.length > 1 ? `Option ${index + 1}` : 'Your Availability'}
+                      </span>
+                      {availabilityBlocks.length > 1 && (
                         <button
-                          key={date}
                           type="button"
-                          onClick={() => updateBlock(index, 'date', date)}
-                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                            block.date === date 
-                              ? 'bg-[#8B5CF6] text-white' 
-                              : 'bg-white/10 text-white/70 hover:bg-white/20'
-                          }`}
+                          onClick={() => removeBlock(index)}
+                          className="text-red-400 hover:text-red-300 p-1"
                         >
-                          {formatDateForDisplay(date)}
+                          <Trash2 className="w-4 h-4" />
                         </button>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {/* Time Range - Only show after date is selected */}
-                  {block.date && (
-                    <div className="space-y-3">
-                      <p className="text-white/60 text-xs">
-                        Select your available window (we&apos;ll schedule a 30-min meeting within this time)
-                      </p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-white/50 text-xs mb-1">From (PHT)</label>
-                          <input
-                            type="time"
-                            value={block.startTime}
-                            onChange={(e) => updateBlock(index, 'startTime', e.target.value)}
-                            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-white/50 text-xs mb-1">To (PHT)</label>
-                          <input
-                            type="time"
-                            value={block.endTime}
-                            onChange={(e) => updateBlock(index, 'endTime', e.target.value)}
-                            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
-                            required
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Live CT Conversion */}
-                      {block.startTime && block.endTime && (
-                        <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-3">
-                          <p className="text-green-300 text-sm font-medium">
-                            <Clock className="w-4 h-4 inline mr-1" />
-                            Your Time (CT): {convertPHTtoCT(block.date, block.startTime)?.split(', ')[1]} - {convertPHTtoCT(block.date, block.endTime)?.split(', ')[1]}
-                          </p>
-                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-              ))}
+                    
+                    {/* Date Selector */}
+                    <div className="mb-4">
+                      <label className="block text-white/50 text-xs mb-2">Select Date</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {availableDates.map((date) => (
+                          <button
+                            key={date}
+                            type="button"
+                            onClick={() => updateBlock(index, 'date', date)}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              block.date === date 
+                                ? 'bg-[#8B5CF6] text-white' 
+                                : 'bg-white/10 text-white/70 hover:bg-white/20'
+                            }`}
+                          >
+                            {formatDateForDisplay(date)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Time Range - Only show after date is selected */}
+                    {block.date && (
+                      <div className="space-y-3">
+                        <p className="text-white/60 text-xs">
+                          Select your available window (we&apos;ll schedule a 30-min meeting within this time)
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-white/50 text-xs mb-1">From (PHT)</label>
+                            <input
+                              type="time"
+                              value={block.startTime}
+                              onChange={(e) => updateBlock(index, 'startTime', e.target.value)}
+                              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-white/50 text-xs mb-1">To (PHT)</label>
+                            <input
+                              type="time"
+                              value={block.endTime}
+                              onChange={(e) => updateBlock(index, 'endTime', e.target.value)}
+                              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#8B5CF6] [color-scheme:dark]"
+                              required
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Live CT Conversion */}
+                        {block.startTime && block.endTime && (
+                          <>
+                            <div className={`rounded-lg p-3 ${withinRange ? 'bg-green-500/20 border border-green-500/50' : 'bg-red-500/20 border border-red-500/50'}`}>
+                              <p className={`text-sm font-medium ${withinRange ? 'text-green-300' : 'text-red-300'}`}>
+                                <Clock className="w-4 h-4 inline mr-1" />
+                                Central Time: {convertPHTtoCT(block.date, block.startTime)?.split(', ')[1]} - {convertPHTtoCT(block.date, block.endTime)?.split(', ')[1]}
+                                {!withinRange && (
+                                  <span className="block text-xs mt-1">
+                                    ⚠️ This falls outside the requested date range ({interviewData?.date_range_start} - {interviewData?.date_range_end})
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             
             {/* Add Another Option */}

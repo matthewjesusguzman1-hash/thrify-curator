@@ -2461,6 +2461,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
   const [specificTime, setSpecificTime] = useState("");
   const [customDateTime, setCustomDateTime] = useState("");
   const [useCustom, setUseCustom] = useState(false);
+  const [messageOnly, setMessageOnly] = useState(false); // New: send message without meeting link
   const [additionalMessage, setAdditionalMessage] = useState("");
   const [conflicts, setConflicts] = useState([]);
   const [loadingConflicts, setLoadingConflicts] = useState(true);
@@ -2555,37 +2556,58 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
   };
 
   const handleSend = async () => {
-    const confirmedDateTime = getConfirmedDateTime();
-    
-    if (!confirmedDateTime.trim()) {
-      if (selectedSlot && !specificTime) {
-        toast.error("Please enter the specific meeting time within the selected window");
-      } else {
-        toast.error("Please select or enter the confirmed date and time");
+    // Message-only mode validation
+    if (messageOnly) {
+      if (!additionalMessage.trim()) {
+        toast.error("Please enter a message to send");
+        return;
       }
-      return;
-    }
-    if (!meetingLink.trim()) {
-      toast.error("Please enter the Google Meet link");
-      return;
+    } else {
+      // Meeting confirmation mode validation
+      const confirmedDateTime = getConfirmedDateTime();
+      
+      if (!confirmedDateTime.trim()) {
+        if (selectedSlot && !specificTime) {
+          toast.error("Please enter the specific meeting time within the selected window");
+        } else {
+          toast.error("Please select or enter the confirmed date and time");
+        }
+        return;
+      }
+      if (!meetingLink.trim()) {
+        toast.error("Please enter the Google Meet link");
+        return;
+      }
     }
 
     setSending(true);
     try {
-      await axios.post(
-        `${API}/api/applicant-tests/interview-inbox/${request.id}/send-meeting-link`,
-        {
-          confirmed_datetime: confirmedDateTime,
-          meeting_link: meetingLink,
-          additional_message: additionalMessage
-        },
-        getAuthHeader()
-      );
-
-      toast.success("Meeting confirmation sent!");
+      if (messageOnly) {
+        // Send message-only (request different times)
+        await axios.post(
+          `${API}/api/applicant-tests/interview-inbox/${request.id}/send-message`,
+          {
+            message: additionalMessage
+          },
+          getAuthHeader()
+        );
+        toast.success("Message sent to applicant!");
+      } else {
+        // Send meeting confirmation
+        await axios.post(
+          `${API}/api/applicant-tests/interview-inbox/${request.id}/send-meeting-link`,
+          {
+            confirmed_datetime: getConfirmedDateTime(),
+            meeting_link: meetingLink,
+            additional_message: additionalMessage
+          },
+          getAuthHeader()
+        );
+        toast.success("Meeting confirmation sent!");
+      }
       onSent();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to send confirmation");
+      toast.error(error.response?.data?.detail || "Failed to send");
     } finally {
       setSending(false);
     }
@@ -2610,17 +2632,75 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
         <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-[#10B981]/10 to-[#059669]/10">
           <h2 className="text-lg font-bold text-[#333] flex items-center gap-2">
             <Video className="w-5 h-5 text-[#10B981]" />
-            Send Meeting Confirmation
+            {messageOnly ? 'Send Message' : 'Send Meeting Confirmation'}
           </h2>
           <p className="text-sm text-gray-500">to {request.applicant_name}</p>
         </div>
 
         <div className="p-6 space-y-4 overflow-y-auto flex-1">
-          {/* Applicant's Availability Blocks */}
-          <div>
-            <Label className="text-sm font-medium text-gray-700 mb-2 block">
-              Applicant&apos;s Available Windows
-            </Label>
+          {/* Mode Toggle */}
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setMessageOnly(false)}
+              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                !messageOnly 
+                  ? 'bg-[#10B981] text-white' 
+                  : 'bg-white text-gray-600 border border-gray-200'
+              }`}
+            >
+              Confirm Meeting
+            </button>
+            <button
+              type="button"
+              onClick={() => setMessageOnly(true)}
+              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                messageOnly 
+                  ? 'bg-orange-500 text-white' 
+                  : 'bg-white text-gray-600 border border-gray-200'
+              }`}
+            >
+              Request Different Times
+            </button>
+          </div>
+
+          {messageOnly ? (
+            /* Message Only Mode */
+            <div className="space-y-4">
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                <p className="text-sm text-orange-700">
+                  <AlertTriangle className="w-4 h-4 inline mr-1" />
+                  Use this if the applicant&apos;s times don&apos;t work. Your message will be sent without a meeting link.
+                </p>
+              </div>
+
+              {/* Show their availability for reference */}
+              <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                <p className="font-medium text-gray-700 mb-1">Their Submitted Availability:</p>
+                <p className="text-gray-600 whitespace-pre-wrap text-xs">{request.applicant_response?.availability}</p>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Your Message *
+                </Label>
+                <textarea
+                  value={additionalMessage}
+                  onChange={e => setAdditionalMessage(e.target.value)}
+                  rows={5}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none text-sm"
+                  placeholder="Hi! Unfortunately, the times you provided don't work with our schedule due to the timezone difference. Could you please provide some alternative times? We're looking for times that fall within [dates] in Central Time..."
+                />
+              </div>
+            </div>
+          ) : (
+            /* Meeting Confirmation Mode */
+            <>
+              {/* Applicant's Availability Blocks */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Applicant&apos;s Available Windows
+                </Label>
             
             {timeSlots.length > 0 ? (
               <div className="space-y-2 mb-4">
@@ -2805,6 +2885,8 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
               placeholder="Any additional instructions or notes..."
             />
           </div>
+            </>
+          )}
         </div>
 
         <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
@@ -2813,13 +2895,18 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
           </Button>
           <Button
             onClick={handleSend}
-            disabled={sending || ((!selectedSlot || !specificTime) && !customDateTime) || !meetingLink}
-            className="bg-gradient-to-r from-[#10B981] to-[#059669] text-white"
+            disabled={sending || (messageOnly ? !additionalMessage.trim() : (((!selectedSlot || !specificTime) && !customDateTime) || !meetingLink))}
+            className={messageOnly ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white" : "bg-gradient-to-r from-[#10B981] to-[#059669] text-white"}
           >
             {sending ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
                 Sending...
+              </>
+            ) : messageOnly ? (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                Send Message
               </>
             ) : (
               <>

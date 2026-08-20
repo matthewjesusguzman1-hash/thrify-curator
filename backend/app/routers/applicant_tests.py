@@ -455,6 +455,99 @@ async def send_meeting_link(
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
 
 
+class MessageOnlyRequest(BaseModel):
+    message: str
+
+
+@router.post("/interview-inbox/{request_id}/send-message")
+async def send_message_only(
+    request_id: str,
+    request_data: MessageOnlyRequest,
+    admin: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Send a message to applicant without a meeting link (for requesting different times)"""
+    import resend
+    
+    interview_request = await db.interview_requests.find_one({"id": request_id})
+    
+    if not interview_request:
+        raise HTTPException(status_code=404, detail="Interview request not found")
+    
+    applicant_email = interview_request.get("applicant_email")
+    applicant_name = interview_request.get("applicant_name")
+    test_name = interview_request.get("test_name")
+    admin_name = admin.get("name", "Thrifty Curator Team")
+    
+    # Build the message email
+    email_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); padding: 30px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Schedule Update</h1>
+                <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px;">Thrifty Curator</p>
+            </div>
+            
+            <!-- Content -->
+            <div style="padding: 30px;">
+                <p style="color: #333; font-size: 16px; line-height: 1.6;">
+                    Hi {applicant_name},
+                </p>
+                
+                <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #F59E0B;">
+                    <p style="margin: 0; color: #92400e; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">{request_data.message}</p>
+                </div>
+                
+                <p style="color: #666; font-size: 14px; margin-top: 20px;">
+                    Please reply to this email with your updated availability.
+                </p>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                <p style="color: #666; font-size: 12px; margin: 0;">
+                    Questions? Reply to this email.<br>
+                    &copy; 2026 Thrifty Curator
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    try:
+        emails_client = resend.Emails()
+        emails_client.send({
+            "from": f"{admin_name} <noreply@thrifty-curator.com>",
+            "to": applicant_email,
+            "reply_to": admin.get("email", "admin@thrifty-curator.com"),
+            "subject": f"Interview Scheduling Update - {test_name}",
+            "html": email_html
+        })
+        
+        # Update interview request status to indicate we're waiting for new times
+        await db.interview_requests.update_one(
+            {"id": request_id},
+            {"$set": {
+                "status": "needs_reschedule",
+                "message_sent": request_data.message,
+                "message_sent_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        return {"message": "Message sent successfully!"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+
+
 # ============================================
 # TEST CRUD ROUTES (with /{test_id} wildcard)
 # ============================================
