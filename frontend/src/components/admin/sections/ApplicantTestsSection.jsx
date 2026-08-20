@@ -2339,7 +2339,7 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
     const match = phtString.match(/(\w+),\s*(\w+)\s+(\d+),\s*(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)\s*-\s*(\d+):(\d+)\s*(AM|PM)/i);
     if (match) {
       const [, , month, day, year, startH, startM, startAMPM, endH, endM, endAMPM] = match;
-      const months = { January: 0, February: 1, March: 2, April: 3, May: 4, June: 5, July: 6, August: 7, September: 8, October: 9, November: 10, December: 11 };
+      const months = { January: '01', February: '02', March: '03', April: '04', May: '05', June: '06', July: '07', August: '08', September: '09', October: '10', November: '11', December: '12' };
       
       let sh = parseInt(startH);
       if (startAMPM.toUpperCase() === 'PM' && sh !== 12) sh += 12;
@@ -2349,13 +2349,28 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
       if (endAMPM.toUpperCase() === 'PM' && eh !== 12) eh += 12;
       if (endAMPM.toUpperCase() === 'AM' && eh === 12) eh = 0;
       
-      // Create PHT dates and convert to CT
-      const startPHT = new Date(parseInt(year), months[month] || 0, parseInt(day), sh, parseInt(startM));
-      const endPHT = new Date(parseInt(year), months[month] || 0, parseInt(day), eh, parseInt(endM));
+      // Create ISO strings with PHT timezone offset (+08:00)
+      const monthNum = months[month] || '01';
+      const dayPad = day.padStart(2, '0');
+      const startHPad = String(sh).padStart(2, '0');
+      const startMPad = startM.padStart(2, '0');
+      const endHPad = String(eh).padStart(2, '0');
+      const endMPad = endM.padStart(2, '0');
       
-      // PHT is UTC+8, CT is UTC-5 (or UTC-6 during standard time)
-      // For simplicity, use toLocaleString with timezone
-      const startCT = startPHT.toLocaleString('en-US', {
+      // Create dates with explicit PHT offset (+08:00)
+      const startPHTString = `${year}-${monthNum}-${dayPad}T${startHPad}:${startMPad}:00+08:00`;
+      const endPHTString = `${year}-${monthNum}-${dayPad}T${endHPad}:${endMPad}:00+08:00`;
+      
+      const startDate = new Date(startPHTString);
+      const endDate = new Date(endPHTString);
+      
+      // Handle overnight: if end time appears to be before start, it's next day
+      if (endDate <= startDate) {
+        endDate.setDate(endDate.getDate() + 1);
+      }
+      
+      // Convert to CT using toLocaleString
+      const startCT = startDate.toLocaleString('en-US', {
         timeZone: 'America/Chicago',
         weekday: 'short',
         month: 'short',
@@ -2365,7 +2380,7 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
         hour12: true
       });
       
-      const endCT = endPHT.toLocaleString('en-US', {
+      const endCT = endDate.toLocaleString('en-US', {
         timeZone: 'America/Chicago',
         hour: 'numeric',
         minute: '2-digit',
