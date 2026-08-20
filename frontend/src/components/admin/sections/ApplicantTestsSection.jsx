@@ -2421,6 +2421,89 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
       return parseDateTime(a) - parseDateTime(b);
     });
 
+  // Check for overlapping interviews in ALL scheduled/confirmed interviews
+  const checkAllInterviewOverlaps = () => {
+    const overlaps = [];
+    for (let i = 0; i < allInterviewsWithTimes.length; i++) {
+      for (let j = i + 1; j < allInterviewsWithTimes.length; j++) {
+        const a = allInterviewsWithTimes[i];
+        const b = allInterviewsWithTimes[j];
+        
+        // Parse time ranges from CT or PHT strings
+        const parseTimeRange = (interview) => {
+          const ctString = interview.datetime_ct;
+          const phtString = interview.datetime_pht;
+          
+          // Try CT format: "Fri, Aug 21 at 9:00 AM - 9:30 AM CT"
+          if (ctString) {
+            const match = ctString.match(/(\w+),?\s*(\w+)\s+(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)\s*-\s*(\d+):(\d+)\s*(AM|PM)/i);
+            if (match) {
+              const [, , month, day, startH, startM, startAMPM, endH, endM, endAMPM] = match;
+              const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+              
+              let sh = parseInt(startH);
+              if (startAMPM.toUpperCase() === 'PM' && sh !== 12) sh += 12;
+              if (startAMPM.toUpperCase() === 'AM' && sh === 12) sh = 0;
+              
+              let eh = parseInt(endH);
+              if (endAMPM.toUpperCase() === 'PM' && eh !== 12) eh += 12;
+              if (endAMPM.toUpperCase() === 'AM' && eh === 12) eh = 0;
+              
+              return {
+                start: new Date(2026, months[month] || 0, parseInt(day), sh, parseInt(startM)),
+                end: new Date(2026, months[month] || 0, parseInt(day), eh, parseInt(endM))
+              };
+            }
+          }
+          
+          // Try PHT format: "Saturday, August 22, 2026 at 8:30 PM - 9:00 PM PHT"
+          if (phtString) {
+            const match = phtString.match(/(\w+),\s*(\w+)\s+(\d+),\s*(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)\s*-\s*(\d+):(\d+)\s*(AM|PM)/i);
+            if (match) {
+              const [, , month, day, year, startH, startM, startAMPM, endH, endM, endAMPM] = match;
+              const months = { January: 0, February: 1, March: 2, April: 3, May: 4, June: 5, July: 6, August: 7, September: 8, October: 9, November: 10, December: 11 };
+              
+              let sh = parseInt(startH);
+              if (startAMPM.toUpperCase() === 'PM' && sh !== 12) sh += 12;
+              if (startAMPM.toUpperCase() === 'AM' && sh === 12) sh = 0;
+              
+              let eh = parseInt(endH);
+              if (endAMPM.toUpperCase() === 'PM' && eh !== 12) eh += 12;
+              if (endAMPM.toUpperCase() === 'AM' && eh === 12) eh = 0;
+              
+              // Convert PHT to CT for comparison (PHT is UTC+8, use same date for comparison)
+              return {
+                start: new Date(parseInt(year), months[month] || 0, parseInt(day), sh, parseInt(startM)),
+                end: new Date(parseInt(year), months[month] || 0, parseInt(day), eh, parseInt(endM))
+              };
+            }
+          }
+          return null;
+        };
+        
+        const rangeA = parseTimeRange(a);
+        const rangeB = parseTimeRange(b);
+        
+        if (rangeA && rangeB) {
+          // Check if ranges overlap
+          if (rangeA.start < rangeB.end && rangeB.start < rangeA.end) {
+            overlaps.push({ 
+              a: a.applicant_name, 
+              b: b.applicant_name,
+              aStatus: a.status,
+              bStatus: b.status,
+              aId: a.id,
+              bId: b.id
+            });
+          }
+        }
+      }
+    }
+    return overlaps;
+  };
+  
+  const allInterviewOverlaps = checkAllInterviewOverlaps();
+
   const handleSendAllScheduled = async () => {
     if (!window.confirm(`Send meeting confirmations to ${scheduledInterviews.length} applicant(s)?`)) return;
     
@@ -2557,6 +2640,28 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4">
+                {/* Time Conflict Warning */}
+                {allInterviewOverlaps.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-red-800">⚠️ Time Conflicts Detected!</p>
+                        <ul className="mt-2 space-y-1">
+                          {allInterviewOverlaps.map((overlap, idx) => (
+                            <li key={idx} className="text-sm text-red-700">
+                              • <strong>{overlap.a}</strong> ({overlap.aStatus}) and <strong>{overlap.b}</strong> ({overlap.bStatus}) have overlapping times
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="text-sm text-red-600 mt-2">
+                          Please reschedule to avoid double-booking.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 {allInterviewsWithTimes.length === 0 ? (
                   <div className="text-center py-12">
                     <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -2564,19 +2669,33 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {allInterviewsWithTimes.map((interview, idx) => (
+                    {allInterviewsWithTimes.map((interview, idx) => {
+                      // Check if this interview is involved in any conflict
+                      const hasConflict = allInterviewOverlaps.some(
+                        o => o.aId === interview.id || o.bId === interview.id
+                      );
+                      
+                      return (
                       <div 
                         key={interview.id} 
                         className={`rounded-xl p-4 border ${
-                          interview.status === 'confirmed' 
-                            ? 'bg-blue-50 border-blue-200' 
-                            : 'bg-purple-50 border-purple-200'
+                          hasConflict
+                            ? 'bg-red-50 border-red-300 ring-2 ring-red-200'
+                            : interview.status === 'confirmed' 
+                              ? 'bg-blue-50 border-blue-200' 
+                              : 'bg-purple-50 border-purple-200'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <p className="font-semibold text-[#333] text-lg">{interview.applicant_name}</p>
+                              {hasConflict && (
+                                <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  Conflict
+                                </span>
+                              )}
                               {interview.status === 'confirmed' ? (
                                 <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                                   Sent
@@ -2620,7 +2739,7 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 )}
               </div>
