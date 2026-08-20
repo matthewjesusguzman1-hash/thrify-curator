@@ -3381,6 +3381,49 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
     return conflicting;
   };
 
+  // Check if a specific 30-min slot overlaps with any existing interview
+  const check30MinSlotConflict = (slot, baseDate) => {
+    if (!slot || conflicts.length === 0) return null;
+    
+    // Get the slot's CT time range
+    const slotStartCT = convertPHTtoCT(slot.startDate || baseDate, slot.start);
+    const slotEndCT = convertPHTtoCT(slot.endDate || baseDate, slot.end);
+    
+    if (!slotStartCT || !slotEndCT) return null;
+    
+    // Parse the slot's CT times
+    const parseSlotTime = (ctString) => {
+      if (!ctString) return null;
+      const match = ctString.match(/(\w+),?\s*(\w+)\s+(\d+),?\s*(\d+):(\d+)\s*(AM|PM)/i);
+      if (match) {
+        const [, , month, day, hour, min, ampm] = match;
+        const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+        let h = parseInt(hour);
+        if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
+        if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
+        return new Date(2026, months[month] || 0, parseInt(day), h, parseInt(min));
+      }
+      return null;
+    };
+    
+    const slotStart = parseSlotTime(slotStartCT);
+    const slotEnd = parseSlotTime(slotEndCT);
+    
+    if (!slotStart || !slotEnd) return null;
+    
+    // Check against each existing interview
+    for (const existing of conflicts) {
+      const existingRange = parseCTTimeRange(existing.datetime_ct);
+      if (existingRange) {
+        // Check if ranges overlap
+        if (slotStart < existingRange.end && existingRange.start < slotEnd) {
+          return existing;
+        }
+      }
+    }
+    return null;
+  };
+
   const getConfirmedDateTime = () => {
     if (useCustom) return customDateTime;
     if (!selectedSlot || !specificTime) return "";
@@ -3694,6 +3737,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                             const isSelected = specificTime === slot.start;
                             const slotCT = convertPHTtoCT(slot.startDate, slot.start);
                             const slotEndCT = convertPHTtoCT(slot.endDate, slot.end)?.split(', ').pop();
+                            const slotConflict = check30MinSlotConflict(slot, selectedSlot.date);
                             
                             return (
                               <button
@@ -3701,19 +3745,28 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                                 type="button"
                                 onClick={() => setSpecificTime(slot.start)}
                                 className={`p-2 rounded-lg border-2 text-left transition-all ${
-                                  isSelected 
-                                    ? 'border-blue-500 bg-blue-50' 
-                                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                                  slotConflict
+                                    ? 'border-red-300 bg-red-50 hover:border-red-400'
+                                    : isSelected 
+                                      ? 'border-blue-500 bg-blue-50' 
+                                      : 'border-gray-200 hover:border-gray-300 bg-white'
                                 }`}
                               >
                                 {/* CT Time - Primary */}
-                                <p className={`text-sm font-bold ${isSelected ? 'text-blue-700' : 'text-blue-600'}`}>
+                                <p className={`text-sm font-bold ${slotConflict ? 'text-red-700' : isSelected ? 'text-blue-700' : 'text-blue-600'}`}>
                                   {slotCT?.split(', ').slice(-1)[0]} - {slotEndCT}
                                 </p>
                                 {/* PHT Time - Secondary */}
-                                <p className={`text-xs ${isSelected ? 'text-gray-600' : 'text-gray-400'}`}>
+                                <p className={`text-xs ${slotConflict ? 'text-red-500' : isSelected ? 'text-gray-600' : 'text-gray-400'}`}>
                                   PHT: {formatTime12h(slot.start)} - {formatTime12h(slot.end)}
                                 </p>
+                                {/* Conflict Warning */}
+                                {slotConflict && (
+                                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    Conflicts with {slotConflict.name}
+                                  </p>
+                                )}
                               </button>
                             );
                           })}
@@ -3724,19 +3777,35 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                       </>
                     );
                   })()}
-                  {specificTime && (
-                    <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-xs text-blue-600 font-medium">Selected Meeting Time:</p>
-                      {/* CT Time - Primary */}
-                      <p className="text-sm text-blue-800 font-bold">
-                        CT: {getConfirmedDateTimeCT()}
-                      </p>
-                      {/* PHT Time - Secondary */}
-                      <p className="text-xs text-gray-500">
-                        PHT: {formatTime12h(specificTime)} - {addMinutesToTime(specificTime, 30)}
-                      </p>
-                    </div>
-                  )}
+                  {specificTime && (() => {
+                    // Check if the selected specific time conflicts with existing interviews
+                    const slots = generate30MinSlots(selectedSlot.start_time_pht, selectedSlot.end_time_pht, selectedSlot.date);
+                    const selectedSlotData = slots.find(s => s.start === specificTime);
+                    const selectedConflict = selectedSlotData ? check30MinSlotConflict(selectedSlotData, selectedSlot.date) : null;
+                    
+                    return (
+                      <div className={`mt-3 rounded-lg p-3 border ${selectedConflict ? 'bg-red-50 border-red-300' : 'bg-blue-50 border-blue-200'}`}>
+                        <p className={`text-xs font-medium ${selectedConflict ? 'text-red-600' : 'text-blue-600'}`}>Selected Meeting Time:</p>
+                        {/* CT Time - Primary */}
+                        <p className={`text-sm font-bold ${selectedConflict ? 'text-red-800' : 'text-blue-800'}`}>
+                          CT: {getConfirmedDateTimeCT()}
+                        </p>
+                        {/* PHT Time - Secondary */}
+                        <p className="text-xs text-gray-500">
+                          PHT: {formatTime12h(specificTime)} - {addMinutesToTime(specificTime, 30)}
+                        </p>
+                        {/* Conflict Warning */}
+                        {selectedConflict && (
+                          <div className="mt-2 flex items-center gap-2 text-red-700 bg-red-100 rounded px-2 py-1">
+                            <AlertTriangle className="w-4 h-4" />
+                            <span className="text-sm font-medium">
+                              Conflicts with {selectedConflict.name}&apos;s {selectedConflict.status} interview
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <button
                   type="button"
