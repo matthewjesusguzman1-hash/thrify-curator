@@ -2847,7 +2847,7 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                           <div className="mt-2 bg-blue-50 rounded-lg p-3 border border-blue-200">
                             <p className="text-xs text-blue-600 font-medium mb-1">Your Time (Central)</p>
                             <p className="text-blue-800 font-bold text-lg">
-                              {interview.scheduled_datetime_ct || 'Not available'}
+                              {interview.scheduled_datetime_ct || convertPHTStringToCT(interview.scheduled_datetime) || 'Not available'}
                             </p>
                           </div>
                           
@@ -3070,6 +3070,40 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                     <p className="text-yellow-800 text-sm">
                       <Clock className="w-4 h-4 inline mr-2" />
                       Waiting for applicant to respond with their availability
+                    </p>
+                  </div>
+                )}
+
+                {/* Scheduled (Pending) Meeting Info */}
+                {selectedRequest.status === "scheduled" && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
+                    <h4 className="font-medium text-purple-800 mb-2">Interview Scheduled (Pending Send)</h4>
+                    
+                    {/* CT Time - Primary */}
+                    <div className="bg-white rounded-lg p-3 border border-purple-100 mb-2">
+                      <p className="text-xs text-purple-600 font-medium">Your Time (Central)</p>
+                      <p className="text-purple-800 font-bold text-lg">
+                        {selectedRequest.scheduled_datetime_ct || convertPHTStringToCT(selectedRequest.scheduled_datetime) || 'Converting...'}
+                      </p>
+                    </div>
+                    
+                    {/* PHT Time - Secondary */}
+                    <p className="text-sm text-gray-500">PHT: {selectedRequest.scheduled_datetime}</p>
+                    
+                    {selectedRequest.scheduled_meeting_link && (
+                      <a 
+                        href={selectedRequest.scheduled_meeting_link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-purple-600 text-sm flex items-center gap-1 mt-3 hover:underline"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        {selectedRequest.scheduled_meeting_link}
+                      </a>
+                    )}
+                    
+                    <p className="text-xs text-purple-600 mt-3 bg-purple-100 rounded p-2">
+                      ℹ️ This interview is scheduled but confirmation hasn&apos;t been sent yet. Use &quot;Send Pending&quot; to send.
                     </p>
                   </div>
                 )}
