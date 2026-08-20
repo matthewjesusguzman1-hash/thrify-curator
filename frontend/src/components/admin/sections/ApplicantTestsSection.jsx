@@ -2239,8 +2239,77 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
     }
   };
 
-  // Get scheduled (draft) interviews for the summary view
-  const scheduledInterviews = requests.filter(r => r.status === 'scheduled');
+  // Get scheduled (draft) interviews for the summary view - SORTED by CT time
+  const scheduledInterviews = requests
+    .filter(r => r.status === 'scheduled')
+    .sort((a, b) => {
+      // Parse CT datetime for sorting
+      const parseDateTime = (interview) => {
+        const ct = interview.scheduled_datetime_ct || '';
+        // Try to extract date and time from format like "Fri, Aug 21 at 9:00 AM - Aug 21 at 9:30 AM CT"
+        const match = ct.match(/(\w+),?\s*(\w+)\s+(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)/i);
+        if (match) {
+          const [, , month, day, hour, min, ampm] = match;
+          const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+          let h = parseInt(hour);
+          if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
+          if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
+          return new Date(2026, months[month] || 0, parseInt(day), h, parseInt(min));
+        }
+        return new Date(0); // Fallback
+      };
+      return parseDateTime(a) - parseDateTime(b);
+    });
+  
+  // Check for overlapping scheduled interviews
+  const checkScheduledOverlaps = () => {
+    const overlaps = [];
+    for (let i = 0; i < scheduledInterviews.length; i++) {
+      for (let j = i + 1; j < scheduledInterviews.length; j++) {
+        const a = scheduledInterviews[i];
+        const b = scheduledInterviews[j];
+        
+        // Parse CT times to check overlap
+        const parseTimeRange = (ctString) => {
+          if (!ctString) return null;
+          // Format: "Fri, Aug 21 at 9:00 AM - Aug 21 at 9:30 AM CT"
+          const match = ctString.match(/(\w+),?\s*(\w+)\s+(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)\s*-\s*\w+\s+\d+\s+at\s+(\d+):(\d+)\s*(AM|PM)/i);
+          if (match) {
+            const [, , month, day, startH, startM, startAMPM, endH, endM, endAMPM] = match;
+            const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+            
+            let sh = parseInt(startH);
+            if (startAMPM.toUpperCase() === 'PM' && sh !== 12) sh += 12;
+            if (startAMPM.toUpperCase() === 'AM' && sh === 12) sh = 0;
+            
+            let eh = parseInt(endH);
+            if (endAMPM.toUpperCase() === 'PM' && eh !== 12) eh += 12;
+            if (endAMPM.toUpperCase() === 'AM' && eh === 12) eh = 0;
+            
+            return {
+              start: new Date(2026, months[month] || 0, parseInt(day), sh, parseInt(startM)),
+              end: new Date(2026, months[month] || 0, parseInt(day), eh, parseInt(endM))
+            };
+          }
+          return null;
+        };
+        
+        const rangeA = parseTimeRange(a.scheduled_datetime_ct);
+        const rangeB = parseTimeRange(b.scheduled_datetime_ct);
+        
+        if (rangeA && rangeB) {
+          // Check if ranges overlap
+          if (rangeA.start < rangeB.end && rangeB.start < rangeA.end) {
+            overlaps.push({ a: a.applicant_name, b: b.applicant_name });
+          }
+        }
+      }
+    }
+    return overlaps;
+  };
+  
+  const scheduledOverlaps = checkScheduledOverlaps();
+  
   const [showScheduledModal, setShowScheduledModal] = useState(false);
   const [sendingAll, setSendingAll] = useState(false);
 
@@ -2368,6 +2437,28 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4">
+                {/* Overlap Warning */}
+                {scheduledOverlaps.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-red-800">Overlapping Times Detected!</p>
+                        <ul className="mt-2 space-y-1">
+                          {scheduledOverlaps.map((overlap, idx) => (
+                            <li key={idx} className="text-sm text-red-700">
+                              • {overlap.a} and {overlap.b} have overlapping meeting times
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="text-sm text-red-600 mt-2">
+                          Please adjust times or remove one of the conflicting interviews.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="space-y-3">
                   {scheduledInterviews.map(interview => (
                     <div key={interview.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
@@ -2847,15 +2938,18 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
   const fetchConflicts = async () => {
     try {
       const response = await axios.get(`${API}/api/applicant-tests/interview-inbox`, getAuthHeader());
-      const confirmedInterviews = (response.data.requests || [])
-        .filter(r => r.status === 'confirmed' && r.id !== request.id)
+      // Include both confirmed AND scheduled interviews for conflict checking
+      const existingInterviews = (response.data.requests || [])
+        .filter(r => (r.status === 'confirmed' || r.status === 'scheduled') && r.id !== request.id)
         .map(r => ({
           id: r.id,
           name: r.applicant_name,
-          datetime: r.confirmed_datetime,
-          date: r.applicant_response?.time_slots?.[0]?.date
+          datetime: r.confirmed_datetime || r.scheduled_datetime,
+          datetime_ct: r.confirmed_datetime_ct || r.scheduled_datetime_ct,
+          date: r.applicant_response?.time_slots?.[0]?.date,
+          status: r.status
         }));
-      setConflicts(confirmedInterviews);
+      setConflicts(existingInterviews);
     } catch (error) {
       console.error("Failed to fetch conflicts:", error);
     } finally {
@@ -2863,7 +2957,51 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
     }
   };
 
-  // Check if a slot conflicts with existing confirmed interviews
+  // Parse CT time string to get start and end times as Date objects
+  const parseCTTimeRange = (ctString) => {
+    if (!ctString) return null;
+    // Format: "Fri, Aug 21 at 9:00 AM - Aug 21 at 9:30 AM CT" or similar
+    const match = ctString.match(/(\w+),?\s*(\w+)\s+(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)\s*-\s*(?:\w+\s+\d+\s+at\s+)?(\d+):(\d+)\s*(AM|PM)/i);
+    if (match) {
+      const [, , month, day, startH, startM, startAMPM, endH, endM, endAMPM] = match;
+      const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+      
+      let sh = parseInt(startH);
+      if (startAMPM.toUpperCase() === 'PM' && sh !== 12) sh += 12;
+      if (startAMPM.toUpperCase() === 'AM' && sh === 12) sh = 0;
+      
+      let eh = parseInt(endH);
+      if (endAMPM.toUpperCase() === 'PM' && eh !== 12) eh += 12;
+      if (endAMPM.toUpperCase() === 'AM' && eh === 12) eh = 0;
+      
+      return {
+        start: new Date(2026, months[month] || 0, parseInt(day), sh, parseInt(startM)),
+        end: new Date(2026, months[month] || 0, parseInt(day), eh, parseInt(endM))
+      };
+    }
+    return null;
+  };
+
+  // Check if a proposed time overlaps with existing interviews
+  const checkTimeOverlap = (proposedCT) => {
+    if (!proposedCT || conflicts.length === 0) return null;
+    
+    const proposedRange = parseCTTimeRange(proposedCT);
+    if (!proposedRange) return null;
+    
+    for (const existing of conflicts) {
+      const existingRange = parseCTTimeRange(existing.datetime_ct);
+      if (existingRange) {
+        // Check if ranges overlap
+        if (proposedRange.start < existingRange.end && existingRange.start < proposedRange.end) {
+          return existing;
+        }
+      }
+    }
+    return null;
+  };
+
+  // Check if a slot conflicts with existing confirmed interviews (legacy date check)
   const checkConflict = (slot) => {
     if (!slot || conflicts.length === 0) return null;
     
@@ -2908,6 +3046,19 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
     if (!meetingLink.trim()) {
       toast.error("Please enter the Google Meet link");
       return;
+    }
+
+    // Check for time overlap with existing scheduled/confirmed interviews
+    const overlappingInterview = checkTimeOverlap(confirmedDateTimeCT);
+    if (overlappingInterview) {
+      const proceed = window.confirm(
+        `⚠️ TIME CONFLICT DETECTED!\n\n` +
+        `This time overlaps with ${overlappingInterview.name}'s ${overlappingInterview.status} interview.\n\n` +
+        `Their time: ${overlappingInterview.datetime_ct}\n` +
+        `Your selected time: ${confirmedDateTimeCT}\n\n` +
+        `Do you want to schedule anyway?`
+      );
+      if (!proceed) return;
     }
 
     setScheduling(true);
