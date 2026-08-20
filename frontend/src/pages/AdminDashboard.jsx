@@ -57,7 +57,8 @@ import {
   Pause,
   Square,
   Car,
-  ClipboardCheck
+  ClipboardCheck,
+  Inbox
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -3546,18 +3547,8 @@ export default function AdminDashboard() {
               badge={`${formsSummary.total_new || 0} new submissions`}
               testId="group-forms"
             >
-              {/* Conversations Section - Employee & Consignor Messages */}
-              <div data-testid="conversations-section">
-                <ConversationsSection />
-              </div>
-
-              {/* Messages Section - Landing Page Contact Form */}
-              <div data-testid="messages-section">
-                <MessagesSection />
-              </div>
-
-              {/* Form Submissions Section */}
-              <div data-testid="form-submissions-section">
+              {/* Primary Section: Form Submissions */}
+              <div data-testid="form-submissions-section" className="mb-4">
                 <FormSubmissionsSection
                   formSubmissions={formSubmissions}
                   formsSummary={formsSummary}
@@ -3580,25 +3571,39 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* Interview Scheduler Section */}
-              <div data-testid="interview-scheduler-section">
-                <InterviewSchedulerSection getAuthHeader={getAuthHeader} />
-              </div>
-
-              {/* Applicant Skills Tests Section */}
-              <div data-testid="applicant-tests-section">
+              {/* Hiring Section: Applicant Tests */}
+              <div data-testid="applicant-tests-section" className="mb-4">
                 <ApplicantTestsSection getAuthHeader={getAuthHeader} />
               </div>
 
-              {/* Rejection History Section */}
-              <div data-testid="rejection-history-section">
-                <RejectionHistorySection getAuthHeader={getAuthHeader} />
+              {/* Messaging Section: Side by Side */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                <div data-testid="conversations-section">
+                  <ConversationsSection />
+                </div>
+                <div data-testid="messages-section">
+                  <MessagesSection />
+                </div>
               </div>
 
-              {/* Email Logs Section */}
-              <div data-testid="email-logs-section">
-                <EmailLogsSection getAuthHeader={getAuthHeader} />
-              </div>
+              {/* Less Used Sections - Collapsed by Default */}
+              <details className="group border-t border-gray-200 pt-4">
+                <summary className="flex items-center gap-2 cursor-pointer text-gray-500 hover:text-gray-700 text-sm font-medium py-2 select-none">
+                  <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
+                  Additional Tools
+                </summary>
+                <div className="pt-4 space-y-4">
+                  <div data-testid="interview-scheduler-section">
+                    <InterviewSchedulerSection getAuthHeader={getAuthHeader} />
+                  </div>
+                  <div data-testid="rejection-history-section">
+                    <RejectionHistorySection getAuthHeader={getAuthHeader} />
+                  </div>
+                  <div data-testid="email-logs-section">
+                    <EmailLogsSection getAuthHeader={getAuthHeader} />
+                  </div>
+                </div>
+              </details>
             </DashboardGroup>
 
             {/* GROUP 4: Reports & Operations */}
