@@ -422,7 +422,7 @@ export default function InterviewResponsePage() {
                             <p className={`text-lg font-bold ${withinRange ? 'text-green-300' : 'text-red-300'}`}>
                               {convertPHTtoCT(block.date, block.startTime)} - {convertPHTtoCT(block.date, block.endTime)?.split(', ')[1]}
                             </p>
-                            <p className="text-white/50 text-xs mt-1">(Central Time - Texas, USA)</p>
+                            <p className="text-white/50 text-xs mt-1">(Central Time)</p>
                             {!withinRange && (
                               <p className="text-red-300 text-sm mt-2 font-medium">
                                 ⚠️ This falls outside the requested date range ({interviewData?.date_range_start} - {interviewData?.date_range_end})
