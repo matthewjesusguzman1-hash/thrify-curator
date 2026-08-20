@@ -294,6 +294,14 @@ class SendMeetingLinkRequest(BaseModel):
     confirmed_datetime: str
     meeting_link: str
     additional_message: str = ""
+    confirmed_datetime_ct: str = ""  # Central Time conversion
+
+
+class ScheduleInterviewRequest(BaseModel):
+    """Request to save interview time as draft (scheduled) before sending"""
+    scheduled_datetime: str  # PHT time string
+    scheduled_datetime_ct: str  # Central Time string for admin reference
+    meeting_link: str
 
 
 @router.get("/interview-inbox")
@@ -543,6 +551,154 @@ async def send_message_only(
         )
         
         return {"message": "Message sent successfully!"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+
+
+@router.post("/interview-inbox/{request_id}/schedule")
+async def schedule_interview(
+    request_id: str,
+    request_data: ScheduleInterviewRequest,
+    admin: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Save interview time as scheduled (draft) without sending email yet"""
+    interview_request = await db.interview_requests.find_one({"id": request_id})
+    
+    if not interview_request:
+        raise HTTPException(status_code=404, detail="Interview request not found")
+    
+    # Update interview request with scheduled details
+    await db.interview_requests.update_one(
+        {"id": request_id},
+        {"$set": {
+            "status": "scheduled",
+            "scheduled_datetime": request_data.scheduled_datetime,
+            "scheduled_datetime_ct": request_data.scheduled_datetime_ct,
+            "scheduled_meeting_link": request_data.meeting_link,
+            "scheduled_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Interview scheduled! Review in the summary before sending."}
+
+
+@router.post("/interview-inbox/{request_id}/send-scheduled")
+async def send_scheduled_interview(
+    request_id: str,
+    admin: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Send confirmation email for a previously scheduled interview"""
+    import resend
+    
+    interview_request = await db.interview_requests.find_one({"id": request_id})
+    
+    if not interview_request:
+        raise HTTPException(status_code=404, detail="Interview request not found")
+    
+    if interview_request.get("status") != "scheduled":
+        raise HTTPException(status_code=400, detail="Interview is not in scheduled status")
+    
+    applicant_email = interview_request.get("applicant_email")
+    applicant_name = interview_request.get("applicant_name")
+    test_name = interview_request.get("test_name")
+    admin_name = admin.get("name", "Thrifty Curator Team")
+    
+    scheduled_datetime = interview_request.get("scheduled_datetime")
+    scheduled_datetime_ct = interview_request.get("scheduled_datetime_ct")
+    meeting_link = interview_request.get("scheduled_meeting_link")
+    
+    if not scheduled_datetime or not meeting_link:
+        raise HTTPException(status_code=400, detail="Missing scheduled datetime or meeting link")
+    
+    # Build confirmation email
+    email_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 30px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Interview Confirmed!</h1>
+                <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px;">Thrifty Curator</p>
+            </div>
+            
+            <!-- Content -->
+            <div style="padding: 30px;">
+                <p style="color: #333; font-size: 16px; line-height: 1.6;">
+                    Hi {applicant_name},
+                </p>
+                
+                <p style="color: #333; font-size: 16px; line-height: 1.6;">
+                    Great news! Your interview has been confirmed.
+                </p>
+                
+                <!-- Date/Time Box -->
+                <div style="background-color: #ecfdf5; border-radius: 8px; padding: 20px; margin: 25px 0; border-left: 4px solid #10B981;">
+                    <p style="margin: 0; color: #065f46; font-size: 18px; font-weight: 600;">
+                        {scheduled_datetime}
+                    </p>
+                </div>
+                
+                <!-- Meeting Link Button -->
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{meeting_link}" style="display: inline-block; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 18px;">
+                        Join Google Meet
+                    </a>
+                </div>
+                
+                <p style="color: #666; font-size: 14px; text-align: center;">
+                    Meeting Link: <a href="{meeting_link}" style="color: #059669;">{meeting_link}</a>
+                </p>
+                
+                <div style="background-color: #fef3c7; border-radius: 8px; padding: 15px; margin-top: 25px;">
+                    <p style="margin: 0; color: #92400e; font-size: 14px;">
+                        <strong>Tips:</strong> Please join the meeting 2-3 minutes early. Make sure your camera and microphone are working.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                <p style="color: #666; font-size: 12px; margin: 0;">
+                    Questions? Reply to this email.<br>
+                    &copy; 2026 Thrifty Curator
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    try:
+        emails_client = resend.Emails()
+        emails_client.send({
+            "from": f"{admin_name} <noreply@thrifty-curator.com>",
+            "to": applicant_email,
+            "reply_to": admin.get("email", "admin@thrifty-curator.com"),
+            "subject": f"Interview Confirmed - {test_name}",
+            "html": email_html
+        })
+        
+        # Update interview request status to confirmed
+        await db.interview_requests.update_one(
+            {"id": request_id},
+            {"$set": {
+                "status": "confirmed",
+                "confirmed_datetime": scheduled_datetime,
+                "confirmed_datetime_ct": scheduled_datetime_ct,
+                "meeting_link": meeting_link,
+                "confirmed_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        return {"message": "Meeting confirmation sent successfully!"}
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")

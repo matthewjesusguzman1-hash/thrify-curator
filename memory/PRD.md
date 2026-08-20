@@ -143,6 +143,17 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - Admin can send meeting confirmation with Google Meet link and CT/PHT timezone
 - Interview Response page: `/app/frontend/src/pages/InterviewResponsePage.jsx`
 
+### Interview Scheduling Preselect/Review Workflow (2026-08-20) - NEW
+- **Bug Fixed**: CT (Central Time) conversion now displays correctly when admin selects specific 30-minute meeting time
+- **Schedule (Review Later)**: Admin can save interview times as drafts without immediately sending confirmation email
+- **Review Scheduled Summary**: Dedicated view showing all scheduled (draft) interviews with both PHT and CT times
+- **Individual Send**: Admin can send confirmation email to one applicant at a time
+- **Bulk Send All**: Admin can send all scheduled confirmations at once with one click
+- **Backend Endpoints Added**:
+  - `POST /api/applicant-tests/interview-inbox/{request_id}/schedule` - Save draft with PHT + CT times
+  - `POST /api/applicant-tests/interview-inbox/{request_id}/send-scheduled` - Send confirmation for previously scheduled interview
+- **Workflow**: Admin picks times → Schedule (saves draft) → Review all on one screen → Send individually or bulk
+
 ### Safari Web Push Notifications
 - Implemented VAPID-based Web Push for Safari PWA (home screen bookmarked web app)
 - Backend service: `/app/backend/app/services/web_push_service.py`

@@ -2229,9 +2229,62 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
       case "responded":
         return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Responded</span>;
       case "confirmed":
-        return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Confirmed</span>;
+        return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Sent</span>;
+      case "scheduled":
+        return <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">Scheduled</span>;
+      case "needs_reschedule":
+        return <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">Needs Reschedule</span>;
       default:
         return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">Pending</span>;
+    }
+  };
+
+  // Get scheduled (draft) interviews for the summary view
+  const scheduledInterviews = requests.filter(r => r.status === 'scheduled');
+  const [showScheduledSummary, setShowScheduledSummary] = useState(false);
+  const [sendingAll, setSendingAll] = useState(false);
+
+  const handleSendAllScheduled = async () => {
+    if (!window.confirm(`Send meeting confirmations to ${scheduledInterviews.length} applicant(s)?`)) return;
+    
+    setSendingAll(true);
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const interview of scheduledInterviews) {
+      try {
+        await axios.post(
+          `${API}/api/applicant-tests/interview-inbox/${interview.id}/send-scheduled`,
+          {},
+          getAuthHeader()
+        );
+        successCount++;
+      } catch (error) {
+        failCount++;
+      }
+    }
+    
+    setSendingAll(false);
+    if (successCount > 0) {
+      toast.success(`Sent ${successCount} meeting confirmation(s)`);
+    }
+    if (failCount > 0) {
+      toast.error(`Failed to send ${failCount} confirmation(s)`);
+    }
+    fetchRequests();
+  };
+
+  const handleSendSingleScheduled = async (interviewId) => {
+    try {
+      await axios.post(
+        `${API}/api/applicant-tests/interview-inbox/${interviewId}/send-scheduled`,
+        {},
+        getAuthHeader()
+      );
+      toast.success("Meeting confirmation sent!");
+      fetchRequests();
+    } catch (error) {
+      toast.error("Failed to send confirmation");
     }
   };
 
@@ -2259,10 +2312,85 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
             </h2>
             <p className="text-sm text-gray-500">View and respond to applicant availability</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
-            <X className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-3">
+            {scheduledInterviews.length > 0 && (
+              <Button
+                onClick={() => setShowScheduledSummary(!showScheduledSummary)}
+                variant={showScheduledSummary ? "default" : "outline"}
+                className={showScheduledSummary ? "bg-purple-600 text-white" : "border-purple-400 text-purple-600"}
+                size="sm"
+              >
+                <Calendar className="w-4 h-4 mr-1" />
+                Review Scheduled ({scheduledInterviews.length})
+              </Button>
+            )}
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
+
+        {/* Scheduled Summary View */}
+        {showScheduledSummary && scheduledInterviews.length > 0 && (
+          <div className="bg-purple-50 border-b border-purple-200 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-purple-900 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Scheduled Interviews - Review Before Sending
+              </h3>
+              <Button
+                onClick={handleSendAllScheduled}
+                disabled={sendingAll}
+                className="bg-green-600 hover:bg-green-700 text-white"
+                size="sm"
+              >
+                {sendingAll ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-1" />
+                    Send All ({scheduledInterviews.length})
+                  </>
+                )}
+              </Button>
+            </div>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {scheduledInterviews.map(interview => (
+                <div key={interview.id} className="bg-white rounded-lg p-3 border border-purple-200 flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-[#333] truncate">{interview.applicant_name}</p>
+                    <p className="text-sm text-purple-700">{interview.scheduled_datetime}</p>
+                    {interview.scheduled_datetime_ct && (
+                      <p className="text-xs text-blue-600">Your time: {interview.scheduled_datetime_ct}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => handleSendSingleScheduled(interview.id)}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Send className="w-3 h-3 mr-1" />
+                      Send
+                    </Button>
+                    <button
+                      onClick={(e) => handleDelete(interview.id, e)}
+                      className="p-1 text-gray-400 hover:text-red-500"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-purple-600 mt-2">
+              Review all times above, then click &quot;Send All&quot; or send individually.
+            </p>
+          </div>
+        )}
 
         <div className="flex-1 overflow-hidden flex">
           {/* Request List */}
@@ -2499,6 +2627,7 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
 // Send Meeting Link Modal
 function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
   const [sending, setSending] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [specificTime, setSpecificTime] = useState("");
   const [customDateTime, setCustomDateTime] = useState("");
@@ -2539,6 +2668,40 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
     const period = hours >= 12 ? 'PM' : 'AM';
     const hours12 = hours % 12 || 12;
     return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
+  };
+
+  // Convert PHT time to Central Time
+  const convertPHTtoCT = (date, time) => {
+    if (!date || !time) return null;
+    const phtString = `${date}T${time}:00+08:00`;
+    const utcDate = new Date(phtString);
+    return utcDate.toLocaleString('en-US', {
+      timeZone: 'America/Chicago',
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  // Get the full Central Time datetime string for the selected meeting time
+  const getConfirmedDateTimeCT = () => {
+    if (useCustom || !selectedSlot || !specificTime) return "";
+    const startCT = convertPHTtoCT(selectedSlot.date, specificTime);
+    // Calculate end time (30 mins later)
+    const [hours, mins] = specificTime.split(':').map(Number);
+    const endMins = mins + 30;
+    const endHours = hours + Math.floor(endMins / 60);
+    const endTime = `${String(endHours % 24).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
+    const endCT = convertPHTtoCT(selectedSlot.date, endTime);
+    if (startCT && endCT) {
+      // Extract just the time part from endCT for cleaner display
+      const endTimePart = endCT.split(', ').pop();
+      return `${startCT} - ${endTimePart} CT`;
+    }
+    return startCT || "";
   };
 
   // Get the time slots from the applicant's response
@@ -2597,6 +2760,44 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
     return `${dateStr} at ${startTime12h} - ${endTime12h} PHT`;
   };
 
+  const handleSchedule = async () => {
+    // Validation
+    const confirmedDateTime = getConfirmedDateTime();
+    const confirmedDateTimeCT = getConfirmedDateTimeCT();
+    
+    if (!confirmedDateTime.trim()) {
+      if (selectedSlot && !specificTime) {
+        toast.error("Please enter the specific meeting time within the selected window");
+      } else {
+        toast.error("Please select or enter the confirmed date and time");
+      }
+      return;
+    }
+    if (!meetingLink.trim()) {
+      toast.error("Please enter the Google Meet link");
+      return;
+    }
+
+    setScheduling(true);
+    try {
+      await axios.post(
+        `${API}/api/applicant-tests/interview-inbox/${request.id}/schedule`,
+        {
+          scheduled_datetime: confirmedDateTime,
+          scheduled_datetime_ct: confirmedDateTimeCT,
+          meeting_link: meetingLink
+        },
+        getAuthHeader()
+      );
+      toast.success("Interview scheduled! Check the 'Review Scheduled' button to review and send.");
+      onSent();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to schedule");
+    } finally {
+      setScheduling(false);
+    }
+  };
+
   const handleSend = async () => {
     // Message-only mode validation
     if (messageOnly) {
@@ -2640,6 +2841,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
           `${API}/api/applicant-tests/interview-inbox/${request.id}/send-meeting-link`,
           {
             confirmed_datetime: getConfirmedDateTime(),
+            confirmed_datetime_ct: getConfirmedDateTimeCT(),
             meeting_link: meetingLink,
             additional_message: additionalMessage
           },
@@ -2824,9 +3026,17 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                     className="border-gray-300"
                   />
                   {specificTime && (
-                    <p className="text-xs text-blue-600 mt-1">
-                      Meeting: {specificTime} - {addMinutesToTime(specificTime, 30)} PHT
-                    </p>
+                    <>
+                      <p className="text-xs text-gray-600 mt-2">
+                        PHT: {formatTime12h(specificTime)} - {addMinutesToTime(specificTime, 30)}
+                      </p>
+                      <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-xs text-blue-600 font-medium">Your Time (Central):</p>
+                        <p className="text-sm text-blue-800 font-bold">
+                          {getConfirmedDateTimeCT()}
+                        </p>
+                      </div>
+                    </>
                   )}
                 </div>
                 <button
@@ -2931,13 +3141,33 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
           )}
         </div>
 
-        <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose} disabled={sending}>
+        <div className="p-6 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3">
+          <Button variant="outline" onClick={onClose} disabled={sending || scheduling}>
             Cancel
           </Button>
+          {!messageOnly && (
+            <Button
+              onClick={handleSchedule}
+              disabled={scheduling || sending || ((!selectedSlot || !specificTime) && !customDateTime) || !meetingLink}
+              variant="outline"
+              className="border-purple-400 text-purple-600 hover:bg-purple-50"
+            >
+              {scheduling ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-purple-600 border-t-transparent mr-2" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Schedule (Review Later)
+                </>
+              )}
+            </Button>
+          )}
           <Button
             onClick={handleSend}
-            disabled={sending || (messageOnly ? !additionalMessage.trim() : (((!selectedSlot || !specificTime) && !customDateTime) || !meetingLink))}
+            disabled={sending || scheduling || (messageOnly ? !additionalMessage.trim() : (((!selectedSlot || !specificTime) && !customDateTime) || !meetingLink))}
             className={messageOnly ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white" : "bg-gradient-to-r from-[#10B981] to-[#059669] text-white"}
           >
             {sending ? (
@@ -2953,7 +3183,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
             ) : (
               <>
                 <Send className="w-4 h-4 mr-2" />
-                Send Confirmation
+                Send Now
               </>
             )}
           </Button>
