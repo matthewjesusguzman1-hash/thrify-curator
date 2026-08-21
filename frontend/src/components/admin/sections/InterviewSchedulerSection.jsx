@@ -552,7 +552,15 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
               <div className="space-y-2 max-h-[200px] overflow-y-auto">
                 {bookings
                   .filter(b => b.status === 'confirmed')
-                  .sort((a, b) => a.interview_date.localeCompare(b.interview_date))
+                  .sort((a, b) => {
+                    // Sort by date first, then by time
+                    const dateCompare = a.interview_date.localeCompare(b.interview_date);
+                    if (dateCompare !== 0) return dateCompare;
+                    // Extract start time for comparison
+                    const timeA = a.interview_time?.split(' - ')[0] || '00:00';
+                    const timeB = b.interview_time?.split(' - ')[0] || '00:00';
+                    return timeA.localeCompare(timeB);
+                  })
                   .map(booking => (
                     <div key={booking.id} className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-3 rounded-lg border gap-2">
                       <div className="flex items-center gap-3">
@@ -890,10 +898,55 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
 
 // Availability Inbox Tab Component
 function AvailabilityInboxTab({ requests, onSchedule, onUnschedule, onSendConfirmation, onSendMessage, onDelete }) {
-  // Group by status
+  // Helper to parse datetime string for sorting (handles various formats)
+  const parseDateTimeForSort = (dateTimeStr) => {
+    if (!dateTimeStr) return new Date(9999, 11, 31); // Put items without dates at the end
+    
+    // Try to extract date components from various formats
+    // Format examples: "Sat, Aug 23 at 10:30 AM CT", "Saturday, Aug 23 at 10:30 AM - 11:00 AM PHT"
+    const monthMap = { 'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5, 
+                       'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11 };
+    
+    // Try to match: "Mon, Aug 23" or "Monday, Aug 23" pattern
+    const dateMatch = dateTimeStr.match(/([A-Za-z]+),?\s+([A-Za-z]+)\s+(\d+)/);
+    const timeMatch = dateTimeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    
+    if (dateMatch && timeMatch) {
+      const month = monthMap[dateMatch[2]] ?? 0;
+      const day = parseInt(dateMatch[3], 10);
+      let hours = parseInt(timeMatch[1], 10);
+      const minutes = parseInt(timeMatch[2], 10);
+      const isPM = timeMatch[3].toUpperCase() === 'PM';
+      
+      if (isPM && hours !== 12) hours += 12;
+      if (!isPM && hours === 12) hours = 0;
+      
+      // Assume current year
+      const year = new Date().getFullYear();
+      return new Date(year, month, day, hours, minutes);
+    }
+    
+    // Fallback: try parsing directly
+    const parsed = new Date(dateTimeStr);
+    return isNaN(parsed.getTime()) ? new Date(9999, 11, 31) : parsed;
+  };
+
+  // Group by status and sort chronologically (earliest first)
   const responded = requests.filter(r => r.status === 'responded');
-  const scheduled = requests.filter(r => r.status === 'scheduled');
-  const confirmed = requests.filter(r => r.status === 'confirmed');
+  const scheduled = requests
+    .filter(r => r.status === 'scheduled')
+    .sort((a, b) => {
+      const dateA = parseDateTimeForSort(a.scheduled_datetime_ct || a.scheduled_datetime);
+      const dateB = parseDateTimeForSort(b.scheduled_datetime_ct || b.scheduled_datetime);
+      return dateA - dateB;
+    });
+  const confirmed = requests
+    .filter(r => r.status === 'confirmed')
+    .sort((a, b) => {
+      const dateA = parseDateTimeForSort(a.confirmed_datetime_ct || a.confirmed_datetime);
+      const dateB = parseDateTimeForSort(b.confirmed_datetime_ct || b.confirmed_datetime);
+      return dateA - dateB;
+    });
   const pending = requests.filter(r => r.status === 'pending');
   const needsReschedule = requests.filter(r => r.status === 'needs_reschedule');
 
