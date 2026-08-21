@@ -3445,39 +3445,75 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
   const check30MinSlotConflict = (slot, baseDate) => {
     if (!slot || conflicts.length === 0) return null;
     
-    // Get the slot's CT time range
-    const slotStartCT = convertPHTtoCT(slot.startDate || baseDate, slot.start);
-    const slotEndCT = convertPHTtoCT(slot.endDate || baseDate, slot.end);
+    // Get the slot's CT time range using the slot's date info
+    const slotStartDate = slot.startDate || baseDate;
+    const slotEndDate = slot.endDate || baseDate;
     
-    if (!slotStartCT || !slotEndCT) return null;
+    // Create Date objects for the slot times (in PHT, then we'll compare in same timezone)
+    const slotStartPHT = `${slotStartDate}T${slot.start}:00+08:00`;
+    const slotEndPHT = `${slotEndDate}T${slot.end}:00+08:00`;
     
-    // Parse the slot's CT times
-    const parseSlotTime = (ctString) => {
-      if (!ctString) return null;
-      const match = ctString.match(/(\w+),?\s*(\w+)\s+(\d+),?\s*(\d+):(\d+)\s*(AM|PM)/i);
-      if (match) {
-        const [, , month, day, hour, min, ampm] = match;
-        const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
-        let h = parseInt(hour);
-        if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
-        if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
-        return new Date(2026, months[month] || 0, parseInt(day), h, parseInt(min));
-      }
-      return null;
-    };
+    const slotStartMs = new Date(slotStartPHT).getTime();
+    const slotEndMs = new Date(slotEndPHT).getTime();
     
-    const slotStart = parseSlotTime(slotStartCT);
-    const slotEnd = parseSlotTime(slotEndCT);
-    
-    if (!slotStart || !slotEnd) return null;
+    if (isNaN(slotStartMs) || isNaN(slotEndMs)) return null;
     
     // Check against each existing interview
     for (const existing of conflicts) {
-      const existingRange = parseCTTimeRange(existing.datetime_ct);
-      if (existingRange) {
-        // Check if ranges overlap
-        if (slotStart < existingRange.end && existingRange.start < slotEnd) {
-          return existing;
+      // Parse existing interview's CT time to get actual timestamps
+      const existingCT = existing.datetime_ct;
+      const existingPHT = existing.datetime;
+      
+      if (existingCT) {
+        // Parse format like "Sat, Aug 22, 7:30 AM - 8:00 AM CT" or "Sat, Aug 22 at 7:30 AM - 8:00 AM CT"
+        const match = existingCT.match(/(\w+),?\s*(\w+)\s+(\d+),?\s*(?:at\s+)?(\d+):(\d+)\s*(AM|PM)\s*-\s*(\d+):(\d+)\s*(AM|PM)/i);
+        if (match) {
+          const [, , month, day, startH, startM, startAMPM, endH, endM, endAMPM] = match;
+          const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+          
+          let sh = parseInt(startH);
+          if (startAMPM.toUpperCase() === 'PM' && sh !== 12) sh += 12;
+          if (startAMPM.toUpperCase() === 'AM' && sh === 12) sh = 0;
+          
+          let eh = parseInt(endH);
+          if (endAMPM.toUpperCase() === 'PM' && eh !== 12) eh += 12;
+          if (endAMPM.toUpperCase() === 'AM' && eh === 12) eh = 0;
+          
+          // Create CT Date objects and convert to timestamps
+          const existingStartCT = new Date(2026, months[month] || 0, parseInt(day), sh, parseInt(startM));
+          const existingEndCT = new Date(2026, months[month] || 0, parseInt(day), eh, parseInt(endM));
+          
+          // Convert slot times to CT for comparison
+          const slotStartCTDate = new Date(new Date(slotStartPHT).toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+          const slotEndCTDate = new Date(new Date(slotEndPHT).toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+          
+          // For proper comparison, let's use the CT hour/minute values
+          const slotStartCTStr = new Date(slotStartPHT).toLocaleString('en-US', { 
+            timeZone: 'America/Chicago',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hour12: false 
+          });
+          const slotEndCTStr = new Date(slotEndPHT).toLocaleString('en-US', { 
+            timeZone: 'America/Chicago',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hour12: false 
+          });
+          
+          // Parse "MM/DD/YYYY, HH:MM" format
+          const parseLocaleStr = (str) => {
+            const [datePart, timePart] = str.split(', ');
+            const [m, d, y] = datePart.split('/').map(Number);
+            const [h, min] = timePart.split(':').map(Number);
+            return new Date(y, m - 1, d, h, min);
+          };
+          
+          const slotStartForCompare = parseLocaleStr(slotStartCTStr);
+          const slotEndForCompare = parseLocaleStr(slotEndCTStr);
+          
+          // Check if ranges overlap
+          if (slotStartForCompare < existingEndCT && existingStartCT < slotEndForCompare) {
+            return existing;
+          }
         }
       }
     }
@@ -3739,9 +3775,9 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                         )}
                       </div>
                       {conflict && (
-                        <div className="mt-2 flex items-center gap-1 text-xs text-orange-600">
+                        <div className="mt-2 flex items-center gap-1 text-xs text-red-600 bg-red-50 rounded px-2 py-1">
                           <AlertTriangle className="w-3 h-3" />
-                          Conflict: {conflict.name} already scheduled on this date
+                          Overlaps with {conflict.name} ({conflict.datetime_ct || conflict.datetime})
                         </div>
                       )}
                     </button>
@@ -3824,7 +3860,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                                 {slotConflict && (
                                   <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
                                     <AlertTriangle className="w-3 h-3" />
-                                    Conflicts with {slotConflict.name}
+                                    Overlaps: {slotConflict.name} ({slotConflict.datetime_ct?.split(' - ')[0]?.split(', ').pop() || 'scheduled'})
                                   </p>
                                 )}
                               </button>
