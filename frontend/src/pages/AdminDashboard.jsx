@@ -85,9 +85,9 @@ import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArch
 import SalesDataSection from "@/components/admin/sections/SalesDataSection";
 import TaxesSection from "@/components/admin/sections/TaxesSection";
 import InterviewSchedulerSection from "@/components/admin/sections/InterviewSchedulerSection";
-import ApplicantTestsSection from "@/components/admin/sections/ApplicantTestsSection";
-import RejectionHistorySection from "@/components/admin/sections/RejectionHistorySection";
-import EmailLogsSection from "@/components/admin/sections/EmailLogsSection";
+// ApplicantTestsSection removed - simplified hiring flow
+// RejectionHistorySection removed - simplified hiring flow  
+// EmailLogsSection removed - simplified hiring flow
 import EmployeeTerminationsSection from "@/components/admin/sections/EmployeeTerminationsSection";
 import SendApplicationLinkSection from "@/components/admin/sections/SendApplicationLinkSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
@@ -3582,40 +3582,23 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Additional Tools - Collapsed by Default */}
-              <details className="group border-t border-gray-200 pt-4">
-                <summary className="flex items-center gap-2 cursor-pointer text-gray-500 hover:text-gray-700 text-sm font-medium py-2 select-none">
-                  <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
-                  Additional Tools
-                </summary>
-                <div className="pt-4 space-y-4">
-                  <div data-testid="interview-scheduler-section">
-                    <InterviewSchedulerSection getAuthHeader={getAuthHeader} />
-                  </div>
-                  <div data-testid="rejection-history-section">
-                    <RejectionHistorySection getAuthHeader={getAuthHeader} />
-                  </div>
-                  <div data-testid="email-logs-section">
-                    <EmailLogsSection getAuthHeader={getAuthHeader} />
-                  </div>
-                </div>
-              </details>
+              {/* Additional Tools removed - Interview Scheduler moved to Hiring section */}
             </DashboardGroup>
 
-            {/* GROUP 4: Hiring / Applicant Tests - Separate Section */}
+            {/* GROUP 4: Hiring - Simplified */}
             <DashboardGroup
               title="Hiring"
               icon={ClipboardCheck}
               gradient="from-[#8B5CF6] to-[#6D28D9]"
               defaultOpen={false}
-              badge="Applicant Tests"
+              badge="Applications & Interviews"
               testId="group-hiring"
             >
-              <div data-testid="applicant-tests-section">
-                <ApplicantTestsSection getAuthHeader={getAuthHeader} />
-              </div>
               <div data-testid="send-application-link-section">
                 <SendApplicationLinkSection getAuthHeader={getAuthHeader} />
+              </div>
+              <div data-testid="interview-scheduler-section">
+                <InterviewSchedulerSection getAuthHeader={getAuthHeader} />
               </div>
             </DashboardGroup>
 
