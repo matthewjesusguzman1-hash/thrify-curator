@@ -2265,8 +2265,8 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
     const monthsShort = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
     const monthsFull = { January: 0, February: 1, March: 2, April: 3, May: 4, June: 5, July: 6, August: 7, September: 8, October: 9, November: 10, December: 11 };
     
-    // Format 1: "Fri, Aug 21 at 9:00 AM..."
-    let match = ct.match(/(\w+),?\s*(\w{3})\s+(\d{1,2})\s+at\s+(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    // Format 1: "Sat, Aug 22, 7:00 AM - 7:30 AM CT" (comma after day, no "at")
+    let match = ct.match(/(\w+),\s*(\w{3})\s+(\d{1,2}),\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i);
     if (match) {
       const [, , month, day, hour, min, ampm] = match;
       let h = parseInt(hour);
@@ -2275,7 +2275,17 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
       return new Date(2026, monthsShort[month] ?? 0, parseInt(day), h, parseInt(min));
     }
     
-    // Format 2: "Saturday, August 22, 2026 at 8:30 PM..."
+    // Format 2: "Fri, Aug 21 at 9:00 AM..." (with "at")
+    match = ct.match(/(\w+),?\s*(\w{3})\s+(\d{1,2})\s+at\s+(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (match) {
+      const [, , month, day, hour, min, ampm] = match;
+      let h = parseInt(hour);
+      if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
+      if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
+      return new Date(2026, monthsShort[month] ?? 0, parseInt(day), h, parseInt(min));
+    }
+    
+    // Format 3: "Saturday, August 22, 2026 at 8:30 PM..."
     match = ct.match(/(\w+),\s*(\w+)\s+(\d{1,2}),?\s*(\d{4})?\s+at\s+(\d{1,2}):(\d{2})\s*(AM|PM)/i);
     if (match) {
       const [, , month, day, year, hour, min, ampm] = match;
@@ -2286,7 +2296,7 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
       return new Date(y, monthsFull[month] ?? monthsShort[month] ?? 0, parseInt(day), h, parseInt(min));
     }
     
-    // Format 3: Just extract month day and time
+    // Format 4: Just extract month day and time from any pattern
     match = ct.match(/(\w{3,})\s+(\d{1,2})/);
     if (match) {
       const [, month, day] = match;
