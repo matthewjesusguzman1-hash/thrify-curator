@@ -27,6 +27,7 @@ import ApplicationResponsePage from "@/pages/ApplicationResponsePage";
 import ApplicantTestPage from "@/pages/ApplicantTestPage";
 import InterviewResponsePage from "@/pages/InterviewResponsePage";
 import SubmitAvailabilityPage from "@/pages/SubmitAvailabilityPage";
+import InvitedApplicationPage from "@/pages/InvitedApplicationPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { initShortcutHandler } from "@/utils/shortcutHandler";
 
@@ -280,6 +281,11 @@ function AnimatedRoutes() {
         <Route path="/submit-availability/:token" element={
           <PageTransition>
             <SubmitAvailabilityPage />
+          </PageTransition>
+        } />
+        <Route path="/apply/:token" element={
+          <PageTransition>
+            <InvitedApplicationPage />
           </PageTransition>
         } />
         </Routes>

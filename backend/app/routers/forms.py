@@ -5,6 +5,7 @@ from pydantic import BaseModel, EmailStr
 import os
 import uuid as uuid_module
 import base64
+import secrets
 
 from app.database import db
 from app.dependencies import get_admin_user
@@ -22,6 +23,34 @@ from app.services.email_service import (
 from app.services.apns_service import send_admin_push_notification
 
 router = APIRouter(tags=["Forms"])
+
+
+# ==================== APPLICATION INVITE MODELS ====================
+
+class ApplicationInviteRequest(BaseModel):
+    email: EmailStr
+    template: str = "generic"  # "generic" or "onboarding"
+    required_fields: List[str] = []  # List of field names that are required
+    custom_message: Optional[str] = None
+
+class InvitedJobApplication(BaseModel):
+    """Job application submitted via invite link - supports optional fields"""
+    full_name: str
+    email: EmailStr
+    phone: Optional[str] = ""
+    alt_contact_name: Optional[str] = ""
+    alt_contact_phone: Optional[str] = ""
+    alt_contact_reason: Optional[str] = ""
+    address: Optional[str] = ""
+    resume_text: Optional[str] = ""
+    why_join: Optional[str] = ""
+    availability: Optional[str] = ""
+    tasks_able_to_perform: List[str] = []
+    work_history: List[dict] = []
+    background_check_consent: Optional[bool] = None
+    has_reliable_transportation: Optional[bool] = None
+    additional_info: Optional[str] = ""
+    preferred_contact: str = "email"
 
 # Ensure upload directory exists
 UPLOAD_DIR = "/app/uploads/consignment_photos"
@@ -144,6 +173,244 @@ async def submit_job_application(application: JobApplication, background_tasks: 
     )
     
     return application
+
+
+# ==================== APPLICATION INVITE ENDPOINTS ====================
+
+@router.post("/admin/application-invites/send")
+async def send_application_invite(
+    invite: ApplicationInviteRequest,
+    background_tasks: BackgroundTasks,
+    admin: dict = Depends(get_admin_user)
+):
+    """Send a job application link to a potential applicant"""
+    from app.services.email_service import send_application_invite_email
+    
+    # Check if already sent to this email
+    existing = await db.application_invites.find_one({"email": invite.email.lower()})
+    
+    # Generate unique token
+    token = secrets.token_urlsafe(32)
+    
+    invite_doc = {
+        "id": str(uuid_module.uuid4()),
+        "email": invite.email.lower(),
+        "token": token,
+        "template": invite.template,
+        "required_fields": invite.required_fields,
+        "custom_message": invite.custom_message,
+        "status": "sent",  # sent, opened, completed
+        "sent_at": datetime.now(timezone.utc).isoformat(),
+        "sent_by": admin.get("name", admin.get("email")),
+        "opened_at": None,
+        "completed_at": None,
+        "application_id": None
+    }
+    
+    if existing:
+        # Update existing invite
+        await db.application_invites.update_one(
+            {"email": invite.email.lower()},
+            {"$set": {
+                "token": token,
+                "template": invite.template,
+                "required_fields": invite.required_fields,
+                "custom_message": invite.custom_message,
+                "status": "sent",
+                "sent_at": datetime.now(timezone.utc).isoformat(),
+                "sent_by": admin.get("name", admin.get("email")),
+                "resent_count": (existing.get("resent_count", 0) + 1)
+            }}
+        )
+    else:
+        await db.application_invites.insert_one(invite_doc)
+    
+    # Send email
+    frontend_url = "https://thrifty-curator.com"
+    application_url = f"{frontend_url}/apply/{token}"
+    
+    background_tasks.add_task(
+        send_application_invite_email,
+        to_email=invite.email,
+        application_url=application_url,
+        template=invite.template,
+        custom_message=invite.custom_message
+    )
+    
+    return {
+        "success": True,
+        "message": f"Application invite sent to {invite.email}",
+        "application_url": application_url
+    }
+
+
+@router.get("/admin/application-invites")
+async def get_application_invites(admin: dict = Depends(get_admin_user)):
+    """Get all sent application invites"""
+    invites = await db.application_invites.find({}, {"_id": 0}).sort("sent_at", -1).to_list(500)
+    return {"invites": invites}
+
+
+@router.delete("/admin/application-invites/{invite_id}")
+async def delete_application_invite(invite_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete an application invite"""
+    result = await db.application_invites.delete_one({"id": invite_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Invite not found")
+    return {"success": True}
+
+
+@router.get("/forms/application-invite/{token}")
+async def get_application_invite_details(token: str):
+    """Get invite details for applicant (public endpoint)"""
+    invite = await db.application_invites.find_one({"token": token}, {"_id": 0})
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invalid or expired invite link")
+    
+    # Mark as opened if first time
+    if invite.get("status") == "sent":
+        await db.application_invites.update_one(
+            {"token": token},
+            {"$set": {
+                "status": "opened",
+                "opened_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    
+    # Check if already completed
+    if invite.get("status") == "completed":
+        return {
+            "already_completed": True,
+            "email": invite["email"]
+        }
+    
+    return {
+        "email": invite["email"],
+        "required_fields": invite.get("required_fields", []),
+        "template": invite.get("template", "generic")
+    }
+
+
+@router.post("/forms/application-invite/{token}")
+async def submit_invited_application(
+    token: str,
+    application: InvitedJobApplication,
+    background_tasks: BackgroundTasks
+):
+    """Submit application via invite link"""
+    invite = await db.application_invites.find_one({"token": token})
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invalid or expired invite link")
+    
+    if invite.get("status") == "completed":
+        raise HTTPException(status_code=400, detail="Application already submitted")
+    
+    # Create the application
+    app_id = str(uuid_module.uuid4())
+    app_doc = {
+        "id": app_id,
+        "full_name": application.full_name,
+        "email": application.email,
+        "phone": application.phone or "",
+        "alt_contact_name": application.alt_contact_name or "",
+        "alt_contact_phone": application.alt_contact_phone or "",
+        "alt_contact_reason": application.alt_contact_reason or "",
+        "address": application.address or "",
+        "resume_text": application.resume_text or "",
+        "why_join": application.why_join or "",
+        "availability": application.availability or "",
+        "tasks_able_to_perform": application.tasks_able_to_perform,
+        "work_history": application.work_history,
+        "background_check_consent": application.background_check_consent,
+        "has_reliable_transportation": application.has_reliable_transportation,
+        "additional_info": application.additional_info or "",
+        "preferred_contact": application.preferred_contact,
+        "submitted_at": datetime.now(timezone.utc).isoformat(),
+        "invited": True,
+        "invite_id": invite["id"],
+        "invite_template": invite.get("template", "generic")
+    }
+    
+    await db.job_applications.insert_one(app_doc)
+    
+    # Update invite status
+    await db.application_invites.update_one(
+        {"token": token},
+        {"$set": {
+            "status": "completed",
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "application_id": app_id
+        }}
+    )
+    
+    # Create notification for admin
+    notification = AdminNotification(
+        type="job_application",
+        employee_id=app_id,
+        employee_name=application.full_name,
+        message=f"Invited application from {application.full_name}",
+        details={"email": application.email, "invited": True, "template": invite.get("template")}
+    )
+    await db.admin_notifications.insert_one(notification.model_dump())
+    
+    # Send push notification
+    background_tasks.add_task(
+        send_admin_push_notification,
+        title="Invited Application Received",
+        body=f"{application.full_name} completed their invited application",
+        notification_type="job_application"
+    )
+    
+    # Send confirmation email
+    from app.services.email_service import send_application_received_email
+    background_tasks.add_task(
+        send_application_received_email,
+        to_email=application.email,
+        applicant_name=application.full_name
+    )
+    
+    return {"success": True, "message": "Application submitted successfully"}
+
+
+@router.get("/admin/email-pool")
+async def get_email_pool(admin: dict = Depends(get_admin_user)):
+    """Get emails from job applications and interview pool for easy selection"""
+    # Get from job applications
+    applications = await db.job_applications.find(
+        {},
+        {"_id": 0, "email": 1, "full_name": 1, "submitted_at": 1}
+    ).sort("submitted_at", -1).to_list(100)
+    
+    # Get from interview requests (applicant tests)
+    interview_requests = await db.interview_requests.find(
+        {},
+        {"_id": 0, "applicant_email": 1, "applicant_name": 1}
+    ).to_list(100)
+    
+    # Get from in-person availability requests
+    inperson_requests = await db.inperson_availability_requests.find(
+        {},
+        {"_id": 0, "applicant_email": 1, "applicant_name": 1}
+    ).to_list(100)
+    
+    # Combine and deduplicate
+    emails = {}
+    for app in applications:
+        email = app.get("email", "").lower()
+        if email and email not in emails:
+            emails[email] = {"email": email, "name": app.get("full_name", ""), "source": "application"}
+    
+    for req in interview_requests:
+        email = req.get("applicant_email", "").lower()
+        if email and email not in emails:
+            emails[email] = {"email": email, "name": req.get("applicant_name", ""), "source": "interview"}
+    
+    for req in inperson_requests:
+        email = req.get("applicant_email", "").lower()
+        if email and email not in emails:
+            emails[email] = {"email": email, "name": req.get("applicant_name", ""), "source": "inperson"}
+    
+    return {"emails": list(emails.values())}
 
 
 @router.post("/forms/consignment-inquiry", response_model=ConsignmentInquiry)
@@ -1282,7 +1549,7 @@ async def send_admin_test_email(request: TestEmailRequest, admin: dict = Depends
 # =====================================================
 
 import hashlib
-import secrets
+# secrets already imported at top of file
 
 def hash_password(password: str) -> str:
     """Hash password using SHA256 with salt"""

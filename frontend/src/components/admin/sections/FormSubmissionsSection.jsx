@@ -720,9 +720,24 @@ Thrifty Curator Team`;
                         <tbody>
                           {getSortedData(getFilteredFormSubmissions(formSubmissions.jobApplications), 'jobApplications').map((app) => (
                             <tr key={app.id} data-testid={`job-app-row-${app.id}`}>
-                              <td className="font-medium">{app.full_name}</td>
+                              <td className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  {app.full_name}
+                                  {app.invited && (
+                                    <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-medium" data-testid={`invited-badge-${app.id}`}>
+                                      Invited
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
                               <td>{app.email}</td>
-                              <td>{app.phone}</td>
+                              <td>
+                                {app.phone || (app.alt_contact_name ? (
+                                  <span className="text-xs text-gray-500" title={`Alt: ${app.alt_contact_name} - ${app.alt_contact_phone}`}>
+                                    Alt: {app.alt_contact_name}
+                                  </span>
+                                ) : '-')}
+                              </td>
                               <td className="text-sm text-[#888]">{formatSubmissionDate(app.submitted_at)}</td>
                               <td>
                                 <div className="flex items-center gap-1">

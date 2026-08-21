@@ -1639,3 +1639,81 @@ async def send_availability_followup_email(
     
     html = build_email_template("Please Submit Additional Availability", content)
     return await send_email(to_email, "Thrifty Curator - Additional Availability Needed", html, email_type="availability_followup", recipient_name=applicant_name)
+
+
+async def send_application_invite_email(
+    to_email: str,
+    application_url: str,
+    template: str = "generic",
+    custom_message: str = None
+) -> dict:
+    """Send job application invite email"""
+    
+    if template == "onboarding":
+        subject = "Thrifty Curator - Complete Your Onboarding Application"
+        title = "Complete Your Application"
+        intro = """
+        <p style="color: #333; line-height: 1.6;">
+            Welcome to the next step of your onboarding process!
+        </p>
+        <p style="color: #333; line-height: 1.6;">
+            As a follow-up to our conversation, please complete your application by clicking the button below. 
+            This will help us finalize your onboarding paperwork.
+        </p>
+        """
+    else:  # generic
+        subject = "Thrifty Curator - You're Invited to Apply!"
+        title = "You're Invited to Apply"
+        intro = """
+        <p style="color: #333; line-height: 1.6;">
+            We think you would be a great fit for our team at Thrifty Curator!
+        </p>
+        <p style="color: #333; line-height: 1.6;">
+            We are looking for passionate individuals to join our curated resale business. 
+            Please click the button below to submit your application.
+        </p>
+        """
+    
+    custom_section = ""
+    if custom_message:
+        custom_section = f"""
+        <div style="background: #f8f9fa; border-left: 4px solid #8B5CF6; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+            <p style="color: #333; margin: 0; font-style: italic;">
+                "{custom_message}"
+            </p>
+        </div>
+        """
+    
+    content = f"""
+    {intro}
+    
+    {custom_section}
+    
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{application_url}" 
+           style="background: linear-gradient(135deg, #8B5CF6 0%, #00D4FF 100%); 
+                  color: white; text-decoration: none; padding: 15px 35px; 
+                  border-radius: 30px; font-weight: 600; display: inline-block;
+                  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);">
+            Complete Application
+        </a>
+    </div>
+    
+    <div style="background: #f0f9ff; border-radius: 8px; padding: 15px; margin: 20px 0;">
+        <p style="color: #1e40af; margin: 0; font-size: 14px;">
+            <strong>What we offer:</strong><br>
+            • Flexible scheduling<br>
+            • Team-oriented environment<br>
+            • Opportunity to work with unique, curated items
+        </p>
+    </div>
+    
+    <p style="color: #666; font-size: 14px;">
+        Questions? Reply to this email or visit our website.
+    </p>
+    
+    {get_automated_message_footer()}
+    """
+    
+    html = build_email_template(title, content)
+    return await send_email(to_email, subject, html, email_type="application_invite")

@@ -425,6 +425,17 @@ Thrifty Curator Team`
 
         {/* Modal Content */}
         <div className="p-6 max-h-[60vh] overflow-y-auto">
+          {/* Invited Badge */}
+          {submission.invited && (
+            <div className="mb-4 flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <span className="px-2 py-1 bg-emerald-500 text-white rounded text-xs font-medium">Invited</span>
+              <span className="text-emerald-700 text-sm">
+                This application was submitted via invite link
+                {submission.invite_template && ` (${submission.invite_template === 'onboarding' ? 'Onboarding' : 'General'})`}
+              </span>
+            </div>
+          )}
+
           {/* Contact Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div className="flex items-center gap-3 p-3 bg-[#F9F6F7] rounded-xl">
@@ -443,9 +454,25 @@ Thrifty Curator Team`
               <Phone className="w-5 h-5 text-[#888]" />
               <div>
                 <p className="text-xs text-[#888]">Phone</p>
-                <a href={`tel:${submission.current_phone || submission.phone}`} className="text-[#333] hover:text-[#8B5CF6]">
-                  {submission.current_phone || submission.phone}
-                </a>
+                {submission.phone ? (
+                  <a href={`tel:${submission.current_phone || submission.phone}`} className="text-[#333] hover:text-[#8B5CF6]">
+                    {submission.current_phone || submission.phone}
+                  </a>
+                ) : submission.alt_contact_name ? (
+                  <div>
+                    <p className="text-[#333] text-sm">Alt: {submission.alt_contact_name}</p>
+                    {submission.alt_contact_phone && (
+                      <a href={`tel:${submission.alt_contact_phone}`} className="text-[#8B5CF6] text-sm hover:underline">
+                        {submission.alt_contact_phone}
+                      </a>
+                    )}
+                    {submission.alt_contact_reason && (
+                      <p className="text-xs text-[#888] mt-1">{submission.alt_contact_reason}</p>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-[#888]">Not provided</span>
+                )}
               </div>
             </div>
           </div>

@@ -192,3 +192,24 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - `GET /api/interview-scheduler/admin/check-conflicts` - Check for time conflicts
 - **MongoDB Collection**: `inperson_availability_requests` for storing availability submissions
 - **Existing Production Data**: Not affected - old slot-based bookings preserved
+
+### Send Application Link Feature (2026-08-21) - NEW
+- **Purpose**: Send job application links directly from the app with customizable forms
+- **Location**: Hiring section > "Send Application Link"
+- **Email Templates**:
+  - "Please Apply" - Generic invitation for new potential hires
+  - "Onboarding" - Follow-up for candidates already in the hiring process
+- **Customizable Required Fields**: Admin can toggle which fields applicants must fill out
+- **Optional Phone with Alternative Contact**:
+  - Phone number is now optional
+  - Applicants can provide: Alternative Contact Name, Phone, and Reason
+  - Useful for applicants without personal phones
+- **Tracking**: Shows sent invites with status (Sent/Opened/Completed)
+- **Application Review**: "Invited" badge shown on applications submitted via invite link
+- **Backend Endpoints**:
+  - `POST /api/admin/application-invites/send` - Send invite
+  - `GET /api/admin/application-invites` - List sent invites
+  - `GET /api/admin/email-pool` - Get email suggestions from existing contacts
+  - `GET/POST /api/forms/application-invite/{token}` - Applicant views/submits application
+- **MongoDB Collection**: `application_invites` for tracking sent invites
+- **New Page**: `/apply/:token` - Invited application form with conditional fields

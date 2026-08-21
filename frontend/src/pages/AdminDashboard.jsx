@@ -89,6 +89,7 @@ import ApplicantTestsSection from "@/components/admin/sections/ApplicantTestsSec
 import RejectionHistorySection from "@/components/admin/sections/RejectionHistorySection";
 import EmailLogsSection from "@/components/admin/sections/EmailLogsSection";
 import EmployeeTerminationsSection from "@/components/admin/sections/EmployeeTerminationsSection";
+import SendApplicationLinkSection from "@/components/admin/sections/SendApplicationLinkSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import WebPushSettings from "@/components/WebPushSettings";
@@ -3612,6 +3613,9 @@ export default function AdminDashboard() {
             >
               <div data-testid="applicant-tests-section">
                 <ApplicantTestsSection getAuthHeader={getAuthHeader} />
+              </div>
+              <div data-testid="send-application-link-section">
+                <SendApplicationLinkSection getAuthHeader={getAuthHeader} />
               </div>
             </DashboardGroup>
 

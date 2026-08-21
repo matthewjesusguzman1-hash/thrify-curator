@@ -1,0 +1,90 @@
+{
+  "summary": "Tested Send Application Link feature for Hiring section. All backend APIs working correctly (16/16 tests passed). Frontend components verified: SendApplicationLinkSection renders and expands, send invite modal with template selection and field customization works, InvitedApplicationPage shows error for invalid tokens. One missing UI feature identified: 'invited' badge not displayed in job applications list when reviewing applications submitted via invite link.",
+  "mode": "generate",
+  "baseline_commit": "f3840ce6e6c62ed0790f181b7a3e5e0d796d71d0",
+  "head_commit": "af0f0b6b91fbbcfc8c7508c68d36508f8b9c950d",
+  "specs_created": [
+    "/app/tests/e2e/application-invites.spec.ts",
+    "/app/backend/tests/test_application_invites.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_application_invites.py",
+    "/app/test_reports/pytest/application_invites.xml",
+    "/app/tests/e2e/application-invites.spec.ts"
+  ],
+  "regression_results": {
+    "total_specs": 23,
+    "passed": 23,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [
+    {
+      "id": "IMP-001",
+      "issue_type": "improvement",
+      "severity": "MEDIUM",
+      "description": "Missing 'invited' badge in job applications list view. When admin reviews job applications, applications submitted via invite link should show an 'invited' badge to distinguish them from regular applications. The backend correctly stores the 'invited' field but the frontend FormSubmissionsSection.jsx does not display it.",
+      "endpoint_or_component": "/app/frontend/src/components/admin/sections/FormSubmissionsSection.jsx"
+    }
+  ],
+  "action_items": [
+    "Add 'invited' badge to job applications list in FormSubmissionsSection.jsx for applications where invited=true"
+  ],
+  "updated_files": [
+    "/app/.emergent/testing_baseline_commit",
+    "/app/tests/e2e/application-invites.spec.ts",
+    "/app/backend/tests/test_application_invites.py"
+  ],
+  "test_results": {
+    "backend": "100% (16/16 passed)",
+    "frontend": "100% (7/7 passed)"
+  },
+  "seed_data_creation": "Test invites created during backend tests with unique UUIDs - automatically cleaned up or can be deleted via admin UI",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Send Application Link feature fully tested. Key features verified: 1) SendApplicationLinkSection component renders in Hiring section with invite count, 2) Send invite modal allows email input, template selection (Please Apply/Onboarding), custom message, and required field customization, 3) Sent invites list shows status badges (Sent/Completed) with delete buttons, 4) InvitedApplicationPage shows error for invalid tokens with 'Go to Homepage' button, 5) Backend APIs all working: send invite, list invites, email pool, get invite details, submit invited application, delete invite. One improvement needed: add 'invited' badge to job applications list view.",
+  "features_verified": {
+    "backend_send_invite_api": {
+      "status": "PASS",
+      "details": "POST /api/admin/application-invites/send works with both generic and onboarding templates"
+    },
+    "backend_list_invites_api": {
+      "status": "PASS",
+      "details": "GET /api/admin/application-invites returns list with correct structure (id, email, status, sent_at, template)"
+    },
+    "backend_email_pool_api": {
+      "status": "PASS",
+      "details": "GET /api/admin/email-pool returns emails from job applications and interview requests"
+    },
+    "backend_get_invite_details_api": {
+      "status": "PASS",
+      "details": "GET /api/forms/application-invite/{token} returns invite details or 404 for invalid token"
+    },
+    "backend_submit_invited_application_api": {
+      "status": "PASS",
+      "details": "POST /api/forms/application-invite/{token} creates application with invited=true and alt_contact fields"
+    },
+    "backend_delete_invite_api": {
+      "status": "PASS",
+      "details": "DELETE /api/admin/application-invites/{invite_id} removes invite record"
+    },
+    "frontend_send_application_link_section": {
+      "status": "PASS",
+      "details": "SendApplicationLinkSection renders in Hiring section, expands to show invite button and sent invites list"
+    },
+    "frontend_send_invite_modal": {
+      "status": "PASS",
+      "details": "Modal shows email input, template selection (Please Apply/Onboarding), custom message, required fields checkboxes"
+    },
+    "frontend_invited_application_page": {
+      "status": "PASS",
+      "details": "InvitedApplicationPage shows 'Link Invalid' error for invalid tokens with Go to Homepage button"
+    },
+    "frontend_invited_badge_in_list": {
+      "status": "MISSING",
+      "details": "Job applications list does not show 'invited' badge for applications submitted via invite link"
+    }
+  }
+}
