@@ -737,8 +737,30 @@ export default function EmployeeDashboard({
   };
 
   const handleDownloadBlankW8ben = () => {
+    // Download both the form AND the instructions
+    const formLink = document.createElement('a');
+    formLink.href = "https://www.irs.gov/pub/irs-pdf/fw8ben.pdf";
+    formLink.target = '_blank';
+    formLink.rel = 'noopener noreferrer';
+    document.body.appendChild(formLink);
+    formLink.click();
+    document.body.removeChild(formLink);
+    
+    // Also open the instructions in a new tab
+    setTimeout(() => {
+      const instructionsLink = document.createElement('a');
+      instructionsLink.href = "https://www.irs.gov/pub/irs-pdf/iw8ben.pdf";
+      instructionsLink.target = '_blank';
+      instructionsLink.rel = 'noopener noreferrer';
+      document.body.appendChild(instructionsLink);
+      instructionsLink.click();
+      document.body.removeChild(instructionsLink);
+    }, 500);
+  };
+
+  const handleDownloadW8benInstructions = () => {
     const link = document.createElement('a');
-    link.href = "https://www.irs.gov/pub/irs-pdf/fw8ben.pdf";
+    link.href = "https://www.irs.gov/pub/irs-pdf/iw8ben.pdf";
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
     document.body.appendChild(link);
@@ -1833,26 +1855,65 @@ export default function EmployeeDashboard({
               
               <CollapsibleContent>
                 <div className="px-6 pb-6 pt-2">
-                  <div className="flex justify-end mb-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (window.confirm("Download the IRS W-8BEN form for foreign individuals?")) {
-                          handleDownloadBlankW8ben();
-                        }
-                      }}
-                      className="text-[#FFE66D] border-[#FFE66D]/50 hover:bg-[#FFE66D]/10 bg-transparent"
-                      data-testid="get-w8ben-form-btn"
-                    >
-                      <FileText className="w-4 h-4 mr-1" />
-                      Get W-8BEN Form
-                    </Button>
-                  </div>
-
                   <p className="text-sm text-white/60 mb-4">
                     If you are a foreign individual working for this company, submit your W-8BEN form here to certify your foreign status for U.S. tax purposes.
                   </p>
+
+                  {/* Embedded W-8BEN Form and Instructions */}
+                  <div className="mb-6 rounded-xl overflow-hidden border border-white/20">
+                    {/* Page Navigation Header */}
+                    <div className="bg-gradient-to-r from-[#FFE66D]/20 to-[#4ECDC4]/20 p-3 flex items-center justify-between">
+                      <h3 className="font-semibold text-white flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-[#FFE66D]" />
+                        W-8BEN Form & Instructions
+                      </h3>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDownloadBlankW8ben}
+                          className="text-[#FFE66D] border-[#FFE66D]/50 hover:bg-[#FFE66D]/10 bg-transparent text-xs"
+                        >
+                          Download PDFs
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Scrollable PDF Container */}
+                    <div className="bg-gray-100">
+                      {/* Page 1: W-8BEN Form */}
+                      <div className="border-b-4 border-[#FFE66D]">
+                        <div className="bg-[#FFE66D] text-gray-900 px-3 py-1 text-sm font-semibold">
+                          Page 1: W-8BEN Form (Fill this out)
+                        </div>
+                        <iframe
+                          src="https://www.irs.gov/pub/irs-pdf/fw8ben.pdf"
+                          className="w-full"
+                          style={{ height: '500px' }}
+                          title="W-8BEN Form"
+                        />
+                      </div>
+                      
+                      {/* Page 2: Instructions */}
+                      <div>
+                        <div className="bg-[#4ECDC4] text-gray-900 px-3 py-1 text-sm font-semibold">
+                          Page 2: Instructions (Scroll down to read)
+                        </div>
+                        <iframe
+                          src="https://www.irs.gov/pub/irs-pdf/iw8ben.pdf"
+                          className="w-full"
+                          style={{ height: '500px' }}
+                          title="W-8BEN Instructions"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Quick Reference */}
+                    <div className="bg-white/5 p-3 text-xs text-white/60">
+                      <strong className="text-white/80">Quick tip:</strong> Scroll within each section to view the full document. 
+                      The form is on top, instructions are below.
+                    </div>
+                  </div>
 
                   {/* Submit W-8BEN Button */}
                   {!showW8benSubmitForm && (
