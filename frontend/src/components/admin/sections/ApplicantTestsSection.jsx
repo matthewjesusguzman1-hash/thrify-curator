@@ -2257,26 +2257,62 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
     }
   };
 
+  // Robust datetime parser for sorting interviews chronologically
+  const parseInterviewDateTime = (datetimeStr) => {
+    if (!datetimeStr) return new Date(9999, 11, 31); // Put empty at end
+    
+    const ct = datetimeStr;
+    const monthsShort = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+    const monthsFull = { January: 0, February: 1, March: 2, April: 3, May: 4, June: 5, July: 6, August: 7, September: 8, October: 9, November: 10, December: 11 };
+    
+    // Format 1: "Fri, Aug 21 at 9:00 AM..."
+    let match = ct.match(/(\w+),?\s*(\w{3})\s+(\d{1,2})\s+at\s+(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (match) {
+      const [, , month, day, hour, min, ampm] = match;
+      let h = parseInt(hour);
+      if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
+      if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
+      return new Date(2026, monthsShort[month] ?? 0, parseInt(day), h, parseInt(min));
+    }
+    
+    // Format 2: "Saturday, August 22, 2026 at 8:30 PM..."
+    match = ct.match(/(\w+),\s*(\w+)\s+(\d{1,2}),?\s*(\d{4})?\s+at\s+(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (match) {
+      const [, , month, day, year, hour, min, ampm] = match;
+      let h = parseInt(hour);
+      if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
+      if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
+      const y = year ? parseInt(year) : 2026;
+      return new Date(y, monthsFull[month] ?? monthsShort[month] ?? 0, parseInt(day), h, parseInt(min));
+    }
+    
+    // Format 3: Just extract month day and time
+    match = ct.match(/(\w{3,})\s+(\d{1,2})/);
+    if (match) {
+      const [, month, day] = match;
+      const monthNum = monthsFull[month] ?? monthsShort[month];
+      if (monthNum !== undefined) {
+        const timeMatch = ct.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+        if (timeMatch) {
+          let h = parseInt(timeMatch[1]);
+          if (timeMatch[3].toUpperCase() === 'PM' && h !== 12) h += 12;
+          if (timeMatch[3].toUpperCase() === 'AM' && h === 12) h = 0;
+          return new Date(2026, monthNum, parseInt(day), h, parseInt(timeMatch[2]));
+        }
+        return new Date(2026, monthNum, parseInt(day), 0, 0);
+      }
+    }
+    
+    return new Date(9999, 11, 31);
+  };
+
   // Get scheduled (draft) interviews for the summary view - SORTED by CT time
   const scheduledInterviews = requests
     .filter(r => r.status === 'scheduled')
     .sort((a, b) => {
-      // Parse CT datetime for sorting
-      const parseDateTime = (interview) => {
-        const ct = interview.scheduled_datetime_ct || '';
-        // Try to extract date and time from format like "Fri, Aug 21 at 9:00 AM - Aug 21 at 9:30 AM CT"
-        const match = ct.match(/(\w+),?\s*(\w+)\s+(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)/i);
-        if (match) {
-          const [, , month, day, hour, min, ampm] = match;
-          const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
-          let h = parseInt(hour);
-          if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
-          if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
-          return new Date(2026, months[month] || 0, parseInt(day), h, parseInt(min));
-        }
-        return new Date(0); // Fallback
-      };
-      return parseDateTime(a) - parseDateTime(b);
+      const dateA = parseInterviewDateTime(a.scheduled_datetime_ct || a.scheduled_datetime);
+      const dateB = parseInterviewDateTime(b.scheduled_datetime_ct || b.scheduled_datetime);
+      return dateA - dateB;
     });
   
   // Check for overlapping scheduled interviews
@@ -2406,34 +2442,9 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
       };
     })
     .sort((a, b) => {
-      // Parse CT datetime for sorting
-      const parseDateTime = (interview) => {
-        const ct = interview.datetime_ct || interview.datetime_pht || '';
-        // Try CT format first: "Fri, Aug 21 at 9:00 AM - 9:30 AM CT"
-        let match = ct.match(/(\w+),?\s*(\w+)\s+(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)/i);
-        if (!match) {
-          // Try PHT format: "Saturday, August 22, 2026 at 8:30 PM - 9:00 PM PHT"
-          match = ct.match(/(\w+),\s*(\w+)\s+(\d+),\s*(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)/i);
-          if (match) {
-            const [, , month, day, year, hour, min, ampm] = match;
-            const months = { January: 0, February: 1, March: 2, April: 3, May: 4, June: 5, July: 6, August: 7, September: 8, October: 9, November: 10, December: 11 };
-            let h = parseInt(hour);
-            if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
-            if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
-            return new Date(parseInt(year), months[month] || 0, parseInt(day), h, parseInt(min));
-          }
-        }
-        if (match) {
-          const [, , month, day, hour, min, ampm] = match;
-          const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
-          let h = parseInt(hour);
-          if (ampm.toUpperCase() === 'PM' && h !== 12) h += 12;
-          if (ampm.toUpperCase() === 'AM' && h === 12) h = 0;
-          return new Date(2026, months[month] || 0, parseInt(day), h, parseInt(min));
-        }
-        return new Date(0);
-      };
-      return parseDateTime(a) - parseDateTime(b);
+      const dateA = parseInterviewDateTime(a.datetime_ct || a.datetime_pht);
+      const dateB = parseInterviewDateTime(b.datetime_ct || b.datetime_pht);
+      return dateA - dateB;
     });
 
   // Check for overlapping interviews in ALL scheduled/confirmed interviews
