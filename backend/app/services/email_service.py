@@ -1479,3 +1479,163 @@ The Thrifty Curator Team"""
 
 # Import db for admin notification
 from app.database import db
+
+
+async def send_availability_request_email(
+    to_email: str,
+    applicant_name: str,
+    availability_url: str
+) -> dict:
+    """Send email asking applicant to submit their availability for in-person interview"""
+    
+    first_name = applicant_name.split()[0] if applicant_name else "there"
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        Hi <strong>{first_name}</strong>,
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Thank you for your interest in Thrifty Curator! We'd like to schedule an in-person interview 
+        with you at our store.
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Please click the button below to submit your availability. Let us know what times work best 
+        for you, and we'll get back to you with a confirmed interview time.
+    </p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{availability_url}" 
+           style="background: linear-gradient(135deg, #8B5CF6 0%, #00D4FF 100%); 
+                  color: white; text-decoration: none; padding: 15px 35px; 
+                  border-radius: 30px; font-weight: 600; display: inline-block;
+                  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);">
+            Submit My Availability
+        </a>
+    </div>
+    
+    <div style="background: #f0f9ff; border-radius: 8px; padding: 15px; margin: 20px 0;">
+        <p style="color: #1e40af; margin: 0; font-size: 14px;">
+            <strong>📍 Interview Location:</strong> Thrifty Curator Store<br>
+            <strong>⏱️ Duration:</strong> Approximately 30 minutes
+        </p>
+    </div>
+    
+    <p style="color: #666; font-size: 14px;">
+        If you have any questions, feel free to reply to this email.
+    </p>
+    
+    {get_automated_message_footer()}
+    """
+    
+    html = build_email_template("Schedule Your Interview", content)
+    return await send_email(to_email, "Thrifty Curator - Schedule Your Interview", html, email_type="availability_request", recipient_name=applicant_name)
+
+
+async def send_inperson_interview_confirmation_email(
+    to_email: str,
+    applicant_name: str,
+    interview_datetime: str,
+    interview_datetime_ct: str,
+    location: str,
+    manage_url: str
+) -> dict:
+    """Send confirmation email for scheduled in-person interview"""
+    
+    first_name = applicant_name.split()[0] if applicant_name else "there"
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        Hi <strong>{first_name}</strong>,
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Great news! Your in-person interview has been confirmed.
+    </p>
+    
+    <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); 
+                border: 2px solid #22c55e; border-radius: 12px; padding: 25px; margin: 25px 0;">
+        <h3 style="color: #166534; margin: 0 0 15px 0;">📅 Interview Details</h3>
+        <p style="color: #333; margin: 0 0 10px 0; font-size: 16px;">
+            <strong>Date & Time (Central Time):</strong><br>
+            {interview_datetime_ct}
+        </p>
+        <p style="color: #666; margin: 0 0 15px 0; font-size: 14px;">
+            <em>Philippines Time: {interview_datetime}</em>
+        </p>
+        <p style="color: #333; margin: 0; font-size: 16px;">
+            <strong>Location:</strong><br>
+            {location}
+        </p>
+    </div>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Please arrive 5-10 minutes early. If you need to reschedule or cancel, 
+        use the link below.
+    </p>
+    
+    <div style="text-align: center; margin: 25px 0;">
+        <a href="{manage_url}" 
+           style="background: #f3f4f6; color: #374151; text-decoration: none; 
+                  padding: 12px 25px; border-radius: 6px; font-weight: 500; 
+                  display: inline-block; border: 1px solid #d1d5db;">
+            Manage My Interview
+        </a>
+    </div>
+    
+    <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        We look forward to meeting you!<br><br>
+        <strong>The Thrifty Curator Team</strong>
+    </p>
+    
+    {get_automated_message_footer()}
+    """
+    
+    html = build_email_template("Interview Confirmed!", content)
+    return await send_email(to_email, "Thrifty Curator - Your Interview is Confirmed!", html, email_type="inperson_interview_confirmation", recipient_name=applicant_name)
+
+
+async def send_availability_followup_email(
+    to_email: str,
+    applicant_name: str,
+    resubmit_url: str
+) -> dict:
+    """Send follow-up email asking for new availability times"""
+    
+    first_name = applicant_name.split()[0] if applicant_name else "there"
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6;">
+        Hi <strong>{first_name}</strong>,
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Thank you for submitting your availability! Unfortunately, we weren't able to find a time 
+        that works with our current schedule.
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Could you please submit some additional times that might work for you? We'd really love 
+        to meet with you!
+    </p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{resubmit_url}" 
+           style="background: linear-gradient(135deg, #8B5CF6 0%, #00D4FF 100%); 
+                  color: white; text-decoration: none; padding: 15px 35px; 
+                  border-radius: 30px; font-weight: 600; display: inline-block;
+                  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);">
+            Submit New Times
+        </a>
+    </div>
+    
+    <p style="color: #666; font-size: 14px;">
+        If you have any questions, feel free to reply to this email.
+    </p>
+    
+    {get_automated_message_footer()}
+    """
+    
+    html = build_email_template("Please Submit Additional Availability", content)
+    return await send_email(to_email, "Thrifty Curator - Additional Availability Needed", html, email_type="availability_followup", recipient_name=applicant_name)

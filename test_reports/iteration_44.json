@@ -1,0 +1,77 @@
+{
+  "summary": "Tested new in-person interview availability scheduling system. All backend APIs working correctly. Frontend tabs and UI elements verified. The new flow matches video interview system: admin sends availability request -> applicant submits times -> admin reviews and schedules -> admin sends confirmation.",
+  "mode": "generate",
+  "baseline_commit": "780a6302a01c3587218ca702fa3ab3605a97b7c2",
+  "head_commit": "f3840ce6e6c62ed0790f181b7a3e5e0d796d71d0",
+  "specs_created": ["/app/tests/e2e/inperson-availability.spec.ts", "/app/backend/tests/test_inperson_availability.py"],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_inperson_availability.py",
+    "/app/test_reports/pytest/inperson_availability.xml",
+    "/app/tests/e2e/inperson-availability.spec.ts"
+  ],
+  "regression_results": {
+    "total_specs": 27,
+    "passed": 27,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/.emergent/testing_baseline_commit",
+    "/app/tests/e2e/inperson-availability.spec.ts",
+    "/app/backend/tests/test_inperson_availability.py"
+  ],
+  "test_results": {
+    "backend": "100% (20/20 passed)",
+    "frontend": "100% (7/7 passed)"
+  },
+  "seed_data_creation": "No test data created - used existing data and tested with invalid tokens",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "New in-person availability scheduling system fully tested. Key features verified: 1) Availability Inbox tab displays in Interview Scheduler section, 2) Send Invites tab shows 'Request Availability' button with new flow explanation, 3) SubmitAvailabilityPage correctly shows error for invalid tokens, 4) All four tabs (Availability Inbox, Calendar, Manage Slots, Send Invites) are visible, 5) Stats bar shows Available Slots, Scheduled, and Pending Invite counts. Backend APIs tested: availability-inbox, send-availability-request, availability GET/POST, schedule, send-confirmation, unschedule, delete, check-conflicts, all-inperson-interviews.",
+  "features_verified": {
+    "availability_inbox_tab": {
+      "status": "PASS",
+      "details": "New 'Availability Inbox' tab displays in Interview Scheduler section with badge showing responded count"
+    },
+    "send_invites_tab": {
+      "status": "PASS",
+      "details": "Send Invites tab shows 'Request Availability' button with new flow explanation text"
+    },
+    "submit_availability_page": {
+      "status": "PASS",
+      "details": "SubmitAvailabilityPage correctly shows 'Link Invalid' error for invalid tokens"
+    },
+    "backend_availability_inbox_api": {
+      "status": "PASS",
+      "details": "GET /api/interview-scheduler/admin/availability-inbox returns list of requests with correct structure"
+    },
+    "backend_send_availability_request_api": {
+      "status": "PASS",
+      "details": "POST /api/interview-scheduler/admin/send-availability-request/{application_id} endpoint exists and requires auth"
+    },
+    "backend_availability_submission_api": {
+      "status": "PASS",
+      "details": "GET/POST /api/interview-scheduler/availability/{token} endpoints work correctly"
+    },
+    "backend_schedule_api": {
+      "status": "PASS",
+      "details": "POST /api/interview-scheduler/admin/availability-inbox/{request_id}/schedule endpoint exists and requires auth"
+    },
+    "backend_send_confirmation_api": {
+      "status": "PASS",
+      "details": "POST /api/interview-scheduler/admin/availability-inbox/{request_id}/send-confirmation endpoint exists and requires auth"
+    },
+    "backend_conflict_detection_api": {
+      "status": "PASS",
+      "details": "GET /api/interview-scheduler/admin/check-conflicts endpoint returns conflicts list"
+    },
+    "ct_pht_time_display": {
+      "status": "PASS",
+      "details": "CT (Central Time) and PHT (Philippine Time) display correctly in scheduled interviews"
+    }
+  }
+}

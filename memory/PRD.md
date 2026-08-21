@@ -167,3 +167,28 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 ### Preview Modal Safe Area Fix
 - Fixed close button positioning in test preview modal to respect iOS safe area (status bar)
 - Added `padding-top: max(env(safe-area-inset-top), 12px)` to modal header
+
+### In-Person Interview Scheduler Alignment with Video Call Flow (2026-08-21) - NEW
+- **Full Feature Parity**: The in-person interview scheduler now matches the video call interview workflow
+- **New Availability-Based Flow**:
+  1. Admin sends availability request to applicant (instead of slot-based invite)
+  2. Applicant receives email with link to submit their preferred availability windows
+  3. Applicant submits availability via new `/submit-availability/:token` page
+  4. Admin reviews responses in "Availability Inbox" tab
+  5. Admin selects a 30-minute slot from applicant's availability
+  6. Admin schedules as draft (Review Later) or sends confirmation immediately
+- **New UI Components**:
+  - "Availability Inbox" tab - shows pending, responded, scheduled, and confirmed interviews
+  - "Send Invites" tab - "Request Availability" button instead of direct slot invites
+  - Schedule modal with 30-minute slot selection grid showing both PHT and CT times
+- **Backend Endpoints Added**:
+  - `POST /api/interview-scheduler/admin/send-availability-request/{application_id}` - Send availability request email
+  - `GET/POST /api/interview-scheduler/availability/{token}` - Applicant views/submits availability
+  - `GET /api/interview-scheduler/admin/availability-inbox` - Get all availability requests
+  - `POST /api/interview-scheduler/admin/availability-inbox/{request_id}/schedule` - Save draft schedule
+  - `POST /api/interview-scheduler/admin/availability-inbox/{request_id}/unschedule` - Remove draft
+  - `POST /api/interview-scheduler/admin/availability-inbox/{request_id}/send-confirmation` - Send confirmation email
+  - `POST /api/interview-scheduler/admin/availability-inbox/{request_id}/send-message` - Request new times
+  - `GET /api/interview-scheduler/admin/check-conflicts` - Check for time conflicts
+- **MongoDB Collection**: `inperson_availability_requests` for storing availability submissions
+- **Existing Production Data**: Not affected - old slot-based bookings preserved

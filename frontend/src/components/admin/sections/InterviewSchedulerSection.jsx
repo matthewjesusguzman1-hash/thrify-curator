@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, Clock, Plus, Trash2, Send, User, Phone, Mail, 
   ChevronLeft, ChevronRight, CheckCircle, XCircle, RefreshCw,
-  ChevronDown, ChevronUp, UserX, Eye, Loader2
+  ChevronDown, ChevronUp, UserX, Eye, Loader2, Inbox, MapPin,
+  MessageSquare, AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,11 +16,16 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function InterviewSchedulerSection({ getAuthHeader }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeTab, setActiveTab] = useState('calendar'); // 'calendar', 'slots', 'applicants'
+  const [activeTab, setActiveTab] = useState('inbox'); // 'inbox', 'calendar', 'slots', 'applicants'
   const [slots, setSlots] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Availability inbox state (new flow)
+  const [availabilityRequests, setAvailabilityRequests] = useState([]);
+  const [selectedAvailRequest, setSelectedAvailRequest] = useState(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(null);
   
   // Rejection modal state
   const [showRejectionPreview, setShowRejectionPreview] = useState(false);
@@ -43,14 +50,16 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [slotsRes, bookingsRes, appsRes] = await Promise.all([
+      const [slotsRes, bookingsRes, appsRes, availRes] = await Promise.all([
         axios.get(`${API}/api/interview-scheduler/admin/slots`, getAuthHeader()),
         axios.get(`${API}/api/interview-scheduler/admin/bookings`, getAuthHeader()),
-        axios.get(`${API}/api/admin/forms/job-applications`, getAuthHeader())
+        axios.get(`${API}/api/admin/forms/job-applications`, getAuthHeader()),
+        axios.get(`${API}/api/interview-scheduler/admin/availability-inbox`, getAuthHeader()).catch(() => ({ data: { requests: [] } }))
       ]);
       setSlots(slotsRes.data);
       setBookings(bookingsRes.data);
-      setApplications(appsRes.data.filter(app => !app.interview_scheduled));
+      setApplications(appsRes.data.filter(app => !app.interview_scheduled && !app.availability_request_sent));
+      setAvailabilityRequests(availRes.data.requests || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load scheduler data');
@@ -151,6 +160,102 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to delete slot');
+    }
+  };
+
+  // Send availability request (new flow - like video interview)
+  const sendAvailabilityRequest = async (applicationId, applicantName) => {
+    try {
+      await axios.post(
+        `${API}/api/interview-scheduler/admin/send-availability-request/${applicationId}`,
+        {},
+        getAuthHeader()
+      );
+      toast.success(`Availability request sent to ${applicantName}!`);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to send availability request');
+    }
+  };
+
+  // Schedule from availability (save as draft)
+  const scheduleFromAvailability = async (requestId, selectedDatetime, selectedDatetimeCT, location) => {
+    try {
+      await axios.post(
+        `${API}/api/interview-scheduler/admin/availability-inbox/${requestId}/schedule`,
+        {
+          selected_datetime: selectedDatetime,
+          selected_datetime_ct: selectedDatetimeCT,
+          location: location || "Thrifty Curator Store"
+        },
+        getAuthHeader()
+      );
+      toast.success('Interview scheduled as draft');
+      setShowScheduleModal(null);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to schedule');
+    }
+  };
+
+  // Unschedule (return to responded)
+  const unscheduleAvailability = async (requestId, applicantName) => {
+    if (!window.confirm(`Remove scheduled time for ${applicantName}?\n\nThis will NOT delete their availability.`)) return;
+    try {
+      await axios.post(
+        `${API}/api/interview-scheduler/admin/availability-inbox/${requestId}/unschedule`,
+        {},
+        getAuthHeader()
+      );
+      toast.success('Scheduled time removed');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to unschedule');
+    }
+  };
+
+  // Send confirmation email
+  const sendAvailabilityConfirmation = async (requestId) => {
+    try {
+      await axios.post(
+        `${API}/api/interview-scheduler/admin/availability-inbox/${requestId}/send-confirmation`,
+        {},
+        getAuthHeader()
+      );
+      toast.success('Confirmation sent!');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to send confirmation');
+    }
+  };
+
+  // Send message for new times
+  const sendAvailabilityMessage = async (requestId) => {
+    try {
+      await axios.post(
+        `${API}/api/interview-scheduler/admin/availability-inbox/${requestId}/send-message`,
+        {},
+        getAuthHeader()
+      );
+      toast.success('Message sent requesting new times');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to send message');
+    }
+  };
+
+  // Delete availability request
+  const deleteAvailabilityRequest = async (requestId) => {
+    if (!window.confirm('Delete this availability request? This cannot be undone.')) return;
+    try {
+      await axios.delete(
+        `${API}/api/interview-scheduler/admin/availability-inbox/${requestId}`,
+        getAuthHeader()
+      );
+      toast.success('Request deleted');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete');
     }
   };
 
@@ -329,6 +434,7 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
       {/* Tabs */}
       <div className="flex gap-1 sm:gap-2 border-b border-gray-200 pb-2 overflow-x-auto">
         {[
+          { id: 'inbox', label: 'Availability Inbox', icon: Inbox, badge: availabilityRequests.filter(r => r.status === 'responded').length },
           { id: 'calendar', label: 'Calendar', icon: Calendar },
           { id: 'slots', label: 'Manage Slots', icon: Clock },
           { id: 'applicants', label: 'Send Invites', icon: Send }
@@ -336,18 +442,37 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg transition-all whitespace-nowrap text-sm ${
+            className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg transition-all whitespace-nowrap text-sm relative ${
               activeTab === tab.id
                 ? 'bg-purple-100 text-purple-700 font-medium'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
+            data-testid={`tab-${tab.id}`}
           >
             <tab.icon className="w-4 h-4" />
             <span className="hidden sm:inline">{tab.label}</span>
             <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+            {tab.badge > 0 && (
+              <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {tab.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
+
+      {/* Availability Inbox Tab (New) */}
+      {activeTab === 'inbox' && (
+        <AvailabilityInboxTab
+          requests={availabilityRequests}
+          onSchedule={(req) => setShowScheduleModal(req)}
+          onUnschedule={unscheduleAvailability}
+          onSendConfirmation={sendAvailabilityConfirmation}
+          onSendMessage={sendAvailabilityMessage}
+          onDelete={deleteAvailabilityRequest}
+          getAuthHeader={getAuthHeader}
+        />
+      )}
 
       {/* Calendar Tab */}
       {activeTab === 'calendar' && (
@@ -605,15 +730,14 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
       {/* Send Invites Tab */}
       {activeTab === 'applicants' && (
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h4 className="font-medium text-gray-900 mb-4">Applicants Awaiting Invite</h4>
+          <h4 className="font-medium text-gray-900 mb-4">Applicants Awaiting Interview Request</h4>
           
-          {availableSlots.length === 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-              <p className="text-amber-800 text-sm">
-                <strong>Note:</strong> No available time slots. Create some slots first before sending invites.
-              </p>
-            </div>
-          )}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <p className="text-blue-800 text-sm">
+              <strong>New Flow:</strong> Send an availability request - applicants submit their preferred times, 
+              then you pick a 30-minute slot and confirm.
+            </p>
+          </div>
 
           {applications.length === 0 ? (
             <p className="text-gray-500 text-center py-8">No applicants waiting for interview invites</p>
@@ -636,18 +760,15 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
                           <Phone className="w-3 h-3 flex-shrink-0" /> {app.phone}
                         </p>
                       )}
-                      {app.scheduler_invite_sent && (
-                        <span className="text-xs text-green-600">✓ Invite sent</span>
-                      )}
                     </div>
                   </div>
                   <Button
-                    onClick={() => sendInvite(app.id, app.full_name)}
-                    disabled={availableSlots.length === 0}
+                    onClick={() => sendAvailabilityRequest(app.id, app.full_name)}
                     className="bg-gradient-to-r from-purple-500 to-blue-500 text-white w-full sm:w-auto flex-shrink-0"
+                    data-testid={`send-availability-request-${app.id}`}
                   >
                     <Send className="w-4 h-4 mr-2" />
-                    {app.scheduler_invite_sent ? 'Resend' : 'Send Invite'}
+                    Request Availability
                   </Button>
                 </div>
               ))}
@@ -753,6 +874,436 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Schedule Modal */}
+      {showScheduleModal && (
+        <ScheduleFromAvailabilityModal
+          request={showScheduleModal}
+          onClose={() => setShowScheduleModal(null)}
+          onSchedule={scheduleFromAvailability}
+        />
+      )}
     </div>
+  );
+}
+
+
+// Availability Inbox Tab Component
+function AvailabilityInboxTab({ requests, onSchedule, onUnschedule, onSendConfirmation, onSendMessage, onDelete }) {
+  // Group by status
+  const responded = requests.filter(r => r.status === 'responded');
+  const scheduled = requests.filter(r => r.status === 'scheduled');
+  const confirmed = requests.filter(r => r.status === 'confirmed');
+  const pending = requests.filter(r => r.status === 'pending');
+  const needsReschedule = requests.filter(r => r.status === 'needs_reschedule');
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case "responded":
+        return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Responded</span>;
+      case "confirmed":
+        return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Confirmed</span>;
+      case "scheduled":
+        return <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">Scheduled (Draft)</span>;
+      case "needs_reschedule":
+        return <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">Needs Reschedule</span>;
+      default:
+        return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">Pending</span>;
+    }
+  };
+
+  const formatAvailability = (avail) => {
+    if (!avail || avail.length === 0) return 'No availability submitted';
+    return avail.map((a, i) => {
+      const date = new Date(a.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const startTime = formatTime12h(a.start_time);
+      const endTime = formatTime12h(a.end_time);
+      return `${date}: ${startTime} - ${endTime}`;
+    }).join(' | ');
+  };
+
+  const formatTime12h = (time24) => {
+    if (!time24) return '';
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
+  };
+
+  if (requests.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <Inbox className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+        <p className="text-gray-500">No availability requests yet</p>
+        <p className="text-gray-400 text-sm mt-1">Send availability requests from the Send Invites tab</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Scheduled Drafts Section */}
+      {scheduled.length > 0 && (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-medium text-purple-900 flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              Scheduled (Ready to Send) - {scheduled.length}
+            </h4>
+            {scheduled.length > 1 && (
+              <Button
+                size="sm"
+                onClick={() => scheduled.forEach(r => onSendConfirmation(r.id))}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                Send All ({scheduled.length})
+              </Button>
+            )}
+          </div>
+          <div className="space-y-3">
+            {scheduled.map(req => (
+              <div key={req.id} className="bg-white rounded-lg p-4 border border-purple-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900">{req.applicant_name}</p>
+                    <p className="text-sm text-purple-700">{req.scheduled_datetime_ct || req.scheduled_datetime}</p>
+                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                      <MapPin className="w-3 h-3" />
+                      {req.scheduled_location || 'Thrifty Curator Store'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onUnschedule(req.id, req.applicant_name)}
+                      className="text-red-600 border-red-300"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => onSendConfirmation(req.id)}
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      <Send className="w-4 h-4 mr-1" />
+                      Send
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Responded - Ready to Schedule */}
+      {responded.length > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+          <h4 className="font-medium text-green-900 mb-4 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5" />
+            Ready to Schedule - {responded.length}
+          </h4>
+          <div className="space-y-3">
+            {responded.map(req => (
+              <div key={req.id} className="bg-white rounded-lg p-4 border border-green-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900">{req.applicant_name}</p>
+                    <p className="text-sm text-gray-500">{req.applicant_email}</p>
+                    <p className="text-sm text-green-700 mt-1">{formatAvailability(req.availability)}</p>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onSendMessage(req.id)}
+                      className="text-orange-600 border-orange-300"
+                      title="Request new times"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => onSchedule(req)}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Calendar className="w-4 h-4 mr-1" />
+                      Schedule
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Confirmed Interviews */}
+      {confirmed.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <h4 className="font-medium text-blue-900 mb-4 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5" />
+            Confirmed Interviews - {confirmed.length}
+          </h4>
+          <div className="space-y-3">
+            {confirmed.map(req => (
+              <div key={req.id} className="bg-white rounded-lg p-4 border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900">{req.applicant_name}</p>
+                    <p className="text-sm text-blue-700">{req.confirmed_datetime_ct || req.confirmed_datetime}</p>
+                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                      <MapPin className="w-3 h-3" />
+                      {req.scheduled_location || 'Thrifty Curator Store'}
+                    </p>
+                  </div>
+                  {getStatusBadge(req.status)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pending / Needs Reschedule */}
+      {(pending.length > 0 || needsReschedule.length > 0) && (
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+          <h4 className="font-medium text-gray-700 mb-4">Waiting for Response</h4>
+          <div className="space-y-3">
+            {[...pending, ...needsReschedule].map(req => (
+              <div key={req.id} className="bg-white rounded-lg p-4 border">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900">{req.applicant_name}</p>
+                    <p className="text-sm text-gray-500">{req.applicant_email}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(req.status)}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onDelete(req.id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// Schedule from Availability Modal
+function ScheduleFromAvailabilityModal({ request, onClose, onSchedule }) {
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [specificTime, setSpecificTime] = useState('');
+  const [location, setLocation] = useState('Thrifty Curator Store');
+  const [scheduling, setScheduling] = useState(false);
+
+  // Generate 30-minute slots from availability windows
+  const generate30MinSlots = (window) => {
+    const slots = [];
+    const [startH, startM] = window.start_time.split(':').map(Number);
+    const [endH, endM] = window.end_time.split(':').map(Number);
+    
+    let currentMinutes = startH * 60 + startM;
+    let endMinutes = endH * 60 + endM;
+    
+    // Handle overnight
+    if (endMinutes <= currentMinutes) {
+      endMinutes += 24 * 60;
+    }
+    
+    while (currentMinutes + 30 <= endMinutes) {
+      const slotStartH = Math.floor(currentMinutes / 60) % 24;
+      const slotStartM = currentMinutes % 60;
+      const slotEndH = Math.floor((currentMinutes + 30) / 60) % 24;
+      const slotEndM = (currentMinutes + 30) % 60;
+      
+      slots.push({
+        start: `${String(slotStartH).padStart(2, '0')}:${String(slotStartM).padStart(2, '0')}`,
+        end: `${String(slotEndH).padStart(2, '0')}:${String(slotEndM).padStart(2, '0')}`,
+        date: window.date
+      });
+      
+      currentMinutes += 30;
+      if (slots.length >= 24) break; // Limit
+    }
+    return slots;
+  };
+
+  const formatTime12h = (time24) => {
+    if (!time24) return '';
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
+  };
+
+  const convertPHTtoCT = (date, time) => {
+    if (!date || !time) return null;
+    const phtString = `${date}T${time}:00+08:00`;
+    const utcDate = new Date(phtString);
+    if (isNaN(utcDate.getTime())) return null;
+    return utcDate.toLocaleString('en-US', {
+      timeZone: 'America/Chicago',
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }) + ' CT';
+  };
+
+  const formatDateDisplay = (dateStr) => {
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  };
+
+  const handleSchedule = async () => {
+    if (!selectedSlot && !specificTime) {
+      toast.error('Please select a time slot');
+      return;
+    }
+
+    setScheduling(true);
+    
+    const slot = selectedSlot;
+    const selectedDate = slot?.date || request.availability[0]?.date;
+    const selectedTime = slot?.start || specificTime;
+    const endTime = slot?.end || '';
+    
+    // Format PHT datetime
+    const phtDatetime = `${formatDateDisplay(selectedDate)} at ${formatTime12h(selectedTime)}${endTime ? ` - ${formatTime12h(endTime)}` : ''} PHT`;
+    
+    // Format CT datetime
+    const ctStart = convertPHTtoCT(selectedDate, selectedTime);
+    let ctDatetime = ctStart;
+    if (endTime) {
+      const ctEnd = convertPHTtoCT(selectedDate, endTime);
+      if (ctEnd) {
+        const endTimePart = ctEnd.split(', ').pop()?.replace(' CT', '') || '';
+        ctDatetime = `${ctStart.replace(' CT', '')} - ${endTimePart} CT`;
+      }
+    }
+
+    await onSchedule(request.id, phtDatetime, ctDatetime, location);
+    setScheduling(false);
+  };
+
+  return ReactDOM.createPortal(
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 9999 }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.95 }}
+        className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
+          <h2 className="text-xl font-bold text-gray-900">Schedule Interview</h2>
+          <p className="text-sm text-gray-500">{request.applicant_name}</p>
+        </div>
+
+        <div className="p-6 overflow-y-auto flex-1 space-y-6">
+          {/* Availability Windows */}
+          {request.availability?.map((window, windowIdx) => (
+            <div key={windowIdx} className="space-y-3">
+              <h4 className="font-medium text-gray-700">
+                {formatDateDisplay(window.date)}
+                <span className="text-gray-400 text-sm ml-2">
+                  ({formatTime12h(window.start_time)} - {formatTime12h(window.end_time)} PHT)
+                </span>
+              </h4>
+              
+              <div className="grid grid-cols-3 gap-2">
+                {generate30MinSlots(window).map((slot, slotIdx) => {
+                  const isSelected = selectedSlot?.start === slot.start && selectedSlot?.date === slot.date;
+                  const ctTime = convertPHTtoCT(slot.date, slot.start);
+                  
+                  return (
+                    <button
+                      key={slotIdx}
+                      onClick={() => {
+                        setSelectedSlot(slot);
+                        setSpecificTime('');
+                      }}
+                      className={`p-2 rounded-lg text-sm border transition-all ${
+                        isSelected
+                          ? 'border-purple-500 bg-purple-50 text-purple-700 ring-2 ring-purple-200'
+                          : 'border-gray-200 hover:border-purple-300 text-gray-700'
+                      }`}
+                    >
+                      <div className="font-medium">{formatTime12h(slot.start)}</div>
+                      <div className="text-xs text-gray-500">{ctTime?.split(',')[1]?.trim()}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {/* Selected Time Preview */}
+          {selectedSlot && (
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+              <h4 className="font-medium text-purple-900 mb-2">Selected Time</h4>
+              <p className="text-sm text-gray-700">
+                <strong>PHT:</strong> {formatDateDisplay(selectedSlot.date)} at {formatTime12h(selectedSlot.start)} - {formatTime12h(selectedSlot.end)}
+              </p>
+              <p className="text-sm text-purple-700">
+                <strong>Central:</strong> {convertPHTtoCT(selectedSlot.date, selectedSlot.start)} - {convertPHTtoCT(selectedSlot.date, selectedSlot.end)?.split(',').pop()?.trim()}
+              </p>
+            </div>
+          )}
+
+          {/* Location */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+            <Input
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Thrifty Curator Store"
+            />
+          </div>
+        </div>
+
+        <div className="p-6 bg-gray-50 border-t flex justify-end gap-3">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            onClick={handleSchedule}
+            disabled={!selectedSlot || scheduling}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            {scheduling ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Scheduling...
+              </>
+            ) : (
+              <>
+                <Calendar className="w-4 h-4 mr-2" />
+                Schedule (Review Later)
+              </>
+            )}
+          </Button>
+        </div>
+      </motion.div>
+    </motion.div>,
+    document.body
   );
 }

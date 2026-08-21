@@ -5,7 +5,9 @@ Provides endpoints for:
 - Admin: Create/manage available time slots
 - Admin: View scheduled interviews in calendar format
 - Admin: Send direct emails to applicants
+- Admin: Review applicant availability submissions and schedule interviews
 - Applicants: Book available slots via unique link
+- Applicants: Submit availability windows for admin review
 - Applicants: Cancel/reschedule with reason
 """
 
@@ -72,6 +74,19 @@ class SendEmailRequest(BaseModel):
 class SendSMSRequest(BaseModel):
     to_phone: str
     message: str
+
+class AvailabilityWindow(BaseModel):
+    date: str  # YYYY-MM-DD
+    start_time: str  # HH:MM (24h)
+    end_time: str  # HH:MM (24h)
+
+class SubmitAvailabilityRequest(BaseModel):
+    availability: List[AvailabilityWindow]
+
+class ScheduleFromAvailabilityRequest(BaseModel):
+    selected_datetime: str  # Full datetime in PHT format
+    selected_datetime_ct: str  # Full datetime in CT format
+    location: Optional[str] = "Thrifty Curator Store"
 
 
 # ==================== ADMIN ENDPOINTS ====================
@@ -730,3 +745,397 @@ async def send_post_interview_rejection(booking_id: str, background_tasks: Backg
     )
     
     return {"message": "Rejection email sent successfully", "applicant_name": booking["applicant_name"]}
+
+
+# ==================== AVAILABILITY-BASED SCHEDULING (NEW FLOW) ====================
+
+@router.post("/admin/send-availability-request/{application_id}")
+async def send_availability_request(application_id: str, background_tasks: BackgroundTasks, admin: dict = Depends(get_admin_user)):
+    """Admin sends a link for applicant to submit their availability (like video interview flow)"""
+    from app.services.email_service import send_availability_request_email
+    
+    application = await db.job_applications.find_one({"id": application_id}, {"_id": 0})
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    # Generate unique token for availability submission
+    availability_token = secrets.token_urlsafe(32)
+    
+    # Create or update availability request record
+    existing = await db.inperson_availability_requests.find_one({"applicant_id": application_id})
+    
+    if existing:
+        # Update existing request
+        await db.inperson_availability_requests.update_one(
+            {"applicant_id": application_id},
+            {"$set": {
+                "token": availability_token,
+                "status": "pending",
+                "sent_at": datetime.now(timezone.utc).isoformat(),
+                "sent_by": admin.get("name", admin.get("email"))
+            }}
+        )
+        request_id = existing["id"]
+    else:
+        # Create new request
+        request_id = str(uuid.uuid4())
+        request_doc = {
+            "id": request_id,
+            "applicant_id": application_id,
+            "applicant_name": application["full_name"],
+            "applicant_email": application["email"],
+            "applicant_phone": application.get("phone"),
+            "token": availability_token,
+            "status": "pending",  # pending, responded, scheduled, confirmed
+            "availability": [],
+            "scheduled_datetime": None,
+            "scheduled_datetime_ct": None,
+            "scheduled_location": None,
+            "confirmed_datetime": None,
+            "confirmed_datetime_ct": None,
+            "sent_at": datetime.now(timezone.utc).isoformat(),
+            "sent_by": admin.get("name", admin.get("email")),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.inperson_availability_requests.insert_one(request_doc)
+    
+    # Update application
+    await db.job_applications.update_one(
+        {"id": application_id},
+        {"$set": {
+            "availability_request_sent": True,
+            "availability_request_sent_at": datetime.now(timezone.utc).isoformat(),
+            "availability_token": availability_token
+        }}
+    )
+    
+    # Send email with availability link
+    frontend_url = "https://thrifty-curator.com"
+    availability_url = f"{frontend_url}/submit-availability/{availability_token}"
+    
+    background_tasks.add_task(
+        send_availability_request_email,
+        to_email=application["email"],
+        applicant_name=application["full_name"],
+        availability_url=availability_url
+    )
+    
+    return {
+        "success": True,
+        "message": f"Availability request sent to {application['email']}",
+        "availability_url": availability_url
+    }
+
+
+@router.get("/availability/{token}")
+async def get_availability_request_for_applicant(token: str):
+    """Get availability request details for an applicant"""
+    request = await db.inperson_availability_requests.find_one({"token": token}, {"_id": 0})
+    if not request:
+        raise HTTPException(status_code=404, detail="Invalid or expired link")
+    
+    # Check if already responded
+    if request["status"] == "confirmed":
+        return {
+            "already_confirmed": True,
+            "applicant_name": request["applicant_name"],
+            "confirmed_datetime": request.get("confirmed_datetime"),
+            "confirmed_location": request.get("scheduled_location", "Thrifty Curator Store")
+        }
+    
+    if request["status"] == "scheduled":
+        return {
+            "already_scheduled": True,
+            "applicant_name": request["applicant_name"],
+            "message": "Your interview is being scheduled. You'll receive a confirmation email soon."
+        }
+    
+    return {
+        "applicant_name": request["applicant_name"],
+        "applicant_email": request["applicant_email"],
+        "existing_availability": request.get("availability", []),
+        "status": request["status"]
+    }
+
+
+@router.post("/availability/{token}")
+async def submit_availability(token: str, request: SubmitAvailabilityRequest, background_tasks: BackgroundTasks):
+    """Applicant submits their availability windows"""
+    avail_request = await db.inperson_availability_requests.find_one({"token": token})
+    if not avail_request:
+        raise HTTPException(status_code=404, detail="Invalid or expired link")
+    
+    if avail_request["status"] == "confirmed":
+        raise HTTPException(status_code=400, detail="Your interview is already confirmed")
+    
+    # Store availability
+    availability_data = [
+        {
+            "date": a.date,
+            "start_time": a.start_time,
+            "end_time": a.end_time
+        }
+        for a in request.availability
+    ]
+    
+    await db.inperson_availability_requests.update_one(
+        {"token": token},
+        {"$set": {
+            "availability": availability_data,
+            "status": "responded",
+            "responded_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Create admin notification
+    await create_admin_notification(
+        notification_type="availability_submitted",
+        applicant_name=avail_request["applicant_name"],
+        message=f"{avail_request['applicant_name']} submitted interview availability",
+        details={
+            "applicant_id": avail_request["applicant_id"],
+            "availability_count": len(availability_data)
+        }
+    )
+    
+    # Send push notification
+    background_tasks.add_task(
+        send_admin_push_notification,
+        title="Interview Availability Submitted",
+        body=f"{avail_request['applicant_name']} submitted {len(availability_data)} availability window(s)",
+        notification_type="availability_submitted"
+    )
+    
+    return {
+        "success": True,
+        "message": "Availability submitted! You'll receive a confirmation email once your interview is scheduled."
+    }
+
+
+@router.get("/admin/availability-inbox")
+async def get_availability_inbox(admin: dict = Depends(get_admin_user)):
+    """Get all in-person availability requests for admin review"""
+    requests = await db.inperson_availability_requests.find(
+        {},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(500)
+    
+    return {"requests": requests}
+
+
+@router.get("/admin/availability-inbox/{request_id}")
+async def get_availability_request_detail(request_id: str, admin: dict = Depends(get_admin_user)):
+    """Get details of a specific availability request"""
+    request = await db.inperson_availability_requests.find_one(
+        {"id": request_id},
+        {"_id": 0}
+    )
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return request
+
+
+@router.delete("/admin/availability-inbox/{request_id}")
+async def delete_availability_request(request_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete an availability request"""
+    result = await db.inperson_availability_requests.delete_one({"id": request_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return {"success": True, "message": "Request deleted"}
+
+
+@router.post("/admin/availability-inbox/{request_id}/schedule")
+async def schedule_from_availability(request_id: str, req: ScheduleFromAvailabilityRequest, admin: dict = Depends(get_admin_user)):
+    """Save a scheduled time as draft (like video interview flow)"""
+    avail_request = await db.inperson_availability_requests.find_one({"id": request_id})
+    if not avail_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    await db.inperson_availability_requests.update_one(
+        {"id": request_id},
+        {"$set": {
+            "status": "scheduled",
+            "scheduled_datetime": req.selected_datetime,
+            "scheduled_datetime_ct": req.selected_datetime_ct,
+            "scheduled_location": req.location or "Thrifty Curator Store",
+            "scheduled_at": datetime.now(timezone.utc).isoformat(),
+            "scheduled_by": admin.get("name", admin.get("email"))
+        }}
+    )
+    
+    return {"success": True, "message": "Interview time saved as draft"}
+
+
+@router.post("/admin/availability-inbox/{request_id}/unschedule")
+async def unschedule_from_availability(request_id: str, admin: dict = Depends(get_admin_user)):
+    """Remove scheduled time and return to responded status"""
+    avail_request = await db.inperson_availability_requests.find_one({"id": request_id})
+    if not avail_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    if avail_request.get("status") != "scheduled":
+        raise HTTPException(status_code=400, detail="This request is not in scheduled status")
+    
+    await db.inperson_availability_requests.update_one(
+        {"id": request_id},
+        {"$set": {
+            "status": "responded",
+            "scheduled_datetime": None,
+            "scheduled_datetime_ct": None,
+            "scheduled_location": None
+        }}
+    )
+    
+    return {"success": True, "message": "Scheduled time removed"}
+
+
+@router.post("/admin/availability-inbox/{request_id}/send-confirmation")
+async def send_availability_confirmation(request_id: str, background_tasks: BackgroundTasks, admin: dict = Depends(get_admin_user)):
+    """Send confirmation email for scheduled in-person interview"""
+    from app.services.email_service import send_inperson_interview_confirmation_email
+    
+    avail_request = await db.inperson_availability_requests.find_one({"id": request_id})
+    if not avail_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    if avail_request.get("status") != "scheduled":
+        raise HTTPException(status_code=400, detail="Interview must be scheduled before sending confirmation")
+    
+    # Generate cancel/manage token
+    manage_token = secrets.token_urlsafe(16)
+    
+    # Update to confirmed
+    await db.inperson_availability_requests.update_one(
+        {"id": request_id},
+        {"$set": {
+            "status": "confirmed",
+            "confirmed_datetime": avail_request.get("scheduled_datetime"),
+            "confirmed_datetime_ct": avail_request.get("scheduled_datetime_ct"),
+            "confirmed_at": datetime.now(timezone.utc).isoformat(),
+            "confirmed_by": admin.get("name", admin.get("email")),
+            "manage_token": manage_token
+        }}
+    )
+    
+    # Update job application
+    await db.job_applications.update_one(
+        {"id": avail_request["applicant_id"]},
+        {"$set": {
+            "interview_scheduled": True,
+            "interview_type": "in-person",
+            "interview_datetime": avail_request.get("scheduled_datetime"),
+            "interview_datetime_ct": avail_request.get("scheduled_datetime_ct"),
+            "interview_location": avail_request.get("scheduled_location", "Thrifty Curator Store")
+        }}
+    )
+    
+    # Build manage URL
+    frontend_url = "https://thrifty-curator.com"
+    manage_url = f"{frontend_url}/manage-inperson-interview/{manage_token}"
+    
+    # Send confirmation email
+    background_tasks.add_task(
+        send_inperson_interview_confirmation_email,
+        to_email=avail_request["applicant_email"],
+        applicant_name=avail_request["applicant_name"],
+        interview_datetime=avail_request.get("scheduled_datetime"),
+        interview_datetime_ct=avail_request.get("scheduled_datetime_ct"),
+        location=avail_request.get("scheduled_location", "Thrifty Curator Store"),
+        manage_url=manage_url
+    )
+    
+    return {"success": True, "message": f"Confirmation sent to {avail_request['applicant_email']}"}
+
+
+@router.post("/admin/availability-inbox/{request_id}/send-message")
+async def send_availability_message(request_id: str, background_tasks: BackgroundTasks, admin: dict = Depends(get_admin_user)):
+    """Send a message to applicant requesting new availability times"""
+    from app.services.email_service import send_availability_followup_email
+    
+    avail_request = await db.inperson_availability_requests.find_one({"id": request_id})
+    if not avail_request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    # Update status
+    await db.inperson_availability_requests.update_one(
+        {"id": request_id},
+        {"$set": {
+            "status": "needs_reschedule",
+            "message_sent_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Build resubmit URL
+    frontend_url = "https://thrifty-curator.com"
+    resubmit_url = f"{frontend_url}/submit-availability/{avail_request['token']}"
+    
+    # Send email
+    background_tasks.add_task(
+        send_availability_followup_email,
+        to_email=avail_request["applicant_email"],
+        applicant_name=avail_request["applicant_name"],
+        resubmit_url=resubmit_url
+    )
+    
+    return {"success": True, "message": f"Follow-up message sent to {avail_request['applicant_email']}"}
+
+
+@router.get("/admin/all-inperson-interviews")
+async def get_all_inperson_interviews(admin: dict = Depends(get_admin_user)):
+    """Get all scheduled and confirmed in-person interviews for the schedule view"""
+    # Get from new availability-based system
+    avail_interviews = await db.inperson_availability_requests.find(
+        {"status": {"$in": ["scheduled", "confirmed"]}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(500)
+    
+    # Get from old slot-based system
+    slot_bookings = await db.interview_bookings.find(
+        {"status": "confirmed"},
+        {"_id": 0}
+    ).sort("interview_date", 1).to_list(500)
+    
+    return {
+        "availability_based": avail_interviews,
+        "slot_based": slot_bookings
+    }
+
+
+@router.get("/admin/check-conflicts")
+async def check_interview_conflicts(datetime_ct: str, admin: dict = Depends(get_admin_user)):
+    """Check if a proposed interview time conflicts with existing interviews"""
+    # Get all confirmed/scheduled interviews from both systems
+    avail_interviews = await db.inperson_availability_requests.find(
+        {"status": {"$in": ["scheduled", "confirmed"]}},
+        {"_id": 0, "scheduled_datetime_ct": 1, "confirmed_datetime_ct": 1, "applicant_name": 1}
+    ).to_list(500)
+    
+    slot_bookings = await db.interview_bookings.find(
+        {"status": "confirmed"},
+        {"_id": 0, "interview_date": 1, "interview_time": 1, "applicant_name": 1}
+    ).to_list(500)
+    
+    conflicts = []
+    
+    # Check availability-based interviews
+    for interview in avail_interviews:
+        ct = interview.get("confirmed_datetime_ct") or interview.get("scheduled_datetime_ct")
+        if ct and datetime_ct in ct:
+            conflicts.append({
+                "applicant_name": interview["applicant_name"],
+                "datetime_ct": ct,
+                "type": "availability"
+            })
+    
+    # Check slot-based interviews (convert to CT format for comparison)
+    for booking in slot_bookings:
+        # Simple date comparison for now
+        if datetime_ct and booking.get("interview_date") in datetime_ct:
+            conflicts.append({
+                "applicant_name": booking["applicant_name"],
+                "datetime": f"{booking['interview_date']} {booking.get('interview_time', '')}",
+                "type": "slot"
+            })
+    
+    return {"conflicts": conflicts}
+
