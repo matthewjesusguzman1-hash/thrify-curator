@@ -3213,6 +3213,61 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
     }
   };
 
+  // Convert PHT datetime string to CT (for displaying conflicts)
+  const convertPHTStringToCT = (phtString) => {
+    if (!phtString) return null;
+    const match = phtString.match(/(\w+),\s*(\w+)\s+(\d+),\s*(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)\s*-\s*(\d+):(\d+)\s*(AM|PM)/i);
+    if (match) {
+      const [, , month, day, year, startH, startM, startAMPM, endH, endM, endAMPM] = match;
+      const months = { January: '01', February: '02', March: '03', April: '04', May: '05', June: '06', July: '07', August: '08', September: '09', October: '10', November: '11', December: '12' };
+      
+      let sh = parseInt(startH);
+      if (startAMPM.toUpperCase() === 'PM' && sh !== 12) sh += 12;
+      if (startAMPM.toUpperCase() === 'AM' && sh === 12) sh = 0;
+      
+      let eh = parseInt(endH);
+      if (endAMPM.toUpperCase() === 'PM' && eh !== 12) eh += 12;
+      if (endAMPM.toUpperCase() === 'AM' && eh === 12) eh = 0;
+      
+      const monthNum = months[month] || '01';
+      const dayPad = day.padStart(2, '0');
+      const startHPad = String(sh).padStart(2, '0');
+      const startMPad = startM.padStart(2, '0');
+      const endHPad = String(eh).padStart(2, '0');
+      const endMPad = endM.padStart(2, '0');
+      
+      const startPHTString = `${year}-${monthNum}-${dayPad}T${startHPad}:${startMPad}:00+08:00`;
+      const endPHTString = `${year}-${monthNum}-${dayPad}T${endHPad}:${endMPad}:00+08:00`;
+      
+      const startDate = new Date(startPHTString);
+      const endDate = new Date(endPHTString);
+      
+      if (endDate <= startDate) {
+        endDate.setDate(endDate.getDate() + 1);
+      }
+      
+      const startCT = startDate.toLocaleString('en-US', {
+        timeZone: 'America/Chicago',
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      const endCT = endDate.toLocaleString('en-US', {
+        timeZone: 'America/Chicago',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      return `${startCT} - ${endCT} CT`;
+    }
+    return null;
+  };
+
   // Add minutes to a time string (HH:MM format)
   const addMinutesToTime = (time, mins) => {
     if (!time) return '';
@@ -3364,14 +3419,46 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
       // Include both confirmed AND scheduled interviews for conflict checking
       const existingInterviews = (response.data.requests || [])
         .filter(r => (r.status === 'confirmed' || r.status === 'scheduled') && r.id !== request.id)
-        .map(r => ({
-          id: r.id,
-          name: r.applicant_name,
-          datetime: r.confirmed_datetime || r.scheduled_datetime,
-          datetime_ct: r.confirmed_datetime_ct || r.scheduled_datetime_ct,
-          date: r.applicant_response?.time_slots?.[0]?.date,
-          status: r.status
-        }));
+        .map(r => {
+          const phtTime = r.confirmed_datetime || r.scheduled_datetime;
+          const ctTime = r.confirmed_datetime_ct || r.scheduled_datetime_ct;
+          
+          // Parse the PHT time to extract date and times for comparison
+          // Format: "Saturday, August 22, 2026 at 7:30 PM - 8:00 PM PHT"
+          let startHour = 0, startMin = 0, endHour = 0, endMin = 0, dateStr = '';
+          if (phtTime) {
+            const match = phtTime.match(/(\w+),\s*(\w+)\s+(\d+),\s*(\d+)\s+at\s+(\d+):(\d+)\s*(AM|PM)\s*-\s*(\d+):(\d+)\s*(AM|PM)/i);
+            if (match) {
+              const [, , month, day, year, sH, sM, sAMPM, eH, eM, eAMPM] = match;
+              const months = { January: '01', February: '02', March: '03', April: '04', May: '05', June: '06', July: '07', August: '08', September: '09', October: '10', November: '11', December: '12' };
+              dateStr = `${year}-${months[month] || '01'}-${day.padStart(2, '0')}`;
+              
+              startHour = parseInt(sH);
+              if (sAMPM.toUpperCase() === 'PM' && startHour !== 12) startHour += 12;
+              if (sAMPM.toUpperCase() === 'AM' && startHour === 12) startHour = 0;
+              startMin = parseInt(sM);
+              
+              endHour = parseInt(eH);
+              if (eAMPM.toUpperCase() === 'PM' && endHour !== 12) endHour += 12;
+              if (eAMPM.toUpperCase() === 'AM' && endHour === 12) endHour = 0;
+              endMin = parseInt(eM);
+            }
+          }
+          
+          return {
+            id: r.id,
+            name: r.applicant_name,
+            datetime: phtTime,
+            datetime_ct: ctTime,
+            date: dateStr || r.applicant_response?.time_slots?.[0]?.date,
+            status: r.status,
+            // Store parsed times for easy comparison (in PHT)
+            startHour,
+            startMin,
+            endHour,
+            endMin
+          };
+        });
       setConflicts(existingInterviews);
     } catch (error) {
       console.error("Failed to fetch conflicts:", error);
@@ -3445,75 +3532,28 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
   const check30MinSlotConflict = (slot, baseDate) => {
     if (!slot || conflicts.length === 0) return null;
     
-    // Get the slot's CT time range using the slot's date info
-    const slotStartDate = slot.startDate || baseDate;
-    const slotEndDate = slot.endDate || baseDate;
-    
-    // Create Date objects for the slot times (in PHT, then we'll compare in same timezone)
-    const slotStartPHT = `${slotStartDate}T${slot.start}:00+08:00`;
-    const slotEndPHT = `${slotEndDate}T${slot.end}:00+08:00`;
-    
-    const slotStartMs = new Date(slotStartPHT).getTime();
-    const slotEndMs = new Date(slotEndPHT).getTime();
-    
-    if (isNaN(slotStartMs) || isNaN(slotEndMs)) return null;
+    // Get slot times in minutes from midnight (PHT)
+    const slotDate = slot.startDate || baseDate;
+    const [slotStartH, slotStartM] = slot.start.split(':').map(Number);
+    const [slotEndH, slotEndM] = slot.end.split(':').map(Number);
+    const slotStartMins = slotStartH * 60 + slotStartM;
+    const slotEndMins = slotEndH * 60 + slotEndM;
     
     // Check against each existing interview
     for (const existing of conflicts) {
-      // Parse existing interview's CT time to get actual timestamps
-      const existingCT = existing.datetime_ct;
-      const existingPHT = existing.datetime;
+      // Only check if same date (in PHT)
+      if (existing.date !== slotDate) continue;
       
-      if (existingCT) {
-        // Parse format like "Sat, Aug 22, 7:30 AM - 8:00 AM CT" or "Sat, Aug 22 at 7:30 AM - 8:00 AM CT"
-        const match = existingCT.match(/(\w+),?\s*(\w+)\s+(\d+),?\s*(?:at\s+)?(\d+):(\d+)\s*(AM|PM)\s*-\s*(\d+):(\d+)\s*(AM|PM)/i);
-        if (match) {
-          const [, , month, day, startH, startM, startAMPM, endH, endM, endAMPM] = match;
-          const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
-          
-          let sh = parseInt(startH);
-          if (startAMPM.toUpperCase() === 'PM' && sh !== 12) sh += 12;
-          if (startAMPM.toUpperCase() === 'AM' && sh === 12) sh = 0;
-          
-          let eh = parseInt(endH);
-          if (endAMPM.toUpperCase() === 'PM' && eh !== 12) eh += 12;
-          if (endAMPM.toUpperCase() === 'AM' && eh === 12) eh = 0;
-          
-          // Create CT Date objects and convert to timestamps
-          const existingStartCT = new Date(2026, months[month] || 0, parseInt(day), sh, parseInt(startM));
-          const existingEndCT = new Date(2026, months[month] || 0, parseInt(day), eh, parseInt(endM));
-          
-          // Convert slot times to CT for comparison
-          const slotStartCTDate = new Date(new Date(slotStartPHT).toLocaleString('en-US', { timeZone: 'America/Chicago' }));
-          const slotEndCTDate = new Date(new Date(slotEndPHT).toLocaleString('en-US', { timeZone: 'America/Chicago' }));
-          
-          // For proper comparison, let's use the CT hour/minute values
-          const slotStartCTStr = new Date(slotStartPHT).toLocaleString('en-US', { 
-            timeZone: 'America/Chicago',
-            year: 'numeric', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit', hour12: false 
-          });
-          const slotEndCTStr = new Date(slotEndPHT).toLocaleString('en-US', { 
-            timeZone: 'America/Chicago',
-            year: 'numeric', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit', hour12: false 
-          });
-          
-          // Parse "MM/DD/YYYY, HH:MM" format
-          const parseLocaleStr = (str) => {
-            const [datePart, timePart] = str.split(', ');
-            const [m, d, y] = datePart.split('/').map(Number);
-            const [h, min] = timePart.split(':').map(Number);
-            return new Date(y, m - 1, d, h, min);
-          };
-          
-          const slotStartForCompare = parseLocaleStr(slotStartCTStr);
-          const slotEndForCompare = parseLocaleStr(slotEndCTStr);
-          
-          // Check if ranges overlap
-          if (slotStartForCompare < existingEndCT && existingStartCT < slotEndForCompare) {
-            return existing;
-          }
+      // Use the pre-parsed times from fetchConflicts
+      if (existing.startHour !== undefined && existing.endHour !== undefined) {
+        const existingStartMins = existing.startHour * 60 + existing.startMin;
+        const existingEndMins = existing.endHour * 60 + existing.endMin;
+        
+        // Check if time ranges overlap
+        if (slotStartMins < existingEndMins && existingStartMins < slotEndMins) {
+          // Add CT time to the returned conflict for display
+          const ctTime = existing.datetime_ct || convertPHTStringToCT(existing.datetime);
+          return { ...existing, datetime_ct_display: ctTime };
         }
       }
     }
@@ -3777,7 +3817,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                       {conflict && (
                         <div className="mt-2 flex items-center gap-1 text-xs text-red-600 bg-red-50 rounded px-2 py-1">
                           <AlertTriangle className="w-3 h-3" />
-                          Overlaps with {conflict.name} ({conflict.datetime_ct || conflict.datetime})
+                          {conflict.name}: {(conflict.datetime_ct || convertPHTStringToCT(conflict.datetime))?.split(' - ')[0]?.replace(/,?\s*CT$/, '') || 'scheduled'}
                         </div>
                       )}
                     </button>
@@ -3860,7 +3900,7 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
                                 {slotConflict && (
                                   <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
                                     <AlertTriangle className="w-3 h-3" />
-                                    Overlaps: {slotConflict.name} ({slotConflict.datetime_ct?.split(' - ')[0]?.split(', ').pop() || 'scheduled'})
+                                    {slotConflict.name}: {slotConflict.datetime_ct_display?.split(' - ')[0]?.replace(/,?\s*CT$/, '') || 'scheduled'}
                                   </p>
                                 )}
                               </button>
