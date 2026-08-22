@@ -489,7 +489,12 @@ export default function useGPSTracking() {
       setGpsQuality('unknown');
 
       // Try to use Transistorsoft Background Geolocation on native platforms
-      if (isNative()) {
+      const useNative = isNative();
+      console.log('[GPS] Platform check - isNative:', useNative);
+      
+      let nativeStarted = false;
+      
+      if (useNative) {
         try {
           // Force reinitialize listeners to ensure fresh callbacks
           const BackgroundGeolocation = await initBackgroundGeolocation(true);
@@ -528,17 +533,23 @@ export default function useGPSTracking() {
             // handles continuous tracking. No polling needed - trust the plugin.
             
             toast.success('GPS tracking started - works in background!');
-            return true;
+            nativeStarted = true;
           }
         } catch (bgError) {
-          console.log('BackgroundGeolocation not available:', bgError);
-          toast.error('Background GPS not available. Please try again.');
+          console.log('[GPS] BackgroundGeolocation not available, falling back to web:', bgError);
+          // Don't return - fall through to web fallback
+        }
+      }
+      
+      // Web fallback - use if not native OR if native failed
+      if (!nativeStarted) {
+        console.log('[GPS] Using web geolocation fallback');
+        
+        // Check if geolocation is supported
+        if (!navigator.geolocation) {
+          toast.error('GPS not supported in this browser');
           return false;
         }
-        
-      } else {
-        // Web fallback - works in browser without native plugins
-        console.log('[GPS] Using web fallback (not native platform)');
         
         // Set tracking state FIRST
         setIsTracking(true);
