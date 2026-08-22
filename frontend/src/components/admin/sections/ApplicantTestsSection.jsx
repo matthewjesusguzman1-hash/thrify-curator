@@ -43,6 +43,7 @@ const API = process.env.REACT_APP_BACKEND_URL || "";
 export default function ApplicantTestsSection({ getAuthHeader }) {
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(null);
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(null);
@@ -53,9 +54,11 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
   const [defaultFields, setDefaultFields] = useState([]);
 
   useEffect(() => {
-    fetchTests();
-    fetchDefaultFields();
-  }, []);
+    if (isExpanded) {
+      fetchTests();
+      fetchDefaultFields();
+    }
+  }, [isExpanded]);
 
   const fetchTests = async () => {
     try {
@@ -89,67 +92,94 @@ export default function ApplicantTestsSection({ getAuthHeader }) {
     }
   };
 
-  return (
-    <div className="space-y-4">
-      {/* Header - responsive layout */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-            <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B5CF6] flex-shrink-0" />
-            <span className="truncate">Applicant Skills Tests</span>
-          </h2>
-          <p className="text-xs sm:text-sm text-gray-300 mt-1">
-            Create listing tests to evaluate job applicants
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => setShowInterviewInbox(true)}
-            variant="outline"
-            className="border-[#8B5CF6] text-[#8B5CF6] hover:bg-[#8B5CF6]/10 text-sm"
-            data-testid="interview-inbox-btn"
-          >
-            <Inbox className="w-4 h-4 mr-2" />
-            Interview Inbox
-          </Button>
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white w-full sm:w-auto text-sm"
-            data-testid="create-test-btn"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Test
-          </Button>
-        </div>
-      </div>
+  // Calculate counts for the header
+  const totalInvites = tests.reduce((sum, t) => sum + (t.invites_count || 0), 0);
+  const totalSubmissions = tests.reduce((sum, t) => sum + (t.submissions_count || 0), 0);
 
-      {/* Tests List */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B5CF6] mx-auto" />
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="applicant-tests-section">
+      {/* Collapsible Header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        data-testid="applicant-tests-toggle"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-lg flex items-center justify-center">
+            <Video className="w-5 h-5 text-white" />
+          </div>
+          <div className="text-left">
+            <h3 className="font-semibold text-gray-900">Video Interview Tests</h3>
+            <p className="text-sm text-gray-500">
+              {tests.length} tests • {totalInvites} invited • {totalSubmissions} submissions
+            </p>
+          </div>
         </div>
-      ) : tests.length === 0 ? (
-        <div className="text-center py-12 bg-white/10 rounded-xl border border-white/20">
-          <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-200">No tests created yet</p>
-          <p className="text-sm text-gray-400 mt-1">Create a test to start evaluating applicants</p>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {tests.map((test) => (
-            <TestCard
-              key={test.id}
-              test={test}
-              onDelete={() => handleDeleteTest(test.id)}
-              onInvite={() => setShowInviteModal(test)}
-              onViewSubmissions={() => setShowSubmissionsModal(test)}
-              onPreview={() => setShowPreviewModal(test)}
-              onEdit={() => setShowEditModal(test)}
-              getAuthHeader={getAuthHeader}
-            />
-          ))}
-        </div>
-      )}
+        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Expanded Content */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-t border-gray-200"
+          >
+            <div className="p-4 space-y-4">
+              {/* Action Buttons */}
+              <div className="flex gap-2 justify-end">
+                <Button
+                  onClick={() => setShowInterviewInbox(true)}
+                  variant="outline"
+                  className="border-[#8B5CF6] text-[#8B5CF6] hover:bg-[#8B5CF6]/10 text-sm"
+                  data-testid="interview-inbox-btn"
+                >
+                  <Inbox className="w-4 h-4 mr-2" />
+                  Interview Inbox
+                </Button>
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  className="bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white text-sm"
+                  data-testid="create-test-btn"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Test
+                </Button>
+              </div>
+
+              {/* Tests List */}
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B5CF6] mx-auto" />
+                </div>
+              ) : tests.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-200">
+                  <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-600">No tests created yet</p>
+                  <p className="text-sm text-gray-400 mt-1">Create a test to start evaluating applicants</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {tests.map((test) => (
+                    <TestCard
+                      key={test.id}
+                      test={test}
+                      onDelete={() => handleDeleteTest(test.id)}
+                      onInvite={() => setShowInviteModal(test)}
+                      onViewSubmissions={() => setShowSubmissionsModal(test)}
+                      onPreview={() => setShowPreviewModal(test)}
+                      onEdit={() => setShowEditModal(test)}
+                      getAuthHeader={getAuthHeader}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Create Test Modal */}
       <AnimatePresence>
