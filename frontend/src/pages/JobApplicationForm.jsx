@@ -137,13 +137,17 @@ export default function JobApplicationForm() {
     setLoading(true);
 
     try {
-      await axios.post(`${API}/forms/job-application`, formData);
+      console.log('Submitting job application to:', `${API}/forms/job-application`);
+      const response = await axios.post(`${API}/forms/job-application`, formData);
+      console.log('Submission successful:', response.data);
       setSubmitted(true);
       successFeedback();
       toast.success("Application submitted successfully!");
     } catch (error) {
+      console.error('Submission error:', error);
       errorFeedback();
-      toast.error(error.response?.data?.detail || "Failed to submit application");
+      const errorMessage = error.response?.data?.detail || error.message || "Failed to submit application";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -165,7 +169,7 @@ export default function JobApplicationForm() {
               Application Received!
             </h2>
             <p className="text-[#666] mb-4">
-              Thank you for your interest in joining our team. We'll review your application and get back to you soon.
+              Thank you for your interest in joining our team. We will review your application and get back to you soon.
             </p>
             <div className="mb-6 bg-gradient-to-r from-[#00D4FF]/20 to-[#8B5CF6]/20 border-2 border-[#00D4FF] rounded-xl p-4">
               <div className="flex items-center justify-center gap-3">
@@ -173,7 +177,7 @@ export default function JobApplicationForm() {
                   <Mail className="w-5 h-5 text-white" />
                 </div>
                 <p className="text-[#1A1A2E] font-semibold text-base">
-                  We've sent a confirmation email to your inbox!
+                  We have sent a confirmation email to your inbox!
                 </p>
               </div>
             </div>
