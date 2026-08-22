@@ -182,6 +182,7 @@ export default function useGPSTracking() {
   const kalmanFilterRef = useRef(new GPSKalmanFilter());
   const lastValidSpeedRef = useRef(0); // Track last known valid speed
   const consecutiveRejectsRef = useRef(0); // Track consecutive rejected points
+  const webWatchIdRef = useRef(null); // Track web geolocation watch ID
 
   // Update refs when state changes
   useEffect(() => {
@@ -494,6 +495,12 @@ export default function useGPSTracking() {
           const BackgroundGeolocation = await initBackgroundGeolocation(true);
           
           if (BackgroundGeolocation) {
+            // CRITICAL: Set tracking state BEFORE starting the plugin
+            // Otherwise onLocation callbacks are ignored (isTrackingRef.current is false)
+            setIsTracking(true);
+            isTrackingRef.current = true;
+            console.log('[GPS] Tracking state set to true BEFORE plugin start');
+            
             // Start tracking
             const state = await BackgroundGeolocation.start();
             console.log('BackgroundGeolocation started:', state);
@@ -501,10 +508,6 @@ export default function useGPSTracking() {
             // FORCE the plugin into "moving" mode to prevent auto-stop
             await BackgroundGeolocation.changePace(true);
             console.log('BackgroundGeolocation forced to moving pace');
-            
-            // Set tracking state
-            setIsTracking(true);
-            isTrackingRef.current = true;
             
             // Get initial position with reasonable settings
             try {
@@ -534,19 +537,30 @@ export default function useGPSTracking() {
         }
         
       } else {
-        // Web fallback
+        // Web fallback - works in browser without native plugins
+        console.log('[GPS] Using web fallback (not native platform)');
+        
+        // Set tracking state FIRST
         setIsTracking(true);
         isTrackingRef.current = true;
         
-        const initialPosition = await getCurrentPosition();
-        processLocation({
-          coords: initialPosition,
-          timestamp: initialPosition.timestamp
-        });
+        // Try to get initial position (but don't fail if it doesn't work immediately)
+        try {
+          const initialPosition = await getCurrentPosition();
+          console.log('[GPS] Web initial position:', initialPosition.latitude, initialPosition.longitude);
+          processLocation({
+            coords: initialPosition,
+            timestamp: initialPosition.timestamp
+          });
+        } catch (initErr) {
+          console.log('[GPS] Web initial position failed (will rely on watchPosition):', initErr.message);
+          // Don't fail - watchPosition will still work
+        }
 
         // Start web watch with maximum accuracy
         const watchId = navigator.geolocation.watchPosition(
           (position) => {
+            console.log('[GPS] Web watchPosition update:', position.coords.latitude, position.coords.longitude, 'accuracy:', position.coords.accuracy);
             processLocation({
               coords: {
                 latitude: position.coords.latitude,
@@ -558,17 +572,21 @@ export default function useGPSTracking() {
             });
           },
           (err) => {
-            console.error('Watch error:', err);
+            console.error('[GPS] Web watch error:', err.code, err.message);
             setError(err.message);
+            if (err.code === 1) {
+              toast.error('Location permission denied. Please enable in browser settings.');
+            }
           },
           {
             enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0 // Never use cached positions - always get fresh GPS
+            timeout: 30000, // Increased timeout
+            maximumAge: 5000 // Allow slightly cached positions for better responsiveness
           }
         );
-        console.log('Web GPS watch started, ID:', watchId);
-        toast.info('Web tracking started (foreground only)');
+        webWatchIdRef.current = watchId;
+        console.log('[GPS] Web watch started, ID:', watchId);
+        toast.success('GPS tracking started');
       }
 
       return true;
@@ -609,6 +627,13 @@ export default function useGPSTracking() {
     if (window._gpsPollingInterval) {
       clearInterval(window._gpsPollingInterval);
       window._gpsPollingInterval = null;
+    }
+    
+    // Clear web geolocation watch if active
+    if (webWatchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(webWatchIdRef.current);
+      console.log('[GPS] Web watch cleared, ID:', webWatchIdRef.current);
+      webWatchIdRef.current = null;
     }
 
     // ALWAYS try to stop Transistorsoft Background Geolocation on native, even if we think we're not tracking
