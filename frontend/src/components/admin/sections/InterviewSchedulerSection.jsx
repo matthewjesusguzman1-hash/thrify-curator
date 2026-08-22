@@ -24,6 +24,7 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
   const [availabilityRequests, setAvailabilityRequests] = useState([]);
   const [showScheduleModal, setShowScheduleModal] = useState(null);
   const [showRequestModal, setShowRequestModal] = useState(null);
+  const [showApplicationModal, setShowApplicationModal] = useState(null);
   const [selectedApplications, setSelectedApplications] = useState([]);
 
   useEffect(() => {
@@ -40,8 +41,12 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
         axios.get(`${API}/api/interview-scheduler/admin/availability-inbox`, getAuthHeader()).catch(() => ({ data: { requests: [] } }))
       ]);
       
-      // Get all applications (don't filter out those with availability requests)
-      const allApps = appsRes.data.filter(app => app.status !== 'rejected');
+      // Filter out onboarding applications and rejected ones - only show job applications
+      const jobApps = appsRes.data.filter(app => 
+        app.status !== 'rejected' && 
+        app.invite_template !== 'onboarding' &&
+        app.template !== 'onboarding'
+      );
       
       // Create a map of availability requests by email for quick lookup
       const availRequestMap = {};
@@ -52,7 +57,7 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
       });
       
       // Enrich applications with their availability status
-      const enrichedApps = allApps.map(app => ({
+      const enrichedApps = jobApps.map(app => ({
         ...app,
         availability_request: availRequestMap[app.email?.toLowerCase()] || null,
         availability_status: availRequestMap[app.email?.toLowerCase()]?.status || null
@@ -257,6 +262,7 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
                       selectedApplications={selectedApplications}
                       setSelectedApplications={setSelectedApplications}
                       onRequestAvailability={() => setShowRequestModal(true)}
+                      onViewApplication={(app) => setShowApplicationModal(app)}
                     />
                   )}
 
@@ -301,15 +307,27 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
           onSchedule={scheduleFromAvailability}
         />
       )}
+
+      {/* Application Detail Modal */}
+      {showApplicationModal && (
+        <ApplicationModal
+          application={showApplicationModal}
+          onClose={() => setShowApplicationModal(null)}
+          onRequestAvailability={(app) => {
+            setSelectedApplications([app.id]);
+            setShowApplicationModal(null);
+            setShowRequestModal(true);
+          }}
+        />
+      )}
     </div>
   );
 }
 
 
 // Tab: Review Applications
-function ApplicationsTab({ applications, selectedApplications, setSelectedApplications, onRequestAvailability }) {
+function ApplicationsTab({ applications, selectedApplications, setSelectedApplications, onRequestAvailability, onViewApplication }) {
   const [filter, setFilter] = useState('all'); // 'all', 'new', 'pending', 'responded', 'scheduled'
-  const [expandedApp, setExpandedApp] = useState(null);
 
   const toggleSelection = (appId, e) => {
     e.stopPropagation();
@@ -441,17 +459,14 @@ function ApplicationsTab({ applications, selectedApplications, setSelectedApplic
           filteredApps.map(app => (
             <div
               key={app.id}
-              className={`border rounded-lg transition-all overflow-hidden ${
+              className={`border rounded-lg transition-all overflow-hidden cursor-pointer hover:shadow-md ${
                 selectedApplications.includes(app.id)
                   ? 'border-purple-500 bg-purple-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                  : 'border-gray-200 hover:border-purple-300'
               }`}
+              onClick={() => onViewApplication(app)}
             >
-              {/* Application Header - Clickable */}
-              <div 
-                className="p-4 cursor-pointer"
-                onClick={() => setExpandedApp(expandedApp === app.id ? null : app.id)}
-              >
+              <div className="p-4">
                 <div className="flex items-start gap-3">
                   {/* Checkbox - only for new apps */}
                   {!app.availability_status ? (
@@ -463,7 +478,7 @@ function ApplicationsTab({ applications, selectedApplications, setSelectedApplic
                       className="w-4 h-4 mt-1 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
                     />
                   ) : (
-                    <div className="w-4" /> // Spacer
+                    <div className="w-4" />
                   )}
                   
                   <div className="flex-1 min-w-0">
@@ -471,7 +486,7 @@ function ApplicationsTab({ applications, selectedApplications, setSelectedApplic
                       <h4 className="font-medium text-gray-900 truncate">{app.full_name || app.name}</h4>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {getStatusBadge(app)}
-                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedApp === app.id ? 'rotate-180' : ''}`} />
+                        <Eye className="w-4 h-4 text-gray-400" />
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-3 mt-1 text-sm text-gray-500">
@@ -492,100 +507,6 @@ function ApplicationsTab({ applications, selectedApplications, setSelectedApplic
                   </div>
                 </div>
               </div>
-
-              {/* Expanded Application Details */}
-              <AnimatePresence>
-                {expandedApp === app.id && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="border-t border-gray-200 bg-gray-50"
-                  >
-                    <div className="p-4 space-y-3">
-                      {/* Address */}
-                      {app.address && (
-                        <div>
-                          <p className="text-xs text-gray-500 font-medium">Address</p>
-                          <p className="text-sm text-gray-700">{app.address}</p>
-                        </div>
-                      )}
-                      
-                      {/* Experience/Resume */}
-                      {app.resume_text && (
-                        <div>
-                          <p className="text-xs text-gray-500 font-medium">Experience / Resume</p>
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{app.resume_text}</p>
-                        </div>
-                      )}
-                      
-                      {/* Why Join */}
-                      {app.why_join && (
-                        <div>
-                          <p className="text-xs text-gray-500 font-medium">Why do they want to join?</p>
-                          <p className="text-sm text-gray-700">{app.why_join}</p>
-                        </div>
-                      )}
-                      
-                      {/* Availability */}
-                      {app.availability && (
-                        <div>
-                          <p className="text-xs text-gray-500 font-medium">General Availability</p>
-                          <p className="text-sm text-gray-700">{app.availability}</p>
-                        </div>
-                      )}
-                      
-                      {/* Tasks */}
-                      {app.tasks_able_to_perform && app.tasks_able_to_perform.length > 0 && (
-                        <div>
-                          <p className="text-xs text-gray-500 font-medium">Tasks They Can Perform</p>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {app.tasks_able_to_perform.map((task, i) => (
-                              <span key={i} className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
-                                {task}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Background Check & Transportation */}
-                      <div className="flex gap-4 text-sm">
-                        {app.background_check_consent !== undefined && (
-                          <span className={`flex items-center gap-1 ${app.background_check_consent ? 'text-green-600' : 'text-red-600'}`}>
-                            {app.background_check_consent ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                            Background Check
-                          </span>
-                        )}
-                        {app.has_reliable_transportation !== undefined && (
-                          <span className={`flex items-center gap-1 ${app.has_reliable_transportation ? 'text-green-600' : 'text-red-600'}`}>
-                            {app.has_reliable_transportation ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                            Reliable Transportation
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Action Button for new apps */}
-                      {!app.availability_status && (
-                        <div className="pt-2 border-t border-gray-200">
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedApplications([app.id]);
-                              onRequestAvailability();
-                            }}
-                            className="bg-purple-600 hover:bg-purple-700 text-white"
-                            size="sm"
-                          >
-                            <Send className="w-4 h-4 mr-2" />
-                            Request Availability
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           ))
         )}
@@ -1216,6 +1137,188 @@ function MessageModal({ request, onClose, onSend }) {
             {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
             Send
           </Button>
+        </div>
+      </motion.div>
+    </div>,
+    document.body
+  );
+}
+
+
+// Application Detail Modal
+function ApplicationModal({ application, onClose, onRequestAvailability }) {
+  const app = application;
+  
+  // Get status badge
+  const getStatusBadge = () => {
+    if (!app.availability_status) {
+      return <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">New Application</span>;
+    }
+    switch (app.availability_status) {
+      case 'pending':
+        return <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">Awaiting Response</span>;
+      case 'responded':
+        return <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">Ready to Schedule</span>;
+      case 'scheduled':
+        return <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">Interview Scheduled</span>;
+      case 'confirmed':
+        return <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">Interview Confirmed</span>;
+      default:
+        return null;
+    }
+  };
+
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+      >
+        {/* Header */}
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-500 to-blue-500">
+          <div className="flex items-start justify-between">
+            <div className="text-white">
+              <h3 className="text-xl font-bold">{app.full_name || app.name}</h3>
+              <p className="text-white/80 text-sm mt-1">
+                Applied {new Date(app.submitted_at).toLocaleDateString('en-US', { 
+                  weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
+                })}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-white/80 hover:text-white p-1"
+            >
+              <XCircle className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Status Badge */}
+          <div className="flex justify-center">
+            {getStatusBadge()}
+          </div>
+
+          {/* Contact Info */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">Contact Information</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-gray-400" />
+                <span className="text-gray-700">{app.email}</span>
+              </div>
+              {app.phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-gray-400" />
+                  <span className="text-gray-700">{app.phone}</span>
+                </div>
+              )}
+              {app.address && (
+                <div className="flex items-start gap-2 md:col-span-2">
+                  <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+                  <span className="text-gray-700">{app.address}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Experience/Resume */}
+          {app.resume_text && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Experience / Resume</h4>
+              <p className="text-gray-600 whitespace-pre-wrap bg-gray-50 rounded-lg p-3">{app.resume_text}</p>
+            </div>
+          )}
+
+          {/* Work History */}
+          {app.work_history && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Work History</h4>
+              <p className="text-gray-600 whitespace-pre-wrap bg-gray-50 rounded-lg p-3">{app.work_history}</p>
+            </div>
+          )}
+
+          {/* Why Join */}
+          {app.why_join && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Why do they want to join?</h4>
+              <p className="text-gray-600 bg-gray-50 rounded-lg p-3">{app.why_join}</p>
+            </div>
+          )}
+
+          {/* Availability */}
+          {app.availability && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">General Availability</h4>
+              <p className="text-gray-600 bg-gray-50 rounded-lg p-3">{app.availability}</p>
+            </div>
+          )}
+
+          {/* Tasks */}
+          {app.tasks_able_to_perform && app.tasks_able_to_perform.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Tasks They Can Perform</h4>
+              <div className="flex flex-wrap gap-2">
+                {app.tasks_able_to_perform.map((task, i) => (
+                  <span key={i} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+                    {task}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Background Check & Transportation */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">Additional Information</h4>
+            <div className="flex flex-wrap gap-4">
+              {app.background_check_consent !== undefined && (
+                <div className={`flex items-center gap-2 ${app.background_check_consent ? 'text-green-600' : 'text-red-600'}`}>
+                  {app.background_check_consent ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                  <span className="font-medium">Background Check Consent</span>
+                </div>
+              )}
+              {app.has_reliable_transportation !== undefined && (
+                <div className={`flex items-center gap-2 ${app.has_reliable_transportation ? 'text-green-600' : 'text-red-600'}`}>
+                  {app.has_reliable_transportation ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                  <span className="font-medium">Reliable Transportation</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Alternative Contact (if invited application) */}
+          {app.alternative_contact_name && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-amber-800 mb-2">Alternative Contact</h4>
+              <p className="text-amber-700">
+                <strong>{app.alternative_contact_name}</strong>
+                {app.alternative_contact_method && ` via ${app.alternative_contact_method}`}
+              </p>
+              {app.no_phone_reason && (
+                <p className="text-amber-600 text-sm mt-1">Reason: {app.no_phone_reason}</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="p-4 border-t border-gray-200 bg-gray-50 flex gap-3 justify-end">
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+          {!app.availability_status && (
+            <Button
+              onClick={() => onRequestAvailability(app)}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Request Availability
+            </Button>
+          )}
         </div>
       </motion.div>
     </div>,
