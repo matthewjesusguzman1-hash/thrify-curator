@@ -11,7 +11,7 @@ Provides endpoints for:
 - Applicants: Cancel/reschedule with reason
 """
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from datetime import datetime, timezone
@@ -750,9 +750,16 @@ async def send_post_interview_rejection(booking_id: str, background_tasks: Backg
 # ==================== AVAILABILITY-BASED SCHEDULING (NEW FLOW) ====================
 
 @router.post("/admin/send-availability-request/{application_id}")
-async def send_availability_request(application_id: str, background_tasks: BackgroundTasks, admin: dict = Depends(get_admin_user)):
+async def send_availability_request(application_id: str, request: Request, background_tasks: BackgroundTasks, admin: dict = Depends(get_admin_user)):
     """Admin sends a link for applicant to submit their availability (like video interview flow)"""
     from app.services.email_service import send_availability_request_email
+    
+    # Get request body
+    body = await request.json()
+    date_range_start = body.get("date_range_start", "")
+    date_range_end = body.get("date_range_end", "")
+    time_range_start = body.get("time_range_start", "")
+    time_range_end = body.get("time_range_end", "")
     
     application = await db.job_applications.find_one({"id": application_id}, {"_id": 0})
     if not application:
@@ -771,6 +778,10 @@ async def send_availability_request(application_id: str, background_tasks: Backg
             {"$set": {
                 "token": availability_token,
                 "status": "pending",
+                "date_range_start": date_range_start,
+                "date_range_end": date_range_end,
+                "time_range_start": time_range_start,
+                "time_range_end": time_range_end,
                 "sent_at": datetime.now(timezone.utc).isoformat(),
                 "sent_by": admin.get("name", admin.get("email"))
             }}
@@ -787,6 +798,10 @@ async def send_availability_request(application_id: str, background_tasks: Backg
             "applicant_phone": application.get("phone"),
             "token": availability_token,
             "status": "pending",  # pending, responded, scheduled, confirmed
+            "date_range_start": date_range_start,
+            "date_range_end": date_range_end,
+            "time_range_start": time_range_start,
+            "time_range_end": time_range_end,
             "availability": [],
             "scheduled_datetime": None,
             "scheduled_datetime_ct": None,
@@ -817,7 +832,11 @@ async def send_availability_request(application_id: str, background_tasks: Backg
         send_availability_request_email,
         to_email=application["email"],
         applicant_name=application["full_name"],
-        availability_url=availability_url
+        availability_url=availability_url,
+        date_range_start=date_range_start,
+        date_range_end=date_range_end,
+        time_range_start=time_range_start,
+        time_range_end=time_range_end
     )
     
     return {
@@ -854,6 +873,10 @@ async def get_availability_request_for_applicant(token: str):
         "applicant_name": request["applicant_name"],
         "applicant_email": request["applicant_email"],
         "existing_availability": request.get("availability", []),
+        "date_range_start": request.get("date_range_start", ""),
+        "date_range_end": request.get("date_range_end", ""),
+        "time_range_start": request.get("time_range_start", ""),
+        "time_range_end": request.get("time_range_end", ""),
         "status": request["status"]
     }
 
@@ -990,9 +1013,13 @@ async def unschedule_from_availability(request_id: str, admin: dict = Depends(ge
 
 
 @router.post("/admin/availability-inbox/{request_id}/send-confirmation")
-async def send_availability_confirmation(request_id: str, background_tasks: BackgroundTasks, admin: dict = Depends(get_admin_user)):
+async def send_availability_confirmation(request_id: str, request: Request, background_tasks: BackgroundTasks, admin: dict = Depends(get_admin_user)):
     """Send confirmation email for scheduled in-person interview"""
     from app.services.email_service import send_inperson_interview_confirmation_email
+    
+    # Get location from request body
+    body = await request.json()
+    location = body.get("location", "Thrifty Curator Store")
     
     avail_request = await db.inperson_availability_requests.find_one({"id": request_id})
     if not avail_request:
@@ -1004,13 +1031,14 @@ async def send_availability_confirmation(request_id: str, background_tasks: Back
     # Generate cancel/manage token
     manage_token = secrets.token_urlsafe(16)
     
-    # Update to confirmed
+    # Update to confirmed with location
     await db.inperson_availability_requests.update_one(
         {"id": request_id},
         {"$set": {
             "status": "confirmed",
             "confirmed_datetime": avail_request.get("scheduled_datetime"),
             "confirmed_datetime_ct": avail_request.get("scheduled_datetime_ct"),
+            "scheduled_location": location,
             "confirmed_at": datetime.now(timezone.utc).isoformat(),
             "confirmed_by": admin.get("name", admin.get("email")),
             "manage_token": manage_token
@@ -1025,7 +1053,7 @@ async def send_availability_confirmation(request_id: str, background_tasks: Back
             "interview_type": "in-person",
             "interview_datetime": avail_request.get("scheduled_datetime"),
             "interview_datetime_ct": avail_request.get("scheduled_datetime_ct"),
-            "interview_location": avail_request.get("scheduled_location", "Thrifty Curator Store")
+            "interview_location": location
         }}
     )
     
@@ -1040,7 +1068,7 @@ async def send_availability_confirmation(request_id: str, background_tasks: Back
         applicant_name=avail_request["applicant_name"],
         interview_datetime=avail_request.get("scheduled_datetime"),
         interview_datetime_ct=avail_request.get("scheduled_datetime_ct"),
-        location=avail_request.get("scheduled_location", "Thrifty Curator Store"),
+        location=location,
         manage_url=manage_url
     )
     

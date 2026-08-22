@@ -1484,11 +1484,52 @@ from app.database import db
 async def send_availability_request_email(
     to_email: str,
     applicant_name: str,
-    availability_url: str
+    availability_url: str,
+    date_range_start: str = "",
+    date_range_end: str = "",
+    time_range_start: str = "",
+    time_range_end: str = ""
 ) -> dict:
     """Send email asking applicant to submit their availability for in-person interview"""
     
     first_name = applicant_name.split()[0] if applicant_name else "there"
+    
+    # Format dates and times for display
+    def format_date(date_str):
+        if not date_str:
+            return ""
+        try:
+            from datetime import datetime
+            d = datetime.strptime(date_str, "%Y-%m-%d")
+            return d.strftime("%B %d, %Y")
+        except:
+            return date_str
+    
+    def format_time(time_str):
+        if not time_str:
+            return ""
+        try:
+            hours, minutes = map(int, time_str.split(':'))
+            period = 'AM' if hours < 12 else 'PM'
+            hours12 = hours % 12 or 12
+            return f"{hours12}:{str(minutes).zfill(2)} {period}"
+        except:
+            return time_str
+    
+    # Build date/time constraint section
+    constraints_html = ""
+    if date_range_start and date_range_end:
+        constraints_html = f"""
+        <div style="background: #f5f3ff; border-radius: 8px; padding: 15px; margin: 20px 0; border-left: 4px solid #8B5CF6;">
+            <p style="color: #5b21b6; margin: 0 0 8px 0; font-weight: 600;">
+                📅 Please provide availability within:
+            </p>
+            <p style="color: #6b21a8; margin: 0; font-size: 15px;">
+                <strong>Dates:</strong> {format_date(date_range_start)} – {format_date(date_range_end)}
+            </p>
+            {f'<p style="color: #6b21a8; margin: 5px 0 0 0; font-size: 15px;"><strong>Times:</strong> {format_time(time_range_start)} – {format_time(time_range_end)} Central Time</p>' if time_range_start and time_range_end else ''}
+        </div>
+        """
     
     content = f"""
     <p style="color: #333; line-height: 1.6;">
@@ -1499,6 +1540,8 @@ async def send_availability_request_email(
         Thank you for your interest in Thrifty Curator! We'd like to schedule an in-person interview 
         with you at our store.
     </p>
+    
+    {constraints_html}
     
     <p style="color: #333; line-height: 1.6;">
         Please click the button below to submit your availability. Let us know what times work best 
@@ -1517,8 +1560,8 @@ async def send_availability_request_email(
     
     <div style="background: #f0f9ff; border-radius: 8px; padding: 15px; margin: 20px 0;">
         <p style="color: #1e40af; margin: 0; font-size: 14px;">
-            <strong>📍 Interview Location:</strong> Thrifty Curator Store<br>
-            <strong>⏱️ Duration:</strong> Approximately 30 minutes
+            <strong>⏱️ Duration:</strong> Approximately 30 minutes<br>
+            <strong>📍 Location:</strong> Will be provided in your confirmation email
         </p>
     </div>
     

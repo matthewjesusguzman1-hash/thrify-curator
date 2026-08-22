@@ -19,6 +19,12 @@ export default function SubmitAvailabilityPage() {
   const [confirmationDetails, setConfirmationDetails] = useState(null);
   const [alreadyScheduled, setAlreadyScheduled] = useState(false);
   
+  // Date/time constraints from admin
+  const [dateRangeStart, setDateRangeStart] = useState('');
+  const [dateRangeEnd, setDateRangeEnd] = useState('');
+  const [timeRangeStart, setTimeRangeStart] = useState('');
+  const [timeRangeEnd, setTimeRangeEnd] = useState('');
+  
   // Availability windows
   const [availability, setAvailability] = useState([
     { date: '', start_time: '', end_time: '' }
@@ -33,6 +39,12 @@ export default function SubmitAvailabilityPage() {
     try {
       const response = await axios.get(`${API}/api/interview-scheduler/availability/${token}`);
       setApplicantName(response.data.applicant_name);
+      
+      // Get date/time constraints
+      setDateRangeStart(response.data.date_range_start || '');
+      setDateRangeEnd(response.data.date_range_end || '');
+      setTimeRangeStart(response.data.time_range_start || '');
+      setTimeRangeEnd(response.data.time_range_end || '');
       
       if (response.data.already_confirmed) {
         setAlreadyConfirmed(true);
@@ -63,59 +75,32 @@ export default function SubmitAvailabilityPage() {
     setAvailability(updated);
   };
 
-  // Convert time to CT for display
-  const convertToCT = (date, time) => {
-    if (!date || !time) return null;
-    const phtString = `${date}T${time}:00+08:00`;
-    const utcDate = new Date(phtString);
-    if (isNaN(utcDate.getTime())) return null;
-    return utcDate.toLocaleString('en-US', {
-      timeZone: 'America/Chicago',
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    }) + ' CT';
+  // Format time for display (12-hour)
+  const formatTime12h = (time24) => {
+    if (!time24) return '';
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
   };
 
-  // Get just the time portion for CT (for end times on same day)
-  const convertToCTTimeOnly = (date, time) => {
-    if (!date || !time) return null;
-    const phtString = `${date}T${time}:00+08:00`;
-    const utcDate = new Date(phtString);
-    if (isNaN(utcDate.getTime())) return null;
-    return utcDate.toLocaleString('en-US', {
-      timeZone: 'America/Chicago',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
+  // Format date for display
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
-  // Check if two PHT times convert to the same CT date
-  const sameCtDate = (date, time1, time2) => {
-    if (!date || !time1 || !time2) return true;
-    const pht1 = new Date(`${date}T${time1}:00+08:00`);
-    const pht2 = new Date(`${date}T${time2}:00+08:00`);
-    const ct1 = pht1.toLocaleDateString('en-US', { timeZone: 'America/Chicago' });
-    const ct2 = pht2.toLocaleDateString('en-US', { timeZone: 'America/Chicago' });
-    return ct1 === ct2;
+  // Check if a time is within the allowed range
+  const isTimeInRange = (time) => {
+    if (!time || !timeRangeStart || !timeRangeEnd) return true;
+    return time >= timeRangeStart && time <= timeRangeEnd;
   };
 
-  // Format CT range with smart date handling
-  const formatCTRange = (date, startTime, endTime) => {
-    if (!date || !startTime || !endTime) return null;
-    const startCT = convertToCT(date, startTime);
-    const endCT = convertToCT(date, endTime);
-    if (!startCT || !endCT) return null;
-    
-    if (sameCtDate(date, startTime, endTime)) {
-      return `${startCT.replace(' CT', '')} - ${convertToCTTimeOnly(date, endTime)} CT`;
-    } else {
-      return `${startCT} to ${endCT}`;
-    }
+  // Check if a date is within the allowed range
+  const isDateInRange = (date) => {
+    if (!date || !dateRangeStart || !dateRangeEnd) return true;
+    return date >= dateRangeStart && date <= dateRangeEnd;
   };
 
   const handleSubmit = async () => {
@@ -126,15 +111,25 @@ export default function SubmitAvailabilityPage() {
       return;
     }
 
-    // Validate times
+    // Validate times and ranges
     for (const window of validWindows) {
       if (window.start_time >= window.end_time) {
-        // Allow overnight (e.g., 11 PM to 1 AM)
-        // Only error if same time
         if (window.start_time === window.end_time) {
           toast.error('Start and end time cannot be the same');
           return;
         }
+      }
+      
+      // Check date is in range
+      if (!isDateInRange(window.date)) {
+        toast.error(`Date ${formatDate(window.date)} is outside the allowed range`);
+        return;
+      }
+      
+      // Check times are in range
+      if (!isTimeInRange(window.start_time) || !isTimeInRange(window.end_time)) {
+        toast.error(`Times must be between ${formatTime12h(timeRangeStart)} and ${formatTime12h(timeRangeEnd)}`);
+        return;
       }
     }
 
@@ -150,25 +145,6 @@ export default function SubmitAvailabilityPage() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
-  const formatTime12h = (time24) => {
-    if (!time24) return '';
-    const [hours, minutes] = time24.split(':').map(Number);
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const hours12 = hours % 12 || 12;
-    return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
   };
 
   if (loading) {
@@ -262,13 +238,37 @@ export default function SubmitAvailabilityPage() {
           </p>
         </div>
 
+        {/* Date/Time Constraints */}
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
+          <h3 className="font-medium text-purple-800 mb-3 flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            Interview Window (Central Time)
+          </h3>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-purple-600">Dates:</p>
+              <p className="text-purple-900 font-medium">
+                {formatDate(dateRangeStart)} – {formatDate(dateRangeEnd)}
+              </p>
+            </div>
+            {timeRangeStart && timeRangeEnd && (
+              <div>
+                <p className="text-purple-600">Times:</p>
+                <p className="text-purple-900 font-medium">
+                  {formatTime12h(timeRangeStart)} – {formatTime12h(timeRangeEnd)}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Instructions */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
           <h3 className="font-medium text-blue-800 mb-2">How this works:</h3>
           <ol className="text-blue-700 text-sm space-y-1 list-decimal list-inside">
             <li>Add one or more time windows when you are available</li>
-            <li>Enter times in Philippine Time (PHT)</li>
-            <li>We will pick a 30-minute slot and confirm via email</li>
+            <li>Enter times in Central Time (CT)</li>
+            <li>We will pick a 30-minute slot and send you a confirmation</li>
           </ol>
         </div>
 
@@ -277,7 +277,7 @@ export default function SubmitAvailabilityPage() {
           <div className="bg-gradient-to-r from-purple-500 to-blue-500 p-4 text-white">
             <h2 className="font-semibold flex items-center gap-2">
               <Clock className="w-5 h-5" />
-              Your Availability (PHT)
+              Your Availability (Central Time)
             </h2>
           </div>
           
@@ -304,9 +304,13 @@ export default function SubmitAvailabilityPage() {
                     type="date"
                     value={window.date}
                     onChange={(e) => updateAvailability(index, 'date', e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full"
+                    min={dateRangeStart || new Date().toISOString().split('T')[0]}
+                    max={dateRangeEnd}
+                    className={`w-full ${window.date && !isDateInRange(window.date) ? 'border-red-500' : ''}`}
                   />
+                  {window.date && !isDateInRange(window.date) && (
+                    <p className="text-red-500 text-xs mt-1">Date must be within {formatDate(dateRangeStart)} – {formatDate(dateRangeEnd)}</p>
+                  )}
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -316,7 +320,9 @@ export default function SubmitAvailabilityPage() {
                       type="time"
                       value={window.start_time}
                       onChange={(e) => updateAvailability(index, 'start_time', e.target.value)}
-                      className="w-full"
+                      min={timeRangeStart}
+                      max={timeRangeEnd}
+                      className={`w-full ${window.start_time && !isTimeInRange(window.start_time) ? 'border-red-500' : ''}`}
                     />
                   </div>
                   <span className="text-gray-400 mt-5">to</span>
@@ -326,23 +332,24 @@ export default function SubmitAvailabilityPage() {
                       type="time"
                       value={window.end_time}
                       onChange={(e) => updateAvailability(index, 'end_time', e.target.value)}
-                      className="w-full"
+                      min={timeRangeStart}
+                      max={timeRangeEnd}
+                      className={`w-full ${window.end_time && !isTimeInRange(window.end_time) ? 'border-red-500' : ''}`}
                     />
                   </div>
                 </div>
-
-                {/* CT Preview */}
-                {window.date && window.start_time && window.end_time && (
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm">
-                    <p className="text-blue-600 text-xs font-medium mb-1">Admin sees (Central Time):</p>
-                    <p className="text-blue-800 font-semibold">
-                      {formatCTRange(window.date, window.start_time, window.end_time)}
+                
+                {/* Time validation message */}
+                {(window.start_time && !isTimeInRange(window.start_time)) || (window.end_time && !isTimeInRange(window.end_time)) ? (
+                  <p className="text-red-500 text-xs">Times must be between {formatTime12h(timeRangeStart)} – {formatTime12h(timeRangeEnd)}</p>
+                ) : null}
+                
+                {/* Preview of entered availability */}
+                {window.date && window.start_time && window.end_time && isDateInRange(window.date) && isTimeInRange(window.start_time) && isTimeInRange(window.end_time) && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+                    <p className="text-green-800 font-medium">
+                      {formatDate(window.date)}, {formatTime12h(window.start_time)} – {formatTime12h(window.end_time)} CT
                     </p>
-                    {!sameCtDate(window.date, window.start_time, window.end_time) && (
-                      <p className="text-amber-600 text-xs mt-1">
-                        ⚠️ Note: Your time crosses midnight in Central Time
-                      </p>
-                    )}
                   </div>
                 )}
               </div>
@@ -360,17 +367,12 @@ export default function SubmitAvailabilityPage() {
         </div>
 
         {/* Location Info */}
-        <div className="bg-white rounded-2xl shadow-xl p-4 mb-6">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-              <h3 className="font-medium text-gray-900">Interview Location</h3>
-              <p className="text-gray-600 text-sm">Thrifty Curator Store</p>
-              <p className="text-gray-500 text-xs mt-1">Duration: ~30 minutes</p>
-            </div>
-          </div>
+        <div className="bg-gray-50 rounded-xl p-4 mb-6">
+          <p className="text-gray-600 text-sm flex items-center gap-2">
+            <MapPin className="w-4 h-4" />
+            Interview location will be provided in your confirmation email.
+          </p>
+          <p className="text-gray-500 text-xs mt-1">Duration: ~30 minutes</p>
         </div>
 
         {/* Submit Button */}

@@ -55,7 +55,7 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
   };
 
   // Send availability request to applicant
-  const sendAvailabilityRequest = async (applicationIds, dateStart, dateEnd) => {
+  const sendAvailabilityRequest = async (applicationIds, dateStart, dateEnd, timeStart, timeEnd) => {
     try {
       const selectedApps = applications.filter(app => applicationIds.includes(app.id));
       
@@ -64,7 +64,9 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
           `${API}/api/interview-scheduler/admin/send-availability-request/${app.id}`,
           {
             date_range_start: dateStart,
-            date_range_end: dateEnd
+            date_range_end: dateEnd,
+            time_range_start: timeStart,
+            time_range_end: timeEnd
           },
           getAuthHeader()
         );
@@ -116,11 +118,11 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
   };
 
   // Send confirmation email
-  const sendConfirmation = async (requestId) => {
+  const sendConfirmation = async (requestId, location) => {
     try {
       await axios.post(
         `${API}/api/interview-scheduler/admin/availability-inbox/${requestId}/send-confirmation`,
-        {},
+        { location: location || 'Thrifty Curator Store' },
         getAuthHeader()
       );
       toast.success('Confirmation email sent!');
@@ -521,6 +523,7 @@ function InboxTab({ requests, onSchedule, onSendMessage, onDelete }) {
 
 // Tab: Scheduled Interviews
 function ScheduledTab({ requests, onUnschedule, onSendConfirmation }) {
+  const [confirmModal, setConfirmModal] = useState(null);
   const scheduled = requests.filter(r => r.status === 'scheduled');
   const confirmed = requests.filter(r => r.status === 'confirmed');
 
@@ -544,15 +547,6 @@ function ScheduledTab({ requests, onUnschedule, onSendConfirmation }) {
               <Clock className="w-4 h-4" />
               Ready to Send Confirmation ({scheduled.length})
             </h4>
-            {scheduled.length > 1 && (
-              <Button
-                size="sm"
-                onClick={() => scheduled.forEach(r => onSendConfirmation(r.id))}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-              >
-                Send All
-              </Button>
-            )}
           </div>
           <div className="space-y-2">
             {scheduled.map(req => (
@@ -561,10 +555,6 @@ function ScheduledTab({ requests, onUnschedule, onSendConfirmation }) {
                   <div>
                     <p className="font-medium text-gray-900">{req.applicant_name}</p>
                     <p className="text-sm text-purple-700">{req.scheduled_datetime_ct || req.scheduled_datetime}</p>
-                    <p className="text-xs text-gray-500 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {req.scheduled_location || 'Thrifty Curator Store'}
-                    </p>
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -577,11 +567,11 @@ function ScheduledTab({ requests, onUnschedule, onSendConfirmation }) {
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => onSendConfirmation(req.id)}
+                      onClick={() => setConfirmModal(req)}
                       className="bg-purple-600 hover:bg-purple-700 text-white"
                     >
                       <Send className="w-4 h-4 mr-1" />
-                      Send
+                      Confirm
                     </Button>
                   </div>
                 </div>
@@ -605,10 +595,12 @@ function ScheduledTab({ requests, onUnschedule, onSendConfirmation }) {
                   <div>
                     <p className="font-medium text-gray-900">{req.applicant_name}</p>
                     <p className="text-sm text-green-700">{req.confirmed_datetime_ct || req.confirmed_datetime}</p>
-                    <p className="text-xs text-gray-500 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {req.scheduled_location || 'Thrifty Curator Store'}
-                    </p>
+                    {req.scheduled_location && (
+                      <p className="text-xs text-gray-500 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {req.scheduled_location}
+                      </p>
+                    )}
                   </div>
                   <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
                     Confirmed
@@ -619,7 +611,80 @@ function ScheduledTab({ requests, onUnschedule, onSendConfirmation }) {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal with Location */}
+      {confirmModal && (
+        <ConfirmationModal
+          request={confirmModal}
+          onClose={() => setConfirmModal(null)}
+          onConfirm={onSendConfirmation}
+        />
+      )}
     </div>
+  );
+}
+
+// Confirmation Modal - Add location before sending
+function ConfirmationModal({ request, onClose, onConfirm }) {
+  const [location, setLocation] = useState('Thrifty Curator Store');
+  const [sending, setSending] = useState(false);
+
+  const handleConfirm = async () => {
+    setSending(true);
+    await onConfirm(request.id, location);
+    setSending(false);
+    onClose();
+  };
+
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-xl shadow-xl max-w-md w-full"
+      >
+        <div className="p-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold">Send Confirmation</h3>
+          <p className="text-sm text-gray-500">
+            Confirm interview with {request.applicant_name}
+          </p>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <div className="bg-purple-50 rounded-lg p-3">
+            <p className="text-sm text-purple-700 font-medium">Interview Time:</p>
+            <p className="text-purple-900">{request.scheduled_datetime_ct || request.scheduled_datetime}</p>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-1 block flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              Interview Location
+            </Label>
+            <Input
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              placeholder="Enter interview location"
+              className="border-gray-300"
+            />
+            <p className="text-xs text-gray-500 mt-1">This will be included in the confirmation email</p>
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-gray-200 flex gap-3 justify-end">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={sending || !location.trim()}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+            Send Confirmation
+          </Button>
+        </div>
+      </motion.div>
+    </div>,
+    document.body
   );
 }
 
@@ -635,17 +700,26 @@ function RequestAvailabilityModal({ applications, onClose, onSend, selectedIds }
     nextWeek.setDate(nextWeek.getDate() + 7);
     return `${nextWeek.getFullYear()}-${String(nextWeek.getMonth() + 1).padStart(2, '0')}-${String(nextWeek.getDate()).padStart(2, '0')}`;
   });
+  const [timeStart, setTimeStart] = useState('09:00');
+  const [timeEnd, setTimeEnd] = useState('17:00');
   const [sending, setSending] = useState(false);
 
   const handleSend = async () => {
     setSending(true);
-    await onSend(selectedIds, dateStart, dateEnd);
+    await onSend(selectedIds, dateStart, dateEnd, timeStart, timeEnd);
     setSending(false);
   };
 
   const formatDateForDisplay = (dateStr) => {
     const d = new Date(dateStr + 'T12:00:00');
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  };
+
+  const formatTimeForDisplay = (time24) => {
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
   };
 
   return ReactDOM.createPortal(
@@ -677,32 +751,76 @@ function RequestAvailabilityModal({ applications, onClose, onSend, selectedIds }
           </div>
 
           {/* Date Range */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-1 block">From</Label>
-              <Input
-                type="date"
-                value={dateStart}
-                onChange={e => setDateStart(e.target.value)}
-                className="border-gray-300"
-              />
-              <p className="text-xs text-gray-500 mt-1">{formatDateForDisplay(dateStart)}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-1 block">To</Label>
-              <Input
-                type="date"
-                value={dateEnd}
-                onChange={e => setDateEnd(e.target.value)}
-                className="border-gray-300"
-              />
-              <p className="text-xs text-gray-500 mt-1">{formatDateForDisplay(dateEnd)}</p>
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Date Range
+            </Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">From</label>
+                <Input
+                  type="date"
+                  value={dateStart}
+                  onChange={e => setDateStart(e.target.value)}
+                  className="border-gray-300"
+                />
+                <p className="text-xs text-gray-500 mt-1">{formatDateForDisplay(dateStart)}</p>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">To</label>
+                <Input
+                  type="date"
+                  value={dateEnd}
+                  onChange={e => setDateEnd(e.target.value)}
+                  className="border-gray-300"
+                />
+                <p className="text-xs text-gray-500 mt-1">{formatDateForDisplay(dateEnd)}</p>
+              </div>
             </div>
           </div>
 
-          <p className="text-sm text-gray-500 bg-blue-50 p-3 rounded-lg">
-            Applicants will receive an email asking them to submit their available times within this date range for an in-person interview.
-          </p>
+          {/* Time Range */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Time Window (Central Time)
+            </Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Earliest</label>
+                <Input
+                  type="time"
+                  value={timeStart}
+                  onChange={e => setTimeStart(e.target.value)}
+                  className="border-gray-300"
+                />
+                <p className="text-xs text-gray-500 mt-1">{formatTimeForDisplay(timeStart)}</p>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Latest</label>
+                <Input
+                  type="time"
+                  value={timeEnd}
+                  onChange={e => setTimeEnd(e.target.value)}
+                  className="border-gray-300"
+                />
+                <p className="text-xs text-gray-500 mt-1">{formatTimeForDisplay(timeEnd)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-800">
+              <strong>Applicants will be asked to provide availability:</strong>
+            </p>
+            <p className="text-sm text-blue-700 mt-1">
+              {formatDateForDisplay(dateStart)} – {formatDateForDisplay(dateEnd)}
+            </p>
+            <p className="text-sm text-blue-700">
+              Between {formatTimeForDisplay(timeStart)} and {formatTimeForDisplay(timeEnd)} CT
+            </p>
+          </div>
         </div>
 
         <div className="p-4 border-t border-gray-200 flex gap-3 justify-end">
@@ -726,14 +844,19 @@ function RequestAvailabilityModal({ applications, onClose, onSend, selectedIds }
 // Schedule Modal - Pick a time from availability
 function ScheduleModal({ request, onClose, onSchedule }) {
   const [selectedSlot, setSelectedSlot] = useState(null);
-  const [location, setLocation] = useState('Thrifty Curator Store');
   const [scheduling, setScheduling] = useState(false);
 
-  // Generate 30-minute slots from availability windows
+  // Generate 30-minute slots from availability windows (all in Central Time)
   const generate30MinSlots = (window) => {
     const slots = [];
-    const [startH, startM] = window.start_time_pht.split(':').map(Number);
-    const [endH, endM] = window.end_time_pht.split(':').map(Number);
+    // Use start_time and end_time (CT) instead of PHT
+    const startTime = window.start_time || window.start_time_pht;
+    const endTime = window.end_time || window.end_time_pht;
+    
+    if (!startTime || !endTime) return slots;
+    
+    const [startH, startM] = startTime.split(':').map(Number);
+    const [endH, endM] = endTime.split(':').map(Number);
     
     let currentMinutes = startH * 60 + startM;
     let endMinutes = endH * 60 + endM;
@@ -755,20 +878,15 @@ function ScheduleModal({ request, onClose, onSchedule }) {
         return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
       };
       
-      // Convert to CT
-      const phtDate = new Date(`${window.date}T${String(slotStartH).padStart(2, '0')}:${String(slotStartM).padStart(2, '0')}:00+08:00`);
-      const ctOptions = { timeZone: 'America/Chicago', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true };
-      const ctStart = phtDate.toLocaleString('en-US', ctOptions);
-      
-      const phtEndDate = new Date(`${window.date}T${String(slotEndH).padStart(2, '0')}:${String(slotEndM).padStart(2, '0')}:00+08:00`);
-      const ctEnd = phtEndDate.toLocaleString('en-US', { timeZone: 'America/Chicago', hour: 'numeric', minute: '2-digit', hour12: true });
+      // Format the date
+      const dateObj = new Date(window.date + 'T12:00:00');
+      const dateDisplay = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       
       slots.push({
         date: window.date,
         startTime: `${String(slotStartH).padStart(2, '0')}:${String(slotStartM).padStart(2, '0')}`,
         endTime: `${String(slotEndH).padStart(2, '0')}:${String(slotEndM).padStart(2, '0')}`,
-        displayPHT: `${formatTime(slotStartH, slotStartM)} - ${formatTime(slotEndH, slotEndM)} PHT`,
-        displayCT: `${ctStart} - ${ctEnd} CT`
+        displayCT: `${dateDisplay}, ${formatTime(slotStartH, slotStartM)} - ${formatTime(slotEndH, slotEndM)} CT`
       });
       
       currentMinutes += 30;
@@ -784,14 +902,11 @@ function ScheduleModal({ request, onClose, onSchedule }) {
     if (!selectedSlot) return;
     setScheduling(true);
     
-    const dateObj = new Date(selectedSlot.date + 'T12:00:00');
-    const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    
     await onSchedule(
       request.id,
-      `${dateStr} at ${selectedSlot.displayPHT.replace(' PHT', '')}`,
-      selectedSlot.displayCT.replace(' CT', ''),
-      location
+      selectedSlot.displayCT,
+      selectedSlot.displayCT,
+      null // No location - will be added in confirmation
     );
     setScheduling(false);
   };
@@ -814,7 +929,7 @@ function ScheduleModal({ request, onClose, onSchedule }) {
           {/* Available Time Slots */}
           <div>
             <Label className="text-sm font-medium text-gray-700 mb-2 block">
-              Select a 30-minute slot
+              Select a 30-minute slot (Central Time)
             </Label>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {allSlots.length === 0 ? (
@@ -831,23 +946,15 @@ function ScheduleModal({ request, onClose, onSchedule }) {
                     }`}
                   >
                     <div className="font-medium text-gray-900">{slot.displayCT}</div>
-                    <div className="text-sm text-gray-500">{slot.displayPHT}</div>
                   </button>
                 ))
               )}
             </div>
           </div>
 
-          {/* Location */}
-          <div>
-            <Label className="text-sm font-medium text-gray-700 mb-1 block">Location</Label>
-            <Input
-              value={location}
-              onChange={e => setLocation(e.target.value)}
-              placeholder="Interview location"
-              className="border-gray-300"
-            />
-          </div>
+          <p className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+            Location will be included in the confirmation email sent after scheduling.
+          </p>
         </div>
 
         <div className="p-4 border-t border-gray-200 flex gap-3 justify-end">
