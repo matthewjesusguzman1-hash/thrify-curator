@@ -22,6 +22,9 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
   // Availability inbox state
   const [availabilityRequests, setAvailabilityRequests] = useState([]);
   const [showScheduleModal, setShowScheduleModal] = useState(null);
+  
+  // Legacy slot-based bookings (existing scheduled interviews)
+  const [legacyBookings, setLegacyBookings] = useState([]);
 
   useEffect(() => {
     if (isExpanded) {
@@ -32,12 +35,15 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [appsRes, availRes] = await Promise.all([
+      const [appsRes, availRes, bookingsRes] = await Promise.all([
         axios.get(`${API}/api/admin/forms/job-applications`, getAuthHeader()),
-        axios.get(`${API}/api/interview-scheduler/admin/availability-inbox`, getAuthHeader()).catch(() => ({ data: { requests: [] } }))
+        axios.get(`${API}/api/interview-scheduler/admin/availability-inbox`, getAuthHeader()).catch(() => ({ data: { requests: [] } })),
+        // Also fetch legacy slot-based bookings
+        axios.get(`${API}/api/interview-scheduler/admin/bookings`, getAuthHeader()).catch(() => ({ data: [] }))
       ]);
       setApplications(appsRes.data.filter(app => !app.interview_scheduled && !app.availability_request_sent));
       setAvailabilityRequests(availRes.data.requests || []);
+      setLegacyBookings(bookingsRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load data');
@@ -146,6 +152,7 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
   const respondedCount = availabilityRequests.filter(r => r.status === 'responded').length;
   const scheduledCount = availabilityRequests.filter(r => r.status === 'scheduled').length;
   const confirmedCount = availabilityRequests.filter(r => r.status === 'confirmed').length;
+  const legacyBookingsCount = legacyBookings.length;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="interview-scheduler-section">
@@ -162,7 +169,7 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
           <div className="text-left">
             <h3 className="font-semibold text-gray-900">In-Person Interviews</h3>
             <p className="text-sm text-gray-500">
-              {applications.length} pending • {respondedCount} responded • {scheduledCount + confirmedCount} scheduled
+              {applications.length} pending • {respondedCount} responded • {scheduledCount + confirmedCount + legacyBookingsCount} scheduled
             </p>
           </div>
         </div>
@@ -235,6 +242,7 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
                   {activeTab === 'scheduled' && (
                     <ScheduledTab
                       requests={availabilityRequests.filter(r => r.status === 'scheduled' || r.status === 'confirmed')}
+                      legacyBookings={legacyBookings}
                       onUnschedule={unscheduleAvailability}
                       onSendConfirmation={sendConfirmation}
                     />
@@ -411,7 +419,7 @@ function InboxTab({ requests, onSchedule, onSendMessage, onDelete }) {
 
 
 // Tab: Scheduled Interviews
-function ScheduledTab({ requests, onUnschedule, onSendConfirmation }) {
+function ScheduledTab({ requests, legacyBookings = [], onUnschedule, onSendConfirmation }) {
   // Sort by date (earliest first)
   const parseDateTime = (dateTimeStr) => {
     if (!dateTimeStr) return new Date(9999, 11, 31);
@@ -427,6 +435,15 @@ function ScheduledTab({ requests, onUnschedule, onSendConfirmation }) {
     return new Date(9999, 11, 31);
   };
 
+  // Parse legacy booking date
+  const parseLegacyDate = (booking) => {
+    if (booking.interview_date) {
+      const d = new Date(booking.interview_date);
+      if (!isNaN(d.getTime())) return d;
+    }
+    return new Date(9999, 11, 31);
+  };
+
   const scheduled = requests
     .filter(r => r.status === 'scheduled')
     .sort((a, b) => parseDateTime(a.scheduled_datetime_ct || a.scheduled_datetime) - parseDateTime(b.scheduled_datetime_ct || b.scheduled_datetime));
@@ -435,7 +452,33 @@ function ScheduledTab({ requests, onUnschedule, onSendConfirmation }) {
     .filter(r => r.status === 'confirmed')
     .sort((a, b) => parseDateTime(a.confirmed_datetime_ct || a.confirmed_datetime) - parseDateTime(b.confirmed_datetime_ct || b.confirmed_datetime));
 
-  if (requests.length === 0) {
+  // Sort legacy bookings by interview date
+  const sortedLegacyBookings = [...legacyBookings].sort((a, b) => parseLegacyDate(a) - parseLegacyDate(b));
+
+  // Format legacy booking date for display
+  const formatLegacyDate = (booking) => {
+    if (booking.interview_date) {
+      const d = new Date(booking.interview_date);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      }
+    }
+    return booking.interview_date || 'Date TBD';
+  };
+
+  const formatLegacyTime = (booking) => {
+    if (booking.interview_time) {
+      return booking.interview_time;
+    }
+    if (booking.slot_start && booking.slot_end) {
+      return `${booking.slot_start} - ${booking.slot_end}`;
+    }
+    return '';
+  };
+
+  const hasAnyData = requests.length > 0 || legacyBookings.length > 0;
+
+  if (!hasAnyData) {
     return (
       <div className="text-center py-8">
         <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
@@ -523,6 +566,51 @@ function ScheduledTab({ requests, onUnschedule, onSendConfirmation }) {
                   </div>
                   <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
                     Confirmed
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Legacy Slot-Based Bookings (Existing Scheduled Interviews) */}
+      {sortedLegacyBookings.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-medium text-blue-900 mb-3 flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Slot-Based Interviews ({sortedLegacyBookings.length})
+          </h4>
+          <div className="space-y-2">
+            {sortedLegacyBookings.map((booking, idx) => (
+              <div key={booking.id || idx} className="bg-white rounded-lg p-3 border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900">{booking.applicant_name}</p>
+                    <p className="text-sm text-blue-700">
+                      {formatLegacyDate(booking)} {formatLegacyTime(booking)}
+                    </p>
+                    {booking.email && (
+                      <p className="text-xs text-gray-500 flex items-center gap-1">
+                        <Mail className="w-3 h-3" />
+                        {booking.email}
+                      </p>
+                    )}
+                    {booking.phone && (
+                      <p className="text-xs text-gray-500 flex items-center gap-1">
+                        <Phone className="w-3 h-3" />
+                        {booking.phone}
+                      </p>
+                    )}
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    booking.status === 'confirmed' 
+                      ? 'bg-green-100 text-green-700' 
+                      : booking.status === 'cancelled'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {booking.status || 'Scheduled'}
                   </span>
                 </div>
               </div>
