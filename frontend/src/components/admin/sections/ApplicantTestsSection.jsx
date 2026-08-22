@@ -1259,6 +1259,49 @@ function ScheduleInterviewModal({ test, selectedEmails, submissions, onClose, ge
     return `${nextWeek.getFullYear()}-${String(nextWeek.getMonth() + 1).padStart(2, '0')}-${String(nextWeek.getDate()).padStart(2, '0')}`;
   });
 
+  // Time range state (optional filter for availability)
+  const [timeRangeEnabled, setTimeRangeEnabled] = useState(() => {
+    const saved = localStorage.getItem('thrifty_scheduling_time_range_enabled');
+    return saved === 'true';
+  });
+  const [timeStart, setTimeStart] = useState(() => {
+    return localStorage.getItem('thrifty_scheduling_time_start') || '06:00';
+  });
+  const [timeEnd, setTimeEnd] = useState(() => {
+    return localStorage.getItem('thrifty_scheduling_time_end') || '22:00';
+  });
+
+  // Save time range settings
+  const saveTimeRange = (enabled, start, end) => {
+    localStorage.setItem('thrifty_scheduling_time_range_enabled', enabled);
+    localStorage.setItem('thrifty_scheduling_time_start', start);
+    localStorage.setItem('thrifty_scheduling_time_end', end);
+  };
+
+  const handleTimeRangeToggle = (enabled) => {
+    setTimeRangeEnabled(enabled);
+    saveTimeRange(enabled, timeStart, timeEnd);
+  };
+
+  const handleTimeStartChange = (value) => {
+    setTimeStart(value);
+    saveTimeRange(timeRangeEnabled, value, timeEnd);
+  };
+
+  const handleTimeEndChange = (value) => {
+    setTimeEnd(value);
+    saveTimeRange(timeRangeEnabled, timeStart, value);
+  };
+
+  // Format time for display
+  const formatTime12h = (time24) => {
+    if (!time24) return '';
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${String(minutes).padStart(2, '0')} ${period}`;
+  };
+
   // Save dates when they change
   const saveDates = (start, end) => {
     localStorage.setItem('thrifty_scheduling_dates', JSON.stringify({ start, end }));
@@ -1334,7 +1377,12 @@ We look forward to speaking with you!`;
           meeting_link: meetingLink,
           date_range_start: formatDateForEmail(dateStart),
           date_range_end: formatDateForEmail(dateEnd),
-          timezone
+          timezone,
+          // Include time range if enabled
+          time_range_enabled: timeRangeEnabled,
+          time_range_start: timeRangeEnabled ? timeStart : null,
+          time_range_end: timeRangeEnabled ? timeEnd : null,
+          time_range_display: timeRangeEnabled ? `${formatTime12h(timeStart)} - ${formatTime12h(timeEnd)} CT` : null
         },
         getAuthHeader()
       );
@@ -1421,6 +1469,57 @@ We look forward to speaking with you!`;
                 className="border-gray-300"
               />
             </div>
+          </div>
+
+          {/* Time Range (Optional) */}
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div className="flex items-center justify-between mb-3">
+              <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Preferred Time Window (Optional)
+              </Label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={timeRangeEnabled}
+                  onChange={(e) => handleTimeRangeToggle(e.target.checked)}
+                  className="w-4 h-4 text-[#8B5CF6] border-gray-300 rounded focus:ring-[#8B5CF6]"
+                />
+                <span className="text-sm text-gray-600">Enable</span>
+              </label>
+            </div>
+            
+            {timeRangeEnabled ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">From (CT)</label>
+                  <Input
+                    type="time"
+                    value={timeStart}
+                    onChange={e => handleTimeStartChange(e.target.value)}
+                    className="border-gray-300"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Until (CT)</label>
+                  <Input
+                    type="time"
+                    value={timeEnd}
+                    onChange={e => handleTimeEndChange(e.target.value)}
+                    className="border-gray-300"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-gray-500">
+                    Applicants will be asked to select times that fall within <strong>{formatTime12h(timeStart)} - {formatTime12h(timeEnd)} CT</strong> on the dates above.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500">
+                When enabled, you can specify what hours (in your timezone) applicants should select from.
+              </p>
+            )}
           </div>
 
           {/* Timezone */}

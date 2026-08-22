@@ -80,6 +80,44 @@ export default function SubmitAvailabilityPage() {
     }) + ' CT';
   };
 
+  // Get just the time portion for CT (for end times on same day)
+  const convertToCTTimeOnly = (date, time) => {
+    if (!date || !time) return null;
+    const phtString = `${date}T${time}:00+08:00`;
+    const utcDate = new Date(phtString);
+    if (isNaN(utcDate.getTime())) return null;
+    return utcDate.toLocaleString('en-US', {
+      timeZone: 'America/Chicago',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  // Check if two PHT times convert to the same CT date
+  const sameCtDate = (date, time1, time2) => {
+    if (!date || !time1 || !time2) return true;
+    const pht1 = new Date(`${date}T${time1}:00+08:00`);
+    const pht2 = new Date(`${date}T${time2}:00+08:00`);
+    const ct1 = pht1.toLocaleDateString('en-US', { timeZone: 'America/Chicago' });
+    const ct2 = pht2.toLocaleDateString('en-US', { timeZone: 'America/Chicago' });
+    return ct1 === ct2;
+  };
+
+  // Format CT range with smart date handling
+  const formatCTRange = (date, startTime, endTime) => {
+    if (!date || !startTime || !endTime) return null;
+    const startCT = convertToCT(date, startTime);
+    const endCT = convertToCT(date, endTime);
+    if (!startCT || !endCT) return null;
+    
+    if (sameCtDate(date, startTime, endTime)) {
+      return `${startCT.replace(' CT', '')} - ${convertToCTTimeOnly(date, endTime)} CT`;
+    } else {
+      return `${startCT} to ${endCT}`;
+    }
+  };
+
   const handleSubmit = async () => {
     const validWindows = availability.filter(a => a.date && a.start_time && a.end_time);
     
@@ -295,11 +333,16 @@ export default function SubmitAvailabilityPage() {
 
                 {/* CT Preview */}
                 {window.date && window.start_time && window.end_time && (
-                  <div className="bg-gray-50 rounded-lg p-3 text-sm">
-                    <span className="text-gray-500">Central Time: </span>
-                    <span className="text-gray-700">
-                      {convertToCT(window.date, window.start_time)} - {formatTime12h(window.end_time)}
-                    </span>
+                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm">
+                    <p className="text-blue-600 text-xs font-medium mb-1">Admin sees (Central Time):</p>
+                    <p className="text-blue-800 font-semibold">
+                      {formatCTRange(window.date, window.start_time, window.end_time)}
+                    </p>
+                    {!sameCtDate(window.date, window.start_time, window.end_time) && (
+                      <p className="text-amber-600 text-xs mt-1">
+                        ⚠️ Note: Your time crosses midnight in Central Time
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

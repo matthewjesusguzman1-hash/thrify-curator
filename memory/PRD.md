@@ -83,6 +83,17 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - **Collapsible Tax Forms (2026-08-18)**: W-9 and W-8BEN sections in Employee Dashboard now collapse/expand with chevron animation to save vertical space
 - **Splash Screen Optimization (2026-08-18)**: Restored original animated blob design with GPU optimization hints (willChange, translateZ, backfaceVisibility) for smoother performance
 - **Applicant Skills Tests Portrait Layout Fix (2026-08-18)**: Fixed responsive layout bug where View, Invite, and Delete buttons were cut off in portrait mode. TestCard component now stacks content vertically with action buttons in their own row below the card content. Header also made responsive with Create Test button going full-width on mobile.
+- **Enhanced Timezone Display for Interview Scheduling (2026-08-22)**:
+  - Video interview applicants now see full CT date context including weekday (e.g., "Sun, Aug 24, 7:00 AM - 7:30 AM")
+  - When PHT time crosses midnight in CT (e.g., Monday PHT morning = Sunday CT evening), a warning note appears
+  - Both InterviewResponsePage.jsx (video) and SubmitAvailabilityPage.jsx (in-person) updated
+  - New helper functions: formatCTRange(), sameCtDate(), convertPHTtoCTTimeOnly()
+- **Admin Time Range Filter for Interview Scheduling (2026-08-22)**:
+  - Added optional time range filter when inviting applicants for video interviews
+  - Admin can enable/disable time range filter with checkbox
+  - When enabled, admin specifies preferred CT time window (e.g., 6:00 AM - 10:00 PM)
+  - Settings persist to localStorage for convenience
+  - Time range info sent with interview invitation email data
 
 ### Recently Removed
 - AI Reports Assistant (removed 2026-05-12 per user request)

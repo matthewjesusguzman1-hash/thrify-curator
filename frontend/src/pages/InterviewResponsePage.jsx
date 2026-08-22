@@ -8,8 +8,8 @@ import axios from "axios";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-// Convert PHT to CT and return both formatted string and Date object
-function convertPHTtoCT(date, time) {
+// Convert PHT to CT and return formatted string with full date context
+function convertPHTtoCT(date, time, options = {}) {
   if (!date || !time) return null;
   
   const year = date.split('-')[0];
@@ -30,6 +30,60 @@ function convertPHTtoCT(date, time) {
   };
   
   return utcDate.toLocaleString('en-US', ctOptions);
+}
+
+// Get just the time portion for CT (for end times on same day)
+function convertPHTtoCTTimeOnly(date, time) {
+  if (!date || !time) return null;
+  
+  const year = date.split('-')[0];
+  const month = date.split('-')[1];
+  const day = date.split('-')[2];
+  const phtString = `${year}-${month}-${day}T${time}:00+08:00`;
+  
+  const utcDate = new Date(phtString);
+  
+  return utcDate.toLocaleString('en-US', {
+    timeZone: 'America/Chicago',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
+// Check if two PHT times convert to the same CT date
+function sameCtDate(date, time1, time2) {
+  if (!date || !time1 || !time2) return true;
+  
+  const year = date.split('-')[0];
+  const month = date.split('-')[1];
+  const day = date.split('-')[2];
+  
+  const pht1 = new Date(`${year}-${month}-${day}T${time1}:00+08:00`);
+  const pht2 = new Date(`${year}-${month}-${day}T${time2}:00+08:00`);
+  
+  const ct1 = pht1.toLocaleDateString('en-US', { timeZone: 'America/Chicago' });
+  const ct2 = pht2.toLocaleDateString('en-US', { timeZone: 'America/Chicago' });
+  
+  return ct1 === ct2;
+}
+
+// Format CT display with smart date handling
+function formatCTRange(date, startTime, endTime) {
+  if (!date || !startTime || !endTime) return null;
+  
+  const startCT = convertPHTtoCT(date, startTime);
+  const endCT = convertPHTtoCT(date, endTime);
+  
+  if (!startCT || !endCT) return null;
+  
+  // If same CT date, show "Sat, Aug 24, 7:00 AM - 7:30 AM"
+  // If different CT dates, show both full dates
+  if (sameCtDate(date, startTime, endTime)) {
+    return `${startCT} - ${convertPHTtoCTTimeOnly(date, endTime)}`;
+  } else {
+    return `${startCT} to ${endCT}`;
+  }
 }
 
 // Get the CT date for a given PHT date and time
@@ -206,10 +260,9 @@ export default function InterviewResponsePage() {
     const formattedBlocks = validBlocks.map(block => {
       const dateObj = new Date(block.date + 'T12:00:00');
       const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      const ctStart = convertPHTtoCT(block.date, block.startTime);
-      const ctEnd = convertPHTtoCT(block.date, block.endTime);
+      const ctRange = formatCTRange(block.date, block.startTime, block.endTime);
       
-      return `${dateStr}: ${formatTime12h(block.startTime)} - ${formatTime12h(block.endTime)} PHT\n→ Central Time: ${ctStart?.split(', ')[1] || ''} - ${ctEnd?.split(', ')[1] || ''}`;
+      return `${dateStr}: ${formatTime12h(block.startTime)} - ${formatTime12h(block.endTime)} PHT\n→ Central Time: ${ctRange}`;
     }).join('\n\n');
 
     setSubmitting(true);
@@ -222,7 +275,8 @@ export default function InterviewResponsePage() {
           start_time_pht: block.startTime,
           end_time_pht: block.endTime,
           start_time_ct: convertPHTtoCT(block.date, block.startTime),
-          end_time_ct: convertPHTtoCT(block.date, block.endTime)
+          end_time_ct: convertPHTtoCT(block.date, block.endTime),
+          ct_range: formatCTRange(block.date, block.startTime, block.endTime)
         }))
       });
       
@@ -418,11 +472,16 @@ export default function InterviewResponsePage() {
                         {/* Live CT Conversion - Show what time it is for the interviewer */}
                         {block.startTime && block.endTime && (
                           <div className={`rounded-xl p-4 ${withinRange ? 'bg-green-500/20 border border-green-500/50' : 'bg-red-500/20 border border-red-500/50'}`}>
-                            <p className="text-white/60 text-xs mb-1">This is what time it will be for your interviewer:</p>
+                            <p className="text-white/60 text-xs mb-2">This is what time it will be for your interviewer (Central Time):</p>
                             <p className={`text-lg font-bold ${withinRange ? 'text-green-300' : 'text-red-300'}`}>
-                              {convertPHTtoCT(block.date, block.startTime)} - {convertPHTtoCT(block.date, block.endTime)?.split(', ')[1]}
+                              {formatCTRange(block.date, block.startTime, block.endTime)}
                             </p>
-                            <p className="text-white/50 text-xs mt-1">(Central Time)</p>
+                            {!sameCtDate(block.date, block.startTime, block.endTime) && (
+                              <p className="text-amber-300 text-xs mt-2 flex items-center gap-1">
+                                <Info className="w-3 h-3" />
+                                Note: Your time crosses midnight in Central Time
+                              </p>
+                            )}
                             {!withinRange && (
                               <p className="text-red-300 text-sm mt-2 font-medium">
                                 ⚠️ This falls outside the requested date range ({interviewData?.date_range_start} - {interviewData?.date_range_end})

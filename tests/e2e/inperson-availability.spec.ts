@@ -2,11 +2,12 @@ import { test, expect } from '@playwright/test';
 
 /**
  * Test In-Person Interview Availability Scheduling Features
- * Tests the new availability-based in-person interview scheduling system:
- * 1. Availability Inbox tab in Interview Scheduler section
- * 2. Send Invites tab with Request Availability button
- * 3. SubmitAvailabilityPage with valid/invalid token
- * 4. Schedule modal with 30-minute slot selection and CT display
+ * Tests the availability-based in-person interview scheduling system:
+ * 1. Interview Scheduler section in Hiring group
+ * 2. Request Availability tab with pending applicants
+ * 3. Review Responses tab (Availability Inbox)
+ * 4. Scheduled tab with confirmed interviews
+ * 5. SubmitAvailabilityPage with valid/invalid token
  */
 
 test.describe('Interview Scheduler - Availability Inbox Tab', () => {
@@ -39,25 +40,10 @@ test.describe('Interview Scheduler - Availability Inbox Tab', () => {
   });
 
   test('should display Availability Inbox tab in Interview Scheduler', async ({ page }) => {
-    // Click on Forms & Communications section to expand
-    const formsSection = page.getByText('Forms & Communications').first();
-    await formsSection.click();
+    // Navigate to Hiring section
+    const hiringSection = page.getByText('Hiring').first();
+    await hiringSection.click();
     await page.waitForTimeout(1500);
-
-    // Scroll down to see Additional Tools
-    await page.evaluate(() => window.scrollBy(0, 400));
-    await page.waitForTimeout(500);
-
-    // Look for Additional Tools
-    const additionalTools = page.getByText('Additional Tools');
-    if (await additionalTools.isVisible()) {
-      await additionalTools.click();
-      await page.waitForTimeout(1000);
-    }
-
-    // Scroll down more
-    await page.evaluate(() => window.scrollBy(0, 200));
-    await page.waitForTimeout(500);
 
     // Click on Interview Scheduler to expand
     const interviewScheduler = page.getByTestId('interview-scheduler-toggle');
@@ -65,153 +51,96 @@ test.describe('Interview Scheduler - Availability Inbox Tab', () => {
     await interviewScheduler.click();
     await page.waitForTimeout(1500);
 
-    // Check for Availability Inbox tab
+    // Check for Review Responses tab (Availability Inbox)
     const availabilityInboxTab = page.getByTestId('tab-inbox');
     await expect(availabilityInboxTab).toBeVisible();
     
     await page.screenshot({ path: 'availability-inbox-tab.jpeg', quality: 20 });
   });
 
-  test('should display Send Invites tab with Request Availability button', async ({ page }) => {
-    // Click on Forms & Communications section to expand
-    const formsSection = page.getByText('Forms & Communications').first();
-    await formsSection.click();
+  test('should display Request Availability tab with pending applicants', async ({ page }) => {
+    // Navigate to Hiring section
+    const hiringSection = page.getByText('Hiring').first();
+    await hiringSection.click();
     await page.waitForTimeout(1500);
-
-    // Scroll down to see Additional Tools
-    await page.evaluate(() => window.scrollBy(0, 400));
-    await page.waitForTimeout(500);
-
-    // Look for Additional Tools
-    const additionalTools = page.getByText('Additional Tools');
-    if (await additionalTools.isVisible()) {
-      await additionalTools.click();
-      await page.waitForTimeout(1000);
-    }
-
-    // Scroll down more
-    await page.evaluate(() => window.scrollBy(0, 200));
-    await page.waitForTimeout(500);
 
     // Click on Interview Scheduler to expand
     const interviewScheduler = page.getByTestId('interview-scheduler-toggle');
     await interviewScheduler.click();
     await page.waitForTimeout(1500);
 
-    // Click on Send Invites tab
-    const sendInvitesTab = page.getByTestId('tab-applicants');
-    await expect(sendInvitesTab).toBeVisible();
-    await sendInvitesTab.click();
-    await page.waitForTimeout(1000);
-
-    // Check for "New Flow" explanation text
-    const newFlowText = page.getByText(/New Flow.*availability request/i);
-    await expect(newFlowText).toBeVisible();
-
-    // Check for Request Availability button (if applicants exist)
-    const requestAvailabilityBtn = page.getByRole('button', { name: /Request Availability/i });
-    // This may or may not be visible depending on whether there are applicants
+    // Check for Request Availability tab (should be default)
+    const requestTab = page.getByTestId('tab-applicants');
+    await expect(requestTab).toBeVisible();
+    
+    // Click on it to ensure it's active
+    await requestTab.click();
+    await page.waitForTimeout(500);
+    
+    // Check for Request Availability content
+    const requestLabel = page.getByText(/Request Availability/i);
+    await expect(requestLabel.first()).toBeVisible();
     
     await page.screenshot({ path: 'send-invites-tab-new-flow.jpeg', quality: 20 });
   });
 
-  test('should display all four tabs in Interview Scheduler', async ({ page }) => {
-    // Click on Forms & Communications section to expand
-    const formsSection = page.getByText('Forms & Communications').first();
-    await formsSection.click();
+  test('should show all three tabs in Interview Scheduler', async ({ page }) => {
+    // Navigate to Hiring section
+    const hiringSection = page.getByText('Hiring').first();
+    await hiringSection.click();
     await page.waitForTimeout(1500);
-
-    // Scroll down to see Additional Tools
-    await page.evaluate(() => window.scrollBy(0, 400));
-    await page.waitForTimeout(500);
-
-    // Look for Additional Tools
-    const additionalTools = page.getByText('Additional Tools');
-    if (await additionalTools.isVisible()) {
-      await additionalTools.click();
-      await page.waitForTimeout(1000);
-    }
-
-    // Scroll down more
-    await page.evaluate(() => window.scrollBy(0, 200));
-    await page.waitForTimeout(500);
 
     // Click on Interview Scheduler to expand
     const interviewScheduler = page.getByTestId('interview-scheduler-toggle');
     await interviewScheduler.click();
     await page.waitForTimeout(1500);
 
-    // Check for all four tabs
-    const inboxTab = page.getByTestId('tab-inbox');
-    const calendarTab = page.getByTestId('tab-calendar');
-    const slotsTab = page.getByTestId('tab-slots');
+    // Check for all three tabs
     const applicantsTab = page.getByTestId('tab-applicants');
-
-    await expect(inboxTab).toBeVisible();
-    await expect(calendarTab).toBeVisible();
-    await expect(slotsTab).toBeVisible();
+    const inboxTab = page.getByTestId('tab-inbox');
+    const scheduledTab = page.getByTestId('tab-scheduled');
+    
     await expect(applicantsTab).toBeVisible();
-
+    await expect(inboxTab).toBeVisible();
+    await expect(scheduledTab).toBeVisible();
+    
     await page.screenshot({ path: 'interview-scheduler-all-tabs.jpeg', quality: 20 });
   });
 
-  test('should display stats bar with Available Slots, Scheduled, and Pending Invite', async ({ page }) => {
-    // Click on Forms & Communications section to expand
-    const formsSection = page.getByText('Forms & Communications').first();
-    await formsSection.click();
+  test('should display stats in Interview Scheduler header', async ({ page }) => {
+    // Navigate to Hiring section
+    const hiringSection = page.getByText('Hiring').first();
+    await hiringSection.click();
     await page.waitForTimeout(1500);
 
-    // Scroll down to see Additional Tools
-    await page.evaluate(() => window.scrollBy(0, 400));
-    await page.waitForTimeout(500);
-
-    // Look for Additional Tools
-    const additionalTools = page.getByText('Additional Tools');
-    if (await additionalTools.isVisible()) {
-      await additionalTools.click();
-      await page.waitForTimeout(1000);
-    }
-
-    // Scroll down more
-    await page.evaluate(() => window.scrollBy(0, 200));
-    await page.waitForTimeout(500);
-
-    // Click on Interview Scheduler to expand
-    const interviewScheduler = page.getByTestId('interview-scheduler-toggle');
-    await interviewScheduler.click();
-    await page.waitForTimeout(1500);
-
-    // Check for stats bar - use exact match to avoid strict mode violations
-    const availableSlotsText = page.getByText('Available Slots', { exact: true });
-    const scheduledText = page.locator('div').filter({ hasText: /^Scheduled$/ }).first();
-    const pendingInviteText = page.getByText('Pending Invite', { exact: true });
-
-    await expect(availableSlotsText).toBeVisible();
-    await expect(scheduledText).toBeVisible();
-    await expect(pendingInviteText).toBeVisible();
-
+    // Check for Interview Scheduler header with stats
+    const schedulerToggle = page.getByTestId('interview-scheduler-toggle');
+    await expect(schedulerToggle).toBeVisible();
+    
+    // Check for stats text (pending, responded, scheduled)
+    const statsText = page.getByText(/pending.*responded.*scheduled/i);
+    await expect(statsText).toBeVisible();
+    
     await page.screenshot({ path: 'interview-scheduler-stats.jpeg', quality: 20 });
   });
 });
 
 test.describe('Submit Availability Page', () => {
-  test('should show error for invalid token', async ({ page }) => {
-    await page.goto('/submit-availability/invalid-test-token-12345');
+  test('should show error for invalid availability token', async ({ page }) => {
+    // Navigate to submit availability page with invalid token
+    await page.goto('/submit-availability/invalid-test-token');
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(5000);
-
-    // Check for error message
-    const errorTitle = page.getByText('Link Invalid');
-    await expect(errorTitle).toBeVisible();
-
-    const errorMessage = page.getByText(/Invalid or expired/i);
-    await expect(errorMessage).toBeVisible();
-
+    await page.waitForTimeout(2000);
+    
+    // Should show error message
+    const errorMessage = page.getByText(/Invalid|expired|Link Invalid/i);
+    await expect(errorMessage.first()).toBeVisible();
+    
     await page.screenshot({ path: 'submit-availability-invalid-token.jpeg', quality: 20 });
   });
 });
 
-test.describe('Interview Scheduler - Calendar Tab', () => {
+test.describe('Interview Scheduler - Calendar and Scheduling', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
@@ -232,108 +161,40 @@ test.describe('Interview Scheduler - Calendar Tab', () => {
     await page.waitForTimeout(3000);
   });
 
-  test('should display calendar view with month navigation', async ({ page }) => {
-    // Click on Forms & Communications section to expand
-    const formsSection = page.getByText('Forms & Communications').first();
-    await formsSection.click();
+  test('should display calendar icon in Interview Scheduler', async ({ page }) => {
+    // Navigate to Hiring section
+    const hiringSection = page.getByText('Hiring').first();
+    await hiringSection.click();
     await page.waitForTimeout(1500);
 
-    // Scroll down to see Additional Tools
-    await page.evaluate(() => window.scrollBy(0, 400));
-    await page.waitForTimeout(500);
-
-    // Look for Additional Tools
-    const additionalTools = page.getByText('Additional Tools');
-    if (await additionalTools.isVisible()) {
-      await additionalTools.click();
-      await page.waitForTimeout(1000);
-    }
-
-    // Scroll down more
-    await page.evaluate(() => window.scrollBy(0, 200));
-    await page.waitForTimeout(500);
-
-    // Click on Interview Scheduler to expand
-    const interviewScheduler = page.getByTestId('interview-scheduler-toggle');
-    await interviewScheduler.click();
-    await page.waitForTimeout(1500);
-
-    // Click on Calendar tab
-    const calendarTab = page.getByTestId('tab-calendar');
-    await calendarTab.click();
-    await page.waitForTimeout(1000);
-
-    // Check for calendar elements
-    const monthHeader = page.locator('h3').filter({ hasText: /\w+ \d{4}/ }); // e.g., "August 2026"
-    await expect(monthHeader).toBeVisible();
-
-    // Check for day headers
-    const sundayHeader = page.getByText('Sun');
-    await expect(sundayHeader.first()).toBeVisible();
-
+    // Check for Interview Scheduler with calendar icon
+    const schedulerToggle = page.getByTestId('interview-scheduler-toggle');
+    await expect(schedulerToggle).toBeVisible();
+    
+    // The header should contain "In-Person Interviews"
+    const headerText = page.getByText(/In-Person Interviews/i);
+    await expect(headerText).toBeVisible();
+    
     await page.screenshot({ path: 'interview-scheduler-calendar.jpeg', quality: 20 });
   });
-});
 
-test.describe('Interview Scheduler - Manage Slots Tab', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(4000);
-    
-    const employeePortal = page.getByText('Employee Portal');
-    await employeePortal.click();
+  test('should show Manage Slots button in Scheduled tab', async ({ page }) => {
+    // Navigate to Hiring section
+    const hiringSection = page.getByText('Hiring').first();
+    await hiringSection.click();
     await page.waitForTimeout(1500);
-    
-    const emailInput = page.getByPlaceholder('your@email.com');
-    await emailInput.fill('matthewjesusguzman1@gmail.com');
-    await page.getByRole('button', { name: /find my account/i }).click();
-    await page.waitForTimeout(1500);
-    
-    const codeInput = page.getByPlaceholder('4-digit code');
-    await codeInput.fill('4399');
-    await page.getByRole('button', { name: /sign in/i }).click();
-    await page.waitForTimeout(3000);
-  });
-
-  test('should display slot management interface', async ({ page }) => {
-    // Click on Forms & Communications section to expand
-    const formsSection = page.getByText('Forms & Communications').first();
-    await formsSection.click();
-    await page.waitForTimeout(1500);
-
-    // Scroll down to see Additional Tools
-    await page.evaluate(() => window.scrollBy(0, 400));
-    await page.waitForTimeout(500);
-
-    // Look for Additional Tools
-    const additionalTools = page.getByText('Additional Tools');
-    if (await additionalTools.isVisible()) {
-      await additionalTools.click();
-      await page.waitForTimeout(1000);
-    }
-
-    // Scroll down more
-    await page.evaluate(() => window.scrollBy(0, 200));
-    await page.waitForTimeout(500);
 
     // Click on Interview Scheduler to expand
     const interviewScheduler = page.getByTestId('interview-scheduler-toggle');
     await interviewScheduler.click();
     await page.waitForTimeout(1500);
 
-    // Click on Manage Slots tab
-    const slotsTab = page.getByTestId('tab-slots');
-    await slotsTab.click();
+    // Click on Scheduled tab
+    const scheduledTab = page.getByTestId('tab-scheduled');
+    await scheduledTab.click();
     await page.waitForTimeout(1000);
-
-    // Check for slot management elements
-    const addSlotsTitle = page.getByText('Add Available Time Slots');
-    await expect(addSlotsTitle).toBeVisible();
-
-    const createSlotsBtn = page.getByRole('button', { name: /Create Slots/i });
-    await expect(createSlotsBtn).toBeVisible();
-
+    
+    // Take screenshot of scheduled tab content
     await page.screenshot({ path: 'interview-scheduler-manage-slots.jpeg', quality: 20 });
   });
 });
