@@ -2586,6 +2586,13 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
       return dateA - dateB;
     });
 
+  // Find the next upcoming interview (first one with a date in the future)
+  const now = new Date();
+  const nextInterviewId = allInterviewsWithTimes.find(interview => {
+    const interviewDate = parseInterviewDateTime(interview.datetime_ct || interview.datetime_pht);
+    return interviewDate > now;
+  })?.id || null;
+
   // Check for overlapping interviews in ALL scheduled/confirmed interviews
   const checkAllInterviewOverlaps = () => {
     const overlaps = [];
@@ -2839,6 +2846,8 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                       const hasConflict = allInterviewOverlaps.some(
                         o => o.aId === interview.id || o.bId === interview.id
                       );
+                      // Check if this is the next upcoming interview
+                      const isNextInterview = interview.id === nextInterviewId;
                       
                       return (
                       <div 
@@ -2846,15 +2855,23 @@ function InterviewInboxModal({ onClose, getAuthHeader }) {
                         className={`rounded-xl p-4 border ${
                           hasConflict
                             ? 'bg-red-50 border-red-300 ring-2 ring-red-200'
-                            : interview.status === 'confirmed' 
-                              ? 'bg-blue-50 border-blue-200' 
-                              : 'bg-purple-50 border-purple-200'
+                            : isNextInterview
+                              ? 'bg-green-50 border-green-400 ring-2 ring-green-300 shadow-lg'
+                              : interview.status === 'confirmed' 
+                                ? 'bg-blue-50 border-blue-200' 
+                                : 'bg-purple-50 border-purple-200'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <p className="font-semibold text-[#333] text-lg">{interview.applicant_name}</p>
+                              {isNextInterview && (
+                                <span className="px-2 py-0.5 bg-green-500 text-white rounded-full text-xs font-bold flex items-center gap-1 animate-pulse">
+                                  <Clock className="w-3 h-3" />
+                                  NEXT
+                                </span>
+                              )}
                               {hasConflict && (
                                 <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium flex items-center gap-1">
                                   <AlertTriangle className="w-3 h-3" />
