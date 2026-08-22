@@ -85,9 +85,7 @@ import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArch
 import SalesDataSection from "@/components/admin/sections/SalesDataSection";
 import TaxesSection from "@/components/admin/sections/TaxesSection";
 import InterviewSchedulerSection from "@/components/admin/sections/InterviewSchedulerSection";
-// ApplicantTestsSection removed - simplified hiring flow
-// RejectionHistorySection removed - simplified hiring flow  
-// EmailLogsSection removed - simplified hiring flow
+import ApplicantTestsSection from "@/components/admin/sections/ApplicantTestsSection";
 import EmployeeTerminationsSection from "@/components/admin/sections/EmployeeTerminationsSection";
 import SendApplicationLinkSection from "@/components/admin/sections/SendApplicationLinkSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
@@ -3585,7 +3583,7 @@ export default function AdminDashboard() {
               {/* Additional Tools removed - Interview Scheduler moved to Hiring section */}
             </DashboardGroup>
 
-            {/* GROUP 4: Hiring - Simplified */}
+            {/* GROUP 4: Hiring - Applications, Skills Tests & Interviews */}
             <DashboardGroup
               title="Hiring"
               icon={ClipboardCheck}
@@ -3596,6 +3594,9 @@ export default function AdminDashboard() {
             >
               <div data-testid="send-application-link-section">
                 <SendApplicationLinkSection getAuthHeader={getAuthHeader} />
+              </div>
+              <div data-testid="applicant-tests-section">
+                <ApplicantTestsSection getAuthHeader={getAuthHeader} />
               </div>
               <div data-testid="interview-scheduler-section">
                 <InterviewSchedulerSection getAuthHeader={getAuthHeader} />
