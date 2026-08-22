@@ -269,10 +269,12 @@ export default function SubmitAvailabilityPage() {
         {/* Instructions */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
           <h3 className="font-medium text-blue-800 mb-2">How this works:</h3>
-          <ol className="text-blue-700 text-sm space-y-1 list-decimal list-inside">
-            <li>Add one or more time windows when you are available</li>
-            <li>Enter times in Central Time (CT)</li>
-            <li>We will pick a 30-minute slot and send you a confirmation</li>
+          <ol className="text-blue-700 text-sm space-y-2 list-decimal list-inside">
+            <li>Select a date when you are available</li>
+            <li>Enter a <strong>time block</strong> (e.g., 9:00 AM – 12:00 PM) or a specific <strong>30-minute appointment time</strong> (e.g., 10:00 AM – 10:30 AM)</li>
+            <li>Add multiple time windows if you have availability on different days</li>
+            <li>All times are in <strong>Central Time (CT)</strong></li>
+            <li>We will select a 30-minute slot from your availability and send you a confirmation email with the location</li>
           </ol>
         </div>
 
