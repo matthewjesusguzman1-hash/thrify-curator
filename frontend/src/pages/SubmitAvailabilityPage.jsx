@@ -238,29 +238,33 @@ export default function SubmitAvailabilityPage() {
           </p>
         </div>
 
-        {/* Date/Time Constraints */}
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
-          <h3 className="font-medium text-purple-800 mb-3 flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            Interview Window (Central Time)
-          </h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-purple-600">Dates:</p>
-              <p className="text-purple-900 font-medium">
-                {formatDate(dateRangeStart)} – {formatDate(dateRangeEnd)}
-              </p>
+        {/* Date/Time Constraints - only show if set */}
+        {(dateRangeStart || dateRangeEnd || timeRangeStart || timeRangeEnd) && (
+          <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
+            <h3 className="font-medium text-purple-800 mb-3 flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Interview Window (Central Time)
+            </h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              {dateRangeStart && dateRangeEnd && (
+                <div>
+                  <p className="text-purple-600">Dates:</p>
+                  <p className="text-purple-900 font-medium">
+                    {formatDate(dateRangeStart)} – {formatDate(dateRangeEnd)}
+                  </p>
+                </div>
+              )}
+              {timeRangeStart && timeRangeEnd && (
+                <div>
+                  <p className="text-purple-600">Times:</p>
+                  <p className="text-purple-900 font-medium">
+                    {formatTime12h(timeRangeStart)} – {formatTime12h(timeRangeEnd)}
+                  </p>
+                </div>
+              )}
             </div>
-            {timeRangeStart && timeRangeEnd && (
-              <div>
-                <p className="text-purple-600">Times:</p>
-                <p className="text-purple-900 font-medium">
-                  {formatTime12h(timeRangeStart)} – {formatTime12h(timeRangeEnd)}
-                </p>
-              </div>
-            )}
           </div>
-        </div>
+        )}
 
         {/* Instructions */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
