@@ -94,6 +94,16 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - When enabled, admin specifies preferred CT time window (e.g., 6:00 AM - 10:00 PM)
   - Settings persist to localStorage for convenience
   - Time range info sent with interview invitation email data
+- **Next Interview Highlight in View Schedule (2026-08-22)**:
+  - The "View Schedule" modal in Interview Inbox now highlights the next upcoming interview
+  - First future interview (by date/time) gets green styling with animated "NEXT" badge
+  - Visual distinction: green background, ring border, shadow, and pulsing clock icon
+  - Past interviews display normally without highlight
+- **In-Person Interview Onboarding Exclusion (2026-08-22)**:
+  - In-Person Interviews section now filters out onboarding applications
+  - Only generic job applications appear in "Review Applications" tab
+  - Onboarding applications (for adding someone to the system) remain separate
+  - Full application details available via popup modal when clicking an application
 
 ### Recently Removed
 - AI Reports Assistant (removed 2026-05-12 per user request)

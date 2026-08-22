@@ -1037,7 +1037,7 @@ function ScheduleModal({ request, onClose, onSchedule }) {
         <div className="p-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold">Schedule Interview</h3>
           <p className="text-sm text-gray-500">
-            Choose a time for {request.applicant_name}'s in-person interview
+            Choose a time for {request.applicant_name}&apos;s in-person interview
           </p>
         </div>
 
