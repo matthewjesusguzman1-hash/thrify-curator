@@ -39,12 +39,26 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
         axios.get(`${API}/api/admin/forms/job-applications`, getAuthHeader()),
         axios.get(`${API}/api/interview-scheduler/admin/availability-inbox`, getAuthHeader()).catch(() => ({ data: { requests: [] } }))
       ]);
-      // Filter applications - exclude those who already have availability requests or scheduled interviews
-      const availRequestEmails = (availRes.data.requests || []).map(r => r.applicant_email?.toLowerCase());
-      setApplications(appsRes.data.filter(app => 
-        !availRequestEmails.includes(app.email?.toLowerCase()) &&
-        app.status !== 'rejected'
-      ));
+      
+      // Get all applications (don't filter out those with availability requests)
+      const allApps = appsRes.data.filter(app => app.status !== 'rejected');
+      
+      // Create a map of availability requests by email for quick lookup
+      const availRequestMap = {};
+      (availRes.data.requests || []).forEach(r => {
+        if (r.applicant_email) {
+          availRequestMap[r.applicant_email.toLowerCase()] = r;
+        }
+      });
+      
+      // Enrich applications with their availability status
+      const enrichedApps = allApps.map(app => ({
+        ...app,
+        availability_request: availRequestMap[app.email?.toLowerCase()] || null,
+        availability_status: availRequestMap[app.email?.toLowerCase()]?.status || null
+      }));
+      
+      setApplications(enrichedApps);
       setAvailabilityRequests(availRes.data.requests || []);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -163,6 +177,7 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
   };
 
   // Count helpers
+  const newAppsCount = applications.filter(a => !a.availability_status).length;
   const pendingCount = availabilityRequests.filter(r => r.status === 'pending').length;
   const respondedCount = availabilityRequests.filter(r => r.status === 'responded').length;
   const scheduledCount = availabilityRequests.filter(r => r.status === 'scheduled').length;
@@ -183,7 +198,7 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
           <div className="text-left">
             <h3 className="font-semibold text-gray-900">In-Person Interviews</h3>
             <p className="text-sm text-gray-500">
-              {applications.length} to review • {respondedCount} responded • {scheduledCount + confirmedCount} scheduled
+              {newAppsCount} new • {pendingCount + respondedCount} in progress • {scheduledCount + confirmedCount} scheduled
             </p>
           </div>
         </div>
@@ -293,7 +308,11 @@ export default function InterviewSchedulerSection({ getAuthHeader }) {
 
 // Tab: Review Applications
 function ApplicationsTab({ applications, selectedApplications, setSelectedApplications, onRequestAvailability }) {
-  const toggleSelection = (appId) => {
+  const [filter, setFilter] = useState('all'); // 'all', 'new', 'pending', 'responded', 'scheduled'
+  const [expandedApp, setExpandedApp] = useState(null);
+
+  const toggleSelection = (appId, e) => {
+    e.stopPropagation();
     setSelectedApplications(prev => 
       prev.includes(appId) 
         ? prev.filter(id => id !== appId)
@@ -301,99 +320,275 @@ function ApplicationsTab({ applications, selectedApplications, setSelectedApplic
     );
   };
 
+  // Filter applications based on status
+  const filteredApps = applications.filter(app => {
+    if (filter === 'all') return true;
+    if (filter === 'new') return !app.availability_status;
+    if (filter === 'pending') return app.availability_status === 'pending';
+    if (filter === 'responded') return app.availability_status === 'responded';
+    if (filter === 'scheduled') return app.availability_status === 'scheduled' || app.availability_status === 'confirmed';
+    return true;
+  });
+
+  // Only allow selecting apps that haven't been processed yet
+  const selectableApps = filteredApps.filter(app => !app.availability_status);
+
   const toggleAll = () => {
-    if (selectedApplications.length === applications.length) {
+    if (selectedApplications.length === selectableApps.length && selectableApps.length > 0) {
       setSelectedApplications([]);
     } else {
-      setSelectedApplications(applications.map(a => a.id));
+      setSelectedApplications(selectableApps.map(a => a.id));
     }
   };
+
+  // Get status badge
+  const getStatusBadge = (app) => {
+    if (!app.availability_status) {
+      return <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">New</span>;
+    }
+    switch (app.availability_status) {
+      case 'pending':
+        return <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">Awaiting Response</span>;
+      case 'responded':
+        return <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">Ready to Schedule</span>;
+      case 'scheduled':
+        return <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">Scheduled</span>;
+      case 'confirmed':
+        return <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">Confirmed</span>;
+      default:
+        return null;
+    }
+  };
+
+  // Count by status
+  const newCount = applications.filter(a => !a.availability_status).length;
+  const pendingCount = applications.filter(a => a.availability_status === 'pending').length;
+  const respondedCount = applications.filter(a => a.availability_status === 'responded').length;
+  const scheduledCount = applications.filter(a => a.availability_status === 'scheduled' || a.availability_status === 'confirmed').length;
 
   if (applications.length === 0) {
     return (
       <div className="text-center py-8">
         <FileText className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-        <p className="text-gray-500">No applications to review</p>
-        <p className="text-gray-400 text-sm">All applicants have been processed or sent availability requests</p>
+        <p className="text-gray-500">No applications yet</p>
+        <p className="text-gray-400 text-sm">Applications will appear here when submitted</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Header with Select All and Action Button */}
-      <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={selectedApplications.length === applications.length && applications.length > 0}
-            onChange={toggleAll}
-            className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-          />
-          <span className="text-sm text-gray-600">
-            {selectedApplications.length > 0 
-              ? `${selectedApplications.length} selected`
-              : 'Select All'}
-          </span>
-        </label>
-        
-        {selectedApplications.length > 0 && (
-          <Button
-            onClick={onRequestAvailability}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-            size="sm"
+      {/* Filter Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {[
+          { id: 'all', label: 'All', count: applications.length },
+          { id: 'new', label: 'New', count: newCount },
+          { id: 'pending', label: 'Awaiting', count: pendingCount },
+          { id: 'responded', label: 'Ready', count: respondedCount },
+          { id: 'scheduled', label: 'Scheduled', count: scheduledCount }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setFilter(tab.id)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+              filter === tab.id
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
           >
-            <Send className="w-4 h-4 mr-2" />
-            Request Availability ({selectedApplications.length})
-          </Button>
-        )}
+            {tab.label} ({tab.count})
+          </button>
+        ))}
       </div>
+
+      {/* Action Bar */}
+      {selectableApps.length > 0 && (
+        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selectedApplications.length === selectableApps.length && selectableApps.length > 0}
+              onChange={toggleAll}
+              className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+            />
+            <span className="text-sm text-gray-600">
+              {selectedApplications.length > 0 
+                ? `${selectedApplications.length} selected`
+                : `Select all new (${selectableApps.length})`}
+            </span>
+          </label>
+          
+          {selectedApplications.length > 0 && (
+            <Button
+              onClick={onRequestAvailability}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              size="sm"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Request Availability ({selectedApplications.length})
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Applications List */}
       <div className="space-y-2">
-        {applications.map(app => (
-          <div
-            key={app.id}
-            className={`p-4 border rounded-lg cursor-pointer transition-all ${
-              selectedApplications.includes(app.id)
-                ? 'border-purple-500 bg-purple-50'
-                : 'border-gray-200 hover:border-purple-300'
-            }`}
-            onClick={() => toggleSelection(app.id)}
-          >
-            <div className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                checked={selectedApplications.includes(app.id)}
-                onChange={() => {}}
-                className="w-4 h-4 mt-1 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-              />
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-gray-900">{app.name}</h4>
-                  <span className="text-xs text-gray-400">
-                    {new Date(app.submitted_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-3 mt-1 text-sm text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Mail className="w-3 h-3" />
-                    {app.email}
-                  </span>
-                  {app.phone && (
-                    <span className="flex items-center gap-1">
-                      <Phone className="w-3 h-3" />
-                      {app.phone}
-                    </span>
-                  )}
-                </div>
-                {app.position && (
-                  <p className="text-xs text-gray-400 mt-1">Applied for: {app.position}</p>
-                )}
-              </div>
-            </div>
+        {filteredApps.length === 0 ? (
+          <div className="text-center py-6 text-gray-500">
+            No applications in this category
           </div>
-        ))}
+        ) : (
+          filteredApps.map(app => (
+            <div
+              key={app.id}
+              className={`border rounded-lg transition-all overflow-hidden ${
+                selectedApplications.includes(app.id)
+                  ? 'border-purple-500 bg-purple-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              {/* Application Header - Clickable */}
+              <div 
+                className="p-4 cursor-pointer"
+                onClick={() => setExpandedApp(expandedApp === app.id ? null : app.id)}
+              >
+                <div className="flex items-start gap-3">
+                  {/* Checkbox - only for new apps */}
+                  {!app.availability_status ? (
+                    <input
+                      type="checkbox"
+                      checked={selectedApplications.includes(app.id)}
+                      onChange={(e) => toggleSelection(app.id, e)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-4 h-4 mt-1 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                    />
+                  ) : (
+                    <div className="w-4" /> // Spacer
+                  )}
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="font-medium text-gray-900 truncate">{app.full_name || app.name}</h4>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {getStatusBadge(app)}
+                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedApp === app.id ? 'rotate-180' : ''}`} />
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-3 mt-1 text-sm text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <Mail className="w-3 h-3" />
+                        {app.email}
+                      </span>
+                      {app.phone && (
+                        <span className="flex items-center gap-1">
+                          <Phone className="w-3 h-3" />
+                          {app.phone}
+                        </span>
+                      )}
+                      <span className="text-xs text-gray-400">
+                        {new Date(app.submitted_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Expanded Application Details */}
+              <AnimatePresence>
+                {expandedApp === app.id && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="border-t border-gray-200 bg-gray-50"
+                  >
+                    <div className="p-4 space-y-3">
+                      {/* Address */}
+                      {app.address && (
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">Address</p>
+                          <p className="text-sm text-gray-700">{app.address}</p>
+                        </div>
+                      )}
+                      
+                      {/* Experience/Resume */}
+                      {app.resume_text && (
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">Experience / Resume</p>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{app.resume_text}</p>
+                        </div>
+                      )}
+                      
+                      {/* Why Join */}
+                      {app.why_join && (
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">Why do they want to join?</p>
+                          <p className="text-sm text-gray-700">{app.why_join}</p>
+                        </div>
+                      )}
+                      
+                      {/* Availability */}
+                      {app.availability && (
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">General Availability</p>
+                          <p className="text-sm text-gray-700">{app.availability}</p>
+                        </div>
+                      )}
+                      
+                      {/* Tasks */}
+                      {app.tasks_able_to_perform && app.tasks_able_to_perform.length > 0 && (
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">Tasks They Can Perform</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {app.tasks_able_to_perform.map((task, i) => (
+                              <span key={i} className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
+                                {task}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Background Check & Transportation */}
+                      <div className="flex gap-4 text-sm">
+                        {app.background_check_consent !== undefined && (
+                          <span className={`flex items-center gap-1 ${app.background_check_consent ? 'text-green-600' : 'text-red-600'}`}>
+                            {app.background_check_consent ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                            Background Check
+                          </span>
+                        )}
+                        {app.has_reliable_transportation !== undefined && (
+                          <span className={`flex items-center gap-1 ${app.has_reliable_transportation ? 'text-green-600' : 'text-red-600'}`}>
+                            {app.has_reliable_transportation ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                            Reliable Transportation
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Action Button for new apps */}
+                      {!app.availability_status && (
+                        <div className="pt-2 border-t border-gray-200">
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedApplications([app.id]);
+                              onRequestAvailability();
+                            }}
+                            className="bg-purple-600 hover:bg-purple-700 text-white"
+                            size="sm"
+                          >
+                            <Send className="w-4 h-4 mr-2" />
+                            Request Availability
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
