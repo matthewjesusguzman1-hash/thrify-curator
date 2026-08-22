@@ -236,7 +236,7 @@ function TerminateEmployeeModal({ employee, onClose, onTerminated, getAuthHeader
       return;
     }
     
-    if (confirmName.toLowerCase() !== employee.name.toLowerCase()) {
+    if (confirmName.trim().toLowerCase() !== employee.name.trim().toLowerCase()) {
       toast.error("Please type the employee's name to confirm");
       return;
     }
@@ -399,8 +399,12 @@ function TerminateEmployeeModal({ employee, onClose, onTerminated, getAuthHeader
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={submitting || confirmName.toLowerCase() !== employee.name.toLowerCase()}
-            className="bg-red-500 text-white hover:bg-red-600"
+            disabled={submitting || confirmName.trim().toLowerCase() !== employee.name.trim().toLowerCase()}
+            className={`text-white ${
+              confirmName.trim().toLowerCase() === employee.name.trim().toLowerCase()
+                ? 'bg-red-500 hover:bg-red-600'
+                : 'bg-red-300 cursor-not-allowed'
+            }`}
           >
             {submitting ? "Processing..." : "Terminate Employee"}
           </Button>
