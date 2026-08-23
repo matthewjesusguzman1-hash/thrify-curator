@@ -2596,15 +2596,49 @@ export default function EmployeeDashboard({
                           </p>
                           {/* View/Download button for employee */}
                           <div className="mt-2 flex gap-2">
-                            <a
-                              href={`${API}/time-tracking/w8ben/${doc.id}/download`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const response = await axios.get(
+                                    `${API}/api/time/w8ben/${doc.id}/download`,
+                                    { ...getAuthHeader(), responseType: 'blob' }
+                                  );
+                                  const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
+                                  const url = window.URL.createObjectURL(blob);
+                                  window.open(url, '_blank');
+                                } catch (err) {
+                                  toast.error('Failed to open document');
+                                }
+                              }}
                               className="inline-flex items-center gap-1 px-3 py-1 bg-[#FFE66D]/20 hover:bg-[#FFE66D]/30 text-[#FFE66D] rounded-lg text-xs font-medium transition-colors"
                             >
                               <Eye className="w-3 h-3" />
                               View
-                            </a>
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const response = await axios.get(
+                                    `${API}/api/time/w8ben/${doc.id}/download`,
+                                    { ...getAuthHeader(), responseType: 'blob' }
+                                  );
+                                  const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
+                                  const url = window.URL.createObjectURL(blob);
+                                  const link = document.createElement('a');
+                                  link.href = url;
+                                  link.download = doc.filename || 'w8ben.pdf';
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  document.body.removeChild(link);
+                                } catch (err) {
+                                  toast.error('Failed to download document');
+                                }
+                              }}
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-white/10 hover:bg-white/20 text-white/70 rounded-lg text-xs font-medium transition-colors"
+                            >
+                              <Download className="w-3 h-3" />
+                              Download
+                            </button>
                           </div>
                           {/* Show rejection feedback if needs correction */}
                           {doc.status === 'needs_correction' && doc.status_notes && (

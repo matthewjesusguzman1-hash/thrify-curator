@@ -21,6 +21,7 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
   const [reviewingDoc, setReviewingDoc] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [w8benViewUrl, setW8benViewUrl] = useState(null);
 
   useEffect(() => {
     if (isExpanded) {
@@ -356,43 +357,219 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
                       size="sm"
                       onClick={() => {
                         const printWindow = window.open('', '_blank');
+                        const agreementDate = new Date(reviewingDoc.data.signed_at);
+                        const formattedDate = agreementDate.toLocaleDateString('en-US', { 
+                          year: 'numeric', month: 'long', day: 'numeric' 
+                        });
+                        const formattedTime = agreementDate.toLocaleTimeString('en-US', {
+                          hour: 'numeric', minute: '2-digit'
+                        });
+                        
                         printWindow.document.write(`
+                          <!DOCTYPE html>
                           <html>
                             <head>
-                              <title>Contractor Agreement - ${reviewingDoc.data.employee_name}</title>
+                              <title>Independent Contractor Agreement - ${reviewingDoc.data.employee_name}</title>
                               <style>
-                                body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
-                                h1 { text-align: center; color: #333; }
-                                .info-box { background: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 8px; }
-                                .signature { font-style: italic; font-size: 24px; color: #ec4899; margin: 20px 0; }
-                                .agreement-text { white-space: pre-wrap; line-height: 1.6; }
-                                .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; }
+                                * { margin: 0; padding: 0; box-sizing: border-box; }
+                                @page { margin: 0.75in; }
+                                body { 
+                                  font-family: 'Times New Roman', Times, serif; 
+                                  font-size: 12pt;
+                                  line-height: 1.6;
+                                  color: #000;
+                                  padding: 0.5in;
+                                }
+                                .header {
+                                  text-align: center;
+                                  border-bottom: 3px double #000;
+                                  padding-bottom: 20px;
+                                  margin-bottom: 30px;
+                                }
+                                .company-name {
+                                  font-size: 24pt;
+                                  font-weight: bold;
+                                  letter-spacing: 2px;
+                                  margin-bottom: 5px;
+                                }
+                                .document-title {
+                                  font-size: 18pt;
+                                  font-weight: bold;
+                                  text-transform: uppercase;
+                                  margin-top: 15px;
+                                  letter-spacing: 1px;
+                                }
+                                .parties-section {
+                                  margin: 25px 0;
+                                  padding: 15px;
+                                  border: 1px solid #ccc;
+                                  background: #fafafa;
+                                }
+                                .parties-section h3 {
+                                  font-size: 11pt;
+                                  text-transform: uppercase;
+                                  margin-bottom: 10px;
+                                  border-bottom: 1px solid #ccc;
+                                  padding-bottom: 5px;
+                                }
+                                .party-info { margin: 8px 0; }
+                                .party-label { font-weight: bold; display: inline-block; width: 120px; }
+                                .agreement-body {
+                                  margin: 30px 0;
+                                  text-align: justify;
+                                }
+                                .agreement-body p {
+                                  margin-bottom: 15px;
+                                  text-indent: 0.5in;
+                                }
+                                .signature-section {
+                                  margin-top: 50px;
+                                  page-break-inside: avoid;
+                                }
+                                .signature-box {
+                                  border: 2px solid #000;
+                                  padding: 20px;
+                                  margin-top: 20px;
+                                }
+                                .signature-title {
+                                  font-size: 11pt;
+                                  text-transform: uppercase;
+                                  font-weight: bold;
+                                  margin-bottom: 15px;
+                                  text-align: center;
+                                  background: #000;
+                                  color: #fff;
+                                  padding: 8px;
+                                  margin: -20px -20px 20px -20px;
+                                }
+                                .signature-line {
+                                  display: flex;
+                                  justify-content: space-between;
+                                  margin: 15px 0;
+                                  padding-bottom: 5px;
+                                }
+                                .signature-field {
+                                  flex: 1;
+                                  margin: 0 20px;
+                                }
+                                .signature-field-label {
+                                  font-size: 9pt;
+                                  color: #666;
+                                  border-top: 1px solid #000;
+                                  padding-top: 3px;
+                                  margin-top: 5px;
+                                }
+                                .signature-value {
+                                  min-height: 40px;
+                                  font-size: 14pt;
+                                }
+                                .digital-signature {
+                                  font-family: 'Brush Script MT', cursive;
+                                  font-size: 28pt;
+                                  color: #1a1a8a;
+                                }
+                                .payment-section {
+                                  margin: 25px 0;
+                                  padding: 15px;
+                                  border: 1px solid #ccc;
+                                }
+                                .payment-section h3 {
+                                  font-size: 11pt;
+                                  text-transform: uppercase;
+                                  margin-bottom: 10px;
+                                  border-bottom: 1px solid #ccc;
+                                  padding-bottom: 5px;
+                                }
+                                .footer {
+                                  margin-top: 40px;
+                                  padding-top: 20px;
+                                  border-top: 1px solid #ccc;
+                                  font-size: 9pt;
+                                  color: #666;
+                                  text-align: center;
+                                }
+                                .agreement-text {
+                                  white-space: pre-wrap;
+                                  font-size: 11pt;
+                                  line-height: 1.8;
+                                }
                               </style>
                             </head>
                             <body>
-                              <h1>Independent Contractor Agreement</h1>
-                              <div class="info-box">
-                                <p><strong>Employee:</strong> ${reviewingDoc.data.employee_name}</p>
-                                <p><strong>Email:</strong> ${reviewingDoc.data.employee_email}</p>
-                                <p><strong>Contact:</strong> ${reviewingDoc.data.contact_email || 'N/A'}</p>
-                                <p><strong>Payment:</strong> ${reviewingDoc.data.wise_tag ? 'Wise: ' + reviewingDoc.data.wise_tag : reviewingDoc.data.ewallet_provider ? reviewingDoc.data.ewallet_provider + ': ' + reviewingDoc.data.ewallet_account : 'Not provided'}</p>
+                              <div class="header">
+                                <div class="company-name">THRIFTY CURATOR</div>
+                                <div style="font-size: 10pt; color: #666;">Reselling & Consignment Services</div>
+                                <div class="document-title">Independent Contractor Agreement</div>
                               </div>
-                              <div class="agreement-text">${reviewingDoc.data.agreement_text || 'Agreement text not available'}</div>
+                              
+                              <div class="parties-section">
+                                <h3>Contractor Information</h3>
+                                <div class="party-info"><span class="party-label">Full Name:</span> ${reviewingDoc.data.employee_name}</div>
+                                <div class="party-info"><span class="party-label">Email:</span> ${reviewingDoc.data.employee_email}</div>
+                                ${reviewingDoc.data.contact_email ? `<div class="party-info"><span class="party-label">Contact Email:</span> ${reviewingDoc.data.contact_email}</div>` : ''}
+                              </div>
+                              
+                              <div class="payment-section">
+                                <h3>Payment Information</h3>
+                                ${reviewingDoc.data.wise_tag 
+                                  ? `<div class="party-info"><span class="party-label">Payment Method:</span> Wise Transfer</div>
+                                     <div class="party-info"><span class="party-label">Wise Tag:</span> ${reviewingDoc.data.wise_tag}</div>`
+                                  : reviewingDoc.data.ewallet_provider 
+                                    ? `<div class="party-info"><span class="party-label">Payment Method:</span> E-Wallet</div>
+                                       <div class="party-info"><span class="party-label">Provider:</span> ${reviewingDoc.data.ewallet_provider}</div>
+                                       <div class="party-info"><span class="party-label">Account:</span> ${reviewingDoc.data.ewallet_account}</div>`
+                                    : `<div class="party-info"><em>No payment method specified</em></div>`
+                                }
+                              </div>
+                              
+                              <div class="agreement-body">
+                                <h3 style="text-align: center; margin-bottom: 20px; font-size: 12pt;">TERMS AND CONDITIONS</h3>
+                                <div class="agreement-text">${reviewingDoc.data.agreement_text || 'Agreement text not available'}</div>
+                              </div>
+                              
+                              <div class="signature-section">
+                                <div class="signature-box">
+                                  <div class="signature-title">Contractor Signature & Acknowledgment</div>
+                                  
+                                  <div class="signature-line">
+                                    <div class="signature-field">
+                                      <div class="signature-value">${reviewingDoc.data.signed_name}</div>
+                                      <div class="signature-field-label">Printed Name</div>
+                                    </div>
+                                    <div class="signature-field">
+                                      <div class="signature-value">${formattedDate}</div>
+                                      <div class="signature-field-label">Date</div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div class="signature-line">
+                                    <div class="signature-field" style="flex: 2;">
+                                      <div class="signature-value digital-signature">${reviewingDoc.data.signature_text}</div>
+                                      <div class="signature-field-label">Digital Signature</div>
+                                    </div>
+                                    <div class="signature-field">
+                                      <div class="signature-value">${formattedTime}</div>
+                                      <div class="signature-field-label">Time</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              
                               <div class="footer">
-                                <p><strong>Signed Name:</strong> ${reviewingDoc.data.signed_name}</p>
-                                <p class="signature">${reviewingDoc.data.signature_text}</p>
-                                <p><strong>Signed:</strong> ${new Date(reviewingDoc.data.signed_at).toLocaleString()}</p>
+                                <p>This document was digitally signed on ${formattedDate} at ${formattedTime}</p>
+                                <p>Document ID: ${reviewingDoc.data.employee_id}-${Date.parse(reviewingDoc.data.signed_at)}</p>
+                                <p style="margin-top: 10px;">Thrifty Curator &bull; Independent Contractor Agreement</p>
                               </div>
                             </body>
                           </html>
                         `);
                         printWindow.document.close();
-                        printWindow.print();
+                        setTimeout(() => printWindow.print(), 250);
                       }}
                       className="text-gray-600"
                     >
                       <FileText className="w-4 h-4 mr-2" />
-                      Print Agreement
+                      Print / Save as PDF
                     </Button>
                   </div>
 
