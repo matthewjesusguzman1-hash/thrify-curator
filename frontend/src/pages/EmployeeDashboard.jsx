@@ -190,6 +190,12 @@ export default function EmployeeDashboard({
   const [agreementSignature, setAgreementSignature] = useState("");
   const [agreementName, setAgreementName] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  // Contractor fillable fields
+  const [contractorEmail, setContractorEmail] = useState("");
+  const [contractorWiseTag, setContractorWiseTag] = useState("");
+  const [contractorEwalletProvider, setContractorEwalletProvider] = useState("");
+  const [contractorEwalletAccount, setContractorEwalletAccount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("wise"); // "wise" or "ewallet"
   
   // 1099 documents state
   const [my1099s, setMy1099s] = useState(initialData?.my1099s || { documents: [], count: 0 });
@@ -767,19 +773,40 @@ export default function EmployeeDashboard({
       toast.error("You must agree to the terms to sign");
       return;
     }
+    if (!contractorEmail) {
+      toast.error("Please enter your contact email");
+      return;
+    }
+    // Validate payment method fields
+    if (paymentMethod === "wise" && !contractorWiseTag) {
+      toast.error("Please enter your Wise tag");
+      return;
+    }
+    if (paymentMethod === "ewallet" && (!contractorEwalletProvider || !contractorEwalletAccount)) {
+      toast.error("Please enter your e-wallet provider and account details");
+      return;
+    }
     
     setSigningAgreement(true);
     try {
       await axios.post(`${API}/contractor-agreement/sign`, {
         full_name: agreementName,
         signature_text: agreementSignature,
-        agreed_to_terms: agreedToTerms
+        agreed_to_terms: agreedToTerms,
+        contact_email: contractorEmail,
+        wise_tag: paymentMethod === "wise" ? contractorWiseTag : null,
+        ewallet_provider: paymentMethod === "ewallet" ? contractorEwalletProvider : null,
+        ewallet_account: paymentMethod === "ewallet" ? contractorEwalletAccount : null
       }, getAuthHeader());
       
-      toast.success("Contractor Agreement signed successfully!");
+      toast.success("Contractor Agreement submitted for review!");
       setAgreementName("");
       setAgreementSignature("");
       setAgreedToTerms(false);
+      setContractorEmail("");
+      setContractorWiseTag("");
+      setContractorEwalletProvider("");
+      setContractorEwalletAccount("");
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to sign agreement");
@@ -1965,6 +1992,35 @@ export default function EmployeeDashboard({
                           {contractorAgreement.signature_text}
                         </p>
                       </div>
+                      
+                      {/* Contractor Details (Read Only) */}
+                      <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                        <h4 className="text-xs text-white/50 mb-3 uppercase tracking-wider">Payment Information</h4>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-white/50">Contact Email</p>
+                            <p className="text-white font-medium">{contractorAgreement.contact_email || '-'}</p>
+                          </div>
+                          {contractorAgreement.wise_tag && (
+                            <div>
+                              <p className="text-white/50">Wise Tag</p>
+                              <p className="text-white font-medium">@{contractorAgreement.wise_tag}</p>
+                            </div>
+                          )}
+                          {contractorAgreement.ewallet_provider && (
+                            <>
+                              <div>
+                                <p className="text-white/50">E-Wallet Provider</p>
+                                <p className="text-white font-medium">{contractorAgreement.ewallet_provider}</p>
+                              </div>
+                              <div>
+                                <p className="text-white/50">Account</p>
+                                <p className="text-white font-medium">{contractorAgreement.ewallet_account}</p>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ) : contractorAgreement?.status === 'pending_review' ? (
                     /* Pending Review - Show submitted info */
@@ -2043,45 +2099,148 @@ export default function EmployeeDashboard({
                         </label>
                       </div>
                       
-                      {/* Signature Fields */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Contractor Details Section */}
+                      <div className="bg-white/5 rounded-lg p-4 border border-white/10 space-y-4">
+                        <h4 className="font-semibold text-white text-sm border-b border-white/10 pb-2">
+                          Contractor Information
+                        </h4>
+                        
+                        {/* Contact Email */}
                         <div>
-                          <label className="text-sm text-white/70 block mb-2">Full Legal Name *</label>
+                          <label className="text-sm text-white/70 block mb-2">Contact Email *</label>
                           <input
-                            type="text"
-                            value={agreementName}
-                            onChange={(e) => setAgreementName(e.target.value)}
-                            placeholder="Enter your full legal name"
+                            type="email"
+                            value={contractorEmail}
+                            onChange={(e) => setContractorEmail(e.target.value)}
+                            placeholder="your.email@example.com"
                             className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
                           />
                         </div>
+                        
+                        {/* Payment Method Selection */}
                         <div>
-                          <label className="text-sm text-white/70 block mb-2">Signature (Type your name) *</label>
-                          <input
-                            type="text"
-                            value={agreementSignature}
-                            onChange={(e) => setAgreementSignature(e.target.value)}
-                            placeholder="Type your signature"
-                            className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none font-script italic"
-                          />
+                          <label className="text-sm text-white/70 block mb-2">Payment Method (WISE) *</label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setPaymentMethod("wise")}
+                              className={`p-3 rounded-lg border-2 text-left transition-all ${
+                                paymentMethod === "wise" 
+                                  ? 'border-[#EC4899] bg-[#EC4899]/10' 
+                                  : 'border-white/20 hover:border-white/40'
+                              }`}
+                            >
+                              <span className={`text-sm font-medium ${paymentMethod === "wise" ? 'text-[#EC4899]' : 'text-white/70'}`}>
+                                Wise Account
+                              </span>
+                              <p className="text-xs text-white/50 mt-1">Direct Wise transfer</p>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPaymentMethod("ewallet")}
+                              className={`p-3 rounded-lg border-2 text-left transition-all ${
+                                paymentMethod === "ewallet" 
+                                  ? 'border-[#EC4899] bg-[#EC4899]/10' 
+                                  : 'border-white/20 hover:border-white/40'
+                              }`}
+                            >
+                              <span className={`text-sm font-medium ${paymentMethod === "ewallet" ? 'text-[#EC4899]' : 'text-white/70'}`}>
+                                E-Wallet
+                              </span>
+                              <p className="text-xs text-white/50 mt-1">GCash, Maya, etc.</p>
+                            </button>
+                          </div>
                         </div>
+                        
+                        {/* Wise Tag Field */}
+                        {paymentMethod === "wise" && (
+                          <div>
+                            <label className="text-sm text-white/70 block mb-2">Wise Tag *</label>
+                            <input
+                              type="text"
+                              value={contractorWiseTag}
+                              onChange={(e) => setContractorWiseTag(e.target.value)}
+                              placeholder="@yourtag"
+                              className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
+                            />
+                            <p className="text-xs text-white/40 mt-1">Found in Wise app under Account → Wise tag</p>
+                          </div>
+                        )}
+                        
+                        {/* E-Wallet Fields */}
+                        {paymentMethod === "ewallet" && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-sm text-white/70 block mb-2">E-Wallet Provider *</label>
+                              <input
+                                type="text"
+                                value={contractorEwalletProvider}
+                                onChange={(e) => setContractorEwalletProvider(e.target.value)}
+                                placeholder="e.g., GCash, Maya, PayPal"
+                                className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm text-white/70 block mb-2">Account Number/Email *</label>
+                              <input
+                                type="text"
+                                value={contractorEwalletAccount}
+                                onChange={(e) => setContractorEwalletAccount(e.target.value)}
+                                placeholder="Your wallet number or email"
+                                className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Signature Fields */}
+                      <div className="bg-white/5 rounded-lg p-4 border border-white/10 space-y-4">
+                        <h4 className="font-semibold text-white text-sm border-b border-white/10 pb-2">
+                          Electronic Signature
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm text-white/70 block mb-2">Full Legal Name *</label>
+                            <input
+                              type="text"
+                              value={agreementName}
+                              onChange={(e) => setAgreementName(e.target.value)}
+                              placeholder="Enter your full legal name"
+                              className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm text-white/70 block mb-2">Signature (Type your name) *</label>
+                            <input
+                              type="text"
+                              value={agreementSignature}
+                              onChange={(e) => setAgreementSignature(e.target.value)}
+                              placeholder="Type your signature"
+                              className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none font-script italic"
+                            />
+                          </div>
+                        </div>
+                        <p className="text-xs text-white/40 text-center">
+                          By typing your signature above, you agree that this constitutes a legal electronic signature.
+                        </p>
                       </div>
                       
                       {/* Sign Button */}
                       <Button
                         onClick={handleSignContractorAgreement}
-                        disabled={signingAgreement || !agreedToTerms || !agreementName || !agreementSignature}
+                        disabled={signingAgreement || !agreedToTerms || !agreementName || !agreementSignature || !contractorEmail || (paymentMethod === "wise" ? !contractorWiseTag : (!contractorEwalletProvider || !contractorEwalletAccount))}
                         className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#7C3AED] hover:to-[#DB2777] text-white py-3 rounded-lg font-semibold disabled:opacity-50"
                       >
                         {signingAgreement ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            {contractorAgreement?.status === 'needs_correction' ? 'Re-signing...' : 'Signing...'}
+                            {contractorAgreement?.status === 'needs_correction' ? 'Re-submitting...' : 'Submitting...'}
                           </>
                         ) : (
                           <>
                             <FileSignature className="w-4 h-4 mr-2" />
-                            {contractorAgreement?.status === 'needs_correction' ? 'Re-sign Agreement' : 'Sign Agreement'}
+                            {contractorAgreement?.status === 'needs_correction' ? 'Re-sign & Submit for Review' : 'Sign & Submit for Review'}
                           </>
                         )}
                       </Button>
