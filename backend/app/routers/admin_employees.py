@@ -72,6 +72,10 @@ async def create_employee(employee_data: CreateEmployee, background_tasks: Backg
     if employee_data.hourly_rate is not None:
         user_doc["hourly_rate"] = employee_data.hourly_rate
     
+    # Add remote worker flag
+    if employee_data.is_remote_worker:
+        user_doc["is_remote_worker"] = True
+    
     await db.users.insert_one(user_doc)
     
     # Send welcome email to new employee (in background so it doesn't slow down the response)

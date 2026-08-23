@@ -21,7 +21,9 @@ import {
   Trash2,
   Clock3,
   MessageSquare,
-  Download
+  Download,
+  Globe,
+  TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,6 +139,39 @@ export default function AllEmployeesSection({
     } catch (error) {
       toast.error("Failed to update rate");
     }
+  };
+
+  // Quick approve pay raise for remote workers ($3 -> $5)
+  const handleApprovePayRaise = async (employee) => {
+    if (!window.confirm(`Approve pay raise for ${employee.name}?\n\nThis will increase their rate from $3.00/hr to $5.00/hr.`)) {
+      return;
+    }
+    
+    try {
+      await axios.put(`${API}/admin/employees/${employee.id}/rate`, {
+        hourly_rate: 5.00
+      }, getAuthHeader());
+      
+      toast.success(`Pay raise approved for ${employee.name}!`, {
+        description: "Rate increased to $5.00/hr"
+      });
+      onRefreshEmployees();
+    } catch (error) {
+      toast.error("Failed to approve pay raise");
+    }
+  };
+
+  // Check if remote worker is eligible for pay raise (at $3/hr after 2 weeks)
+  const isEligibleForRaise = (emp) => {
+    if (!emp.is_remote_worker) return false;
+    if (!emp.hourly_rate || emp.hourly_rate >= 5) return false;
+    
+    // Check if 2 weeks have passed since creation
+    const createdDate = new Date(emp.created_at);
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    
+    return createdDate <= twoWeeksAgo;
   };
 
   // W-9 upload
@@ -480,23 +515,42 @@ export default function AllEmployeesSection({
                                   </button>
                                 </div>
                               ) : (
-                                <div 
-                                  className="flex items-center gap-1 cursor-pointer hover:bg-[#F9F6F7] rounded px-2 py-1 -mx-2"
-                                  onClick={() => {
-                                    setEditingRateId(emp.id);
-                                    setEditingRateValue(emp.hourly_rate?.toString() || "");
-                                  }}
-                                  data-testid={`rate-display-${emp.id}`}
-                                  title="Click to edit"
-                                >
-                                  <DollarSign className="w-3 h-3 text-[#C5A065]" />
-                                  <span className={emp.hourly_rate ? 'font-medium text-[#333]' : 'text-[#888]'}>
-                                    {emp.hourly_rate 
-                                      ? `${emp.hourly_rate.toFixed(2)}/hr` 
-                                      : `${payrollSettings?.default_hourly_rate?.toFixed(2) || '20.00'}/hr`}
-                                  </span>
-                                  {!emp.hourly_rate && <span className="text-[#aaa] text-xs ml-1">(default)</span>}
-                                  <Edit3 className="w-3 h-3 text-[#aaa] ml-1" />
+                                <div className="flex items-center gap-1">
+                                  <div 
+                                    className="flex items-center gap-1 cursor-pointer hover:bg-[#F9F6F7] rounded px-2 py-1 -mx-2"
+                                    onClick={() => {
+                                      setEditingRateId(emp.id);
+                                      setEditingRateValue(emp.hourly_rate?.toString() || "");
+                                    }}
+                                    data-testid={`rate-display-${emp.id}`}
+                                    title="Click to edit"
+                                  >
+                                    <DollarSign className="w-3 h-3 text-[#C5A065]" />
+                                    <span className={emp.hourly_rate ? 'font-medium text-[#333]' : 'text-[#888]'}>
+                                      {emp.hourly_rate 
+                                        ? `${emp.hourly_rate.toFixed(2)}/hr` 
+                                        : `${payrollSettings?.default_hourly_rate?.toFixed(2) || '20.00'}/hr`}
+                                    </span>
+                                    {!emp.hourly_rate && <span className="text-[#aaa] text-xs ml-1">(default)</span>}
+                                    <Edit3 className="w-3 h-3 text-[#aaa] ml-1" />
+                                  </div>
+                                  {/* Remote worker indicator and raise button */}
+                                  {emp.is_remote_worker && (
+                                    <div className="flex items-center gap-1 ml-2">
+                                      <Globe className="w-3 h-3 text-purple-500" title="Remote Worker" />
+                                      {isEligibleForRaise(emp) && (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); handleApprovePayRaise(emp); }}
+                                          className="flex items-center gap-1 bg-green-100 hover:bg-green-200 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium transition-colors"
+                                          title="Approve pay raise to $5/hr"
+                                          data-testid={`approve-raise-${emp.id}`}
+                                        >
+                                          <TrendingUp className="w-3 h-3" />
+                                          Raise
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               )
                             ) : (

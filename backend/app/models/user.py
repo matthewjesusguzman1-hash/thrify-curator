@@ -35,6 +35,7 @@ class UserResponse(BaseModel):
     w9_status: Optional[str] = None
     admin_code: Optional[str] = None  # Admin access code (only for admin users)
     has_password: Optional[bool] = None  # Indicates if employee has set a password
+    is_remote_worker: Optional[bool] = None  # Remote/foreign worker flag
 
 
 class TokenResponse(BaseModel):
@@ -50,6 +51,7 @@ class CreateEmployee(BaseModel):
     role: Optional[str] = "employee"  # Default to employee
     admin_code: Optional[str] = None  # Required when role is admin
     hourly_rate: Optional[float] = None  # Starting pay rate
+    is_remote_worker: Optional[bool] = False  # Remote/foreign worker flag
 
 
 class UpdateEmployeeRate(BaseModel):

@@ -773,12 +773,13 @@ function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
 
     setCreating(true);
     try {
-      // Create the employee account with pay rate
+      // Create the employee account with pay rate and remote worker flag
       await axios.post(`${API}/api/admin/create-employee`, {
         name,
         email,
         role: 'employee',
-        hourly_rate: parseFloat(hourlyRate)
+        hourly_rate: parseFloat(hourlyRate),
+        is_remote_worker: isRemote
       }, getAuthHeader());
       
       // Mark the application as having an employee created
