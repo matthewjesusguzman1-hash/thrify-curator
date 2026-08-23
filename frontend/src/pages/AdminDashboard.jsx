@@ -3550,11 +3550,6 @@ export default function AdminDashboard() {
                   onEmployeeTerminated={fetchData}
                 />
               </div>
-
-              {/* Pending Documents Review Section */}
-              <div data-testid="pending-documents-section">
-                <PendingDocumentsSection getAuthHeader={getAuthHeader} />
-              </div>
             </DashboardGroup>
 
             {/* GROUP 2: Payroll & Payments */}
@@ -3693,6 +3688,12 @@ export default function AdminDashboard() {
               <div data-testid="send-application-link-section">
                 <SendApplicationLinkSection getAuthHeader={getAuthHeader} />
               </div>
+              
+              {/* Pending Documents Review Section - For reviewing submitted forms */}
+              <div data-testid="pending-documents-section">
+                <PendingDocumentsSection getAuthHeader={getAuthHeader} />
+              </div>
+              
               <div data-testid="applicant-tests-section">
                 <ApplicantTestsSection getAuthHeader={getAuthHeader} />
               </div>

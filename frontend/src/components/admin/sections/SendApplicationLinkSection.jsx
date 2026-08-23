@@ -760,6 +760,10 @@ function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
   const [name, setName] = useState(application?.full_name || '');
   const [email, setEmail] = useState(application?.email || '');
   const [creating, setCreating] = useState(false);
+  
+  // Pay rate - defaults based on remote worker status
+  const isRemote = application?.is_remote_worker || false;
+  const [hourlyRate, setHourlyRate] = useState(isRemote ? '3.00' : '20.00');
 
   const handleCreate = async () => {
     if (!name || !email) {
@@ -769,11 +773,12 @@ function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
 
     setCreating(true);
     try {
-      // Create the employee account (employees don't need access codes - they log in with email)
+      // Create the employee account with pay rate
       await axios.post(`${API}/api/admin/create-employee`, {
         name,
         email,
-        role: 'employee'
+        role: 'employee',
+        hourly_rate: parseFloat(hourlyRate)
       }, getAuthHeader());
       
       // Mark the application as having an employee created
@@ -844,6 +849,32 @@ function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
             <p className="text-xs text-gray-500 mt-1">Employee will log in using this email</p>
           </div>
 
+          {/* Pay Rate */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-1 block">
+              Starting Pay Rate (USD/hour)
+              {isRemote && <span className="ml-2 text-xs text-purple-600 font-normal">(Remote Worker)</span>}
+            </Label>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">$</span>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={hourlyRate}
+                onChange={(e) => setHourlyRate(e.target.value)}
+                className="border-2 focus:border-green-500 w-24"
+              />
+              <span className="text-gray-500">/ hour</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {isRemote 
+                ? "Default: $3/hr starting, eligible for $5/hr after 2 weeks with approval"
+                : "Default: $20/hr for in-person workers"
+              }
+            </p>
+          </div>
+
           {/* Info Box */}
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <p className="text-sm text-green-700">
@@ -852,8 +883,8 @@ function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
             </p>
             <ul className="text-xs text-green-600 mt-2 ml-5 space-y-1 list-disc">
               <li>Login instructions for the Employee Portal (email-based login)</li>
-              <li>AnyDesk remote access code (1 396 262 135)</li>
-              <li>Reminders about Contractor Agreement & W-8BEN forms</li>
+              {isRemote && <li>AnyDesk remote access code (1 396 262 135)</li>}
+              <li>Reminders about Contractor Agreement & {isRemote ? 'W-8BEN' : 'W-9'} forms</li>
               <li>Option to set up a password for added security</li>
             </ul>
           </div>

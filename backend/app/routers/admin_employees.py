@@ -68,6 +68,10 @@ async def create_employee(employee_data: CreateEmployee, background_tasks: Backg
     if admin_code:
         user_doc["admin_code"] = admin_code
     
+    # Add hourly rate if provided
+    if employee_data.hourly_rate is not None:
+        user_doc["hourly_rate"] = employee_data.hourly_rate
+    
     await db.users.insert_one(user_doc)
     
     # Send welcome email to new employee (in background so it doesn't slow down the response)
@@ -83,6 +87,7 @@ async def create_employee(employee_data: CreateEmployee, background_tasks: Backg
         email=email_normalized,
         name=employee_data.name,
         role=role,
+        hourly_rate=employee_data.hourly_rate,
         phone=employee_data.phone,
         admin_code=admin_code,
         created_at=user_doc["created_at"]

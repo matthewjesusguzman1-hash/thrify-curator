@@ -49,6 +49,7 @@ class CreateEmployee(BaseModel):
     phone: Optional[str] = None
     role: Optional[str] = "employee"  # Default to employee
     admin_code: Optional[str] = None  # Required when role is admin
+    hourly_rate: Optional[float] = None  # Starting pay rate
 
 
 class UpdateEmployeeRate(BaseModel):

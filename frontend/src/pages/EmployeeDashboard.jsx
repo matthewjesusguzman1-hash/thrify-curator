@@ -32,7 +32,8 @@ import {
   GraduationCap,
   ChevronDown,
   FileSignature,
-  Loader2
+  Loader2,
+  HelpCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +48,7 @@ import LiveActivityService from "@/services/LiveActivityService";
 import MessagingSection from "@/components/MessagingSection";
 import OnboardingModal from "@/components/OnboardingModal";
 import PullToRefresh from "@/components/PullToRefresh";
+import EmployeeWalkthrough, { useEmployeeWalkthrough } from "@/components/employee/EmployeeWalkthrough";
 
 // Check if running in Capacitor native app
 const isNativePlatform = () => {
@@ -218,6 +220,9 @@ export default function EmployeeDashboard({
   // Biometric auth for Face ID reset
   const { isAvailable: biometricAvailable, deleteCredentials } = useBiometricAuth();
   const [resettingFaceId, setResettingFaceId] = useState(false);
+
+  // Employee walkthrough/tutorial
+  const { showWalkthrough, triggerWalkthrough, closeWalkthrough } = useEmployeeWalkthrough();
 
   // Reset Face ID credentials
   const handleResetFaceId = async () => {
@@ -1272,11 +1277,33 @@ export default function EmployeeDashboard({
                   <LogOut className="w-4 h-4 mr-1" />
                   Logout
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    lightTap();
+                    triggerWalkthrough();
+                  }}
+                  className="text-white/70 hover:text-white hover:bg-white/10 px-2"
+                  data-testid="help-btn"
+                  title="Show walkthrough"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                </Button>
               </>
             )}
           </div>
         </div>
       </header>
+
+      {/* Employee Walkthrough Modal */}
+      {!isAdminView && (
+        <EmployeeWalkthrough 
+          show={showWalkthrough} 
+          onClose={closeWalkthrough}
+          onComplete={() => toast.success("You're all set! Explore your dashboard.")}
+        />
+      )}
 
       <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-auto">
         <main className="max-w-2xl mx-auto px-4 py-6">
@@ -1623,7 +1650,8 @@ export default function EmployeeDashboard({
             </div>
           </div>
 
-          {/* W-9 Tax Form Section - Collapsible */}
+          {/* W-9 Tax Form Section - Collapsible (Hidden for remote workers who use W-8BEN instead) */}
+          {!onboardingData?.is_remote_worker && (
           <Collapsible open={w9Expanded} onOpenChange={setW9Expanded}>
             <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl shadow-2xl overflow-hidden border border-white/10" data-testid="w9-section">
               <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493]" />
@@ -1938,6 +1966,7 @@ export default function EmployeeDashboard({
               </CollapsibleContent>
             </div>
           </Collapsible>
+          )}
 
           {/* Contractor Agreement Section - Collapsible */}
           <Collapsible open={contractorAgreementExpanded} onOpenChange={setContractorAgreementExpanded}>
