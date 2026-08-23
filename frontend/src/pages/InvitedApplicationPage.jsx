@@ -329,7 +329,7 @@ export default function InvitedApplicationPage() {
                   <option value="whatsapp_call">WhatsApp Call</option>
                   <option value="whatsapp_text">WhatsApp Text</option>
                   <option value="email">Email</option>
-                  <option value="app_messages">Messages through the App</option>
+                  <option value="app_messages">Messages via Thrifty Curator App</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-2">Let us know the best way to reach you</p>
               </div>

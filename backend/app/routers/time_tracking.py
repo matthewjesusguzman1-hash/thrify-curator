@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Response
+from pydantic import BaseModel
 from typing import List
 from datetime import datetime, timezone, timedelta
 import base64
@@ -745,3 +746,54 @@ async def download_own_w8ben(doc_id: str, user: dict = Depends(get_current_user)
             "Content-Disposition": f'inline; filename="{w8ben_doc["filename"]}"'
         }
     )
+
+
+# Employee endpoint to save their AnyDesk address
+class AnydeskAddressUpdate(BaseModel):
+    anydesk_address: str
+
+@router.post("/employees/me/anydesk")
+async def update_my_anydesk_address(data: AnydeskAddressUpdate, current_user: dict = Depends(get_current_user)):
+    """Employee updates their AnyDesk address - this will be visible to admin in Team Management"""
+    
+    user_id = current_user.get("id") or current_user.get("_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    # Update user's anydesk address
+    result = await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "anydesk_address": data.anydesk_address.strip(),
+            "anydesk_shared_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get employee name for notification
+    user = await db.users.find_one({"id": user_id}, {"name": 1, "email": 1})
+    display_name = user.get("name", user.get("email", "Employee")) if user else "Employee"
+    
+    # Create notification for admin
+    notification = AdminNotification(
+        type="anydesk_shared",
+        employee_id=user_id,
+        employee_name=display_name,
+        message=f"{display_name} shared their AnyDesk address",
+        details={"anydesk_address": data.anydesk_address.strip()}
+    )
+    await db.admin_notifications.insert_one(notification.model_dump())
+    
+    # Send push notification to admin
+    try:
+        await send_admin_push_notification(
+            title="AnyDesk Address Received",
+            body=f"{display_name} shared their AnyDesk address: {data.anydesk_address.strip()}",
+            notification_type="anydesk_shared"
+        )
+    except Exception as e:
+        print(f"Failed to send AnyDesk push notification: {e}")
+    
+    return {"success": True, "message": "AnyDesk address saved successfully"}

@@ -1300,7 +1300,7 @@ function ApplicationModal({ application, onClose, onRequestAvailability }) {
                 {app.preferred_contact_method === 'whatsapp_call' && '📱 WhatsApp Call'}
                 {app.preferred_contact_method === 'whatsapp_text' && '📱 WhatsApp Text'}
                 {app.preferred_contact_method === 'email' && '✉️ Email'}
-                {app.preferred_contact_method === 'app_messages' && '💬 Messages through the App'}
+                {app.preferred_contact_method === 'app_messages' && '💬 Messages via Thrifty Curator App'}
               </p>
             </div>
           )}

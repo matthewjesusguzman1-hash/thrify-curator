@@ -471,7 +471,7 @@ Thrifty Curator Team`
                       {submission.preferred_contact_method === 'whatsapp_call' && 'WhatsApp Call'}
                       {submission.preferred_contact_method === 'whatsapp_text' && 'WhatsApp Text'}
                       {submission.preferred_contact_method === 'email' && 'Email'}
-                      {submission.preferred_contact_method === 'app_messages' && 'App Messages'}
+                      {submission.preferred_contact_method === 'app_messages' && 'Messages via Thrifty Curator App'}
                     </span>
                   </div>
                 )}

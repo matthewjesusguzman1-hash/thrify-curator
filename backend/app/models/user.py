@@ -37,6 +37,8 @@ class UserResponse(BaseModel):
     has_password: Optional[bool] = None  # Indicates if employee has set a password
     is_remote_worker: Optional[bool] = None  # Remote/foreign worker flag
     first_shift_date: Optional[str] = None  # Date of first clock-in
+    anydesk_address: Optional[str] = None  # AnyDesk remote desktop address
+    anydesk_shared_at: Optional[str] = None  # When AnyDesk address was shared
 
 
 class TokenResponse(BaseModel):
