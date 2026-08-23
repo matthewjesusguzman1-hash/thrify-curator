@@ -234,7 +234,8 @@ async def send_application_invite(
         await db.application_invites.insert_one(invite_doc)
     
     # Send email
-    frontend_url = "https://thrifty-curator.com"
+    import os
+    frontend_url = os.environ.get("FRONTEND_URL", "https://thrifty-curator.com")
     application_url = f"{frontend_url}/apply/{token}"
     
     background_tasks.add_task(
@@ -1015,6 +1016,41 @@ async def get_job_applications(admin: dict = Depends(get_admin_user)):
         {"_id": 0}
     ).sort("submitted_at", -1).to_list(500)
     return submissions
+
+
+class ApplicationUpdateRequest(BaseModel):
+    employee_created: Optional[bool] = None
+    employee_created_at: Optional[str] = None
+    status: Optional[str] = None
+
+
+@router.patch("/forms/submissions/{application_id}")
+async def update_application(
+    application_id: str, 
+    update: ApplicationUpdateRequest,
+    admin: dict = Depends(get_admin_user)
+):
+    """Update a job application (e.g., mark as employee created)"""
+    update_data = {}
+    if update.employee_created is not None:
+        update_data["employee_created"] = update.employee_created
+    if update.employee_created_at:
+        update_data["employee_created_at"] = update.employee_created_at
+    if update.status:
+        update_data["status"] = update.status
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No update data provided")
+    
+    result = await db.job_applications.update_one(
+        {"id": application_id},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    return {"success": True, "message": "Application updated"}
 
 
 @router.get("/admin/forms/consignment-inquiries")

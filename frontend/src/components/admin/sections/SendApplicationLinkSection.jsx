@@ -34,6 +34,7 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
   const [activeTab, setActiveTab] = useState('invites'); // 'invites' or 'onboarding'
   const [showSendModal, setShowSendModal] = useState(false);
   const [showFollowupModal, setShowFollowupModal] = useState(false);
+  const [showSetupLoginModal, setShowSetupLoginModal] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [invites, setInvites] = useState([]);
   const [onboardingApplications, setOnboardingApplications] = useState([]);
@@ -255,6 +256,11 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
                                     Remote
                                   </span>
                                 )}
+                                {app.employee_created && (
+                                  <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                    Login Created
+                                  </span>
+                                )}
                               </div>
                               <p className="text-sm text-gray-600 mt-1">{app.email}</p>
                               {app.is_remote_worker && app.payment_method && (
@@ -269,18 +275,32 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
                               </p>
                             </div>
                             <div className="flex flex-col gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setSelectedApplication(app);
-                                  setShowFollowupModal(true);
-                                }}
-                                className="text-purple-600 border-purple-300 hover:bg-purple-50"
-                              >
-                                <MailCheck className="w-4 h-4 mr-1" />
-                                Send Onboarding Email
-                              </Button>
+                              {!app.employee_created ? (
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedApplication(app);
+                                    setShowSetupLoginModal(true);
+                                  }}
+                                  className="bg-green-500 hover:bg-green-600 text-white"
+                                >
+                                  <UserPlus className="w-4 h-4 mr-1" />
+                                  Set Up Login
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedApplication(app);
+                                    setShowFollowupModal(true);
+                                  }}
+                                  className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                                >
+                                  <MailCheck className="w-4 h-4 mr-1" />
+                                  Send Onboarding Email
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -334,6 +354,25 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
             setShowFollowupModal(false);
             setSelectedApplication(null);
             toast.success('Onboarding email sent!');
+          }}
+          getAuthHeader={getAuthHeader}
+        />
+      )}
+
+      {/* Set Up Login Modal */}
+      {showSetupLoginModal && selectedApplication && (
+        <SetupLoginModal
+          application={selectedApplication}
+          onClose={() => {
+            setShowSetupLoginModal(false);
+            setSelectedApplication(null);
+          }}
+          onCreated={() => {
+            setShowSetupLoginModal(false);
+            // Show follow-up modal after creating login
+            setShowFollowupModal(true);
+            fetchData();
+            toast.success('Employee login created! Now send them the onboarding email.');
           }}
           getAuthHeader={getAuthHeader}
         />
@@ -665,6 +704,150 @@ function SendFollowupModal({ application, onClose, onSent, getAuthHeader }) {
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <MailCheck className="w-4 h-4 mr-2" />}
             Send Onboarding Email
+          </Button>
+        </div>
+      </motion.div>
+    </motion.div>,
+    document.body
+  );
+}
+
+
+
+function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
+  const [name, setName] = useState(application?.full_name || '');
+  const [email, setEmail] = useState(application?.email || '');
+  const [role, setRole] = useState('employee');
+  const [accessCode, setAccessCode] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  // Generate random 4-digit access code
+  useEffect(() => {
+    setAccessCode(Math.floor(1000 + Math.random() * 9000).toString());
+  }, []);
+
+  const handleCreate = async () => {
+    if (!name || !email || !accessCode) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      // Create the employee account
+      await axios.post(`${API}/api/admin/employees`, {
+        name,
+        email,
+        role,
+        access_code: accessCode
+      }, getAuthHeader());
+      
+      // Mark the application as having an employee created
+      if (application?.id) {
+        await axios.patch(`${API}/api/forms/submissions/${application.id}`, {
+          employee_created: true,
+          employee_created_at: new Date().toISOString()
+        }, getAuthHeader());
+      }
+      
+      onCreated();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to create employee account');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return ReactDOM.createPortal(
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 9999 }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.95 }}
+        className="bg-white rounded-2xl w-full max-w-md overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50 flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Set Up Employee Login</h2>
+            <p className="text-sm text-gray-500">Create portal access for {application?.full_name}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 space-y-5">
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-1 block">Full Name</Label>
+            <Input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Employee name"
+              className="border-2 focus:border-green-500"
+            />
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-1 block">Email Address</Label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="employee@email.com"
+              className="border-2 focus:border-green-500"
+            />
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-1 block">Access Code (4 digits)</Label>
+            <Input
+              type="text"
+              value={accessCode}
+              onChange={(e) => setAccessCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="1234"
+              maxLength={4}
+              className="border-2 focus:border-green-500 font-mono text-lg tracking-widest"
+            />
+            <p className="text-xs text-gray-500 mt-1">This code will be shared with the employee for login</p>
+          </div>
+
+          {/* Info Box */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-sm text-green-700">
+              <CheckCircle className="w-4 h-4 inline mr-1" />
+              After creating the login, you'll be prompted to send the onboarding email with:
+            </p>
+            <ul className="text-xs text-green-600 mt-2 ml-5 space-y-1 list-disc">
+              <li>Login instructions for the Employee Portal</li>
+              <li>AnyDesk remote access code (1 396 262 135)</li>
+              <li>Reminders about Contractor Agreement & W-8BEN forms</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreate}
+            disabled={creating || !name || !email || accessCode.length !== 4}
+            className="bg-green-500 hover:bg-green-600 text-white"
+          >
+            {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+            Create Login & Continue
           </Button>
         </div>
       </motion.div>
