@@ -33,9 +33,7 @@ export default function InvitedApplicationPage() {
     full_name: "",
     email: "",
     phone: "",
-    alt_contact_name: "",
-    alt_contact_phone: "",
-    alt_contact_reason: "",
+    preferred_contact_method: "", // Call, Text, WhatsApp Call, WhatsApp Text, Email, App Messages
     address: "",
     resume_text: "",
     why_join: "",
@@ -292,7 +290,7 @@ export default function InvitedApplicationPage() {
               />
             </div>
 
-            {/* Phone - Optional with Alternative Contact */}
+            {/* Phone - Optional with Preferred Contact Method */}
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
               <div>
                 <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">
@@ -309,38 +307,27 @@ export default function InvitedApplicationPage() {
                 />
               </div>
 
-              {/* Alternative Contact Section */}
+              {/* Preferred Contact Method */}
               <div className="border-t pt-4 mt-4">
                 <div className="flex items-center gap-2 mb-3">
                   <User className="w-4 h-4 text-[#8B5CF6]" />
-                  <Label className="text-sm font-medium text-[#1A1A2E]">Alternative Contact (if no personal phone)</Label>
+                  <Label className="text-sm font-medium text-[#1A1A2E]">Preferred Contact Method</Label>
                 </div>
-                <div className="space-y-3">
-                  <Input
-                    type="text"
-                    name="alt_contact_name"
-                    value={formData.alt_contact_name}
-                    onChange={handleChange}
-                    placeholder="Contact person name"
-                    className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg"
-                  />
-                  <Input
-                    type="tel"
-                    name="alt_contact_phone"
-                    value={formData.alt_contact_phone}
-                    onChange={handleChange}
-                    placeholder="Their phone number"
-                    className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg"
-                  />
-                  <Input
-                    type="text"
-                    name="alt_contact_reason"
-                    value={formData.alt_contact_reason}
-                    onChange={handleChange}
-                    placeholder="Reason (e.g., No personal phone, prefer family contact)"
-                    className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg"
-                  />
-                </div>
+                <select
+                  name="preferred_contact_method"
+                  value={formData.preferred_contact_method}
+                  onChange={handleChange}
+                  className="w-full p-3 border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg bg-white text-[#1A1A2E]"
+                >
+                  <option value="">Select how you prefer to be contacted...</option>
+                  <option value="call">Phone Call</option>
+                  <option value="text">Text Message (SMS)</option>
+                  <option value="whatsapp_call">WhatsApp Call</option>
+                  <option value="whatsapp_text">WhatsApp Text</option>
+                  <option value="email">Email</option>
+                  <option value="app_messages">Messages through the App</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-2">Let us know the best way to reach you</p>
               </div>
             </div>
 

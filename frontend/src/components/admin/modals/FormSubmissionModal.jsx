@@ -458,20 +458,22 @@ Thrifty Curator Team`
                   <a href={`tel:${submission.current_phone || submission.phone}`} className="text-[#333] hover:text-[#8B5CF6]">
                     {submission.current_phone || submission.phone}
                   </a>
-                ) : submission.alt_contact_name ? (
-                  <div>
-                    <p className="text-[#333] text-sm">Alt: {submission.alt_contact_name}</p>
-                    {submission.alt_contact_phone && (
-                      <a href={`tel:${submission.alt_contact_phone}`} className="text-[#8B5CF6] text-sm hover:underline">
-                        {submission.alt_contact_phone}
-                      </a>
-                    )}
-                    {submission.alt_contact_reason && (
-                      <p className="text-xs text-[#888] mt-1">{submission.alt_contact_reason}</p>
-                    )}
-                  </div>
                 ) : (
                   <span className="text-[#888]">Not provided</span>
+                )}
+                {/* Preferred Contact Method */}
+                {submission.preferred_contact_method && (
+                  <div className="mt-2 text-sm">
+                    <span className="text-[#888]">Prefers: </span>
+                    <span className="text-[#8B5CF6] font-medium">
+                      {submission.preferred_contact_method === 'call' && 'Phone Call'}
+                      {submission.preferred_contact_method === 'text' && 'Text (SMS)'}
+                      {submission.preferred_contact_method === 'whatsapp_call' && 'WhatsApp Call'}
+                      {submission.preferred_contact_method === 'whatsapp_text' && 'WhatsApp Text'}
+                      {submission.preferred_contact_method === 'email' && 'Email'}
+                      {submission.preferred_contact_method === 'app_messages' && 'App Messages'}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>

@@ -1290,17 +1290,18 @@ function ApplicationModal({ application, onClose, onRequestAvailability }) {
             </div>
           </div>
 
-          {/* Alternative Contact (if invited application) */}
-          {app.alternative_contact_name && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <h4 className="text-sm font-semibold text-amber-800 mb-2">Alternative Contact</h4>
-              <p className="text-amber-700">
-                <strong>{app.alternative_contact_name}</strong>
-                {app.alternative_contact_method && ` via ${app.alternative_contact_method}`}
+          {/* Preferred Contact Method (if provided) */}
+          {app.preferred_contact_method && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-blue-800 mb-2">Preferred Contact Method</h4>
+              <p className="text-blue-700 font-medium">
+                {app.preferred_contact_method === 'call' && '📞 Phone Call'}
+                {app.preferred_contact_method === 'text' && '💬 Text Message (SMS)'}
+                {app.preferred_contact_method === 'whatsapp_call' && '📱 WhatsApp Call'}
+                {app.preferred_contact_method === 'whatsapp_text' && '📱 WhatsApp Text'}
+                {app.preferred_contact_method === 'email' && '✉️ Email'}
+                {app.preferred_contact_method === 'app_messages' && '💬 Messages through the App'}
               </p>
-              {app.no_phone_reason && (
-                <p className="text-amber-600 text-sm mt-1">Reason: {app.no_phone_reason}</p>
-              )}
             </div>
           )}
         </div>
