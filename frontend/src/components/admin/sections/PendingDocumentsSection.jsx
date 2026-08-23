@@ -323,7 +323,7 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
           <motion.div
             initial={{ scale: 0.95 }}
             animate={{ scale: 1 }}
-            className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
+            className="bg-white rounded-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col"
             onClick={e => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -349,42 +349,34 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
             <div className="p-6 overflow-y-auto flex-1 space-y-4">
               {reviewingDoc.type === 'agreement' && (
                 <>
-                  {/* Employee Info */}
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-500 mb-1">Employee</p>
-                    <p className="font-medium">{reviewingDoc.data.employee_name}</p>
-                    <p className="text-sm text-gray-500">{reviewingDoc.data.employee_email}</p>
-                  </div>
-                  
-                  {/* Signed Name & Signature */}
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Employee Info & Signature Summary */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-sm text-gray-500 mb-1">Employee</p>
+                      <p className="font-medium">{reviewingDoc.data.employee_name}</p>
+                      <p className="text-xs text-gray-500">{reviewingDoc.data.employee_email}</p>
+                    </div>
                     <div className="bg-gray-50 rounded-lg p-4">
                       <p className="text-sm text-gray-500 mb-1">Signed Name</p>
                       <p className="font-medium">{reviewingDoc.data.signed_name}</p>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-sm text-gray-500 mb-1">Signature</p>
+                      <p className="text-sm text-gray-500 mb-1">Digital Signature</p>
                       <p className="text-lg font-script italic text-pink-600">{reviewingDoc.data.signature_text}</p>
                     </div>
                   </div>
                   
-                  {/* Contact Email */}
-                  {reviewingDoc.data.contact_email && (
-                    <div className="bg-blue-50 rounded-lg p-4 flex items-start gap-3">
-                      <Mail className="w-5 h-5 text-blue-500 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-gray-500 mb-1">Contact Email</p>
-                        <p className="font-medium">{reviewingDoc.data.contact_email}</p>
-                      </div>
-                    </div>
-                  )}
-                  
                   {/* Payment Details */}
-                  <div className="border-t border-gray-200 pt-4">
-                    <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                      <Wallet className="w-4 h-4" />
-                      Payment Information
-                    </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {reviewingDoc.data.contact_email && (
+                      <div className="bg-blue-50 rounded-lg p-4 flex items-start gap-3">
+                        <Mail className="w-5 h-5 text-blue-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">Contact Email</p>
+                          <p className="font-medium">{reviewingDoc.data.contact_email}</p>
+                        </div>
+                      </div>
+                    )}
                     
                     {reviewingDoc.data.wise_tag ? (
                       <div className="bg-green-50 rounded-lg p-4 flex items-start gap-3">
@@ -410,12 +402,28 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
                     )}
                   </div>
                   
+                  {/* Full Agreement Text */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                      <FileSignature className="w-4 h-4" />
+                      Full Contractor Agreement
+                    </h4>
+                    <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+                      <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono leading-relaxed">
+                        {reviewingDoc.data.agreement_text || 'Agreement text not available'}
+                      </pre>
+                    </div>
+                  </div>
+                  
                   {/* Signed At */}
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-500 mb-1">Signed At</p>
-                    <p className="font-medium">
-                      {new Date(reviewingDoc.data.signed_at).toLocaleString()}
-                    </p>
+                  <div className="bg-pink-50 rounded-lg p-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Digitally Signed</p>
+                      <p className="font-medium text-pink-700">
+                        {new Date(reviewingDoc.data.signed_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <CheckCircle className="w-6 h-6 text-pink-500" />
                   </div>
                 </>
               )}
@@ -438,6 +446,21 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
                     </p>
                   </div>
                   
+                  {/* Embedded PDF Viewer */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      W-8BEN Document Preview
+                    </h4>
+                    <div className="bg-gray-100 rounded-lg overflow-hidden" style={{ height: '400px' }}>
+                      <iframe
+                        src={`${API}/api/admin/employees/${reviewingDoc.data.employee_id}/w8ben/${reviewingDoc.data.id}/view`}
+                        className="w-full h-full border-0"
+                        title="W-8BEN Preview"
+                      />
+                    </div>
+                  </div>
+                  
                   {/* Download Button */}
                   <Button
                     onClick={() => handleDownloadW8ben(
@@ -445,15 +468,12 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
                       reviewingDoc.data.id,
                       reviewingDoc.data.filename
                     )}
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                    variant="outline"
+                    className="w-full"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Download W-8BEN to Review
+                    Download Original File
                   </Button>
-                  
-                  <p className="text-xs text-gray-500 text-center">
-                    Download and review the submitted W-8BEN form before approving or rejecting.
-                  </p>
                 </>
               )}
 

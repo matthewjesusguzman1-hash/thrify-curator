@@ -123,6 +123,29 @@ async def download_w8ben(employee_id: str, doc_id: str, admin: dict = Depends(ge
     )
 
 
+
+@router.get("/employees/{employee_id}/w8ben/{doc_id}/view")
+async def view_w8ben(employee_id: str, doc_id: str, admin: dict = Depends(get_admin_user)):
+    """View a W-8BEN document inline (for PDF preview in browser)."""
+    w8ben_doc = await db.w8ben_documents.find_one(
+        {"id": doc_id, "employee_id": employee_id}
+    )
+    
+    if not w8ben_doc:
+        raise HTTPException(status_code=404, detail="W-8BEN document not found")
+    
+    content = base64.b64decode(w8ben_doc["content"])
+    
+    return Response(
+        content=content,
+        media_type=w8ben_doc["content_type"],
+        headers={
+            "Content-Disposition": f'inline; filename="{w8ben_doc["filename"]}"'
+        }
+    )
+
+
+
 @router.delete("/employees/{employee_id}/w8ben/{doc_id}")
 async def delete_w8ben(employee_id: str, doc_id: str, admin: dict = Depends(get_admin_user)):
     """Delete a specific W-8BEN document."""
