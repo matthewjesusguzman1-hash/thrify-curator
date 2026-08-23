@@ -375,3 +375,24 @@ async def reject_agreement(
     )
     
     return {"success": True, "message": "Contractor agreement rejected - employee must re-sign"}
+
+
+
+@router.delete("/admin/employee/{employee_id}")
+async def delete_contractor_agreement(
+    employee_id: str,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Admin endpoint to delete an employee's contractor agreement"""
+    result = await db.contractor_agreements.delete_one({"employee_id": employee_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Contractor agreement not found")
+    
+    # Also clear the status from user document
+    await db.users.update_one(
+        {"id": employee_id},
+        {"$unset": {"contractor_agreement_status": ""}}
+    )
+    
+    return {"success": True, "message": "Contractor agreement deleted"}

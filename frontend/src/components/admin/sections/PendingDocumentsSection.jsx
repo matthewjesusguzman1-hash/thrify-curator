@@ -4,7 +4,8 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileCheck, CheckCircle, XCircle, Clock, ChevronDown, 
-  Loader2, Eye, X, FileSignature, FileText, User, AlertTriangle
+  Loader2, Eye, X, FileSignature, FileText, User, AlertTriangle,
+  Trash2, Download, Mail, Wallet, CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -105,6 +106,58 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
     }
   };
 
+  const handleDeleteAgreement = async (employeeId) => {
+    if (!window.confirm("Are you sure you want to delete this contractor agreement? The employee will need to re-sign.")) {
+      return;
+    }
+    setProcessing(true);
+    try {
+      await axios.delete(`${API}/api/contractor-agreement/admin/employee/${employeeId}`, getAuthHeader());
+      toast.success("Contractor agreement deleted");
+      setReviewingDoc(null);
+      fetchPendingDocuments();
+    } catch (error) {
+      toast.error("Failed to delete agreement");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleDeleteW8ben = async (employeeId, docId) => {
+    if (!window.confirm("Are you sure you want to delete this W-8BEN? The employee will need to re-submit.")) {
+      return;
+    }
+    setProcessing(true);
+    try {
+      await axios.delete(`${API}/api/admin/employees/${employeeId}/w8ben/${docId}`, getAuthHeader());
+      toast.success("W-8BEN deleted");
+      setReviewingDoc(null);
+      fetchPendingDocuments();
+    } catch (error) {
+      toast.error("Failed to delete W-8BEN");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleDownloadW8ben = async (employeeId, docId, filename) => {
+    try {
+      const response = await axios.get(
+        `${API}/api/admin/employees/${employeeId}/w8ben/${docId}/download`,
+        { ...getAuthHeader(), responseType: 'blob' }
+      );
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename || 'w8ben.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      toast.error("Failed to download W-8BEN");
+    }
+  };
+
   const totalPending = pendingAgreements.length + pendingW8bens.length;
 
   return (
@@ -180,14 +233,24 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
                                 </p>
                               </div>
                             </div>
-                            <Button
-                              size="sm"
-                              onClick={() => setReviewingDoc({ type: 'agreement', data: agreement })}
-                              className="bg-pink-500 hover:bg-pink-600 text-white"
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              Review
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDeleteAgreement(agreement.employee_id)}
+                                className="text-red-600 border-red-200 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => setReviewingDoc({ type: 'agreement', data: agreement })}
+                                className="bg-pink-500 hover:bg-pink-600 text-white"
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                Review
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -217,14 +280,24 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
                                 </p>
                               </div>
                             </div>
-                            <Button
-                              size="sm"
-                              onClick={() => setReviewingDoc({ type: 'w8ben', data: w8ben })}
-                              className="bg-blue-500 hover:bg-blue-600 text-white"
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              Review
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDeleteW8ben(w8ben.employee_id, w8ben.id)}
+                                className="text-red-600 border-red-200 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => setReviewingDoc({ type: 'w8ben', data: w8ben })}
+                                className="bg-blue-500 hover:bg-blue-600 text-white"
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                Review
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -276,14 +349,68 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
             <div className="p-6 overflow-y-auto flex-1 space-y-4">
               {reviewingDoc.type === 'agreement' && (
                 <>
+                  {/* Employee Info */}
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-500 mb-1">Signed Name</p>
-                    <p className="font-medium">{reviewingDoc.data.signed_name}</p>
+                    <p className="text-sm text-gray-500 mb-1">Employee</p>
+                    <p className="font-medium">{reviewingDoc.data.employee_name}</p>
+                    <p className="text-sm text-gray-500">{reviewingDoc.data.employee_email}</p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-500 mb-1">Signature</p>
-                    <p className="text-lg font-script italic text-pink-600">{reviewingDoc.data.signature_text}</p>
+                  
+                  {/* Signed Name & Signature */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-sm text-gray-500 mb-1">Signed Name</p>
+                      <p className="font-medium">{reviewingDoc.data.signed_name}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-sm text-gray-500 mb-1">Signature</p>
+                      <p className="text-lg font-script italic text-pink-600">{reviewingDoc.data.signature_text}</p>
+                    </div>
                   </div>
+                  
+                  {/* Contact Email */}
+                  {reviewingDoc.data.contact_email && (
+                    <div className="bg-blue-50 rounded-lg p-4 flex items-start gap-3">
+                      <Mail className="w-5 h-5 text-blue-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Contact Email</p>
+                        <p className="font-medium">{reviewingDoc.data.contact_email}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Payment Details */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                      <Wallet className="w-4 h-4" />
+                      Payment Information
+                    </h4>
+                    
+                    {reviewingDoc.data.wise_tag ? (
+                      <div className="bg-green-50 rounded-lg p-4 flex items-start gap-3">
+                        <CreditCard className="w-5 h-5 text-green-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">Wise Tag</p>
+                          <p className="font-medium text-green-700">{reviewingDoc.data.wise_tag}</p>
+                        </div>
+                      </div>
+                    ) : reviewingDoc.data.ewallet_provider ? (
+                      <div className="bg-purple-50 rounded-lg p-4 flex items-start gap-3">
+                        <Wallet className="w-5 h-5 text-purple-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500 mb-1">E-Wallet ({reviewingDoc.data.ewallet_provider})</p>
+                          <p className="font-medium text-purple-700">{reviewingDoc.data.ewallet_account}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-yellow-50 rounded-lg p-4 flex items-center gap-3">
+                        <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                        <p className="text-sm text-yellow-700">No payment method provided</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Signed At */}
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-sm text-gray-500 mb-1">Signed At</p>
                     <p className="font-medium">
@@ -294,15 +421,40 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
               )}
 
               {reviewingDoc.type === 'w8ben' && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-500 mb-1">Submitted</p>
-                  <p className="font-medium">
-                    {new Date(reviewingDoc.data.uploaded_at).toLocaleString()}
+                <>
+                  {/* Employee Info */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-500 mb-1">Employee</p>
+                    <p className="font-medium">{reviewingDoc.data.employee_name || 'Employee'}</p>
+                    <p className="text-sm text-gray-500">{reviewingDoc.data.employee_email || reviewingDoc.data.employee_id}</p>
+                  </div>
+                  
+                  {/* Document Info */}
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-500 mb-1">Document</p>
+                    <p className="font-medium">{reviewingDoc.data.filename || 'W-8BEN Form'}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Submitted: {new Date(reviewingDoc.data.uploaded_at).toLocaleString()}
+                    </p>
+                  </div>
+                  
+                  {/* Download Button */}
+                  <Button
+                    onClick={() => handleDownloadW8ben(
+                      reviewingDoc.data.employee_id, 
+                      reviewingDoc.data.id,
+                      reviewingDoc.data.filename
+                    )}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download W-8BEN to Review
+                  </Button>
+                  
+                  <p className="text-xs text-gray-500 text-center">
+                    Download and review the submitted W-8BEN form before approving or rejecting.
                   </p>
-                  {reviewingDoc.data.filename && (
-                    <p className="text-xs text-gray-400 mt-1">File: {reviewingDoc.data.filename}</p>
-                  )}
-                </div>
+                </>
               )}
 
               {/* Rejection Reason */}
@@ -320,36 +472,53 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+            <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-between">
               <Button
                 variant="outline"
                 onClick={() => {
                   if (reviewingDoc.type === 'agreement') {
-                    handleRejectAgreement(reviewingDoc.data.employee_id);
+                    handleDeleteAgreement(reviewingDoc.data.employee_id);
                   } else {
-                    handleRejectW8ben(reviewingDoc.data.employee_id, reviewingDoc.data.id);
+                    handleDeleteW8ben(reviewingDoc.data.employee_id, reviewingDoc.data.id);
                   }
                 }}
                 disabled={processing}
                 className="text-red-600 border-red-200 hover:bg-red-50"
               >
-                {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
-                Needs Correction
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
               </Button>
-              <Button
-                onClick={() => {
-                  if (reviewingDoc.type === 'agreement') {
-                    handleApproveAgreement(reviewingDoc.data.employee_id);
-                  } else {
-                    handleApproveW8ben(reviewingDoc.data.employee_id, reviewingDoc.data.id);
-                  }
-                }}
-                disabled={processing}
-                className="bg-green-500 hover:bg-green-600 text-white"
-              >
-                {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                Approve
-              </Button>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (reviewingDoc.type === 'agreement') {
+                      handleRejectAgreement(reviewingDoc.data.employee_id);
+                    } else {
+                      handleRejectW8ben(reviewingDoc.data.employee_id, reviewingDoc.data.id);
+                    }
+                  }}
+                  disabled={processing}
+                  className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                >
+                  {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                  Needs Correction
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (reviewingDoc.type === 'agreement') {
+                      handleApproveAgreement(reviewingDoc.data.employee_id);
+                    } else {
+                      handleApproveW8ben(reviewingDoc.data.employee_id, reviewingDoc.data.id);
+                    }
+                  }}
+                  disabled={processing}
+                  className="bg-green-500 hover:bg-green-600 text-white"
+                >
+                  {processing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                  Approve
+                </Button>
+              </div>
             </div>
           </motion.div>
         </motion.div>,
