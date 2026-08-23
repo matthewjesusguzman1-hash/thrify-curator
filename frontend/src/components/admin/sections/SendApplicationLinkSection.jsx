@@ -313,12 +313,20 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => handleDismissApplication(app)}
+                                    onClick={async () => {
+                                      if (!window.confirm('Delete this application?')) return;
+                                      try {
+                                        await axios.delete(`${API}/api/admin/forms/job-applications/${app.id}`, getAuthHeader());
+                                        toast.success('Application deleted');
+                                        fetchData();
+                                      } catch (error) {
+                                        toast.error('Failed to delete');
+                                      }
+                                    }}
                                     className="text-gray-400 hover:text-red-500 hover:bg-red-50"
-                                    title="Remove from onboarding list"
                                   >
-                                    <X className="w-4 h-4 mr-1" />
-                                    Dismiss
+                                    <Trash2 className="w-4 h-4 mr-1" />
+                                    Delete
                                   </Button>
                                 </>
                               ) : (
