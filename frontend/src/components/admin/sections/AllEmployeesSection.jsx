@@ -161,17 +161,35 @@ export default function AllEmployeesSection({
     }
   };
 
-  // Check if remote worker is eligible for pay raise (at $3/hr after 2 weeks)
+  // Check if remote worker is eligible for pay raise (at $3/hr after 2 weeks from first shift)
   const isEligibleForRaise = (emp) => {
     if (!emp.is_remote_worker) return false;
     if (!emp.hourly_rate || emp.hourly_rate >= 5) return false;
     
-    // Check if 2 weeks have passed since creation
-    const createdDate = new Date(emp.created_at);
+    // Need first shift date to determine eligibility
+    if (!emp.first_shift_date) return false;
+    
+    // Check if 2 weeks have passed since first shift
+    const firstShiftDate = new Date(emp.first_shift_date);
     const twoWeeksAgo = new Date();
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
     
-    return createdDate <= twoWeeksAgo;
+    return firstShiftDate <= twoWeeksAgo;
+  };
+  
+  // Get days until eligible for raise
+  const getDaysUntilEligible = (emp) => {
+    if (!emp.is_remote_worker || !emp.first_shift_date) return null;
+    if (emp.hourly_rate >= 5) return null;
+    
+    const firstShiftDate = new Date(emp.first_shift_date);
+    const eligibleDate = new Date(firstShiftDate);
+    eligibleDate.setDate(eligibleDate.getDate() + 14);
+    
+    const now = new Date();
+    const daysRemaining = Math.ceil((eligibleDate - now) / (1000 * 60 * 60 * 24));
+    
+    return daysRemaining > 0 ? daysRemaining : 0;
   };
 
   // W-9 upload
@@ -538,7 +556,7 @@ export default function AllEmployeesSection({
                                   {emp.is_remote_worker && (
                                     <div className="flex items-center gap-1 ml-2">
                                       <Globe className="w-3 h-3 text-purple-500" title="Remote Worker" />
-                                      {isEligibleForRaise(emp) && (
+                                      {isEligibleForRaise(emp) ? (
                                         <button
                                           onClick={(e) => { e.stopPropagation(); handleApprovePayRaise(emp); }}
                                           className="flex items-center gap-1 bg-green-100 hover:bg-green-200 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium transition-colors"
@@ -548,7 +566,15 @@ export default function AllEmployeesSection({
                                           <TrendingUp className="w-3 h-3" />
                                           Raise
                                         </button>
-                                      )}
+                                      ) : emp.hourly_rate < 5 && emp.first_shift_date ? (
+                                        <span className="text-xs text-gray-400" title="Days until eligible for pay raise">
+                                          {getDaysUntilEligible(emp)}d left
+                                        </span>
+                                      ) : emp.hourly_rate < 5 && !emp.first_shift_date ? (
+                                        <span className="text-xs text-orange-400" title="No shifts yet">
+                                          No shifts
+                                        </span>
+                                      ) : null}
                                     </div>
                                   )}
                                 </div>

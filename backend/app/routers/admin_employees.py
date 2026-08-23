@@ -117,14 +117,27 @@ async def get_all_employees(admin: dict = Depends(get_admin_user)):
     ).sort("created_at", -1).to_list(500)
     
     user_ids = [u["id"] for u in users]
+    
+    # Get W-9 status for each user
     w9_docs = await db.w9_documents.find(
         {"employee_id": {"$in": user_ids}}, 
         {"_id": 0, "employee_id": 1, "status": 1}
     ).to_list(500)
     w9_map = {doc["employee_id"]: doc.get("status", "submitted") for doc in w9_docs}
     
+    # Get first shift date for each user (earliest time entry)
+    first_shifts = await db.time_entries.aggregate([
+        {"$match": {"user_id": {"$in": user_ids}}},
+        {"$group": {
+            "_id": "$user_id",
+            "first_shift_date": {"$min": "$clock_in"}
+        }}
+    ]).to_list(500)
+    first_shift_map = {fs["_id"]: fs["first_shift_date"] for fs in first_shifts}
+    
     for user in users:
         user["w9_status"] = w9_map.get(user["id"])
+        user["first_shift_date"] = first_shift_map.get(user["id"])
     
     return [UserResponse(**u) for u in users]
 

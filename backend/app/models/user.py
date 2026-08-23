@@ -36,6 +36,7 @@ class UserResponse(BaseModel):
     admin_code: Optional[str] = None  # Admin access code (only for admin users)
     has_password: Optional[bool] = None  # Indicates if employee has set a password
     is_remote_worker: Optional[bool] = None  # Remote/foreign worker flag
+    first_shift_date: Optional[str] = None  # Date of first clock-in
 
 
 class TokenResponse(BaseModel):
