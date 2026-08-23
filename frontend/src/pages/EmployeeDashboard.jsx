@@ -1773,7 +1773,7 @@ export default function EmployeeDashboard({
                 disabled={loading || locationStatus.checking}
                 className={`w-full max-w-xs mx-auto py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center justify-center gap-2 ${
                   isRemoteWorker() && !isAdminView
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    ? 'bg-gradient-to-r from-[#00D4FF]/60 to-[#8B5CF6]/60 text-white/80 shadow-md'
                     : clockedIn 
                       ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl' 
                       : 'bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:from-[#00A8CC] hover:to-[#7C3AED] text-white shadow-lg hover:shadow-xl'
