@@ -1647,30 +1647,7 @@ export default function EmployeeDashboard({
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6]" />
             <div className="p-6 text-center">
-              {/* Remote Worker Message - Cannot clock in directly */}
-              {isRemoteWorker() && !isAdminView ? (
-                <div className="text-center py-4">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                    <Globe className="w-8 h-8 text-purple-500" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-[#1A1A2E] mb-2">Remote Worker</h3>
-                  <p className="text-gray-600 text-sm mb-4">
-                    As a remote worker, you cannot clock in directly from the app.
-                  </p>
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-left">
-                    <p className="text-purple-800 text-sm font-medium mb-2">How to track your time:</p>
-                    <ol className="text-purple-700 text-sm space-y-2 list-decimal list-inside">
-                      <li>Connect to the company computer via AnyDesk</li>
-                      <li>Your work time is tracked automatically while connected</li>
-                      <li>Make sure to disconnect when your shift ends</li>
-                    </ol>
-                  </div>
-                  <p className="text-gray-500 text-xs mt-4">
-                    Questions? Contact your manager via the Messages section below.
-                  </p>
-                </div>
-              ) : (
-                <>
+              {/* Clock status and button - shown for all employees including remote workers */}
                   <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 ${
                     clockedIn 
                       ? 'bg-green-100 text-green-700' 
@@ -1782,14 +1759,24 @@ export default function EmployeeDashboard({
               {/* Clock In/Out button */}
               <button
                 onClick={() => {
+                  // Remote workers get a message instead of clocking in
+                  if (isRemoteWorker() && !isAdminView) {
+                    toast.info("Remote workers must clock in via AnyDesk", {
+                      description: "Connect to the company computer using AnyDesk to clock in and out.",
+                      duration: 5000
+                    });
+                    return;
+                  }
                   buttonPress(); // Haptic on button press
                   handleClock(clockedIn ? "out" : "in");
                 }}
                 disabled={loading || locationStatus.checking}
                 className={`w-full max-w-xs mx-auto py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center justify-center gap-2 ${
-                  clockedIn 
-                    ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl' 
-                    : 'bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:from-[#00A8CC] hover:to-[#7C3AED] text-white shadow-lg hover:shadow-xl'
+                  isRemoteWorker() && !isAdminView
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : clockedIn 
+                      ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl' 
+                      : 'bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:from-[#00A8CC] hover:to-[#7C3AED] text-white shadow-lg hover:shadow-xl'
                 } disabled:opacity-50`}
                 data-testid="clock-action-btn"
               >
@@ -1807,8 +1794,6 @@ export default function EmployeeDashboard({
                   </>
                 )}
               </button>
-                </>
-              )}
             </div>
           </div>
 
