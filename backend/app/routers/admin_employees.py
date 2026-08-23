@@ -78,13 +78,7 @@ async def create_employee(employee_data: CreateEmployee, background_tasks: Backg
     
     await db.users.insert_one(user_doc)
     
-    # Send welcome email to new employee (in background so it doesn't slow down the response)
-    if role == "employee":
-        background_tasks.add_task(
-            send_new_employee_welcome_email,
-            to_email=email_normalized,
-            employee_name=employee_data.name
-        )
+    # Note: Auto welcome email removed - admin sends onboarding email manually via "Send Onboarding Email" button
     
     return UserResponse(
         id=user_id,

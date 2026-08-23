@@ -29,7 +29,7 @@ const FIELD_OPTIONS = [
   { id: "has_reliable_transportation", label: "Reliable Transportation", default: true, onboardingDefault: false },
 ];
 
-export default function SendApplicationLinkSection({ getAuthHeader }) {
+export default function SendApplicationLinkSection({ getAuthHeader, refreshKey }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState('invites'); // 'invites' or 'onboarding'
   const [showSendModal, setShowSendModal] = useState(false);
@@ -46,6 +46,13 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
       fetchData();
     }
   }, [isExpanded]);
+
+  // Refresh when parent triggers refresh
+  useEffect(() => {
+    if (refreshKey && isExpanded) {
+      fetchData();
+    }
+  }, [refreshKey]);
 
   const fetchData = async () => {
     setLoading(true);

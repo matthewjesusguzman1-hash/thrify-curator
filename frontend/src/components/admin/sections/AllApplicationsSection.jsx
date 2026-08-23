@@ -29,7 +29,7 @@ import { Input } from '@/components/ui/input';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-export default function AllApplicationsSection({ getAuthHeader }) {
+export default function AllApplicationsSection({ getAuthHeader, refreshKey }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -42,6 +42,13 @@ export default function AllApplicationsSection({ getAuthHeader }) {
       fetchApplications();
     }
   }, [isExpanded]);
+
+  // Refresh when parent triggers refresh
+  useEffect(() => {
+    if (refreshKey && isExpanded) {
+      fetchApplications();
+    }
+  }, [refreshKey]);
 
   const fetchApplications = async () => {
     setLoading(true);

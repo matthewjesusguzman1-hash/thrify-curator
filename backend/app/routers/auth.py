@@ -147,7 +147,9 @@ async def login(credentials: UserLogin):
             name=user["name"],
             role=user["role"],
             created_at=user["created_at"],
-            has_password=has_password
+            has_password=has_password,
+            is_remote_worker=user.get("is_remote_worker", False),
+            hourly_rate=user.get("hourly_rate")
         )
     )
 

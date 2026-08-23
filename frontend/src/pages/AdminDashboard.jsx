@@ -282,6 +282,7 @@ export default function AdminDashboard() {
   
   // Master refresh state
   const [masterRefreshing, setMasterRefreshing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(Date.now()); // Key to trigger child refreshes
 
   // Payroll summary state for overview
   const [payrollSummary, setPayrollSummary] = useState({
@@ -837,6 +838,8 @@ export default function AdminDashboard() {
         fetchPayrollSummary(),
         fetchPendingW9s()
       ]);
+      // Update refresh key to trigger child component refreshes
+      setRefreshKey(Date.now());
       toast.success("Dashboard refreshed");
     } catch (error) {
       console.error("Error refreshing dashboard:", error);
@@ -3688,17 +3691,17 @@ export default function AdminDashboard() {
             >
               {/* All Applications - View all job applications */}
               <div data-testid="all-applications-section">
-                <AllApplicationsSection getAuthHeader={getAuthHeader} />
+                <AllApplicationsSection getAuthHeader={getAuthHeader} refreshKey={refreshKey} />
               </div>
               
               {/* Onboarding & Applications - Send invites, set up logins */}
               <div data-testid="send-application-link-section">
-                <SendApplicationLinkSection getAuthHeader={getAuthHeader} />
+                <SendApplicationLinkSection getAuthHeader={getAuthHeader} refreshKey={refreshKey} />
               </div>
               
               {/* Pending Documents Review Section - For reviewing submitted forms */}
               <div data-testid="pending-documents-section">
-                <PendingDocumentsSection getAuthHeader={getAuthHeader} />
+                <PendingDocumentsSection getAuthHeader={getAuthHeader} refreshKey={refreshKey} />
               </div>
               
               <div data-testid="applicant-tests-section">
