@@ -197,6 +197,9 @@ export default function EmployeeDashboard({
   const [contractorEwalletAccount, setContractorEwalletAccount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("wise"); // "wise" or "ewallet"
   
+  // Onboarding data (pre-populated from job application)
+  const [onboardingData, setOnboardingData] = useState(null);
+  
   // 1099 documents state
   const [my1099s, setMy1099s] = useState(initialData?.my1099s || { documents: [], count: 0 });
   const [loading1099s, setLoading1099s] = useState(false);
@@ -640,6 +643,34 @@ export default function EmployeeDashboard({
       } catch (err) {
         console.log('Error fetching contractor agreement:', err);
         setContractorAgreement({ status: 'pending' });
+      }
+      
+      // Fetch onboarding data to pre-populate contractor agreement fields
+      if (!isAdminView) {
+        try {
+          const onboardingRes = await axios.get(`${API}/forms/my-onboarding-data`, getAuthHeader());
+          if (onboardingRes.data.found) {
+            setOnboardingData(onboardingRes.data);
+            // Pre-populate contractor agreement fields if not already signed
+            const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+            setContractorEmail(onboardingRes.data.email || storedUser?.email || "");
+            setAgreementName(onboardingRes.data.full_name || storedUser?.name || "");
+            
+            // Pre-populate payment info if remote worker
+            if (onboardingRes.data.is_remote_worker && onboardingRes.data.payment_method) {
+              if (onboardingRes.data.payment_method === 'e_wallet') {
+                setPaymentMethod('ewallet');
+                setContractorEwalletProvider(onboardingRes.data.wallet_provider || "");
+                setContractorEwalletAccount(onboardingRes.data.wallet_number || "");
+              } else if (onboardingRes.data.payment_method === 'wise_account') {
+                setPaymentMethod('wise');
+                setContractorWiseTag(onboardingRes.data.wise_tag || "");
+              }
+            }
+          }
+        } catch (err) {
+          console.log('No onboarding data found:', err);
+        }
       }
       
       // Start Live Activity ONCE when clocked in (avoid restarting on every fetchData) - skip in admin view
@@ -2265,6 +2296,12 @@ export default function EmployeeDashboard({
                     <h2 className="font-poppins text-lg font-semibold text-white">
                       W-8BEN Tax Form
                     </h2>
+                    {/* Action Required badge for remote workers without submitted W-8BEN */}
+                    {onboardingData?.is_remote_worker && (!w8benStatus?.status || w8benStatus?.status === 'not_submitted') && (
+                      <span className="bg-red-500/90 text-white px-2 py-0.5 rounded-full text-xs font-bold animate-pulse">
+                        Action Required
+                      </span>
+                    )}
                     {w8benStatus?.total_documents > 0 && (
                       <span className="bg-[#FFE66D]/30 text-[#FFE66D] px-2 py-0.5 rounded-full text-xs font-medium">
                         {w8benStatus.total_documents}

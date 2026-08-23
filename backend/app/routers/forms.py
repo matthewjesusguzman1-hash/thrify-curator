@@ -8,7 +8,7 @@ import base64
 import secrets
 
 from app.database import db
-from app.dependencies import get_admin_user
+from app.dependencies import get_admin_user, get_current_user
 from app.models.forms import JobApplication, ConsignmentInquiry, ConsignmentAgreement, UpdateSubmissionStatus, PaymentMethodUpdate, ConsignmentItemAddition, ConsignmentApproval
 from app.models.notifications import AdminNotification
 from app.services.email_service import (
@@ -1005,6 +1005,37 @@ async def download_item_addition_pdf(update_id: str, admin: dict = Depends(get_a
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+# Employee endpoint to get their own onboarding application data
+@router.get("/forms/my-onboarding-data")
+async def get_my_onboarding_data(current_user: dict = Depends(get_current_user)):
+    """Get the current employee's onboarding application data (if any)"""
+    email = current_user.get("email", "").lower()
+    
+    # Find their job application (most recent one with onboarding template)
+    application = await db.job_applications.find_one(
+        {"email": {"$regex": f"^{email}$", "$options": "i"}},
+        {"_id": 0},
+        sort=[("submitted_at", -1)]
+    )
+    
+    if not application:
+        return {"found": False}
+    
+    return {
+        "found": True,
+        "full_name": application.get("full_name"),
+        "email": application.get("email"),
+        "phone": application.get("phone"),
+        "address": application.get("address"),
+        "is_remote_worker": application.get("is_remote_worker", False),
+        "payment_method": application.get("payment_method"),
+        "wallet_provider": application.get("wallet_provider"),
+        "wallet_number": application.get("wallet_number"),
+        "wise_tag": application.get("wise_tag"),
+        "invite_template": application.get("invite_template")
+    }
 
 
 # Admin form management routes
