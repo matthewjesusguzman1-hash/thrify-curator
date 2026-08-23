@@ -688,6 +688,26 @@ export default function AdminDashboard() {
         break;
         
       case 'job_application':
+        // Hiring group contains All Applications
+        await expandGroupIfNeeded('group-hiring');
+        
+        // Scroll to All Applications section
+        const allAppsSection = document.querySelector('[data-testid="all-applications-section"]');
+        if (allAppsSection) {
+          allAppsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          
+          // Check if section is collapsed
+          const allAppsToggle = document.querySelector('[data-testid="all-applications-toggle"]');
+          if (allAppsToggle) {
+            const chevronDown = allAppsToggle.querySelector('svg.lucide-chevron-down');
+            if (chevronDown) {
+              await new Promise(resolve => setTimeout(resolve, 300));
+              allAppsToggle.click();
+            }
+          }
+        }
+        break;
+
       case 'consignment_inquiry':
       case 'consignment_agreement':
         // Forms & Communications group contains Form Submissions

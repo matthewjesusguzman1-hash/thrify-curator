@@ -40,7 +40,8 @@ export default function NotificationBell({
   notifications, 
   unreadCount, 
   onMarkAllRead, 
-  loading 
+  loading,
+  onNavigateToSection
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
@@ -64,6 +65,25 @@ export default function NotificationBell({
     if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
     return date.toLocaleDateString();
+  };
+
+  const handleNotificationClick = (notif) => {
+    const type = notif.type || notif.notification_type;
+    
+    // Navigate based on notification type
+    if (onNavigateToSection) {
+      if (type === 'job_application') {
+        onNavigateToSection('hiring', 'all_applications');
+      } else if (type === 'consignment_agreement' || type === 'consignment_inquiry') {
+        onNavigateToSection('forms', 'form_submissions');
+      } else if (type === 'interview_booked' || type === 'interview_cancelled' || type === 'interview_rescheduled' || type === 'interview_response' || type === 'applicant_test_submission') {
+        onNavigateToSection('hiring', 'applicant_tests');
+      } else if (type === 'clock_in' || type === 'clock_out') {
+        onNavigateToSection('team', 'all_employees');
+      }
+    }
+    
+    setIsOpen(false);
   };
 
   return (
@@ -125,7 +145,8 @@ export default function NotificationBell({
                   return (
                     <div
                       key={notif.id}
-                      className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
+                      onClick={() => handleNotificationClick(notif)}
+                      className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${
                         !notif.read ? "bg-[#00D4FF]/5" : ""
                       }`}
                       data-testid={`notification-${notif.id}`}
