@@ -146,7 +146,7 @@ export default function EmployeeDashboard({
     total_shifts: 0,
     period_hours: 0,
     period_shifts: 0,
-    hourly_rate: 15.00,
+    hourly_rate: 20.00,
     estimated_pay: 0,
     period_start: null,
     period_end: null,
@@ -233,8 +233,8 @@ export default function EmployeeDashboard({
   const { isAvailable: biometricAvailable, deleteCredentials } = useBiometricAuth();
   const [resettingFaceId, setResettingFaceId] = useState(false);
 
-  // Employee walkthrough/tutorial
-  const { showWalkthrough, triggerWalkthrough, closeWalkthrough } = useEmployeeWalkthrough();
+  // Employee walkthrough/tutorial - skip in admin view
+  const { showWalkthrough, triggerWalkthrough, closeWalkthrough } = useEmployeeWalkthrough(isAdminView);
 
   // Reset Face ID credentials
   const handleResetFaceId = async () => {
@@ -609,7 +609,7 @@ export default function EmployeeDashboard({
           axios.get(`${API}/time/employees/${adminViewEmployee.id}/entries`, getAuthHeader()),
           axios.get(`${API}/time/employees/${adminViewEmployee.id}/summary`, getAuthHeader()),
           axios.get(`${API}/time/w9/admin/employee/${adminViewEmployee.id}/status`, getAuthHeader()).catch(() => ({ data: { has_w9: false, w9_documents: [] } })),
-          axios.get(`${API}/time-tracking/w8ben/admin/employee/${adminViewEmployee.id}/status`, getAuthHeader()).catch(() => ({ data: { status: 'not_applicable' } }))
+          axios.get(`${API}/admin/employees/${adminViewEmployee.id}/w8ben/status`, getAuthHeader()).catch(() => ({ data: { status: 'not_applicable' } }))
         ]);
       } else {
         // Normal employee view
@@ -663,31 +663,35 @@ export default function EmployeeDashboard({
       }
       
       // Fetch onboarding data to pre-populate contractor agreement fields
-      if (!isAdminView) {
-        try {
-          const onboardingRes = await axios.get(`${API}/forms/my-onboarding-data`, getAuthHeader());
-          if (onboardingRes.data.found) {
-            setOnboardingData(onboardingRes.data);
-            // Pre-populate contractor agreement fields if not already signed
-            const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-            setContractorEmail(onboardingRes.data.email || storedUser?.email || "");
-            setAgreementName(onboardingRes.data.full_name || storedUser?.name || "");
-            
-            // Pre-populate payment info if remote worker
-            if (onboardingRes.data.is_remote_worker && onboardingRes.data.payment_method) {
-              if (onboardingRes.data.payment_method === 'e_wallet') {
-                setPaymentMethod('ewallet');
-                setContractorEwalletProvider(onboardingRes.data.wallet_provider || "");
-                setContractorEwalletAccount(onboardingRes.data.wallet_number || "");
-              } else if (onboardingRes.data.payment_method === 'wise_account') {
-                setPaymentMethod('wise');
-                setContractorWiseTag(onboardingRes.data.wise_tag || "");
-              }
+      // In admin view, fetch for the employee being viewed; otherwise fetch for current user
+      try {
+        const onboardingUrl = isAdminView && adminViewEmployee
+          ? `${API}/forms/admin/onboarding-data/${encodeURIComponent(adminViewEmployee.email)}`
+          : `${API}/forms/my-onboarding-data`;
+        const onboardingRes = await axios.get(onboardingUrl, getAuthHeader());
+        if (onboardingRes.data.found) {
+          setOnboardingData(onboardingRes.data);
+          // Pre-populate contractor agreement fields if not already signed
+          const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+          const userEmail = isAdminView ? adminViewEmployee?.email : storedUser?.email;
+          const userName = isAdminView ? adminViewEmployee?.name : storedUser?.name;
+          setContractorEmail(onboardingRes.data.email || userEmail || "");
+          setAgreementName(onboardingRes.data.full_name || userName || "");
+          
+          // Pre-populate payment info if remote worker
+          if (onboardingRes.data.is_remote_worker && onboardingRes.data.payment_method) {
+            if (onboardingRes.data.payment_method === 'e_wallet') {
+              setPaymentMethod('ewallet');
+              setContractorEwalletProvider(onboardingRes.data.wallet_provider || "");
+              setContractorEwalletAccount(onboardingRes.data.wallet_number || "");
+            } else if (onboardingRes.data.payment_method === 'wise_account') {
+              setPaymentMethod('wise');
+              setContractorWiseTag(onboardingRes.data.wise_tag || "");
             }
           }
-        } catch (err) {
-          console.log('No onboarding data found:', err);
         }
+      } catch (err) {
+        console.log('No onboarding data found:', err);
       }
       
       // Start Live Activity ONCE when clocked in (avoid restarting on every fetchData) - skip in admin view
@@ -1308,7 +1312,7 @@ export default function EmployeeDashboard({
         </div>
       </header>
 
-      {/* Employee Walkthrough Modal */}
+      {/* Employee Walkthrough Modal - Never show in admin view */}
       {!isAdminView && (
         <EmployeeWalkthrough 
           show={showWalkthrough} 
@@ -3060,8 +3064,8 @@ export default function EmployeeDashboard({
         )}
       </AnimatePresence>
       
-      {/* Onboarding Modal for first-time employees */}
-      <OnboardingModal userType="employee" />
+      {/* Onboarding Modal for first-time employees - NOT shown in admin view */}
+      {!isAdminView && <OnboardingModal userType="employee" />}
     </div>
   );
 }

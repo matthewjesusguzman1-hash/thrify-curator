@@ -569,3 +569,155 @@ async def delete_latest_w9(user: dict = Depends(get_current_user)):
         )
     
     return {"message": "W-9 deleted successfully"}
+
+
+
+# ==========================================
+# Admin Endpoints for Viewing Employee Data
+# ==========================================
+
+from app.dependencies import get_admin_user
+
+@router.get("/employees/{employee_id}/status")
+async def get_employee_status_admin(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Admin endpoint to get an employee's clock status"""
+    # Verify employee exists
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Find any active time entry (no clock_out)
+    entry = await db.time_entries.find_one(
+        {"user_id": employee_id, "clock_out": None},
+        {"_id": 0}
+    )
+    
+    return {
+        "clocked_in": entry is not None,
+        "entry": entry
+    }
+
+@router.get("/employees/{employee_id}/entries")
+async def get_employee_entries_admin(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Admin endpoint to get an employee's time entries"""
+    # Verify employee exists
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    entries = await db.time_entries.find(
+        {"user_id": employee_id},
+        {"_id": 0}
+    ).sort("clock_in", -1).to_list(100)
+    
+    return entries
+
+@router.get("/employees/{employee_id}/summary")
+async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Admin endpoint to get an employee's time summary"""
+    # Verify employee exists
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Get employee's hourly rate
+    hourly_rate = employee.get("hourly_rate")
+    if hourly_rate is None:
+        # Get default rate from payroll settings
+        settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
+        hourly_rate = settings.get("default_hourly_rate", 20.00) if settings else 20.00
+    
+    # Get pay period settings
+    pay_settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
+    
+    # Determine current pay period
+    today = datetime.now(timezone.utc)
+    
+    if pay_settings and pay_settings.get("pay_period_type") == "monthly":
+        period_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if today.month == 12:
+            period_end = today.replace(year=today.year + 1, month=1, day=1) - timedelta(microseconds=1)
+        else:
+            period_end = today.replace(month=today.month + 1, day=1) - timedelta(microseconds=1)
+    else:
+        # Default bi-weekly (every 2 weeks starting from a reference date)
+        reference = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        days_since = (today - reference).days
+        period_num = days_since // 14
+        period_start = reference + timedelta(days=period_num * 14)
+        period_end = period_start + timedelta(days=14) - timedelta(microseconds=1)
+    
+    # Get entries for this period
+    period_entries = await db.time_entries.find({
+        "user_id": employee_id,
+        "clock_in": {
+            "$gte": period_start.isoformat(),
+            "$lte": period_end.isoformat()
+        }
+    }, {"_id": 0}).to_list(500)
+    
+    # Calculate period hours
+    period_hours = 0
+    for entry in period_entries:
+        if entry.get("clock_out"):
+            try:
+                cin = datetime.fromisoformat(entry["clock_in"].replace('Z', '+00:00'))
+                cout = datetime.fromisoformat(entry["clock_out"].replace('Z', '+00:00'))
+                period_hours += (cout - cin).total_seconds() / 3600
+            except (ValueError, KeyError):
+                pass
+    
+    # Get total entries
+    all_entries = await db.time_entries.find({"user_id": employee_id}, {"_id": 0}).to_list(1000)
+    
+    total_hours = 0
+    for entry in all_entries:
+        if entry.get("clock_out"):
+            try:
+                cin = datetime.fromisoformat(entry["clock_in"].replace('Z', '+00:00'))
+                cout = datetime.fromisoformat(entry["clock_out"].replace('Z', '+00:00'))
+                total_hours += (cout - cin).total_seconds() / 3600
+            except (ValueError, KeyError):
+                pass
+    
+    return {
+        "period_hours": round(period_hours, 2),
+        "period_shifts": len(period_entries),
+        "total_hours": round(total_hours, 2),
+        "total_shifts": len(all_entries),
+        "hourly_rate": hourly_rate,
+        "estimated_pay": round(period_hours * hourly_rate, 2),
+        "period_start": period_start.isoformat(),
+        "period_end": period_end.isoformat(),
+        "is_previous_period": False,
+        "ytd_paid": 0,
+        "ytd_payment_count": 0
+    }
+
+@router.get("/w9/admin/employee/{employee_id}/status")
+async def get_employee_w9_status_admin(employee_id: str, admin: dict = Depends(get_admin_user)):
+    """Admin endpoint to get an employee's W-9 status"""
+    # Verify employee exists
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    w9_docs = await db.w9_documents.find(
+        {"employee_id": employee_id},
+        {"_id": 0, "content": 0}
+    ).sort("uploaded_at", -1).to_list(100)
+    
+    if not w9_docs:
+        return {"status": "not_submitted", "has_w9": False, "can_upload": True, "w9_documents": []}
+    
+    latest = w9_docs[0]
+    
+    return {
+        "status": latest.get("status", "submitted"),
+        "has_w9": True,
+        "can_upload": True,
+        "total_documents": len(w9_docs),
+        "rejection_reason": latest.get("rejection_reason"),
+        "reviewed_at": latest.get("reviewed_at"),
+        "w9_documents": w9_docs
+    }

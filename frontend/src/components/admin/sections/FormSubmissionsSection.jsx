@@ -496,11 +496,11 @@ Thrifty Curator Team`;
     );
   };
 
-  const totalSubmissions = (formsSummary?.job_applications?.total || 0) + 
+  const totalSubmissions = 
     (formsSummary?.consignment_inquiries?.total || 0) + 
     (formsSummary?.consignment_agreements?.total || 0);
   
-  const totalNew = (formsSummary?.job_applications?.new || 0) + 
+  const totalNew = 
     (formsSummary?.consignment_inquiries?.new || 0) + 
     (formsSummary?.consignment_agreements?.new || 0);
 

@@ -76,7 +76,7 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"]
     
     settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
-    default_rate = settings.get("default_hourly_rate", 20.00) if settings else 15.00
+    default_rate = settings.get("default_hourly_rate", 20.00) if settings else 20.00
     
     now = datetime.now(timezone.utc)
     period_start, period_end = get_biweekly_period(period_index=0)
@@ -1105,7 +1105,7 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
     
     # Get settings
     settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
-    default_rate = settings.get("default_hourly_rate", 20.00) if settings else 15.00
+    default_rate = settings.get("default_hourly_rate", 20.00) if settings else 20.00
     hourly_rate = employee.get("hourly_rate") or default_rate
     
     # Get all time entries for this employee

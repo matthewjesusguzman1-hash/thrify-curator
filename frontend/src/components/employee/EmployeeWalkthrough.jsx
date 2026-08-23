@@ -241,10 +241,17 @@ export default function EmployeeWalkthrough({ show, onClose, onComplete }) {
 }
 
 // Hook to check if walkthrough should be shown
-export function useEmployeeWalkthrough() {
+export function useEmployeeWalkthrough(isAdminView = false) {
+  // Never show walkthrough in admin view - set initial state to false
   const [showWalkthrough, setShowWalkthrough] = useState(false);
 
   useEffect(() => {
+    // Don't show walkthrough in admin view
+    if (isAdminView) {
+      setShowWalkthrough(false);
+      return;
+    }
+    
     // Check if user has completed the walkthrough
     const completed = localStorage.getItem('employee_walkthrough_completed');
     if (!completed) {
@@ -252,9 +259,14 @@ export function useEmployeeWalkthrough() {
       const timer = setTimeout(() => setShowWalkthrough(true), 1000);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [isAdminView]);
 
-  const triggerWalkthrough = () => setShowWalkthrough(true);
+  const triggerWalkthrough = () => {
+    // Only allow triggering if not in admin view
+    if (!isAdminView) {
+      setShowWalkthrough(true);
+    }
+  };
   const closeWalkthrough = () => setShowWalkthrough(false);
 
   return { showWalkthrough, triggerWalkthrough, closeWalkthrough };

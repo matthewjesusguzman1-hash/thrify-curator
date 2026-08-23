@@ -385,7 +385,13 @@ async def submit_invited_application(
         "submitted_at": datetime.now(timezone.utc).isoformat(),
         "invited": True,
         "invite_id": invite["id"],
-        "invite_template": invite.get("template", "generic")
+        "invite_template": invite.get("template", "generic"),
+        # Remote worker fields
+        "is_remote_worker": application.is_remote_worker or False,
+        "payment_method": application.payment_method,
+        "wallet_provider": application.wallet_provider,
+        "wallet_number": application.wallet_number,
+        "wise_tag": application.wise_tag
     }
     
     await db.job_applications.insert_one(app_doc)
@@ -1036,6 +1042,39 @@ async def get_my_onboarding_data(current_user: dict = Depends(get_current_user))
         "wise_tag": application.get("wise_tag"),
         "invite_template": application.get("invite_template")
     }
+
+
+
+# Admin endpoint to get onboarding data for a specific employee
+@router.get("/forms/admin/onboarding-data/{employee_email}")
+async def get_employee_onboarding_data(employee_email: str, admin: dict = Depends(get_admin_user)):
+    """Get an employee's onboarding application data (admin only)"""
+    email = employee_email.lower()
+    
+    # Find their job application (most recent one)
+    application = await db.job_applications.find_one(
+        {"email": {"$regex": f"^{email}$", "$options": "i"}},
+        {"_id": 0},
+        sort=[("submitted_at", -1)]
+    )
+    
+    if not application:
+        return {"found": False}
+    
+    return {
+        "found": True,
+        "full_name": application.get("full_name"),
+        "email": application.get("email"),
+        "phone": application.get("phone"),
+        "address": application.get("address"),
+        "is_remote_worker": application.get("is_remote_worker", False),
+        "payment_method": application.get("payment_method"),
+        "wallet_provider": application.get("wallet_provider"),
+        "wallet_number": application.get("wallet_number"),
+        "wise_tag": application.get("wise_tag"),
+        "invite_template": application.get("invite_template")
+    }
+
 
 
 # Admin form management routes

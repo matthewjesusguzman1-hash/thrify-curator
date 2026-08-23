@@ -800,9 +800,9 @@ function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
   const [email, setEmail] = useState(application?.email || '');
   const [creating, setCreating] = useState(false);
   
-  // Pay rate - defaults based on remote worker status
-  // Onboarding applications are for remote workers, so check invite_template too
-  const isRemote = application?.is_remote_worker || application?.invite_template === 'onboarding';
+  // Pay rate - defaults based on remote worker status from application data
+  // Only use is_remote_worker field, not invite_template (onboarding isn't always remote)
+  const isRemote = application?.is_remote_worker === true;
   const [hourlyRate, setHourlyRate] = useState(isRemote ? '3.00' : '20.00');
 
   const handleCreate = async () => {
