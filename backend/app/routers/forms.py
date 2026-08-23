@@ -53,10 +53,14 @@ class InvitedJobApplication(BaseModel):
     preferred_contact: str = "email"
     # Remote worker fields (only shown if is_remote_worker is True)
     is_remote_worker: Optional[bool] = False
-    payment_method: Optional[str] = None  # "e_wallet" or "wise_account"
-    wallet_provider: Optional[str] = None  # For e-wallet: provider name
-    wallet_number: Optional[str] = None    # For e-wallet: wallet number
-    wise_tag: Optional[str] = None         # For Wise: tag name
+    # Payment info - same fields as contractor agreement for prefill
+    payment_holder_name: Optional[str] = None
+    payment_holder_email: Optional[str] = None
+    payment_wallet_provider: Optional[str] = None
+    payment_wallet_number: Optional[str] = None
+    payment_address: Optional[str] = None
+    payment_country: Optional[str] = None
+    payment_wise_tag: Optional[str] = None
 
 # Ensure upload directory exists
 UPLOAD_DIR = "/app/uploads/consignment_photos"
@@ -384,10 +388,14 @@ async def submit_invited_application(
         "invite_template": invite.get("template", "generic"),
         # Remote worker fields
         "is_remote_worker": application.is_remote_worker or False,
-        "payment_method": application.payment_method,
-        "wallet_provider": application.wallet_provider,
-        "wallet_number": application.wallet_number,
-        "wise_tag": application.wise_tag
+        # Payment info - same fields as contractor agreement
+        "payment_holder_name": application.payment_holder_name,
+        "payment_holder_email": application.payment_holder_email,
+        "payment_wallet_provider": application.payment_wallet_provider,
+        "payment_wallet_number": application.payment_wallet_number,
+        "payment_address": application.payment_address,
+        "payment_country": application.payment_country,
+        "payment_wise_tag": application.payment_wise_tag
     }
     
     await db.job_applications.insert_one(app_doc)
@@ -1032,6 +1040,15 @@ async def get_my_onboarding_data(current_user: dict = Depends(get_current_user))
         "phone": application.get("phone"),
         "address": application.get("address"),
         "is_remote_worker": application.get("is_remote_worker", False),
+        # New unified payment fields
+        "payment_holder_name": application.get("payment_holder_name"),
+        "payment_holder_email": application.get("payment_holder_email"),
+        "payment_wallet_provider": application.get("payment_wallet_provider"),
+        "payment_wallet_number": application.get("payment_wallet_number"),
+        "payment_address": application.get("payment_address"),
+        "payment_country": application.get("payment_country"),
+        "payment_wise_tag": application.get("payment_wise_tag"),
+        # Legacy fields for backwards compatibility
         "payment_method": application.get("payment_method"),
         "wallet_provider": application.get("wallet_provider"),
         "wallet_number": application.get("wallet_number"),
@@ -1064,6 +1081,15 @@ async def get_employee_onboarding_data(employee_email: str, admin: dict = Depend
         "phone": application.get("phone"),
         "address": application.get("address"),
         "is_remote_worker": application.get("is_remote_worker", False),
+        # New unified payment fields
+        "payment_holder_name": application.get("payment_holder_name"),
+        "payment_holder_email": application.get("payment_holder_email"),
+        "payment_wallet_provider": application.get("payment_wallet_provider"),
+        "payment_wallet_number": application.get("payment_wallet_number"),
+        "payment_address": application.get("payment_address"),
+        "payment_country": application.get("payment_country"),
+        "payment_wise_tag": application.get("payment_wise_tag"),
+        # Legacy fields for backwards compatibility
         "payment_method": application.get("payment_method"),
         "wallet_provider": application.get("wallet_provider"),
         "wallet_number": application.get("wallet_number"),

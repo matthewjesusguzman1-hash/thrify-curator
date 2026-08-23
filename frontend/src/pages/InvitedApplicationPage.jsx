@@ -58,10 +58,14 @@ export default function InvitedApplicationPage() {
     ],
     // Remote worker fields
     is_remote_worker: false,
-    payment_method: "",  // "e_wallet" or "wise_account"
-    wallet_provider: "",
-    wallet_number: "",
-    wise_tag: ""
+    // Payment info - same fields as contractor agreement
+    payment_holder_name: "",
+    payment_holder_email: "",
+    payment_wallet_provider: "",
+    payment_wallet_number: "",
+    payment_address: "",
+    payment_country: "",
+    payment_wise_tag: ""
   });
   const [inviteTemplate, setInviteTemplate] = useState("generic");
 
@@ -568,7 +572,15 @@ export default function InvitedApplicationPage() {
                       ...formData, 
                       is_remote_worker: checked,
                       // Clear payment fields when unchecking
-                      ...(checked ? {} : { payment_method: "", wallet_provider: "", wallet_number: "", wise_tag: "" })
+                      ...(checked ? {} : { 
+                        payment_holder_name: "", 
+                        payment_holder_email: "", 
+                        payment_wallet_provider: "", 
+                        payment_wallet_number: "", 
+                        payment_address: "", 
+                        payment_country: "", 
+                        payment_wise_tag: "" 
+                      })
                     })}
                     className="w-6 h-6 border-2 border-[#8B5CF6] data-[state=checked]:bg-[#8B5CF6] data-[state=checked]:border-[#8B5CF6]"
                   />
@@ -580,107 +592,106 @@ export default function InvitedApplicationPage() {
                 {formData.is_remote_worker && (
                   <div className="space-y-4 mt-4 pl-4 border-l-2 border-[#8B5CF6]/30">
                     <Label className="text-sm font-semibold text-[#1A1A2E] block">
-                      Preferred Payment Method via Wise *
+                      Payment Information (via Wise)
                     </Label>
+                    <p className="text-xs text-gray-500 -mt-2">
+                      Fill in the payment details that apply to you. This will be used for the Contractor Agreement.
+                    </p>
                     
-                    {/* Payment Method Selection */}
-                    <div className="space-y-3">
-                      <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border-2 border-gray-200 hover:border-[#8B5CF6]/50 transition-colors">
-                        <input
-                          type="radio"
-                          name="payment_method"
-                          value="e_wallet"
-                          checked={formData.payment_method === "e_wallet"}
-                          onChange={(e) => setFormData({ 
-                            ...formData, 
-                            payment_method: e.target.value,
-                            wise_tag: "" // Clear wise tag when switching
-                          })}
-                          className="w-5 h-5 accent-[#8B5CF6] mt-0.5"
-                        />
+                    {/* Payment Fields Grid */}
+                    <div className="space-y-3 bg-white/50 p-4 rounded-lg">
+                      {/* Account Holder Info */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <span className="text-sm font-medium text-[#1A1A2E]">E-Wallet</span>
-                          <p className="text-xs text-gray-500 mt-0.5">Transfer to GCash, Maya, PayPal, etc.</p>
+                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Account Holder Name</Label>
+                          <Input
+                            type="text"
+                            name="payment_holder_name"
+                            value={formData.payment_holder_name}
+                            onChange={handleChange}
+                            placeholder="Full name on account"
+                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                          />
                         </div>
-                      </label>
-
-                      <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border-2 border-gray-200 hover:border-[#8B5CF6]/50 transition-colors">
-                        <input
-                          type="radio"
-                          name="payment_method"
-                          value="wise_account"
-                          checked={formData.payment_method === "wise_account"}
-                          onChange={(e) => setFormData({ 
-                            ...formData, 
-                            payment_method: e.target.value,
-                            wallet_provider: "", // Clear wallet fields when switching
-                            wallet_number: ""
-                          })}
-                          className="w-5 h-5 accent-[#8B5CF6] mt-0.5"
-                        />
                         <div>
-                          <span className="text-sm font-medium text-[#1A1A2E]">Wise Account</span>
-                          <p className="text-xs text-gray-500 mt-0.5">Direct transfer to your Wise account</p>
+                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Account Holder Email</Label>
+                          <Input
+                            type="email"
+                            name="payment_holder_email"
+                            value={formData.payment_holder_email}
+                            onChange={handleChange}
+                            placeholder="Email linked to account"
+                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                          />
                         </div>
-                      </label>
+                      </div>
+                      
+                      {/* Wallet Info */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Wallet Provider</Label>
+                          <Input
+                            type="text"
+                            name="payment_wallet_provider"
+                            value={formData.payment_wallet_provider}
+                            onChange={handleChange}
+                            placeholder="e.g., Wise, GCash, Maya, PayPal"
+                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Wallet Number / Account</Label>
+                          <Input
+                            type="text"
+                            name="payment_wallet_number"
+                            value={formData.payment_wallet_number}
+                            onChange={handleChange}
+                            placeholder="Your wallet number or account"
+                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Address */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Address</Label>
+                          <Input
+                            type="text"
+                            name="payment_address"
+                            value={formData.payment_address}
+                            onChange={handleChange}
+                            placeholder="Street address, city, state/province"
+                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Country</Label>
+                          <Input
+                            type="text"
+                            name="payment_country"
+                            value={formData.payment_country}
+                            onChange={handleChange}
+                            placeholder="Country of residence"
+                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Wise Tag */}
+                      <div>
+                        <Label className="text-sm text-[#1A1A2E] mb-1 block">Wise Tag (if using Wise)</Label>
+                        <Input
+                          type="text"
+                          name="payment_wise_tag"
+                          value={formData.payment_wise_tag}
+                          onChange={handleChange}
+                          placeholder="@yourtag"
+                          className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Found in Wise app under Account → Wise tag</p>
+                      </div>
                     </div>
-
-                    {/* E-Wallet Fields */}
-                    {formData.payment_method === "e_wallet" && (
-                      <div className="space-y-3 bg-white/50 p-3 rounded-lg">
-                        <div>
-                          <Label className="text-sm text-[#1A1A2E] mb-1 block">
-                            Wallet Provider *
-                          </Label>
-                          <Input
-                            type="text"
-                            name="wallet_provider"
-                            value={formData.wallet_provider}
-                            onChange={handleChange}
-                            placeholder="e.g., GCash, Maya, PayPal"
-                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-sm text-[#1A1A2E] mb-1 block">
-                            Wallet Number/Email *
-                          </Label>
-                          <Input
-                            type="text"
-                            name="wallet_number"
-                            value={formData.wallet_number}
-                            onChange={handleChange}
-                            placeholder="Your wallet number or email"
-                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
-                            required
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Wise Account Fields */}
-                    {formData.payment_method === "wise_account" && (
-                      <div className="space-y-3 bg-white/50 p-3 rounded-lg">
-                        <div>
-                          <Label className="text-sm text-[#1A1A2E] mb-1 block">
-                            Wise Tag Name *
-                          </Label>
-                          <Input
-                            type="text"
-                            name="wise_tag"
-                            value={formData.wise_tag}
-                            onChange={handleChange}
-                            placeholder="@yourtag"
-                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
-                            required
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Found in your Wise app under Account → Wise tag
-                          </p>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>

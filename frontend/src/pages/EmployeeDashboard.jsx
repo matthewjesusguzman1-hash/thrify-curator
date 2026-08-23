@@ -796,15 +796,36 @@ export default function EmployeeDashboard({
           setAgreementName(onboardingRes.data.full_name || userName || "");
           
           // Pre-populate payment info if remote worker
-          if (onboardingRes.data.is_remote_worker && onboardingRes.data.payment_method) {
-            // Pre-populate with whatever payment info was provided during onboarding
-            if (onboardingRes.data.wallet_provider) {
+          if (onboardingRes.data.is_remote_worker) {
+            // New unified fields
+            if (onboardingRes.data.payment_holder_name) {
+              setPaymentHolderName(onboardingRes.data.payment_holder_name);
+            }
+            if (onboardingRes.data.payment_holder_email) {
+              setPaymentHolderEmail(onboardingRes.data.payment_holder_email);
+            }
+            if (onboardingRes.data.payment_wallet_provider) {
+              setPaymentWalletProvider(onboardingRes.data.payment_wallet_provider);
+            } else if (onboardingRes.data.wallet_provider) {
+              // Fallback to legacy field
               setPaymentWalletProvider(onboardingRes.data.wallet_provider);
             }
-            if (onboardingRes.data.wallet_number) {
+            if (onboardingRes.data.payment_wallet_number) {
+              setPaymentWalletNumber(onboardingRes.data.payment_wallet_number);
+            } else if (onboardingRes.data.wallet_number) {
+              // Fallback to legacy field
               setPaymentWalletNumber(onboardingRes.data.wallet_number);
             }
-            if (onboardingRes.data.wise_tag) {
+            if (onboardingRes.data.payment_address) {
+              setPaymentAddress(onboardingRes.data.payment_address);
+            }
+            if (onboardingRes.data.payment_country) {
+              setPaymentCountry(onboardingRes.data.payment_country);
+            }
+            if (onboardingRes.data.payment_wise_tag) {
+              setPaymentWiseTag(onboardingRes.data.payment_wise_tag);
+            } else if (onboardingRes.data.wise_tag) {
+              // Fallback to legacy field
               setPaymentWiseTag(onboardingRes.data.wise_tag);
             }
           }
@@ -2579,6 +2600,116 @@ export default function EmployeeDashboard({
               </CollapsibleContent>
             </div>
           </Collapsible>
+
+          {/* AnyDesk Setup Section - Only for Remote Workers */}
+          {isRemoteWorker() && (
+            <Collapsible defaultOpen={false}>
+              <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl shadow-2xl overflow-hidden border border-white/10" data-testid="anydesk-section">
+                <div className="h-1.5 bg-gradient-to-r from-[#EC4899] via-[#8B5CF6] to-[#00D4FF]" />
+                <CollapsibleTrigger asChild>
+                  <button 
+                    className="w-full p-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
+                    data-testid="anydesk-collapse-trigger"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="w-5 h-5 text-[#EC4899]" />
+                      <h2 className="font-poppins text-lg font-semibold text-white">
+                        Remote Work Setup
+                      </h2>
+                      <span className="bg-[#EC4899]/20 text-[#EC4899] px-2 py-0.5 rounded-full text-xs font-medium">
+                        Required
+                      </span>
+                    </div>
+                    <ChevronDown className="w-5 h-5 text-white/60 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                  </button>
+                </CollapsibleTrigger>
+                
+                <CollapsibleContent>
+                  <div className="px-6 pb-6 pt-2 space-y-6">
+                    {/* AnyDesk Setup */}
+                    <div className="bg-white/5 rounded-xl p-4 border border-[#EC4899]/30">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 bg-[#EC4899]/20 rounded-lg flex items-center justify-center">
+                          <Briefcase className="w-5 h-5 text-[#EC4899]" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold">AnyDesk Remote Desktop</h3>
+                          <p className="text-white/60 text-sm">Required for remote work tasks</p>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <p className="text-white/70 text-sm">
+                          AnyDesk allows you to securely access the company computer remotely to perform your work tasks.
+                        </p>
+                        
+                        <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                          <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+                            <span className="w-6 h-6 bg-[#EC4899]/20 rounded-full flex items-center justify-center text-xs text-[#EC4899] font-bold">1</span>
+                            Download AnyDesk
+                          </h4>
+                          <a
+                            href="https://anydesk.com/en/downloads"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-[#EC4899]/20 hover:bg-[#EC4899]/30 text-[#EC4899] rounded-lg text-sm font-medium transition-colors"
+                          >
+                            <Download className="w-4 h-4" />
+                            Download AnyDesk
+                          </a>
+                          <p className="text-white/50 text-xs mt-2">
+                            Available for Windows, Mac, Linux, iOS, and Android
+                          </p>
+                        </div>
+                        
+                        <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                          <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+                            <span className="w-6 h-6 bg-[#EC4899]/20 rounded-full flex items-center justify-center text-xs text-[#EC4899] font-bold">2</span>
+                            Install & Set Up
+                          </h4>
+                          <ol className="text-white/70 text-sm space-y-2 list-decimal list-inside">
+                            <li>Install AnyDesk on your computer or device</li>
+                            <li>Open AnyDesk and note your AnyDesk Address (9-digit number)</li>
+                            <li>Share your AnyDesk Address with your manager</li>
+                            <li>Your manager will send you the company computer address to connect</li>
+                          </ol>
+                        </div>
+                        
+                        <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                          <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+                            <span className="w-6 h-6 bg-[#EC4899]/20 rounded-full flex items-center justify-center text-xs text-[#EC4899] font-bold">3</span>
+                            Connect to Work
+                          </h4>
+                          <ol className="text-white/70 text-sm space-y-2 list-decimal list-inside">
+                            <li>Open AnyDesk</li>
+                            <li>Enter the company computer address provided by your manager</li>
+                            <li>Click Connect</li>
+                            <li>Wait for your connection to be accepted</li>
+                            <li>You can now work on the company computer remotely!</li>
+                          </ol>
+                        </div>
+                        
+                        <div className="bg-[#FFE66D]/10 border border-[#FFE66D]/30 rounded-lg p-4">
+                          <div className="flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-[#FFE66D] flex-shrink-0 mt-0.5" />
+                            <div>
+                              <h4 className="text-[#FFE66D] font-medium mb-1">Important Tips</h4>
+                              <ul className="text-white/70 text-sm space-y-1">
+                                <li>• Ensure you have a stable internet connection</li>
+                                <li>• Always log out when done with your shift</li>
+                                <li>• Contact your manager if you have connection issues</li>
+                                <li>• Do not share the company computer address with others</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </div>
+            </Collapsible>
+          )}
 
           {/* W-8BEN Tax Form Section - Collapsible */}
           <Collapsible open={w8benExpanded} onOpenChange={setW8benExpanded}>
