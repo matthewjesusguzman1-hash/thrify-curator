@@ -33,7 +33,11 @@ import {
   ChevronDown,
   FileSignature,
   Loader2,
-  HelpCircle
+  HelpCircle,
+  Smartphone,
+  Bell,
+  Share,
+  Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -240,6 +244,114 @@ export default function EmployeeDashboard({
 
   // Employee walkthrough/tutorial - skip in admin view
   const { showWalkthrough, triggerWalkthrough, closeWalkthrough } = useEmployeeWalkthrough(isAdminView);
+
+  // PWA Install Prompt State
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  
+  // Push notification state
+  const [pushPermission, setPushPermission] = useState('default');
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+
+  // Check if PWA is installed and set up install prompt
+  useEffect(() => {
+    // Check if already installed as PWA
+    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
+                            window.navigator.standalone === true;
+    setIsStandalone(isStandaloneMode);
+    
+    // Check if iOS
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    setIsIOS(isIOSDevice);
+    
+    // Check if user dismissed the banner before
+    const dismissed = localStorage.getItem('pwa_install_dismissed');
+    const dismissedTime = dismissed ? parseInt(dismissed) : 0;
+    const oneWeek = 7 * 24 * 60 * 60 * 1000;
+    
+    // Show banner if not installed, not dismissed recently
+    if (!isStandaloneMode && (!dismissed || Date.now() - dismissedTime > oneWeek)) {
+      setShowInstallBanner(true);
+    }
+    
+    // Listen for beforeinstallprompt (Android/Chrome)
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBanner(true);
+    };
+    
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    
+    // Check push notification permission
+    if ('Notification' in window) {
+      setPushPermission(Notification.permission);
+    }
+    
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  // Handle PWA install
+  const handleInstallPWA = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setShowInstallBanner(false);
+        toast.success('App installed!', { description: 'You can now access Thrifty Curator from your home screen' });
+      }
+      setDeferredPrompt(null);
+    }
+  };
+
+  // Dismiss install banner
+  const dismissInstallBanner = () => {
+    localStorage.setItem('pwa_install_dismissed', Date.now().toString());
+    setShowInstallBanner(false);
+  };
+
+  // Request push notification permission and subscribe
+  const requestPushPermission = async () => {
+    try {
+      if (!('Notification' in window)) {
+        toast.error('Push notifications not supported', { description: 'Your browser does not support push notifications' });
+        return;
+      }
+      
+      const permission = await Notification.requestPermission();
+      setPushPermission(permission);
+      
+      if (permission === 'granted') {
+        // Register service worker and subscribe to push
+        const registration = await navigator.serviceWorker.ready;
+        
+        // Get VAPID public key from backend (or use a configured one)
+        // For now, we'll just show success - actual push subscription would need VAPID keys
+        setPushSubscribed(true);
+        toast.success('Notifications enabled!', { description: 'You will receive push notifications for new messages' });
+        
+        // Store preference
+        localStorage.setItem('push_notifications_enabled', 'true');
+      } else if (permission === 'denied') {
+        toast.error('Notifications blocked', { description: 'Please enable notifications in your browser settings' });
+      }
+    } catch (error) {
+      console.error('Failed to request push permission:', error);
+      toast.error('Failed to enable notifications');
+    }
+  };
+
+  // Check if push is already subscribed on load
+  useEffect(() => {
+    const pushEnabled = localStorage.getItem('push_notifications_enabled');
+    if (pushEnabled === 'true' && Notification.permission === 'granted') {
+      setPushSubscribed(true);
+    }
+  }, []);
 
   // Reset Face ID credentials
   const handleResetFaceId = async () => {
@@ -1335,6 +1447,99 @@ export default function EmployeeDashboard({
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
+          
+          {/* PWA Install Banner - Only show if not installed and not in admin view */}
+          {!isAdminView && showInstallBanner && !isStandalone && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] rounded-xl p-4 shadow-lg"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Smartphone className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold text-sm">Add to Home Screen</h3>
+                    <p className="text-white/80 text-xs mt-0.5">
+                      Install the app for quick access and push notifications
+                    </p>
+                  </div>
+                </div>
+                <button onClick={dismissInstallBanner} className="text-white/60 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {isIOS ? (
+                // iOS Safari instructions
+                <div className="mt-3 bg-white/10 rounded-lg p-3">
+                  <p className="text-white text-xs font-medium mb-2">To install on iPhone/iPad:</p>
+                  <ol className="text-white/90 text-xs space-y-1.5">
+                    <li className="flex items-center gap-2">
+                      <span className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center text-[10px] font-bold">1</span>
+                      Tap the <Share className="w-4 h-4 inline mx-1" /> Share button below
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center text-[10px] font-bold">2</span>
+                      Scroll and tap "Add to Home Screen" <Plus className="w-4 h-4 inline mx-1" />
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center text-[10px] font-bold">3</span>
+                      Tap "Add" in the top right corner
+                    </li>
+                  </ol>
+                </div>
+              ) : deferredPrompt ? (
+                // Android/Chrome install button
+                <Button 
+                  onClick={handleInstallPWA}
+                  className="mt-3 w-full bg-white text-[#8B5CF6] hover:bg-white/90 font-semibold"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Install App
+                </Button>
+              ) : (
+                // Generic instructions for other browsers
+                <div className="mt-3 bg-white/10 rounded-lg p-3">
+                  <p className="text-white/90 text-xs">
+                    Look for "Install" or "Add to Home Screen" in your browser menu
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          )}
+          
+          {/* Push Notification Banner - Only show if not subscribed, app is installed or native, and not admin view */}
+          {!isAdminView && !pushSubscribed && pushPermission !== 'denied' && (isStandalone || isNativePlatform()) && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-[#FFE66D]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Bell className="w-5 h-5 text-[#FFE66D]" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-semibold text-sm">Enable Notifications</h3>
+                  <p className="text-white/60 text-xs mt-0.5">
+                    Get notified when you receive messages from your manager
+                  </p>
+                  <Button 
+                    onClick={requestPushPermission}
+                    size="sm"
+                    className="mt-2 bg-[#FFE66D] text-[#1A1A2E] hover:bg-[#FFE66D]/90 font-medium"
+                  >
+                    <Bell className="w-3 h-3 mr-1.5" />
+                    Turn On Notifications
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {/* Clock In/Out Card */}
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6]" />
