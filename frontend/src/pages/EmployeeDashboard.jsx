@@ -1759,24 +1759,14 @@ export default function EmployeeDashboard({
               {/* Clock In/Out button */}
               <button
                 onClick={() => {
-                  // Remote workers get a message instead of clocking in
-                  if (isRemoteWorker() && !isAdminView) {
-                    toast.info("Remote workers must clock in via AnyDesk", {
-                      description: "Connect to the company computer using AnyDesk to clock in and out.",
-                      duration: 5000
-                    });
-                    return;
-                  }
                   buttonPress(); // Haptic on button press
                   handleClock(clockedIn ? "out" : "in");
                 }}
                 disabled={loading || locationStatus.checking}
                 className={`w-full max-w-xs mx-auto py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center justify-center gap-2 ${
-                  isRemoteWorker() && !isAdminView
-                    ? 'bg-gradient-to-r from-[#00D4FF]/60 to-[#8B5CF6]/60 text-white/80 shadow-md'
-                    : clockedIn 
-                      ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl' 
-                      : 'bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:from-[#00A8CC] hover:to-[#7C3AED] text-white shadow-lg hover:shadow-xl'
+                  clockedIn 
+                    ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl' 
+                    : 'bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] hover:from-[#00A8CC] hover:to-[#7C3AED] text-white shadow-lg hover:shadow-xl'
                 } disabled:opacity-50`}
                 data-testid="clock-action-btn"
               >

@@ -105,13 +105,6 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
     display_name = "Administrator" if user.get("role") == "admin" else user["name"]
     
     if action.action == "in":
-        # Check if user is a remote worker - they cannot clock in directly
-        if user.get("is_remote_worker"):
-            raise HTTPException(
-                status_code=403, 
-                detail="Remote workers cannot clock in directly. Please use AnyDesk to connect to the company computer."
-            )
-        
         # Check geofencing - must be within business location to clock in
         # Skip geofence check for admin users
         if user.get("role") != "admin":
