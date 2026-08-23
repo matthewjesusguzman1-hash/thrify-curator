@@ -177,6 +177,7 @@ export default function EmployeeDashboard({
   const [w8benStatus, setW8benStatus] = useState(initialData?.w8benStatus || null);
   const [uploadingW8ben, setUploadingW8ben] = useState(false);
   const [showW8benSubmitForm, setShowW8benSubmitForm] = useState(false);
+  const [showW8benInstructions, setShowW8benInstructions] = useState(false);
   const [w8benFormData, setW8benFormData] = useState({ file: null });
   const w8benInputRef = useRef(null);
   
@@ -2399,16 +2400,82 @@ export default function EmployeeDashboard({
                           <Download className="w-4 h-4" />
                           Download W-8BEN Form
                         </a>
-                        <a
-                          href="https://www.irs.gov/pub/irs-pdf/iw8ben.pdf"
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          onClick={() => setShowW8benInstructions(!showW8benInstructions)}
                           className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white/80 rounded-lg text-sm font-medium transition-colors"
                         >
                           <FileText className="w-4 h-4" />
-                          View Instructions
-                        </a>
+                          {showW8benInstructions ? 'Hide Instructions' : 'View Instructions'}
+                        </button>
                       </div>
+                      
+                      {/* Inline W-8BEN Instructions */}
+                      {showW8benInstructions && (
+                        <div className="mt-4 p-4 bg-white/5 rounded-xl border border-[#FFE66D]/30">
+                          <h4 className="text-[#FFE66D] font-semibold mb-3 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4" />
+                            W-8BEN Instructions for Foreign Contractors
+                          </h4>
+                          
+                          <div className="space-y-4 text-sm text-white/80">
+                            <div className="p-3 bg-[#FFE66D]/10 rounded-lg border-l-4 border-[#FFE66D]">
+                              <p className="font-medium text-[#FFE66D] mb-1">Who needs this form?</p>
+                              <p>If you are a foreign individual working as an independent contractor outside the United States, you must complete Form W-8BEN to certify your foreign status.</p>
+                            </div>
+                            
+                            <div>
+                              <p className="font-medium text-white mb-2">Key Fields to Complete:</p>
+                              <ul className="space-y-2 ml-4">
+                                <li className="flex items-start gap-2">
+                                  <span className="text-[#FFE66D] font-bold">Line 1:</span>
+                                  <span>Your full legal name as shown on your passport</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <span className="text-[#FFE66D] font-bold">Line 2:</span>
+                                  <span>Country of citizenship</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <span className="text-[#FFE66D] font-bold">Line 3:</span>
+                                  <span>Your permanent residence address (NOT a P.O. Box)</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <span className="text-[#FFE66D] font-bold">Line 4:</span>
+                                  <span>Mailing address (if different from Line 3)</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <span className="text-[#FFE66D] font-bold">Line 6:</span>
+                                  <span>Foreign tax ID number (if you have one - NOT required)</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                  <span className="text-[#FFE66D] font-bold">Line 8:</span>
+                                  <span>Date of birth (MM-DD-YYYY format)</span>
+                                </li>
+                              </ul>
+                            </div>
+                            
+                            <div className="p-3 bg-blue-500/10 rounded-lg border-l-4 border-blue-400">
+                              <p className="font-medium text-blue-400 mb-1">Part II - Tax Treaty (Optional)</p>
+                              <p>If your country has a tax treaty with the US, you may claim reduced withholding. Most contractors can skip this section if unsure.</p>
+                            </div>
+                            
+                            <div className="p-3 bg-green-500/10 rounded-lg border-l-4 border-green-400">
+                              <p className="font-medium text-green-400 mb-1">Certification (Required)</p>
+                              <p>Sign and date the form at the bottom. Your signature certifies that the information is accurate.</p>
+                            </div>
+                            
+                            <div className="mt-3 pt-3 border-t border-white/10">
+                              <a
+                                href="https://www.irs.gov/pub/irs-pdf/iw8ben.pdf#page=3"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#FFE66D] hover:underline text-sm"
+                              >
+                                View full IRS instructions (Page 3 - Line-by-Line Instructions) →
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -2517,16 +2584,35 @@ export default function EmployeeDashboard({
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                               doc.status === 'approved' 
                                 ? 'bg-green-500/20 text-green-400'
-                                : doc.status === 'rejected'
+                                : doc.status === 'rejected' || doc.status === 'needs_correction'
                                 ? 'bg-red-500/20 text-red-400'
                                 : 'bg-[#FFE66D]/20 text-[#FFE66D]'
                             }`}>
-                              {doc.status?.charAt(0).toUpperCase() + doc.status?.slice(1) || 'Submitted'}
+                              {doc.status === 'needs_correction' ? 'Needs Correction' : doc.status?.charAt(0).toUpperCase() + doc.status?.slice(1) || 'Submitted'}
                             </span>
                           </div>
                           <p className="text-xs text-white/40 mt-1">
                             Submitted: {new Date(doc.uploaded_at).toLocaleDateString()}
                           </p>
+                          {/* View/Download button for employee */}
+                          <div className="mt-2 flex gap-2">
+                            <a
+                              href={`${API}/time-tracking/w8ben/${doc.id}/download`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-[#FFE66D]/20 hover:bg-[#FFE66D]/30 text-[#FFE66D] rounded-lg text-xs font-medium transition-colors"
+                            >
+                              <Eye className="w-3 h-3" />
+                              View
+                            </a>
+                          </div>
+                          {/* Show rejection feedback if needs correction */}
+                          {doc.status === 'needs_correction' && doc.status_notes && (
+                            <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
+                              <p className="text-xs text-red-400 font-medium">Admin Feedback:</p>
+                              <p className="text-xs text-white/70 mt-1">{doc.status_notes}</p>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

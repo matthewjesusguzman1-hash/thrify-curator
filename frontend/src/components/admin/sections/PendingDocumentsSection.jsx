@@ -349,6 +349,53 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
             <div className="p-6 overflow-y-auto flex-1 space-y-4">
               {reviewingDoc.type === 'agreement' && (
                 <>
+                  {/* Action buttons for print/download */}
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const printWindow = window.open('', '_blank');
+                        printWindow.document.write(`
+                          <html>
+                            <head>
+                              <title>Contractor Agreement - ${reviewingDoc.data.employee_name}</title>
+                              <style>
+                                body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+                                h1 { text-align: center; color: #333; }
+                                .info-box { background: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 8px; }
+                                .signature { font-style: italic; font-size: 24px; color: #ec4899; margin: 20px 0; }
+                                .agreement-text { white-space: pre-wrap; line-height: 1.6; }
+                                .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; }
+                              </style>
+                            </head>
+                            <body>
+                              <h1>Independent Contractor Agreement</h1>
+                              <div class="info-box">
+                                <p><strong>Employee:</strong> ${reviewingDoc.data.employee_name}</p>
+                                <p><strong>Email:</strong> ${reviewingDoc.data.employee_email}</p>
+                                <p><strong>Contact:</strong> ${reviewingDoc.data.contact_email || 'N/A'}</p>
+                                <p><strong>Payment:</strong> ${reviewingDoc.data.wise_tag ? 'Wise: ' + reviewingDoc.data.wise_tag : reviewingDoc.data.ewallet_provider ? reviewingDoc.data.ewallet_provider + ': ' + reviewingDoc.data.ewallet_account : 'Not provided'}</p>
+                              </div>
+                              <div class="agreement-text">${reviewingDoc.data.agreement_text || 'Agreement text not available'}</div>
+                              <div class="footer">
+                                <p><strong>Signed Name:</strong> ${reviewingDoc.data.signed_name}</p>
+                                <p class="signature">${reviewingDoc.data.signature_text}</p>
+                                <p><strong>Signed:</strong> ${new Date(reviewingDoc.data.signed_at).toLocaleString()}</p>
+                              </div>
+                            </body>
+                          </html>
+                        `);
+                        printWindow.document.close();
+                        printWindow.print();
+                      }}
+                      className="text-gray-600"
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Print Agreement
+                    </Button>
+                  </div>
+
                   {/* Employee Info & Signature Summary */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-gray-50 rounded-lg p-4">
@@ -360,9 +407,9 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
                       <p className="text-sm text-gray-500 mb-1">Signed Name</p>
                       <p className="font-medium">{reviewingDoc.data.signed_name}</p>
                     </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="bg-pink-50 rounded-lg p-4 border border-pink-200">
                       <p className="text-sm text-gray-500 mb-1">Digital Signature</p>
-                      <p className="text-lg font-script italic text-pink-600">{reviewingDoc.data.signature_text}</p>
+                      <p className="text-2xl font-script italic text-pink-600">{reviewingDoc.data.signature_text}</p>
                     </div>
                   </div>
                   
@@ -402,28 +449,33 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
                     )}
                   </div>
                   
-                  {/* Full Agreement Text */}
-                  <div className="border-t border-gray-200 pt-4">
-                    <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                      <FileSignature className="w-4 h-4" />
-                      Full Contractor Agreement
-                    </h4>
-                    <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
-                      <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono leading-relaxed">
+                  {/* Full Agreement Text - Styled like employee view */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="p-3 border-b border-gray-200 bg-gray-50">
+                      <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <FileSignature className="w-4 h-4" />
+                        Independent Contractor Agreement
+                      </h3>
+                    </div>
+                    <div className="p-4 max-h-80 overflow-y-auto bg-white">
+                      <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
                         {reviewingDoc.data.agreement_text || 'Agreement text not available'}
-                      </pre>
+                      </div>
                     </div>
                   </div>
                   
-                  {/* Signed At */}
-                  <div className="bg-pink-50 rounded-lg p-4 flex items-center justify-between">
+                  {/* Signed Confirmation */}
+                  <div className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-lg p-4 flex items-center justify-between border border-pink-200">
                     <div>
-                      <p className="text-sm text-gray-500 mb-1">Digitally Signed</p>
-                      <p className="font-medium text-pink-700">
-                        {new Date(reviewingDoc.data.signed_at).toLocaleString()}
+                      <p className="text-sm text-gray-600">Digitally Signed</p>
+                      <p className="font-semibold text-pink-700">
+                        {new Date(reviewingDoc.data.signed_at).toLocaleString('en-US', {
+                          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                          hour: 'numeric', minute: '2-digit'
+                        })}
                       </p>
                     </div>
-                    <CheckCircle className="w-6 h-6 text-pink-500" />
+                    <CheckCircle className="w-8 h-8 text-pink-500" />
                   </div>
                 </>
               )}
@@ -446,34 +498,34 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
                     </p>
                   </div>
                   
-                  {/* Embedded PDF Viewer */}
-                  <div className="border-t border-gray-200 pt-4">
-                    <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                      <FileText className="w-4 h-4" />
-                      W-8BEN Document Preview
-                    </h4>
-                    <div className="bg-gray-100 rounded-lg overflow-hidden" style={{ height: '400px' }}>
-                      <iframe
-                        src={`${API}/api/admin/employees/${reviewingDoc.data.employee_id}/w8ben/${reviewingDoc.data.id}/view`}
-                        className="w-full h-full border-0"
-                        title="W-8BEN Preview"
-                      />
-                    </div>
+                  {/* View/Download buttons */}
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => {
+                        window.open(`${API}/api/admin/employees/${reviewingDoc.data.employee_id}/w8ben/${reviewingDoc.data.id}/view`, '_blank');
+                      }}
+                      className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Document
+                    </Button>
+                    <Button
+                      onClick={() => handleDownloadW8ben(
+                        reviewingDoc.data.employee_id, 
+                        reviewingDoc.data.id,
+                        reviewingDoc.data.filename
+                      )}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
                   </div>
                   
-                  {/* Download Button */}
-                  <Button
-                    onClick={() => handleDownloadW8ben(
-                      reviewingDoc.data.employee_id, 
-                      reviewingDoc.data.id,
-                      reviewingDoc.data.filename
-                    )}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download Original File
-                  </Button>
+                  <p className="text-xs text-gray-500 text-center">
+                    Click "View Document" to open the W-8BEN in a new tab for review.
+                  </p>
                 </>
               )}
 

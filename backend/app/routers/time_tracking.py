@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Response
 from typing import List
 from datetime import datetime, timezone, timedelta
 import base64
@@ -721,3 +721,27 @@ async def get_employee_w9_status_admin(employee_id: str, admin: dict = Depends(g
         "reviewed_at": latest.get("reviewed_at"),
         "w9_documents": w9_docs
     }
+
+
+
+# Employee endpoint to download their own W-8BEN
+@router.get("/w8ben/{doc_id}/download")
+async def download_own_w8ben(doc_id: str, user: dict = Depends(get_current_user)):
+    """Employee endpoint to download their own W-8BEN document"""
+    w8ben_doc = await db.w8ben_documents.find_one(
+        {"id": doc_id, "employee_id": user["id"]}
+    )
+    
+    if not w8ben_doc:
+        raise HTTPException(status_code=404, detail="W-8BEN document not found")
+    
+    import base64
+    content = base64.b64decode(w8ben_doc["content"])
+    
+    return Response(
+        content=content,
+        media_type=w8ben_doc.get("content_type", "application/pdf"),
+        headers={
+            "Content-Disposition": f'inline; filename="{w8ben_doc["filename"]}"'
+        }
+    )

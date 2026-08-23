@@ -334,7 +334,7 @@ async def approve_agreement(
     
     # Also update the user document
     await db.users.update_one(
-        {"_id": ObjectId(employee_id)},
+        {"id": employee_id},
         {"$set": {"contractor_agreement_status": "approved"}}
     )
     
@@ -370,7 +370,7 @@ async def reject_agreement(
     
     # Also update the user document
     await db.users.update_one(
-        {"_id": ObjectId(employee_id)},
+        {"id": employee_id},
         {"$set": {"contractor_agreement_status": "needs_correction"}}
     )
     
