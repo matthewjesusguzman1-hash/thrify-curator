@@ -195,10 +195,14 @@ export default function EmployeeDashboard({
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   // Contractor fillable fields
   const [contractorEmail, setContractorEmail] = useState("");
-  const [contractorWiseTag, setContractorWiseTag] = useState("");
-  const [contractorEwalletProvider, setContractorEwalletProvider] = useState("");
-  const [contractorEwalletAccount, setContractorEwalletAccount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("wise"); // "wise" or "ewallet"
+  // Payment fields - user fills in what applies to them
+  const [paymentHolderName, setPaymentHolderName] = useState("");
+  const [paymentHolderEmail, setPaymentHolderEmail] = useState("");
+  const [paymentWalletProvider, setPaymentWalletProvider] = useState("");
+  const [paymentWalletNumber, setPaymentWalletNumber] = useState("");
+  const [paymentAddress, setPaymentAddress] = useState("");
+  const [paymentCountry, setPaymentCountry] = useState("");
+  const [paymentWiseTag, setPaymentWiseTag] = useState("");
   
   // Onboarding data (pre-populated from job application)
   const [onboardingData, setOnboardingData] = useState(null);
@@ -681,13 +685,15 @@ export default function EmployeeDashboard({
           
           // Pre-populate payment info if remote worker
           if (onboardingRes.data.is_remote_worker && onboardingRes.data.payment_method) {
-            if (onboardingRes.data.payment_method === 'e_wallet') {
-              setPaymentMethod('ewallet');
-              setContractorEwalletProvider(onboardingRes.data.wallet_provider || "");
-              setContractorEwalletAccount(onboardingRes.data.wallet_number || "");
-            } else if (onboardingRes.data.payment_method === 'wise_account') {
-              setPaymentMethod('wise');
-              setContractorWiseTag(onboardingRes.data.wise_tag || "");
+            // Pre-populate with whatever payment info was provided during onboarding
+            if (onboardingRes.data.wallet_provider) {
+              setPaymentWalletProvider(onboardingRes.data.wallet_provider);
+            }
+            if (onboardingRes.data.wallet_number) {
+              setPaymentWalletNumber(onboardingRes.data.wallet_number);
+            }
+            if (onboardingRes.data.wise_tag) {
+              setPaymentWiseTag(onboardingRes.data.wise_tag);
             }
           }
         }
@@ -830,15 +836,6 @@ export default function EmployeeDashboard({
       toast.error("Please enter your contact email");
       return;
     }
-    // Validate payment method fields
-    if (paymentMethod === "wise" && !contractorWiseTag) {
-      toast.error("Please enter your Wise tag");
-      return;
-    }
-    if (paymentMethod === "ewallet" && (!contractorEwalletProvider || !contractorEwalletAccount)) {
-      toast.error("Please enter your e-wallet provider and account details");
-      return;
-    }
     
     setSigningAgreement(true);
     try {
@@ -847,9 +844,14 @@ export default function EmployeeDashboard({
         signature_text: agreementSignature,
         agreed_to_terms: agreedToTerms,
         contact_email: contractorEmail,
-        wise_tag: paymentMethod === "wise" ? contractorWiseTag : null,
-        ewallet_provider: paymentMethod === "ewallet" ? contractorEwalletProvider : null,
-        ewallet_account: paymentMethod === "ewallet" ? contractorEwalletAccount : null
+        // Payment info - user fills what applies to them
+        payment_holder_name: paymentHolderName || null,
+        payment_holder_email: paymentHolderEmail || null,
+        payment_wallet_provider: paymentWalletProvider || null,
+        payment_wallet_number: paymentWalletNumber || null,
+        payment_address: paymentAddress || null,
+        payment_country: paymentCountry || null,
+        payment_wise_tag: paymentWiseTag || null
       }, getAuthHeader());
       
       toast.success("Contractor Agreement submitted for review!");
@@ -857,9 +859,13 @@ export default function EmployeeDashboard({
       setAgreementSignature("");
       setAgreedToTerms(false);
       setContractorEmail("");
-      setContractorWiseTag("");
-      setContractorEwalletProvider("");
-      setContractorEwalletAccount("");
+      setPaymentHolderName("");
+      setPaymentHolderEmail("");
+      setPaymentWalletProvider("");
+      setPaymentWalletNumber("");
+      setPaymentAddress("");
+      setPaymentCountry("");
+      setPaymentWiseTag("");
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to sign agreement");
@@ -2078,23 +2084,47 @@ export default function EmployeeDashboard({
                             <p className="text-white/50">Contact Email</p>
                             <p className="text-white font-medium">{contractorAgreement.contact_email || '-'}</p>
                           </div>
-                          {contractorAgreement.wise_tag && (
+                          {contractorAgreement.payment_holder_name && (
                             <div>
-                              <p className="text-white/50">Wise Tag</p>
-                              <p className="text-white font-medium">@{contractorAgreement.wise_tag}</p>
+                              <p className="text-white/50">Account Holder</p>
+                              <p className="text-white font-medium">{contractorAgreement.payment_holder_name}</p>
                             </div>
                           )}
-                          {contractorAgreement.ewallet_provider && (
-                            <>
-                              <div>
-                                <p className="text-white/50">E-Wallet Provider</p>
-                                <p className="text-white font-medium">{contractorAgreement.ewallet_provider}</p>
-                              </div>
-                              <div>
-                                <p className="text-white/50">Account</p>
-                                <p className="text-white font-medium">{contractorAgreement.ewallet_account}</p>
-                              </div>
-                            </>
+                          {contractorAgreement.payment_holder_email && (
+                            <div>
+                              <p className="text-white/50">Holder Email</p>
+                              <p className="text-white font-medium">{contractorAgreement.payment_holder_email}</p>
+                            </div>
+                          )}
+                          {contractorAgreement.payment_wallet_provider && (
+                            <div>
+                              <p className="text-white/50">Wallet Provider</p>
+                              <p className="text-white font-medium">{contractorAgreement.payment_wallet_provider}</p>
+                            </div>
+                          )}
+                          {contractorAgreement.payment_wallet_number && (
+                            <div>
+                              <p className="text-white/50">Wallet Number</p>
+                              <p className="text-white font-medium">{contractorAgreement.payment_wallet_number}</p>
+                            </div>
+                          )}
+                          {contractorAgreement.payment_address && (
+                            <div className="col-span-2">
+                              <p className="text-white/50">Address</p>
+                              <p className="text-white font-medium">{contractorAgreement.payment_address}</p>
+                            </div>
+                          )}
+                          {contractorAgreement.payment_country && (
+                            <div>
+                              <p className="text-white/50">Country</p>
+                              <p className="text-white font-medium">{contractorAgreement.payment_country}</p>
+                            </div>
+                          )}
+                          {contractorAgreement.payment_wise_tag && (
+                            <div>
+                              <p className="text-white/50">Wise Tag</p>
+                              <p className="text-white font-medium">@{contractorAgreement.payment_wise_tag}</p>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -2196,79 +2226,96 @@ export default function EmployeeDashboard({
                         
                         {/* Payment Method Selection */}
                         <div>
-                          <label className="text-sm text-white/70 block mb-2">Payment Method (WISE) *</label>
-                          <div className="grid grid-cols-2 gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setPaymentMethod("wise")}
-                              className={`p-3 rounded-lg border-2 text-left transition-all ${
-                                paymentMethod === "wise" 
-                                  ? 'border-[#EC4899] bg-[#EC4899]/10' 
-                                  : 'border-white/20 hover:border-white/40'
-                              }`}
-                            >
-                              <span className={`text-sm font-medium ${paymentMethod === "wise" ? 'text-[#EC4899]' : 'text-white/70'}`}>
-                                Wise Account
-                              </span>
-                              <p className="text-xs text-white/50 mt-1">Direct Wise transfer</p>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPaymentMethod("ewallet")}
-                              className={`p-3 rounded-lg border-2 text-left transition-all ${
-                                paymentMethod === "ewallet" 
-                                  ? 'border-[#EC4899] bg-[#EC4899]/10' 
-                                  : 'border-white/20 hover:border-white/40'
-                              }`}
-                            >
-                              <span className={`text-sm font-medium ${paymentMethod === "ewallet" ? 'text-[#EC4899]' : 'text-white/70'}`}>
-                                E-Wallet
-                              </span>
-                              <p className="text-xs text-white/50 mt-1">GCash, Maya, etc.</p>
-                            </button>
+                          <label className="text-sm text-white/70 block mb-2">Payment Information</label>
+                          <p className="text-xs text-white/40 mb-4">Fill in the payment details that apply to you</p>
+                          
+                          <div className="space-y-4">
+                            {/* Account Holder Info */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm text-white/70 block mb-2">Account Holder Name</label>
+                                <input
+                                  type="text"
+                                  value={paymentHolderName}
+                                  onChange={(e) => setPaymentHolderName(e.target.value)}
+                                  placeholder="Full name on account"
+                                  className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm text-white/70 block mb-2">Account Holder Email</label>
+                                <input
+                                  type="email"
+                                  value={paymentHolderEmail}
+                                  onChange={(e) => setPaymentHolderEmail(e.target.value)}
+                                  placeholder="Email linked to account"
+                                  className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Wallet Info */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm text-white/70 block mb-2">Wallet Provider</label>
+                                <input
+                                  type="text"
+                                  value={paymentWalletProvider}
+                                  onChange={(e) => setPaymentWalletProvider(e.target.value)}
+                                  placeholder="e.g., Wise, GCash, Maya, PayPal"
+                                  className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm text-white/70 block mb-2">Wallet Number / Account</label>
+                                <input
+                                  type="text"
+                                  value={paymentWalletNumber}
+                                  onChange={(e) => setPaymentWalletNumber(e.target.value)}
+                                  placeholder="Your wallet number or account"
+                                  className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Address */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm text-white/70 block mb-2">Address</label>
+                                <input
+                                  type="text"
+                                  value={paymentAddress}
+                                  onChange={(e) => setPaymentAddress(e.target.value)}
+                                  placeholder="Street address, city, state/province"
+                                  className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm text-white/70 block mb-2">Country</label>
+                                <input
+                                  type="text"
+                                  value={paymentCountry}
+                                  onChange={(e) => setPaymentCountry(e.target.value)}
+                                  placeholder="Country of residence"
+                                  className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Wise Tag */}
+                            <div>
+                              <label className="text-sm text-white/70 block mb-2">Wise Tag (if using Wise)</label>
+                              <input
+                                type="text"
+                                value={paymentWiseTag}
+                                onChange={(e) => setPaymentWiseTag(e.target.value)}
+                                placeholder="@yourtag"
+                                className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
+                              />
+                              <p className="text-xs text-white/40 mt-1">Found in Wise app under Account → Wise tag</p>
+                            </div>
                           </div>
                         </div>
-                        
-                        {/* Wise Tag Field */}
-                        {paymentMethod === "wise" && (
-                          <div>
-                            <label className="text-sm text-white/70 block mb-2">Wise Tag *</label>
-                            <input
-                              type="text"
-                              value={contractorWiseTag}
-                              onChange={(e) => setContractorWiseTag(e.target.value)}
-                              placeholder="@yourtag"
-                              className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
-                            />
-                            <p className="text-xs text-white/40 mt-1">Found in Wise app under Account → Wise tag</p>
-                          </div>
-                        )}
-                        
-                        {/* E-Wallet Fields */}
-                        {paymentMethod === "ewallet" && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm text-white/70 block mb-2">E-Wallet Provider *</label>
-                              <input
-                                type="text"
-                                value={contractorEwalletProvider}
-                                onChange={(e) => setContractorEwalletProvider(e.target.value)}
-                                placeholder="e.g., GCash, Maya, PayPal"
-                                className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-sm text-white/70 block mb-2">Account Number/Email *</label>
-                              <input
-                                type="text"
-                                value={contractorEwalletAccount}
-                                onChange={(e) => setContractorEwalletAccount(e.target.value)}
-                                placeholder="Your wallet number or email"
-                                className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
-                              />
-                            </div>
-                          </div>
-                        )}
                       </div>
                       
                       {/* Signature Fields */}
@@ -2306,7 +2353,7 @@ export default function EmployeeDashboard({
                       {/* Sign Button */}
                       <Button
                         onClick={handleSignContractorAgreement}
-                        disabled={signingAgreement || !agreedToTerms || !agreementName || !agreementSignature || !contractorEmail || (paymentMethod === "wise" ? !contractorWiseTag : (!contractorEwalletProvider || !contractorEwalletAccount))}
+                        disabled={signingAgreement || !agreedToTerms || !agreementName || !agreementSignature || !contractorEmail}
                         className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#7C3AED] hover:to-[#DB2777] text-white py-3 rounded-lg font-semibold disabled:opacity-50"
                       >
                         {signingAgreement ? (
@@ -2600,7 +2647,7 @@ export default function EmployeeDashboard({
                               onClick={async () => {
                                 try {
                                   const response = await axios.get(
-                                    `${API}/api/time/w8ben/${doc.id}/download`,
+                                    `${API}/time/w8ben/${doc.id}/download`,
                                     { ...getAuthHeader(), responseType: 'blob' }
                                   );
                                   const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
@@ -2619,7 +2666,7 @@ export default function EmployeeDashboard({
                               onClick={async () => {
                                 try {
                                   const response = await axios.get(
-                                    `${API}/api/time/w8ben/${doc.id}/download`,
+                                    `${API}/time/w8ben/${doc.id}/download`,
                                     { ...getAuthHeader(), responseType: 'blob' }
                                   );
                                   const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });

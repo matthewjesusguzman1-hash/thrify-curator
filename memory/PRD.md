@@ -238,3 +238,18 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - `GET/POST /api/forms/application-invite/{token}` - Applicant views/submits application
 - **MongoDB Collection**: `application_invites` for tracking sent invites
 - **New Page**: `/apply/:token` - Invited application form with conditional fields
+
+### Contractor Agreement & W-8BEN Updates (2026-08-23) - NEW
+- **Simplified Payment Information**: Replaced Wise/E-Wallet toggle with unified payment fields
+  - All fields are shown: Account Holder Name/Email, Wallet Provider, Wallet Number, Address, Country, Wise Tag
+  - User fills in whichever fields apply to them (more flexible)
+  - No required fields for payment - user chooses what to provide
+- **W-8BEN Viewing Fix**: 
+  - Fixed employee W-8BEN "View Document" - was using wrong API path (`/api/api/...` instead of `/api/...`)
+  - Fixed admin W-8BEN viewing - now uses authenticated blob fetch instead of direct window.open
+  - Both employee and admin can now properly view W-8BEN documents in new tab
+- **Admin Agreement Review**: 
+  - Updated payment info display to show all available fields
+  - Print/PDF template updated with new payment field format
+  - Agreement text is now properly returned from pending list endpoint
+

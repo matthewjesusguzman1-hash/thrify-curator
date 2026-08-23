@@ -23,9 +23,14 @@ class SignAgreementRequest(BaseModel):
     agreed_to_terms: bool
     # Contractor fillable fields
     contact_email: Optional[str] = None
-    wise_tag: Optional[str] = None
-    ewallet_provider: Optional[str] = None
-    ewallet_account: Optional[str] = None
+    # Payment info - user fills in what applies to them
+    payment_holder_name: Optional[str] = None
+    payment_holder_email: Optional[str] = None
+    payment_wallet_provider: Optional[str] = None
+    payment_wallet_number: Optional[str] = None
+    payment_address: Optional[str] = None
+    payment_country: Optional[str] = None
+    payment_wise_tag: Optional[str] = None
 
 
 class ReviewAgreementRequest(BaseModel):
@@ -178,9 +183,14 @@ async def get_agreement_status(current_user: dict = Depends(get_current_user)):
         "admin_feedback": agreement.get("admin_feedback"),
         # Contractor details
         "contact_email": agreement.get("contact_email"),
-        "wise_tag": agreement.get("wise_tag"),
-        "ewallet_provider": agreement.get("ewallet_provider"),
-        "ewallet_account": agreement.get("ewallet_account"),
+        # Payment info
+        "payment_holder_name": agreement.get("payment_holder_name"),
+        "payment_holder_email": agreement.get("payment_holder_email"),
+        "payment_wallet_provider": agreement.get("payment_wallet_provider"),
+        "payment_wallet_number": agreement.get("payment_wallet_number"),
+        "payment_address": agreement.get("payment_address"),
+        "payment_country": agreement.get("payment_country"),
+        "payment_wise_tag": agreement.get("payment_wise_tag"),
         "reviewed_by": agreement.get("reviewed_by")
     }
 
@@ -225,9 +235,14 @@ async def sign_agreement(
         "created_at": datetime.now(timezone.utc).isoformat(),
         # Contractor fillable fields
         "contact_email": request.contact_email or employee_email,
-        "wise_tag": request.wise_tag,
-        "ewallet_provider": request.ewallet_provider,
-        "ewallet_account": request.ewallet_account
+        # Payment info - all fields user fills in
+        "payment_holder_name": request.payment_holder_name,
+        "payment_holder_email": request.payment_holder_email,
+        "payment_wallet_provider": request.payment_wallet_provider,
+        "payment_wallet_number": request.payment_wallet_number,
+        "payment_address": request.payment_address,
+        "payment_country": request.payment_country,
+        "payment_wise_tag": request.payment_wise_tag
     }
     
     if existing:
@@ -257,6 +272,10 @@ async def get_pending_agreements(admin_user: dict = Depends(get_admin_user)):
         {"status": "pending_review"},
         {"_id": 0}
     ).to_list(100)
+    
+    # Add the agreement text to each pending agreement for review
+    for agreement in pending:
+        agreement["agreement_text"] = CONTRACTOR_AGREEMENT_TEXT
     
     return {"pending": pending, "count": len(pending)}
 
