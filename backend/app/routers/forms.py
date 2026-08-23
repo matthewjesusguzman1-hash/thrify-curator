@@ -418,13 +418,20 @@ async def submit_invited_application(
         notification_type="job_application"
     )
     
-    # Send confirmation email
-    from app.services.email_service import send_application_received_email
-    background_tasks.add_task(
-        send_application_received_email,
-        to_email=application.email,
-        applicant_name=application.full_name
-    )
+    # Send confirmation email - use simplified email for onboarding applicants
+    if invite.get("template") == "onboarding":
+        background_tasks.add_task(
+            send_onboarding_application_received_email,
+            to_email=application.email,
+            applicant_name=application.full_name
+        )
+    else:
+        from app.services.email_service import send_application_received_email
+        background_tasks.add_task(
+            send_application_received_email,
+            to_email=application.email,
+            applicant_name=application.full_name
+        )
     
     return {"success": True, "message": "Application submitted successfully"}
 

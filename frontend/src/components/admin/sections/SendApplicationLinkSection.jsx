@@ -53,13 +53,13 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
       const [invitesRes, poolRes, applicationsRes] = await Promise.all([
         axios.get(`${API}/api/admin/application-invites`, getAuthHeader()),
         axios.get(`${API}/api/admin/email-pool`, getAuthHeader()),
-        axios.get(`${API}/api/forms/submissions?type=job_application`, getAuthHeader())
+        axios.get(`${API}/api/admin/forms/job-applications`, getAuthHeader())
       ]);
       setInvites(invitesRes.data.invites || []);
       setEmailPool(poolRes.data.emails || []);
       
-      // Filter for onboarding applications
-      const allApps = applicationsRes.data.submissions || [];
+      // Filter for onboarding applications - check if they have onboarding template
+      const allApps = applicationsRes.data || [];
       const onboardingApps = allApps.filter(app => 
         app.invite_template === 'onboarding' || 
         (app.invited && invitesRes.data.invites?.some(

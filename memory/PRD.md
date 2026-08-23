@@ -104,6 +104,10 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - Only generic job applications appear in "Review Applications" tab
   - Onboarding applications (for adding someone to the system) remain separate
   - Full application details available via popup modal when clicking an application
+- **Onboarding Email Simplification (2026-08-23)**:
+  - Onboarding application "received" emails now use simplified content
+  - Removed "what happens next" content as applicants already know the process
+  - Email now shows simple "Application Received" confirmation with note about next email coming for login setup
 
 ### Recently Removed
 - AI Reports Assistant (removed 2026-05-12 per user request)

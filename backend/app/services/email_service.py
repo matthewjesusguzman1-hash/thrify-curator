@@ -1858,8 +1858,7 @@ async def send_onboarding_application_received_email(
     applicant_name: str
 ):
     """
-    Send confirmation email when an onboarding application is received.
-    Informs them about next steps (contractor agreement, W-8BEN, etc.)
+    Send simple confirmation email when an onboarding application is received.
     """
     subject = "Thrifty Curator - Application Received!"
     title = "Application Received"
@@ -1873,25 +1872,14 @@ async def send_onboarding_application_received_email(
         Thank you for completing your application! We've received your information and are reviewing it now.
     </p>
     
-    <div style="background: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 20px; margin: 25px 0;">
-        <p style="color: #166534; margin: 0 0 10px 0; font-weight: 600;">
-            ✅ What Happens Next:
+    <div style="background: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center;">
+        <p style="color: #166534; margin: 0; font-size: 18px; font-weight: 600;">
+            ✅ Application Received
         </p>
-        <p style="color: #166534; margin: 0; font-size: 14px; line-height: 1.8;">
-            Once we've set up your employee account, you'll receive a follow-up email with:
+        <p style="color: #166534; margin: 10px 0 0 0; font-size: 14px;">
+            You'll receive another email with login instructions once your account is set up.
         </p>
-        <ul style="color: #166534; margin: 10px 0 0 0; padding-left: 20px; font-size: 14px; line-height: 1.8;">
-            <li>Login instructions for the Employee Portal</li>
-            <li>A <strong>Contractor Agreement</strong> to sign digitally</li>
-            <li>Instructions for completing the <strong>W-8BEN tax form</strong></li>
-            <li>Details on setting up your payment method</li>
-            <li>Information about remote access tools (if applicable)</li>
-        </ul>
     </div>
-    
-    <p style="color: #666; font-size: 14px;">
-        Please keep an eye on your inbox. If you have any questions in the meantime, feel free to reply to this email.
-    </p>
     
     <p style="color: #333; line-height: 1.6; margin-top: 20px;">
         We're looking forward to working with you!
