@@ -284,8 +284,8 @@ async def get_employee_agreement(
     )
     
     if not agreement:
-        # Get employee info for the response
-        employee = await db.users.find_one({"_id": ObjectId(employee_id)})
+        # Get employee info for the response - use 'id' field, not _id
+        employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
         if not employee:
             raise HTTPException(status_code=404, detail="Employee not found")
         
