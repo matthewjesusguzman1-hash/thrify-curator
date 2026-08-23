@@ -20,6 +20,8 @@ class TimeEntry(BaseModel):
 
 class ClockInOut(BaseModel):
     action: str  # "in" or "out"
+    latitude: Optional[float] = None  # User's current latitude
+    longitude: Optional[float] = None  # User's current longitude
 
 
 class EditTimeEntryRequest(BaseModel):

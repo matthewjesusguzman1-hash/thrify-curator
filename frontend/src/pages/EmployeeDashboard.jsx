@@ -37,7 +37,8 @@ import {
   Smartphone,
   Bell,
   Share,
-  Plus
+  Plus,
+  Globe
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1034,7 +1035,7 @@ export default function EmployeeDashboard({
     
     setSavingAnydesk(true);
     try {
-      await axios.post(`${API}/employees/me/anydesk`, {
+      await axios.post(`${API}/time/employees/me/anydesk`, {
         anydesk_address: anydeskAddress.trim()
       }, getAuthHeader());
       
@@ -1205,9 +1206,13 @@ export default function EmployeeDashboard({
           return;
         }
         
-        // Location verified - proceed with clock in
+        // Location verified - proceed with clock in with coordinates
         try {
-          await axios.post(`${API}/time/clock`, { action: "in" }, getAuthHeader());
+          await axios.post(`${API}/time/clock`, { 
+            action: "in",
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          }, getAuthHeader());
           heavyPress(); // Strong haptic for clock in
           successFeedback();
           toast.success("Clocked in!");
@@ -1642,14 +1647,38 @@ export default function EmployeeDashboard({
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6]" />
             <div className="p-6 text-center">
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 ${
-                clockedIn 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-gray-100 text-gray-600'
-              }`} data-testid="clock-status">
-                <span className={`w-2 h-2 rounded-full ${clockedIn ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
-                {clockedIn ? 'Currently Working' : 'Not Clocked In'}
-              </div>
+              {/* Remote Worker Message - Cannot clock in directly */}
+              {isRemoteWorker() && !isAdminView ? (
+                <div className="text-center py-4">
+                  <div className="w-16 h-16 bg-purple-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <Globe className="w-8 h-8 text-purple-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#1A1A2E] mb-2">Remote Worker</h3>
+                  <p className="text-gray-600 text-sm mb-4">
+                    As a remote worker, you cannot clock in directly from the app.
+                  </p>
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-left">
+                    <p className="text-purple-800 text-sm font-medium mb-2">How to track your time:</p>
+                    <ol className="text-purple-700 text-sm space-y-2 list-decimal list-inside">
+                      <li>Connect to the company computer via AnyDesk</li>
+                      <li>Your work time is tracked automatically while connected</li>
+                      <li>Make sure to disconnect when your shift ends</li>
+                    </ol>
+                  </div>
+                  <p className="text-gray-500 text-xs mt-4">
+                    Questions? Contact your manager via the Messages section below.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 ${
+                    clockedIn 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-gray-100 text-gray-600'
+                  }`} data-testid="clock-status">
+                    <span className={`w-2 h-2 rounded-full ${clockedIn ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                    {clockedIn ? 'Currently Working' : 'Not Clocked In'}
+                  </div>
 
               {/* Location Status Indicator - Only show when there's a status to display, hide in admin view */}
               {!isAdminView && locationStatus.denied ? (
@@ -1778,6 +1807,8 @@ export default function EmployeeDashboard({
                   </>
                 )}
               </button>
+                </>
+              )}
             </div>
           </div>
 

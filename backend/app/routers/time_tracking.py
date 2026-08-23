@@ -69,6 +69,31 @@ def round_up_to_minute(seconds: float) -> float:
     return total_minutes / 60
 
 
+# Geofence configuration - Business location coordinates (Omaha, NE area)
+BUSINESS_LATITUDE = 41.13063
+BUSINESS_LONGITUDE = -95.99024
+GEOFENCE_RADIUS_METERS = 3219  # ~2 miles in meters for GPS variance (matching frontend)
+
+def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculate distance between two coordinates in meters using Haversine formula"""
+    R = 6371000  # Earth's radius in meters
+    
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    
+    a = math.sin(delta_phi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    
+    return R * c
+
+def is_within_geofence(latitude: float, longitude: float) -> tuple[bool, float]:
+    """Check if coordinates are within the business geofence. Returns (is_within, distance_meters)"""
+    distance = calculate_distance(latitude, longitude, BUSINESS_LATITUDE, BUSINESS_LONGITUDE)
+    return distance <= GEOFENCE_RADIUS_METERS, distance
+
+
 @router.post("/clock", response_model=TimeEntry)
 async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user)):
     now = datetime.now(timezone.utc)
@@ -80,6 +105,29 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
     display_name = "Administrator" if user.get("role") == "admin" else user["name"]
     
     if action.action == "in":
+        # Check if user is a remote worker - they cannot clock in directly
+        if user.get("is_remote_worker"):
+            raise HTTPException(
+                status_code=403, 
+                detail="Remote workers cannot clock in directly. Please use AnyDesk to connect to the company computer."
+            )
+        
+        # Check geofencing - must be within business location to clock in
+        # Skip geofence check for admin users
+        if user.get("role") != "admin":
+            if action.latitude is None or action.longitude is None:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Location access is required to clock in. Please enable location services."
+                )
+            
+            is_within, distance = is_within_geofence(action.latitude, action.longitude)
+            if not is_within:
+                raise HTTPException(
+                    status_code=403, 
+                    detail=f"You must be at the business location to clock in. You are {int(distance)} meters away."
+                )
+        
         # Check if already clocked in
         active = await db.time_entries.find_one(
             {"user_id": user["id"], "clock_out": None}, {"_id": 0}
