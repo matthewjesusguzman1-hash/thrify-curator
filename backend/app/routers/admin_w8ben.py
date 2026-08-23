@@ -10,6 +10,8 @@ import os
 
 from app.database import db
 from app.dependencies import get_admin_user, get_current_user
+from app.models.notifications import AdminNotification
+from app.services.apns_service import send_admin_push_notification
 
 router = APIRouter(prefix="/admin", tags=["Admin - W-8BEN Management"])
 
@@ -339,6 +341,29 @@ async def employee_upload_w8ben(file: UploadFile = File(...), user: dict = Depen
             "tax_form_type": "W-8BEN"
         }}
     )
+    
+    # Get employee display name
+    display_name = user.get("name", user.get("email", "Employee"))
+    
+    # Create W-8BEN submission notification for admin
+    notification = AdminNotification(
+        type="w8ben_submission",
+        employee_id=user["id"],
+        employee_name=display_name,
+        message=f"{display_name} submitted a W-8BEN form",
+        details={"filename": file.filename, "time": w8ben_doc["uploaded_at"]}
+    )
+    await db.admin_notifications.insert_one(notification.model_dump())
+    
+    # Send push notification
+    try:
+        await send_admin_push_notification(
+            title="W-8BEN Submitted",
+            body=f"{display_name} submitted a W-8BEN form for review",
+            notification_type="w8ben_submission"
+        )
+    except Exception as e:
+        print(f"Failed to send W-8BEN push notification: {e}")
     
     return {
         "message": "W-8BEN uploaded successfully",

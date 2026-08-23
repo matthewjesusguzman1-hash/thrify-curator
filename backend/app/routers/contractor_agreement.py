@@ -13,6 +13,8 @@ from bson import ObjectId
 
 from app.database import db
 from app.dependencies import get_current_user, get_admin_user
+from app.models.notifications import AdminNotification
+from app.services.apns_service import send_admin_push_notification
 
 router = APIRouter(prefix="/contractor-agreement", tags=["Contractor Agreement"])
 
@@ -254,6 +256,26 @@ async def sign_agreement(
         )
     else:
         await db.contractor_agreements.insert_one(agreement_data)
+    
+    # Create contractor agreement submission notification for admin
+    notification = AdminNotification(
+        type="contractor_agreement_submission",
+        employee_id=employee_id,
+        employee_name=employee_name,
+        message=f"{employee_name} signed the Contractor Agreement",
+        details={"signed_at": agreement_data["signed_at"], "email": employee_email}
+    )
+    await db.admin_notifications.insert_one(notification.model_dump())
+    
+    # Send push notification
+    try:
+        await send_admin_push_notification(
+            title="Contractor Agreement Signed",
+            body=f"{employee_name} signed the Contractor Agreement - pending review",
+            notification_type="contractor_agreement_submission"
+        )
+    except Exception as e:
+        print(f"Failed to send contractor agreement push notification: {e}")
     
     return {
         "success": True,
