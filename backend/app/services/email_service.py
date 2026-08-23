@@ -1808,12 +1808,12 @@ async def send_onboarding_followup_email(
         <p style="color: white; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">
             Your Login Information
         </p>
-        <p style="color: white; margin: 0; font-size: 14px;">
-            Email: <strong>{to_email}</strong><br>
-            <span style="font-size: 13px; opacity: 0.9;">You can set your password when you first log in</span>
+        <p style="color: #d1fae5; margin: 0; font-size: 14px;">
+            Email: <strong style="color: white; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 4px;">{to_email}</strong><br>
+            <span style="font-size: 13px; color: #d1fae5;">You can set your password when you first log in</span>
         </p>
         <div style="margin-top: 15px;">
-            <a href="{app_url}/admin" 
+            <a href="{app_url}/login" 
                style="background: white; color: #059669; text-decoration: none; 
                       padding: 12px 30px; border-radius: 25px; font-weight: 600; 
                       display: inline-block;">

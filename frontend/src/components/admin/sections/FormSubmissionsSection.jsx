@@ -67,10 +67,9 @@ export default function FormSubmissionsSection({
   onViewConsignorPortal
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeFormTab, setActiveFormTab] = useState("job_applications");
+  const [activeFormTab, setActiveFormTab] = useState("consignment_inquiries");
   const [formSearchQuery, setFormSearchQuery] = useState("");
   const [sortConfig, setSortConfig] = useState({
-    jobApplications: { key: "submitted_at", direction: "desc" },
     consignmentInquiries: { key: "submitted_at", direction: "desc" },
     consignmentAgreements: { key: "submitted_at", direction: "desc" },
     updates: { key: "submitted_at", direction: "desc" }
@@ -547,25 +546,8 @@ Thrifty Curator Team`;
             className="overflow-hidden"
           >
             <div className="mt-6 pt-6 border-t border-[#eee]">
-              {/* Form Type Tabs */}
+              {/* Form Type Tabs - Job Applications moved to Hiring section */}
               <div className="flex flex-wrap gap-2 mb-6">
-                <button
-                  onClick={() => setActiveFormTab("job_applications")}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeFormTab === "job_applications"
-                      ? "bg-gradient-to-r from-[#FF1493] to-[#E91E8C] text-white shadow-md"
-                      : "bg-[#F9F6F7] text-[#666] hover:bg-[#F0EAEB]"
-                  }`}
-                  data-testid="tab-job-applications"
-                >
-                  <Briefcase className="w-4 h-4" />
-                  Job Applications
-                  {formsSummary?.job_applications?.new > 0 && (
-                    <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                      {formsSummary.job_applications.new}
-                    </span>
-                  )}
-                </button>
                 <button
                   onClick={() => setActiveFormTab("consignment_inquiries")}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${

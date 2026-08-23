@@ -202,6 +202,18 @@ export default function EmployeeDashboard({
   // Onboarding data (pre-populated from job application)
   const [onboardingData, setOnboardingData] = useState(null);
   
+  // Determine if user is a remote worker (check onboarding data, user record, or localStorage)
+  const isRemoteWorker = () => {
+    // Check onboarding data first
+    if (onboardingData?.is_remote_worker) return true;
+    // Check stored user data
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    if (storedUser?.is_remote_worker) return true;
+    // Check admin view employee
+    if (adminViewEmployee?.is_remote_worker) return true;
+    return false;
+  };
+  
   // 1099 documents state
   const [my1099s, setMy1099s] = useState(initialData?.my1099s || { documents: [], count: 0 });
   const [loading1099s, setLoading1099s] = useState(false);
@@ -1651,7 +1663,7 @@ export default function EmployeeDashboard({
           </div>
 
           {/* W-9 Tax Form Section - Collapsible (Hidden for remote workers who use W-8BEN instead) */}
-          {!onboardingData?.is_remote_worker && (
+          {!isRemoteWorker() && (
           <Collapsible open={w9Expanded} onOpenChange={setW9Expanded}>
             <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl shadow-2xl overflow-hidden border border-white/10" data-testid="w9-section">
               <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493]" />
@@ -2326,7 +2338,7 @@ export default function EmployeeDashboard({
                       W-8BEN Tax Form
                     </h2>
                     {/* Action Required badge for remote workers without submitted W-8BEN */}
-                    {onboardingData?.is_remote_worker && (!w8benStatus?.status || w8benStatus?.status === 'not_submitted') && (
+                    {isRemoteWorker() && (!w8benStatus?.status || w8benStatus?.status === 'not_submitted' || w8benStatus?.status === 'not_applicable') && (
                       <span className="bg-red-500/90 text-white px-2 py-0.5 rounded-full text-xs font-bold animate-pulse">
                         Action Required
                       </span>
@@ -2347,59 +2359,52 @@ export default function EmployeeDashboard({
                     If you are a foreign individual working for this company, submit your W-8BEN form here to certify your foreign status for U.S. tax purposes.
                   </p>
 
-                  {/* Embedded W-8BEN Form and Instructions */}
-                  <div className="mb-6 rounded-xl overflow-hidden border border-white/20">
-                    {/* Page Navigation Header */}
-                    <div className="bg-gradient-to-r from-[#FFE66D]/20 to-[#4ECDC4]/20 p-3 flex items-center justify-between">
+                  {/* W-8BEN Status and Links - Following W-9 pattern */}
+                  <div className="mb-6 p-4 bg-white/5 rounded-xl border border-white/10">
+                    <div className="flex items-center justify-between mb-4">
                       <h3 className="font-semibold text-white flex items-center gap-2">
                         <FileText className="w-4 h-4 text-[#FFE66D]" />
-                        W-8BEN Form & Instructions
+                        W-8BEN Form
                       </h3>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleDownloadBlankW8ben}
-                          className="text-[#FFE66D] border-[#FFE66D]/50 hover:bg-[#FFE66D]/10 bg-transparent text-xs"
-                        >
-                          Download PDFs
-                        </Button>
-                      </div>
+                      {w8benStatus?.status === 'submitted' || w8benStatus?.status === 'approved' ? (
+                        <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium">
+                          Submitted
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 bg-[#FFE66D]/20 text-[#FFE66D] rounded-full text-sm font-medium">
+                          Not Submitted
+                        </span>
+                      )}
                     </div>
                     
-                    {/* Scrollable PDF Container */}
-                    <div className="bg-gray-100">
-                      {/* Page 1: W-8BEN Form */}
-                      <div className="border-b-4 border-[#FFE66D]">
-                        <div className="bg-[#FFE66D] text-gray-900 px-3 py-1 text-sm font-semibold">
-                          Page 1: W-8BEN Form (Fill this out)
-                        </div>
-                        <iframe
-                          src="https://www.irs.gov/pub/irs-pdf/fw8ben.pdf"
-                          className="w-full"
-                          style={{ height: '500px' }}
-                          title="W-8BEN Form"
-                        />
-                      </div>
+                    <div className="space-y-3">
+                      <p className="text-sm text-white/70">
+                        {w8benStatus?.status === 'submitted' || w8benStatus?.status === 'approved' 
+                          ? "Your W-8BEN has been submitted. You can submit an updated form if needed."
+                          : "No W-8BEN submissions yet. Download the form, fill it out, and upload it below."
+                        }
+                      </p>
                       
-                      {/* Page 2: Instructions */}
-                      <div>
-                        <div className="bg-[#4ECDC4] text-gray-900 px-3 py-1 text-sm font-semibold">
-                          Page 2: Instructions (Scroll down to read)
-                        </div>
-                        <iframe
-                          src="https://www.irs.gov/pub/irs-pdf/iw8ben.pdf"
-                          className="w-full"
-                          style={{ height: '500px' }}
-                          title="W-8BEN Instructions"
-                        />
+                      <div className="flex flex-wrap gap-2">
+                        <a
+                          href="https://www.irs.gov/pub/irs-pdf/fw8ben.pdf"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFE66D]/20 hover:bg-[#FFE66D]/30 text-[#FFE66D] rounded-lg text-sm font-medium transition-colors"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download W-8BEN Form
+                        </a>
+                        <a
+                          href="https://www.irs.gov/pub/irs-pdf/iw8ben.pdf"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white/80 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
+                          View Instructions
+                        </a>
                       </div>
-                    </div>
-                    
-                    {/* Quick Reference */}
-                    <div className="bg-white/5 p-3 text-xs text-white/60">
-                      <strong className="text-white/80">Quick tip:</strong> Scroll within each section to view the full document. 
-                      The form is on top, instructions are below.
                     </div>
                   </div>
 

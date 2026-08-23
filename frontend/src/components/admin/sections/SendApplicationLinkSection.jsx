@@ -18,15 +18,15 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 // Field options that can be toggled
 const FIELD_OPTIONS = [
-  { id: "phone", label: "Phone Number", default: false },
-  { id: "address", label: "Current Address", default: true },
-  { id: "resume_text", label: "Experience / Resume", default: true },
-  { id: "work_history", label: "Work History", default: false },
-  { id: "why_join", label: "Why Join Us", default: true },
-  { id: "availability", label: "Availability", default: true },
-  { id: "tasks_able_to_perform", label: "Tasks They Can Perform", default: true },
-  { id: "background_check_consent", label: "Background Check Consent", default: true },
-  { id: "has_reliable_transportation", label: "Reliable Transportation", default: true },
+  { id: "phone", label: "Phone Number", default: false, onboardingDefault: false },
+  { id: "address", label: "Current Address", default: true, onboardingDefault: true },
+  { id: "resume_text", label: "Experience / Resume", default: true, onboardingDefault: false },
+  { id: "work_history", label: "Work History", default: false, onboardingDefault: false },
+  { id: "why_join", label: "Why Join Us", default: true, onboardingDefault: false },
+  { id: "availability", label: "Availability", default: true, onboardingDefault: false },
+  { id: "tasks_able_to_perform", label: "Tasks They Can Perform", default: true, onboardingDefault: false },
+  { id: "background_check_consent", label: "Background Check Consent", default: true, onboardingDefault: true },
+  { id: "has_reliable_transportation", label: "Reliable Transportation", default: true, onboardingDefault: false },
 ];
 
 export default function SendApplicationLinkSection({ getAuthHeader }) {
@@ -330,18 +330,38 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
                                   </Button>
                                 </>
                               ) : (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setSelectedApplication(app);
-                                    setShowFollowupModal(true);
-                                  }}
-                                  className="text-purple-600 border-purple-300 hover:bg-purple-50"
-                                >
-                                  <MailCheck className="w-4 h-4 mr-1" />
-                                  Send Onboarding Email
-                                </Button>
+                                <div className="flex flex-col gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedApplication(app);
+                                      setShowFollowupModal(true);
+                                    }}
+                                    className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                                  >
+                                    <MailCheck className="w-4 h-4 mr-1" />
+                                    Send Onboarding Email
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={async () => {
+                                      if (!window.confirm('Delete this application? (The employee account will remain)')) return;
+                                      try {
+                                        await axios.delete(`${API}/api/admin/forms/job-applications/${app.id}`, getAuthHeader());
+                                        toast.success('Application deleted');
+                                        fetchData();
+                                      } catch (error) {
+                                        toast.error('Failed to delete');
+                                      }
+                                    }}
+                                    className="text-gray-400 hover:text-red-500 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-1" />
+                                    Delete
+                                  </Button>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -433,6 +453,18 @@ function SendInviteModal({ onClose, onSent, emailPool, getAuthHeader }) {
   );
   const [sending, setSending] = useState(false);
   const [showEmailDropdown, setShowEmailDropdown] = useState(false);
+
+  // Update required fields when template changes
+  const handleTemplateChange = (newTemplate) => {
+    setTemplate(newTemplate);
+    if (newTemplate === 'onboarding') {
+      // For onboarding (remote workers), only address and background consent
+      setRequiredFields(FIELD_OPTIONS.filter(f => f.onboardingDefault).map(f => f.id));
+    } else {
+      // For generic applications, use standard defaults
+      setRequiredFields(FIELD_OPTIONS.filter(f => f.default).map(f => f.id));
+    }
+  };
 
   const handleFieldToggle = (fieldId, checked) => {
     if (checked) {
@@ -543,7 +575,7 @@ function SendInviteModal({ onClose, onSent, emailPool, getAuthHeader }) {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setTemplate('generic')}
+                onClick={() => handleTemplateChange('generic')}
                 className={`p-4 rounded-xl border-2 text-left transition-all ${
                   template === 'generic' 
                     ? 'border-emerald-500 bg-emerald-50' 
@@ -556,7 +588,7 @@ function SendInviteModal({ onClose, onSent, emailPool, getAuthHeader }) {
               </button>
               <button
                 type="button"
-                onClick={() => setTemplate('onboarding')}
+                onClick={() => handleTemplateChange('onboarding')}
                 className={`p-4 rounded-xl border-2 text-left transition-all ${
                   template === 'onboarding' 
                     ? 'border-purple-500 bg-purple-50' 
@@ -762,7 +794,8 @@ function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
   const [creating, setCreating] = useState(false);
   
   // Pay rate - defaults based on remote worker status
-  const isRemote = application?.is_remote_worker || false;
+  // Onboarding applications are for remote workers, so check invite_template too
+  const isRemote = application?.is_remote_worker || application?.invite_template === 'onboarding';
   const [hourlyRate, setHourlyRate] = useState(isRemote ? '3.00' : '20.00');
 
   const handleCreate = async () => {
@@ -885,7 +918,7 @@ function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
             <ul className="text-xs text-green-600 mt-2 ml-5 space-y-1 list-disc">
               <li>Login instructions for the Employee Portal (email-based login)</li>
               {isRemote && <li>AnyDesk remote access code (1 396 262 135)</li>}
-              <li>Reminders about Contractor Agreement & {isRemote ? 'W-8BEN' : 'W-9'} forms</li>
+              <li>Reminders to complete required forms (Contractor Agreement, {isRemote ? 'W-8BEN' : 'W-9'})</li>
               <li>Option to set up a password for added security</li>
             </ul>
           </div>
