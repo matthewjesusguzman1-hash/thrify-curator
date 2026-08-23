@@ -89,6 +89,7 @@ import ApplicantTestsSection from "@/components/admin/sections/ApplicantTestsSec
 import EmployeeTerminationsSection from "@/components/admin/sections/EmployeeTerminationsSection";
 import PendingDocumentsSection from "@/components/admin/sections/PendingDocumentsSection";
 import SendApplicationLinkSection from "@/components/admin/sections/SendApplicationLinkSection";
+import AllApplicationsSection from "@/components/admin/sections/AllApplicationsSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import WebPushSettings from "@/components/WebPushSettings";
@@ -3685,6 +3686,12 @@ export default function AdminDashboard() {
               badge="Applications & Interviews"
               testId="group-hiring"
             >
+              {/* All Applications - View all job applications */}
+              <div data-testid="all-applications-section">
+                <AllApplicationsSection getAuthHeader={getAuthHeader} />
+              </div>
+              
+              {/* Onboarding & Applications - Send invites, set up logins */}
               <div data-testid="send-application-link-section">
                 <SendApplicationLinkSection getAuthHeader={getAuthHeader} />
               </div>
