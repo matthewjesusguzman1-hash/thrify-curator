@@ -18,7 +18,9 @@ from app.services.email_service import (
     send_approval_notification,
     send_test_email,
     get_email_status,
-    send_consignment_inquiry_confirmation
+    send_consignment_inquiry_confirmation,
+    send_onboarding_followup_email,
+    send_onboarding_application_received_email
 )
 from app.services.apns_service import send_admin_push_notification
 
@@ -51,6 +53,12 @@ class InvitedJobApplication(BaseModel):
     has_reliable_transportation: Optional[bool] = None
     additional_info: Optional[str] = ""
     preferred_contact: str = "email"
+    # Remote worker fields (only shown if is_remote_worker is True)
+    is_remote_worker: Optional[bool] = False
+    payment_method: Optional[str] = None  # "e_wallet" or "wise_account"
+    wallet_provider: Optional[str] = None  # For e-wallet: provider name
+    wallet_number: Optional[str] = None    # For e-wallet: wallet number
+    wise_tag: Optional[str] = None         # For Wise: tag name
 
 # Ensure upload directory exists
 UPLOAD_DIR = "/app/uploads/consignment_photos"
@@ -258,6 +266,54 @@ async def delete_application_invite(invite_id: str, admin: dict = Depends(get_ad
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Invite not found")
     return {"success": True}
+
+
+class OnboardingFollowupRequest(BaseModel):
+    email: EmailStr
+    employee_name: str
+    include_anydesk: bool = False
+
+
+@router.post("/admin/send-onboarding-followup")
+async def send_onboarding_followup(
+    request: OnboardingFollowupRequest,
+    background_tasks: BackgroundTasks,
+    admin: dict = Depends(get_admin_user)
+):
+    """
+    Send onboarding follow-up email to a new employee.
+    This should be sent AFTER admin confirms they have login access.
+    """
+    import os
+    app_url = os.environ.get("FRONTEND_URL", "https://thrifty-curator.com")
+    
+    # Send the email
+    background_tasks.add_task(
+        send_onboarding_followup_email,
+        to_email=request.email,
+        employee_name=request.employee_name,
+        include_anydesk=request.include_anydesk,
+        app_url=app_url
+    )
+    
+    # Log the action
+    await db.onboarding_emails.insert_one({
+        "email": request.email,
+        "employee_name": request.employee_name,
+        "include_anydesk": request.include_anydesk,
+        "sent_at": datetime.now(timezone.utc).isoformat(),
+        "sent_by": admin.get("name", "Admin"),
+        "type": "followup"
+    })
+    
+    return {"success": True, "message": f"Onboarding follow-up email sent to {request.email}"}
+
+
+@router.get("/admin/onboarding-emails")
+async def get_onboarding_emails(admin: dict = Depends(get_admin_user)):
+    """Get history of sent onboarding emails"""
+    emails = await db.onboarding_emails.find({}, {"_id": 0}).sort("sent_at", -1).to_list(200)
+    return {"emails": emails}
 
 
 @router.get("/forms/application-invite/{token}")

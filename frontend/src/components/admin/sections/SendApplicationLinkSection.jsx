@@ -4,7 +4,8 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Send, Mail, Users, CheckCircle, Clock, X, ChevronDown, 
-  FileText, UserPlus, Loader2, ExternalLink, Trash2
+  FileText, UserPlus, Loader2, ExternalLink, Trash2, User,
+  Globe, Briefcase, MailCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,8 +31,12 @@ const FIELD_OPTIONS = [
 
 export default function SendApplicationLinkSection({ getAuthHeader }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState('invites'); // 'invites' or 'onboarding'
   const [showSendModal, setShowSendModal] = useState(false);
+  const [showFollowupModal, setShowFollowupModal] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState(null);
   const [invites, setInvites] = useState([]);
+  const [onboardingApplications, setOnboardingApplications] = useState([]);
   const [emailPool, setEmailPool] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -44,12 +49,23 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [invitesRes, poolRes] = await Promise.all([
+      const [invitesRes, poolRes, applicationsRes] = await Promise.all([
         axios.get(`${API}/api/admin/application-invites`, getAuthHeader()),
-        axios.get(`${API}/api/admin/email-pool`, getAuthHeader())
+        axios.get(`${API}/api/admin/email-pool`, getAuthHeader()),
+        axios.get(`${API}/api/forms/submissions?type=job_application`, getAuthHeader())
       ]);
       setInvites(invitesRes.data.invites || []);
       setEmailPool(poolRes.data.emails || []);
+      
+      // Filter for onboarding applications
+      const allApps = applicationsRes.data.submissions || [];
+      const onboardingApps = allApps.filter(app => 
+        app.invite_template === 'onboarding' || 
+        (app.invited && invitesRes.data.invites?.some(
+          inv => inv.email === app.email && inv.template === 'onboarding'
+        ))
+      );
+      setOnboardingApplications(onboardingApps);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -90,6 +106,8 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
     });
   };
 
+  const onboardingInvites = invites.filter(inv => inv.template === 'onboarding');
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="send-application-link-section">
       {/* Header */}
@@ -102,8 +120,10 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
             <UserPlus className="w-5 h-5 text-white" />
           </div>
           <div className="text-left">
-            <h3 className="font-semibold text-gray-900">Send Application Link</h3>
-            <p className="text-sm text-gray-500">{invites.length} invite{invites.length !== 1 ? 's' : ''} sent</p>
+            <h3 className="font-semibold text-gray-900">Onboarding & Applications</h3>
+            <p className="text-sm text-gray-500">
+              {invites.length} invite{invites.length !== 1 ? 's' : ''} sent • {onboardingApplications.length} onboarding
+            </p>
           </div>
         </div>
         <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
@@ -119,50 +139,169 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
             className="border-t border-gray-200"
           >
             <div className="p-4 space-y-4">
-              {/* Send New Invite Button */}
-              <Button
-                onClick={() => setShowSendModal(true)}
-                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
-                data-testid="open-send-invite-modal"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                Send Application Invite
-              </Button>
+              {/* Tabs */}
+              <div className="flex gap-2 border-b border-gray-200 pb-2">
+                <button
+                  onClick={() => setActiveTab('invites')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'invites' 
+                      ? 'bg-emerald-100 text-emerald-700' 
+                      : 'text-gray-500 hover:bg-gray-100'
+                  }`}
+                >
+                  <Send className="w-4 h-4 inline mr-2" />
+                  Send Invites
+                </button>
+                <button
+                  onClick={() => setActiveTab('onboarding')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'onboarding' 
+                      ? 'bg-purple-100 text-purple-700' 
+                      : 'text-gray-500 hover:bg-gray-100'
+                  }`}
+                >
+                  <Globe className="w-4 h-4 inline mr-2" />
+                  Onboarding ({onboardingApplications.length})
+                </button>
+              </div>
 
-              {/* Sent Invites List */}
-              {loading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                </div>
-              ) : invites.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Mail className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                  <p>No invites sent yet</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <h4 className="font-medium text-gray-700 text-sm">Sent Invites</h4>
-                  {invites.map(invite => (
-                    <div key={invite.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-gray-900 truncate">{invite.email}</p>
-                        <p className="text-xs text-gray-500">
-                          Sent {formatDate(invite.sent_at)} • {invite.template === 'onboarding' ? 'Onboarding' : 'Generic'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 ml-2">
-                        {getStatusBadge(invite.status)}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(invite.id)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+              {/* Send Invites Tab */}
+              {activeTab === 'invites' && (
+                <>
+                  {/* Send New Invite Button */}
+                  <Button
+                    onClick={() => setShowSendModal(true)}
+                    className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                    data-testid="open-send-invite-modal"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Application Invite
+                  </Button>
+
+                  {/* Sent Invites List */}
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                     </div>
-                  ))}
+                  ) : invites.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Mail className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                      <p>No invites sent yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-gray-700 text-sm">Sent Invites</h4>
+                      {invites.map(invite => (
+                        <div key={invite.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-gray-900 truncate">{invite.email}</p>
+                            <p className="text-xs text-gray-500">
+                              Sent {formatDate(invite.sent_at)} • 
+                              <span className={invite.template === 'onboarding' ? 'text-purple-600 font-medium' : ''}>
+                                {invite.template === 'onboarding' ? ' Onboarding' : ' Generic'}
+                              </span>
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 ml-2">
+                            {getStatusBadge(invite.status)}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(invite.id)}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Onboarding Tab */}
+              {activeTab === 'onboarding' && (
+                <div className="space-y-4">
+                  {/* Info Banner */}
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                    <p className="text-sm text-purple-700">
+                      <Globe className="w-4 h-4 inline mr-1" />
+                      Onboarding applications are for remote workers. After setting up their employee account, send them a follow-up email with login instructions.
+                    </p>
+                  </div>
+
+                  {loading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                    </div>
+                  ) : onboardingApplications.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Users className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                      <p>No onboarding applications yet</p>
+                      <p className="text-xs mt-1">Send an onboarding invite to get started</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {onboardingApplications.map(app => (
+                        <div key={app.id} className="border border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-purple-500" />
+                                <p className="font-semibold text-gray-900">{app.full_name}</p>
+                                {app.is_remote_worker && (
+                                  <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                    Remote
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600 mt-1">{app.email}</p>
+                              {app.is_remote_worker && app.payment_method && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Payment: {app.payment_method === 'e_wallet' 
+                                    ? `${app.wallet_provider} - ${app.wallet_number}` 
+                                    : `Wise @${app.wise_tag}`}
+                                </p>
+                              )}
+                              <p className="text-xs text-gray-400 mt-1">
+                                Applied: {formatDate(app.submitted_at || app.created_at)}
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedApplication(app);
+                                  setShowFollowupModal(true);
+                                }}
+                                className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                              >
+                                <MailCheck className="w-4 h-4 mr-1" />
+                                Send Onboarding Email
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Send to someone not in list */}
+                  <div className="pt-4 border-t border-gray-200">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedApplication(null);
+                        setShowFollowupModal(true);
+                      }}
+                      className="w-full text-gray-600 border-gray-300"
+                    >
+                      <Mail className="w-4 h-4 mr-2" />
+                      Send Onboarding Email to Someone Else
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -170,7 +309,7 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
         )}
       </AnimatePresence>
 
-      {/* Send Modal */}
+      {/* Send Invite Modal */}
       {showSendModal && (
         <SendInviteModal
           onClose={() => setShowSendModal(false)}
@@ -179,6 +318,23 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
             fetchData();
           }}
           emailPool={emailPool}
+          getAuthHeader={getAuthHeader}
+        />
+      )}
+
+      {/* Send Onboarding Follow-up Modal */}
+      {showFollowupModal && (
+        <SendFollowupModal
+          application={selectedApplication}
+          onClose={() => {
+            setShowFollowupModal(false);
+            setSelectedApplication(null);
+          }}
+          onSent={() => {
+            setShowFollowupModal(false);
+            setSelectedApplication(null);
+            toast.success('Onboarding email sent!');
+          }}
           getAuthHeader={getAuthHeader}
         />
       )}
@@ -261,41 +417,39 @@ function SendInviteModal({ onClose, onSent, emailPool, getAuthHeader }) {
           </button>
         </div>
 
-        {/* Content */}
+        {/* Body */}
         <div className="p-6 overflow-y-auto flex-1 space-y-5">
           {/* Email Input with Dropdown */}
           <div className="relative">
-            <Label className="text-sm font-medium text-gray-700 mb-2 block">Email Address *</Label>
+            <Label className="text-sm font-medium text-gray-700 mb-1 block">Email Address *</Label>
             <Input
               type="email"
               value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setShowEmailDropdown(true);
-              }}
+              onChange={(e) => setEmail(e.target.value)}
               onFocus={() => setShowEmailDropdown(true)}
-              placeholder="Enter email or select from pool"
-              className="w-full"
+              placeholder="Enter email address"
+              className="border-2 focus:border-emerald-500"
               data-testid="invite-email-input"
             />
             
-            {/* Email Dropdown */}
-            {showEmailDropdown && filteredPool.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                {filteredPool.slice(0, 10).map((item, idx) => (
+            {/* Email Pool Dropdown */}
+            {showEmailDropdown && filteredPool.length > 0 && email && (
+              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                {filteredPool.slice(0, 5).map((person, idx) => (
                   <button
                     key={idx}
+                    type="button"
                     onClick={() => {
-                      setEmail(item.email);
+                      setEmail(person.email);
                       setShowEmailDropdown(false);
                     }}
-                    className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center justify-between"
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2"
                   >
+                    <User className="w-4 h-4 text-gray-400" />
                     <div>
-                      <p className="font-medium text-gray-900">{item.name || item.email}</p>
-                      <p className="text-xs text-gray-500">{item.email}</p>
+                      <p className="text-sm font-medium text-gray-900">{person.name}</p>
+                      <p className="text-xs text-gray-500">{person.email}</p>
                     </div>
-                    <span className="text-xs text-gray-400 capitalize">{item.source}</span>
                   </button>
                 ))}
               </div>
@@ -304,94 +458,213 @@ function SendInviteModal({ onClose, onSent, emailPool, getAuthHeader }) {
 
           {/* Template Selection */}
           <div>
-            <Label className="text-sm font-medium text-gray-700 mb-2 block">Email Template</Label>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">Application Type</Label>
             <div className="grid grid-cols-2 gap-3">
               <button
+                type="button"
                 onClick={() => setTemplate('generic')}
-                className={`p-4 rounded-lg border-2 text-left transition-all ${
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
                   template === 'generic' 
                     ? 'border-emerald-500 bg-emerald-50' 
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <Mail className="w-4 h-4 text-emerald-600" />
-                  <span className="font-medium text-gray-900">Please Apply</span>
-                </div>
-                <p className="text-xs text-gray-500">Generic invitation to apply</p>
+                <Briefcase className={`w-5 h-5 mb-2 ${template === 'generic' ? 'text-emerald-600' : 'text-gray-400'}`} />
+                <p className="font-medium text-gray-900">Generic</p>
+                <p className="text-xs text-gray-500 mt-1">Standard job application</p>
               </button>
-              
               <button
+                type="button"
                 onClick={() => setTemplate('onboarding')}
-                className={`p-4 rounded-lg border-2 text-left transition-all ${
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
                   template === 'onboarding' 
-                    ? 'border-emerald-500 bg-emerald-50' 
+                    ? 'border-purple-500 bg-purple-50' 
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <FileText className="w-4 h-4 text-teal-600" />
-                  <span className="font-medium text-gray-900">Onboarding</span>
-                </div>
-                <p className="text-xs text-gray-500">Follow-up / onboarding process</p>
+                <Globe className={`w-5 h-5 mb-2 ${template === 'onboarding' ? 'text-purple-600' : 'text-gray-400'}`} />
+                <p className="font-medium text-gray-900">Onboarding</p>
+                <p className="text-xs text-gray-500 mt-1">For remote workers</p>
               </button>
             </div>
-          </div>
-
-          {/* Custom Message */}
-          <div>
-            <Label className="text-sm font-medium text-gray-700 mb-2 block">Custom Message (Optional)</Label>
-            <Textarea
-              value={customMessage}
-              onChange={(e) => setCustomMessage(e.target.value)}
-              placeholder="Add a personal note to the email..."
-              className="min-h-[80px]"
-            />
           </div>
 
           {/* Required Fields */}
           <div>
             <Label className="text-sm font-medium text-gray-700 mb-2 block">Required Fields</Label>
-            <p className="text-xs text-gray-500 mb-3">Select which fields the applicant must fill out</p>
-            <div className="space-y-2 max-h-48 overflow-y-auto p-3 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-2 gap-2 p-3 bg-gray-50 rounded-lg">
               {FIELD_OPTIONS.map(field => (
-                <div key={field.id} className="flex items-center gap-3">
+                <div key={field.id} className="flex items-center gap-2">
                   <Checkbox
                     id={field.id}
                     checked={requiredFields.includes(field.id)}
                     onCheckedChange={(checked) => handleFieldToggle(field.id, checked)}
-                    className="data-[state=checked]:bg-emerald-500"
+                    className="w-4 h-4"
                   />
-                  <Label htmlFor={field.id} className="text-sm text-gray-700 cursor-pointer">
+                  <Label htmlFor={field.id} className="text-xs text-gray-600 cursor-pointer">
                     {field.label}
                   </Label>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-gray-400 mt-2">* Name and Email are always required</p>
+          </div>
+
+          {/* Custom Message */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-1 block">Custom Message (Optional)</Label>
+            <Textarea
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              placeholder="Add a personal note to the invite email..."
+              className="border-2 focus:border-emerald-500 min-h-[80px]"
+            />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-6 bg-gray-50 border-t flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+        <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
           <Button
             onClick={handleSend}
-            disabled={!email || sending}
+            disabled={sending || !email}
             className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
-            data-testid="send-invite-btn"
+            data-testid="send-invite-button"
           >
-            {sending ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Sending...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4 mr-2" />
-                Send Invite
-              </>
-            )}
+            {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+            Send Invite
+          </Button>
+        </div>
+      </motion.div>
+    </motion.div>,
+    document.body
+  );
+}
+
+
+function SendFollowupModal({ application, onClose, onSent, getAuthHeader }) {
+  const [email, setEmail] = useState(application?.email || '');
+  const [name, setName] = useState(application?.full_name || '');
+  const [includeAnydesk, setIncludeAnydesk] = useState(true);
+  const [sending, setSending] = useState(false);
+
+  const handleSend = async () => {
+    if (!email || !name) {
+      toast.error('Please enter both name and email');
+      return;
+    }
+
+    setSending(true);
+    try {
+      await axios.post(`${API}/api/admin/send-onboarding-followup`, {
+        email,
+        employee_name: name,
+        include_anydesk: includeAnydesk
+      }, getAuthHeader());
+      
+      onSent();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to send email');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return ReactDOM.createPortal(
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 9999 }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.95 }}
+        className="bg-white rounded-2xl w-full max-w-md overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50 flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Send Onboarding Email</h2>
+            <p className="text-sm text-gray-500">Login instructions & next steps</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 space-y-5">
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-1 block">Employee Name *</Label>
+            <Input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Full name"
+              className="border-2 focus:border-purple-500"
+            />
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-1 block">Email Address *</Label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="employee@email.com"
+              className="border-2 focus:border-purple-500"
+            />
+          </div>
+
+          {/* AnyDesk Option */}
+          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <Checkbox
+              id="include-anydesk"
+              checked={includeAnydesk}
+              onCheckedChange={setIncludeAnydesk}
+              className="mt-0.5"
+            />
+            <div>
+              <Label htmlFor="include-anydesk" className="font-medium text-amber-800 cursor-pointer">
+                Include AnyDesk Instructions
+              </Label>
+              <p className="text-xs text-amber-700 mt-1">
+                Adds remote access code (1 396 262 135) to the email
+              </p>
+            </div>
+          </div>
+
+          {/* Email Preview */}
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <p className="text-xs font-medium text-gray-500 mb-2">EMAIL WILL INCLUDE:</p>
+            <ul className="text-sm text-gray-700 space-y-1">
+              <li>✓ Login instructions for Employee Portal</li>
+              <li>✓ Reminder to sign Contractor Agreement</li>
+              <li>✓ Instructions for W-8BEN tax form</li>
+              <li>✓ Payment method setup reminder</li>
+              {includeAnydesk && <li>✓ AnyDesk remote access code</li>}
+            </ul>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSend}
+            disabled={sending || !email || !name}
+            className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white"
+          >
+            {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <MailCheck className="w-4 h-4 mr-2" />}
+            Send Onboarding Email
           </Button>
         </div>
       </motion.div>

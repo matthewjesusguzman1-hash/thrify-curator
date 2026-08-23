@@ -1760,3 +1760,145 @@ async def send_application_invite_email(
     
     html = build_email_template(title, content)
     return await send_email(to_email, subject, html, email_type="application_invite")
+
+
+
+async def send_onboarding_followup_email(
+    to_email: str,
+    employee_name: str,
+    include_anydesk: bool = False,
+    app_url: str = "https://thrifty-curator.com"
+):
+    """
+    Send onboarding follow-up email with instructions for new remote workers.
+    This is sent AFTER admin confirms they have login access.
+    
+    Args:
+        to_email: Employee email address
+        employee_name: Employee's name
+        include_anydesk: Whether to include AnyDesk remote access instructions
+        app_url: URL to the app
+    """
+    subject = "Thrifty Curator - Welcome! Complete Your Onboarding"
+    title = f"Welcome to the Team, {employee_name}!"
+    
+    anydesk_section = ""
+    if include_anydesk:
+        anydesk_section = """
+        <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <p style="color: #92400e; margin: 0 0 10px 0; font-weight: 600;">
+                🖥️ Remote Access (AnyDesk)
+            </p>
+            <p style="color: #78350f; margin: 0; font-size: 14px;">
+                When you're ready to remote in, use AnyDesk with the following code:<br>
+                <strong style="font-size: 18px; letter-spacing: 2px;">1 396 262 135</strong>
+            </p>
+            <p style="color: #78350f; margin: 10px 0 0 0; font-size: 13px;">
+                Download AnyDesk at: <a href="https://anydesk.com/download" style="color: #d97706;">anydesk.com/download</a>
+            </p>
+        </div>
+        """
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6; font-size: 16px;">
+        Congratulations! Your account has been set up and you now have access to the Employee Portal.
+    </p>
+    
+    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center;">
+        <p style="color: white; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">
+            Your Login Information
+        </p>
+        <p style="color: white; margin: 0; font-size: 14px;">
+            Email: <strong>{to_email}</strong><br>
+            <span style="font-size: 13px; opacity: 0.9;">You can set your password when you first log in</span>
+        </p>
+        <div style="margin-top: 15px;">
+            <a href="{app_url}/admin" 
+               style="background: white; color: #059669; text-decoration: none; 
+                      padding: 12px 30px; border-radius: 25px; font-weight: 600; 
+                      display: inline-block;">
+                Log In to Employee Portal
+            </a>
+        </div>
+    </div>
+    
+    <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <p style="color: #1e293b; margin: 0 0 15px 0; font-weight: 600; font-size: 16px;">
+            📋 Complete Your Onboarding:
+        </p>
+        <ol style="color: #475569; margin: 0; padding-left: 20px; line-height: 2;">
+            <li><strong>Sign the Contractor Agreement</strong> - Available in your Employee Dashboard</li>
+            <li><strong>Complete the W-8BEN Form</strong> - Required tax documentation (also in your Dashboard)</li>
+            <li><strong>Set Up Your Payment Method</strong> - Ensure your Wise or payment details are correct</li>
+        </ol>
+    </div>
+    
+    {anydesk_section}
+    
+    <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+        <p style="color: #1e40af; margin: 0; font-size: 14px;">
+            <strong>💡 Tip:</strong> Once logged in, you'll find detailed instructions for remote access 
+            and getting started in your Employee Dashboard.
+        </p>
+    </div>
+    
+    <p style="color: #666; font-size: 14px; margin-top: 25px;">
+        If you have any questions, please don't hesitate to reach out. We're excited to have you on the team!
+    </p>
+    
+    {get_automated_message_footer()}
+    """
+    
+    html = build_email_template(title, content)
+    return await send_email(to_email, subject, html, email_type="onboarding_followup")
+
+
+async def send_onboarding_application_received_email(
+    to_email: str,
+    applicant_name: str
+):
+    """
+    Send confirmation email when an onboarding application is received.
+    Informs them about next steps (contractor agreement, W-8BEN, etc.)
+    """
+    subject = "Thrifty Curator - Application Received!"
+    title = "Application Received"
+    
+    content = f"""
+    <p style="color: #333; line-height: 1.6; font-size: 16px;">
+        Hi {applicant_name},
+    </p>
+    
+    <p style="color: #333; line-height: 1.6;">
+        Thank you for completing your application! We've received your information and are reviewing it now.
+    </p>
+    
+    <div style="background: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 20px; margin: 25px 0;">
+        <p style="color: #166534; margin: 0 0 10px 0; font-weight: 600;">
+            ✅ What Happens Next:
+        </p>
+        <p style="color: #166534; margin: 0; font-size: 14px; line-height: 1.8;">
+            Once we've set up your employee account, you'll receive a follow-up email with:
+        </p>
+        <ul style="color: #166534; margin: 10px 0 0 0; padding-left: 20px; font-size: 14px; line-height: 1.8;">
+            <li>Login instructions for the Employee Portal</li>
+            <li>A <strong>Contractor Agreement</strong> to sign digitally</li>
+            <li>Instructions for completing the <strong>W-8BEN tax form</strong></li>
+            <li>Details on setting up your payment method</li>
+            <li>Information about remote access tools (if applicable)</li>
+        </ul>
+    </div>
+    
+    <p style="color: #666; font-size: 14px;">
+        Please keep an eye on your inbox. If you have any questions in the meantime, feel free to reply to this email.
+    </p>
+    
+    <p style="color: #333; line-height: 1.6; margin-top: 20px;">
+        We're looking forward to working with you!
+    </p>
+    
+    {get_automated_message_footer()}
+    """
+    
+    html = build_email_template(title, content)
+    return await send_email(to_email, subject, html, email_type="onboarding_received")

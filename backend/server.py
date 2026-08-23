@@ -34,6 +34,7 @@ from app.routers.admin_w8ben import employee_router as w8ben_employee_router
 from app.routers.applicant_tests import router as applicant_tests_router, public_router as applicant_tests_public_router
 from app.routers.web_push import router as web_push_router
 from app.routers.employee_terminations import router as employee_terminations_router
+from app.routers.contractor_agreement import router as contractor_agreement_router
 
 # Configure logging
 logging.basicConfig(
@@ -166,6 +167,7 @@ app.include_router(applicant_tests_router)  # Already has /api prefix
 app.include_router(applicant_tests_public_router)  # Public routes, already has /api prefix
 app.include_router(web_push_router, prefix="/api")  # Web Push for Safari PWA
 app.include_router(employee_terminations_router)  # Already has /api prefix
+app.include_router(contractor_agreement_router, prefix="/api")  # Contractor agreements
 
 
 @app.get("/api/")

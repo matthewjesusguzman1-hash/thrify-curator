@@ -30,7 +30,9 @@ import {
   Shield,
   Fingerprint,
   GraduationCap,
-  ChevronDown
+  ChevronDown,
+  FileSignature,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -180,6 +182,14 @@ export default function EmployeeDashboard({
   const [w9Expanded, setW9Expanded] = useState(false);
   const [w8benExpanded, setW8benExpanded] = useState(false);
   const [nec1099Expanded, setNec1099Expanded] = useState(false);
+  const [contractorAgreementExpanded, setContractorAgreementExpanded] = useState(false);
+  
+  // Contractor Agreement state
+  const [contractorAgreement, setContractorAgreement] = useState(null);
+  const [signingAgreement, setSigningAgreement] = useState(false);
+  const [agreementSignature, setAgreementSignature] = useState("");
+  const [agreementName, setAgreementName] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   
   // 1099 documents state
   const [my1099s, setMy1099s] = useState(initialData?.my1099s || { documents: [], count: 0 });
@@ -615,6 +625,17 @@ export default function EmployeeDashboard({
       setW9Status(w9Res.data);
       setW8benStatus(w8benRes.data);
       
+      // Fetch contractor agreement status
+      try {
+        const agreementRes = isAdminView && adminViewEmployee
+          ? await axios.get(`${API}/contractor-agreement/admin/employee/${adminViewEmployee.id}`, getAuthHeader())
+          : await axios.get(`${API}/contractor-agreement/status`, getAuthHeader());
+        setContractorAgreement(agreementRes.data);
+      } catch (err) {
+        console.log('Error fetching contractor agreement:', err);
+        setContractorAgreement({ status: 'pending' });
+      }
+      
       // Start Live Activity ONCE when clocked in (avoid restarting on every fetchData) - skip in admin view
       if (!isAdminView && isNowClocked && !liveActivityStartedRef.current && statusRes.data.entry?.clock_in) {
         const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -733,6 +754,37 @@ export default function EmployeeDashboard({
       toast.error(error.response?.data?.detail || "Failed to submit W-8BEN");
     } finally {
       setUploadingW8ben(false);
+    }
+  };
+
+  // Contractor Agreement handler
+  const handleSignContractorAgreement = async () => {
+    if (!agreementName || !agreementSignature) {
+      toast.error("Please enter your full name and signature");
+      return;
+    }
+    if (!agreedToTerms) {
+      toast.error("You must agree to the terms to sign");
+      return;
+    }
+    
+    setSigningAgreement(true);
+    try {
+      await axios.post(`${API}/contractor-agreement/sign`, {
+        full_name: agreementName,
+        signature_text: agreementSignature,
+        agreed_to_terms: agreedToTerms
+      }, getAuthHeader());
+      
+      toast.success("Contractor Agreement signed successfully!");
+      setAgreementName("");
+      setAgreementSignature("");
+      setAgreedToTerms(false);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to sign agreement");
+    } finally {
+      setSigningAgreement(false);
     }
   };
 
@@ -1824,6 +1876,156 @@ export default function EmployeeDashboard({
                       </div>
                     )}
                   </div>
+                </div>
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
+
+          {/* Contractor Agreement Section - Collapsible */}
+          <Collapsible open={contractorAgreementExpanded} onOpenChange={setContractorAgreementExpanded}>
+            <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl shadow-2xl overflow-hidden border border-white/10" data-testid="contractor-agreement-section">
+              <div className="h-1.5 bg-gradient-to-r from-[#8B5CF6] via-[#EC4899] to-[#F59E0B]" />
+              <CollapsibleTrigger asChild>
+                <button 
+                  className="w-full p-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
+                  data-testid="contractor-agreement-collapse-trigger"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileSignature className="w-5 h-5 text-[#EC4899]" />
+                    <h2 className="font-poppins text-lg font-semibold text-white">
+                      Contractor Agreement
+                    </h2>
+                    {contractorAgreement?.status === 'signed' && (
+                      <span className="bg-green-500/30 text-green-400 px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        Signed
+                      </span>
+                    )}
+                    {contractorAgreement?.status === 'pending' && (
+                      <span className="bg-yellow-500/30 text-yellow-400 px-2 py-0.5 rounded-full text-xs font-medium">
+                        Action Required
+                      </span>
+                    )}
+                  </div>
+                  <ChevronDown className={`w-5 h-5 text-white/60 transition-transform duration-200 ${contractorAgreementExpanded ? 'rotate-180' : ''}`} />
+                </button>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent>
+                <div className="px-6 pb-6 pt-2">
+                  {contractorAgreement?.status === 'signed' ? (
+                    /* Signed Agreement - Read Only View */
+                    <div className="space-y-4">
+                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="w-5 h-5 text-green-400" />
+                          <span className="font-semibold text-green-400">Agreement Signed</span>
+                        </div>
+                        <p className="text-sm text-white/70">
+                          Signed by <span className="text-white font-medium">{contractorAgreement.signed_name}</span> on{' '}
+                          {new Date(contractorAgreement.signed_at).toLocaleDateString('en-US', {
+                            month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                      
+                      {/* Agreement Text (Read Only) */}
+                      <div className="bg-white/5 rounded-lg border border-white/10">
+                        <div className="p-3 border-b border-white/10 bg-white/5">
+                          <h3 className="font-semibold text-white text-sm">Agreement Terms</h3>
+                        </div>
+                        <div className="p-4 max-h-[300px] overflow-y-auto">
+                          <pre className="text-xs text-white/70 whitespace-pre-wrap font-sans leading-relaxed">
+                            {contractorAgreement.agreement_text}
+                          </pre>
+                        </div>
+                      </div>
+                      
+                      {/* Signature Display */}
+                      <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                        <p className="text-xs text-white/50 mb-2">Digital Signature</p>
+                        <p className="text-lg font-script italic text-[#EC4899]">
+                          {contractorAgreement.signature_text}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Unsigned Agreement - Sign Form */
+                    <div className="space-y-4">
+                      <p className="text-sm text-white/60">
+                        Please read and sign the contractor agreement below. This is required to complete your onboarding.
+                      </p>
+                      
+                      {/* Agreement Text */}
+                      <div className="bg-white/5 rounded-lg border border-white/10">
+                        <div className="p-3 border-b border-white/10 bg-white/5">
+                          <h3 className="font-semibold text-white text-sm">Independent Contractor Agreement</h3>
+                        </div>
+                        <div className="p-4 max-h-[300px] overflow-y-auto">
+                          <pre className="text-xs text-white/70 whitespace-pre-wrap font-sans leading-relaxed">
+                            {contractorAgreement?.agreement_text || 'Loading agreement...'}
+                          </pre>
+                        </div>
+                      </div>
+                      
+                      {/* Agreement Checkbox */}
+                      <div className="flex items-start gap-3 p-4 bg-[#EC4899]/10 rounded-lg border border-[#EC4899]/30">
+                        <input
+                          type="checkbox"
+                          id="agree-terms"
+                          checked={agreedToTerms}
+                          onChange={(e) => setAgreedToTerms(e.target.checked)}
+                          className="w-5 h-5 mt-0.5 accent-[#EC4899]"
+                        />
+                        <label htmlFor="agree-terms" className="text-sm text-white cursor-pointer">
+                          I have read, understood, and agree to all terms of this Independent Contractor Agreement.
+                        </label>
+                      </div>
+                      
+                      {/* Signature Fields */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-white/70 block mb-2">Full Legal Name *</label>
+                          <input
+                            type="text"
+                            value={agreementName}
+                            onChange={(e) => setAgreementName(e.target.value)}
+                            placeholder="Enter your full legal name"
+                            className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm text-white/70 block mb-2">Signature (Type your name) *</label>
+                          <input
+                            type="text"
+                            value={agreementSignature}
+                            onChange={(e) => setAgreementSignature(e.target.value)}
+                            placeholder="Type your signature"
+                            className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none font-script italic"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Sign Button */}
+                      <Button
+                        onClick={handleSignContractorAgreement}
+                        disabled={signingAgreement || !agreedToTerms || !agreementName || !agreementSignature}
+                        className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#7C3AED] hover:to-[#DB2777] text-white py-3 rounded-lg font-semibold disabled:opacity-50"
+                      >
+                        {signingAgreement ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Signing...
+                          </>
+                        ) : (
+                          <>
+                            <FileSignature className="w-4 h-4 mr-2" />
+                            Sign Agreement
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CollapsibleContent>
             </div>

@@ -57,8 +57,15 @@ export default function InvitedApplicationPage() {
         reason_for_leaving: "",
         may_contact: null
       }
-    ]
+    ],
+    // Remote worker fields
+    is_remote_worker: false,
+    payment_method: "",  // "e_wallet" or "wise_account"
+    wallet_provider: "",
+    wallet_number: "",
+    wise_tag: ""
   });
+  const [inviteTemplate, setInviteTemplate] = useState("generic");
 
   useEffect(() => {
     fetchInviteDetails();
@@ -73,6 +80,7 @@ export default function InvitedApplicationPage() {
       } else {
         setFormData(prev => ({ ...prev, email: response.data.email }));
         setRequiredFields(response.data.required_fields || []);
+        setInviteTemplate(response.data.template || "generic");
       }
     } catch (err) {
       setError(err.response?.data?.detail || "Invalid or expired invite link");
@@ -559,6 +567,135 @@ export default function InvitedApplicationPage() {
                     <span className="text-sm text-[#1A1A2E]">No</span>
                   </label>
                 </div>
+              </div>
+            )}
+
+            {/* Remote Worker Section - Only shown for onboarding applications */}
+            {inviteTemplate === "onboarding" && (
+              <div className="border-2 border-[#8B5CF6]/30 rounded-xl p-4 bg-[#8B5CF6]/5">
+                <div className="flex items-center gap-3 mb-4">
+                  <Checkbox
+                    id="is_remote_worker"
+                    checked={formData.is_remote_worker}
+                    onCheckedChange={(checked) => setFormData({ 
+                      ...formData, 
+                      is_remote_worker: checked,
+                      // Clear payment fields when unchecking
+                      ...(checked ? {} : { payment_method: "", wallet_provider: "", wallet_number: "", wise_tag: "" })
+                    })}
+                    className="w-6 h-6 border-2 border-[#8B5CF6] data-[state=checked]:bg-[#8B5CF6] data-[state=checked]:border-[#8B5CF6]"
+                  />
+                  <Label htmlFor="is_remote_worker" className="text-sm font-semibold text-[#1A1A2E] cursor-pointer">
+                    I am a remote worker (working outside the US)
+                  </Label>
+                </div>
+
+                {formData.is_remote_worker && (
+                  <div className="space-y-4 mt-4 pl-4 border-l-2 border-[#8B5CF6]/30">
+                    <Label className="text-sm font-semibold text-[#1A1A2E] block">
+                      Preferred Payment Method via Wise *
+                    </Label>
+                    
+                    {/* Payment Method Selection */}
+                    <div className="space-y-3">
+                      <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border-2 border-gray-200 hover:border-[#8B5CF6]/50 transition-colors">
+                        <input
+                          type="radio"
+                          name="payment_method"
+                          value="e_wallet"
+                          checked={formData.payment_method === "e_wallet"}
+                          onChange={(e) => setFormData({ 
+                            ...formData, 
+                            payment_method: e.target.value,
+                            wise_tag: "" // Clear wise tag when switching
+                          })}
+                          className="w-5 h-5 accent-[#8B5CF6] mt-0.5"
+                        />
+                        <div>
+                          <span className="text-sm font-medium text-[#1A1A2E]">E-Wallet</span>
+                          <p className="text-xs text-gray-500 mt-0.5">Transfer to GCash, Maya, PayPal, etc.</p>
+                        </div>
+                      </label>
+
+                      <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border-2 border-gray-200 hover:border-[#8B5CF6]/50 transition-colors">
+                        <input
+                          type="radio"
+                          name="payment_method"
+                          value="wise_account"
+                          checked={formData.payment_method === "wise_account"}
+                          onChange={(e) => setFormData({ 
+                            ...formData, 
+                            payment_method: e.target.value,
+                            wallet_provider: "", // Clear wallet fields when switching
+                            wallet_number: ""
+                          })}
+                          className="w-5 h-5 accent-[#8B5CF6] mt-0.5"
+                        />
+                        <div>
+                          <span className="text-sm font-medium text-[#1A1A2E]">Wise Account</span>
+                          <p className="text-xs text-gray-500 mt-0.5">Direct transfer to your Wise account</p>
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* E-Wallet Fields */}
+                    {formData.payment_method === "e_wallet" && (
+                      <div className="space-y-3 bg-white/50 p-3 rounded-lg">
+                        <div>
+                          <Label className="text-sm text-[#1A1A2E] mb-1 block">
+                            Wallet Provider *
+                          </Label>
+                          <Input
+                            type="text"
+                            name="wallet_provider"
+                            value={formData.wallet_provider}
+                            onChange={handleChange}
+                            placeholder="e.g., GCash, Maya, PayPal"
+                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm text-[#1A1A2E] mb-1 block">
+                            Wallet Number/Email *
+                          </Label>
+                          <Input
+                            type="text"
+                            name="wallet_number"
+                            value={formData.wallet_number}
+                            onChange={handleChange}
+                            placeholder="Your wallet number or email"
+                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                            required
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Wise Account Fields */}
+                    {formData.payment_method === "wise_account" && (
+                      <div className="space-y-3 bg-white/50 p-3 rounded-lg">
+                        <div>
+                          <Label className="text-sm text-[#1A1A2E] mb-1 block">
+                            Wise Tag Name *
+                          </Label>
+                          <Input
+                            type="text"
+                            name="wise_tag"
+                            value={formData.wise_tag}
+                            onChange={handleChange}
+                            placeholder="@yourtag"
+                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                            required
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Found in your Wise app under Account → Wise tag
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
