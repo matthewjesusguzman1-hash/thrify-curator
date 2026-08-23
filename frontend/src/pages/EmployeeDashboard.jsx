@@ -150,7 +150,7 @@ export default function EmployeeDashboard({
     total_shifts: 0,
     period_hours: 0,
     period_shifts: 0,
-    hourly_rate: 20.00,
+    hourly_rate: null, // Don't show a default rate - wait for actual data
     estimated_pay: 0,
     period_start: null,
     period_end: null,
@@ -1760,11 +1760,13 @@ export default function EmployeeDashboard({
               </div>
 
               {/* Rate Info */}
-              <div className="mt-4 pt-4 border-t border-gray-100 text-center">
-                <p className="text-xs sm:text-sm text-gray-500">
-                  Rate: <span className="font-semibold text-[#1A1A2E]">{formatCurrency(summary.hourly_rate)}/hr</span>
-                </p>
-              </div>
+              {summary.hourly_rate !== null && (
+                <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    Rate: <span className="font-semibold text-[#1A1A2E]">{formatCurrency(summary.hourly_rate)}/hr</span>
+                  </p>
+                </div>
+              )}
 
               {/* YTD Paid */}
               {summary.ytd_paid > 0 && (
@@ -2982,14 +2984,19 @@ export default function EmployeeDashboard({
                             <button
                               onClick={async () => {
                                 try {
+                                  // Use admin endpoint when in admin view mode
+                                  const endpoint = isAdminView && adminViewEmployee
+                                    ? `${API}/admin/employees/${adminViewEmployee.id}/w8ben/${doc.id}/view`
+                                    : `${API}/time/w8ben/${doc.id}/download`;
                                   const response = await axios.get(
-                                    `${API}/time/w8ben/${doc.id}/download`,
+                                    endpoint,
                                     { ...getAuthHeader(), responseType: 'blob' }
                                   );
                                   const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
                                   const url = window.URL.createObjectURL(blob);
                                   window.open(url, '_blank');
                                 } catch (err) {
+                                  console.error('Failed to open W-8BEN:', err);
                                   toast.error('Failed to open document');
                                 }
                               }}
@@ -3001,8 +3008,12 @@ export default function EmployeeDashboard({
                             <button
                               onClick={async () => {
                                 try {
+                                  // Use admin endpoint when in admin view mode
+                                  const endpoint = isAdminView && adminViewEmployee
+                                    ? `${API}/admin/employees/${adminViewEmployee.id}/w8ben/${doc.id}/download`
+                                    : `${API}/time/w8ben/${doc.id}/download`;
                                   const response = await axios.get(
-                                    `${API}/time/w8ben/${doc.id}/download`,
+                                    endpoint,
                                     { ...getAuthHeader(), responseType: 'blob' }
                                   );
                                   const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
@@ -3014,6 +3025,7 @@ export default function EmployeeDashboard({
                                   link.click();
                                   document.body.removeChild(link);
                                 } catch (err) {
+                                  console.error('Failed to download W-8BEN:', err);
                                   toast.error('Failed to download document');
                                 }
                               }}
