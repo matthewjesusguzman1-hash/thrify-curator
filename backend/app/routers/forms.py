@@ -41,6 +41,7 @@ class InvitedJobApplication(BaseModel):
     email: EmailStr
     phone: Optional[str] = ""
     preferred_contact_method: Optional[str] = ""  # call, text, whatsapp_call, whatsapp_text, email, app_messages
+    preferred_contact_details: Optional[str] = ""  # Additional details for the contact method
     address: Optional[str] = ""
     resume_text: Optional[str] = ""
     why_join: Optional[str] = ""
@@ -372,6 +373,7 @@ async def submit_invited_application(
         "email": application.email,
         "phone": application.phone or "",
         "preferred_contact_method": application.preferred_contact_method or "",
+        "preferred_contact_details": application.preferred_contact_details or "",
         "address": application.address or "",
         "resume_text": application.resume_text or "",
         "why_join": application.why_join or "",

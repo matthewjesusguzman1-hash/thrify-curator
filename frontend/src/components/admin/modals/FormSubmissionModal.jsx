@@ -473,6 +473,9 @@ Thrifty Curator Team`
                       {submission.preferred_contact_method === 'email' && 'Email'}
                       {submission.preferred_contact_method === 'app_messages' && 'Messages via Thrifty Curator App'}
                     </span>
+                    {submission.preferred_contact_details && (
+                      <span className="text-[#333] ml-1">({submission.preferred_contact_details})</span>
+                    )}
                   </div>
                 )}
               </div>

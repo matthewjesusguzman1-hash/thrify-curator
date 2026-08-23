@@ -1532,9 +1532,9 @@ export default function EmployeeDashboard({
                     <Smartphone className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold text-sm">Save to Home Screen</h3>
+                    <h3 className="text-white font-semibold text-sm">Save to Home Screen (Mobile Only)</h3>
                     <p className="text-white/80 text-xs mt-0.5">
-                      Save this website as a bookmark to your home screen to enable push notifications
+                      This feature is for mobile devices only. Save this website to your phone's home screen to enable push notifications.
                     </p>
                   </div>
                 </div>
@@ -1546,7 +1546,7 @@ export default function EmployeeDashboard({
               {isIOS ? (
                 // iOS Safari instructions
                 <div className="mt-3 bg-white/10 rounded-lg p-3">
-                  <p className="text-white text-xs font-medium mb-3">How to save to your Home Screen:</p>
+                  <p className="text-white text-xs font-medium mb-3">How to save to your Home Screen (iPhone/iPad):</p>
                   <ol className="text-white/90 text-xs space-y-2">
                     <li className="flex items-start gap-2">
                       <span className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">1</span>
@@ -1565,6 +1565,9 @@ export default function EmployeeDashboard({
                       <span>Open the app from your Home Screen to enable push notifications</span>
                     </li>
                   </ol>
+                  <p className="text-white/60 text-xs mt-3 italic">
+                    Note: Push notifications only work when you open the app from your home screen bookmark, not from the browser.
+                  </p>
                 </div>
               ) : deferredPrompt ? (
                 // Android/Chrome install button
@@ -1577,13 +1580,13 @@ export default function EmployeeDashboard({
                     Add to Home Screen
                   </Button>
                   <p className="text-white/70 text-xs mt-2 text-center">
-                    This enables push notifications for messages
+                    This enables push notifications for messages (mobile only)
                   </p>
                 </div>
               ) : (
                 // Generic Android instructions
                 <div className="mt-3 bg-white/10 rounded-lg p-3">
-                  <p className="text-white text-xs font-medium mb-3">How to save to your Home Screen:</p>
+                  <p className="text-white text-xs font-medium mb-3">How to save to your Home Screen (Android):</p>
                   <ol className="text-white/90 text-xs space-y-2">
                     <li className="flex items-start gap-2">
                       <span className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">1</span>
@@ -1598,6 +1601,9 @@ export default function EmployeeDashboard({
                       <span>Open the app from your Home Screen to enable notifications</span>
                     </li>
                   </ol>
+                  <p className="text-white/60 text-xs mt-3 italic">
+                    Note: Push notifications only work on mobile devices when using the home screen bookmark.
+                  </p>
                 </div>
               )}
             </motion.div>

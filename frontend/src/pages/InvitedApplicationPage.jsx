@@ -34,6 +34,7 @@ export default function InvitedApplicationPage() {
     email: "",
     phone: "",
     preferred_contact_method: "", // Call, Text, WhatsApp Call, WhatsApp Text, Email, App Messages
+    preferred_contact_details: "", // Additional details for contact method (phone number, WhatsApp number, etc.)
     address: "",
     resume_text: "",
     why_join: "",
@@ -331,6 +332,29 @@ export default function InvitedApplicationPage() {
                   <option value="email">Email</option>
                   <option value="app_messages">Messages via Thrifty Curator App</option>
                 </select>
+                
+                {/* Contact Details Field - shows when a contact method is selected */}
+                {formData.preferred_contact_method && formData.preferred_contact_method !== 'app_messages' && (
+                  <div className="mt-3">
+                    <Input
+                      type="text"
+                      name="preferred_contact_details"
+                      value={formData.preferred_contact_details}
+                      onChange={handleChange}
+                      placeholder={
+                        formData.preferred_contact_method === 'call' || formData.preferred_contact_method === 'text' 
+                          ? "Enter your phone number"
+                          : formData.preferred_contact_method === 'whatsapp_call' || formData.preferred_contact_method === 'whatsapp_text'
+                          ? "Enter your WhatsApp number"
+                          : formData.preferred_contact_method === 'email'
+                          ? "Enter your email address"
+                          : "Enter contact details"
+                      }
+                      className="border-2 border-gray-200 focus:border-[#00D4FF] rounded-lg bg-white"
+                    />
+                  </div>
+                )}
+                
                 <p className="text-xs text-gray-500 mt-2">Let us know the best way to reach you</p>
               </div>
             </div>

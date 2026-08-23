@@ -1302,6 +1302,11 @@ function ApplicationModal({ application, onClose, onRequestAvailability }) {
                 {app.preferred_contact_method === 'email' && '✉️ Email'}
                 {app.preferred_contact_method === 'app_messages' && '💬 Messages via Thrifty Curator App'}
               </p>
+              {app.preferred_contact_details && (
+                <p className="text-blue-600 text-sm mt-1">
+                  Contact: <span className="font-medium">{app.preferred_contact_details}</span>
+                </p>
+              )}
             </div>
           )}
         </div>
