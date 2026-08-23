@@ -2,6 +2,7 @@
 Contractor Agreement Routes
 
 Handles digital signing and management of contractor agreements for employees.
+Includes admin approval workflow similar to W-9 forms.
 """
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -22,16 +23,8 @@ class SignAgreementRequest(BaseModel):
     agreed_to_terms: bool
 
 
-class AgreementResponse(BaseModel):
-    id: str
-    employee_id: str
-    employee_name: str
-    employee_email: str
-    signed_at: Optional[str] = None
-    signature_text: Optional[str] = None
-    signed_name: Optional[str] = None
-    status: str  # "pending", "signed"
-    agreement_text: str
+class ReviewAgreementRequest(BaseModel):
+    feedback: Optional[str] = None
 
 
 # The contractor agreement text
@@ -94,19 +87,26 @@ async def get_agreement_status(current_user: dict = Depends(get_current_user)):
     
     if not agreement:
         return {
-            "status": "pending",
+            "status": "not_submitted",
             "signed_at": None,
             "signature_text": None,
             "signed_name": None,
-            "agreement_text": CONTRACTOR_AGREEMENT_TEXT
+            "agreement_text": CONTRACTOR_AGREEMENT_TEXT,
+            "can_sign": True,
+            "admin_feedback": None
         }
     
+    # Determine if user can re-sign (only if rejected/needs_correction)
+    can_sign = agreement.get("status") in ["not_submitted", "needs_correction"]
+    
     return {
-        "status": agreement.get("status", "pending"),
+        "status": agreement.get("status", "not_submitted"),
         "signed_at": agreement.get("signed_at"),
         "signature_text": agreement.get("signature_text"),
         "signed_name": agreement.get("signed_name"),
-        "agreement_text": CONTRACTOR_AGREEMENT_TEXT
+        "agreement_text": CONTRACTOR_AGREEMENT_TEXT,
+        "can_sign": can_sign,
+        "admin_feedback": agreement.get("admin_feedback")
     }
 
 
@@ -115,7 +115,7 @@ async def sign_agreement(
     request: SignAgreementRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    """Sign the contractor agreement"""
+    """Sign the contractor agreement - submits for admin review"""
     if not request.agreed_to_terms:
         raise HTTPException(status_code=400, detail="You must agree to the terms")
     
@@ -126,10 +126,14 @@ async def sign_agreement(
     employee_email = current_user.get("email", "")
     employee_name = current_user.get("name", request.full_name)
     
-    # Check if already signed
+    # Check if already approved
     existing = await db.contractor_agreements.find_one({"employee_id": employee_id})
-    if existing and existing.get("status") == "signed":
-        raise HTTPException(status_code=400, detail="Agreement already signed")
+    if existing and existing.get("status") == "approved":
+        raise HTTPException(status_code=400, detail="Agreement already approved")
+    
+    # Check if pending review (don't allow re-submission while pending)
+    if existing and existing.get("status") == "pending_review":
+        raise HTTPException(status_code=400, detail="Agreement is pending admin review")
     
     agreement_data = {
         "employee_id": employee_id,
@@ -138,13 +142,17 @@ async def sign_agreement(
         "signed_name": request.full_name,
         "signature_text": request.signature_text,
         "signed_at": datetime.now(timezone.utc).isoformat(),
-        "status": "signed",
+        "status": "pending_review",  # Pending admin approval
         "agreement_version": "1.0",
-        "ip_address": None,  # Could capture this from request if needed
+        "admin_feedback": None,
+        "reviewed_at": None,
+        "reviewed_by": None,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
     if existing:
+        # Re-submission after rejection
+        agreement_data["resubmitted_at"] = datetime.now(timezone.utc).isoformat()
         await db.contractor_agreements.update_one(
             {"employee_id": employee_id},
             {"$set": agreement_data}
@@ -154,9 +162,34 @@ async def sign_agreement(
     
     return {
         "success": True,
-        "message": "Contractor agreement signed successfully",
+        "message": "Contractor agreement submitted for review",
+        "status": "pending_review",
         "signed_at": agreement_data["signed_at"]
     }
+
+
+# ==================== ADMIN ENDPOINTS ====================
+
+@router.get("/admin/pending")
+async def get_pending_agreements(admin_user: dict = Depends(get_admin_user)):
+    """Get all contractor agreements pending review"""
+    pending = await db.contractor_agreements.find(
+        {"status": "pending_review"},
+        {"_id": 0}
+    ).to_list(100)
+    
+    return {"pending": pending, "count": len(pending)}
+
+
+@router.get("/admin/all")
+async def get_all_agreements(admin_user: dict = Depends(get_admin_user)):
+    """Admin endpoint to get all contractor agreements"""
+    agreements = await db.contractor_agreements.find(
+        {},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    return {"agreements": agreements}
 
 
 @router.get("/admin/employee/{employee_id}")
@@ -177,7 +210,7 @@ async def get_employee_agreement(
             raise HTTPException(status_code=404, detail="Employee not found")
         
         return {
-            "status": "pending",
+            "status": "not_submitted",
             "employee_id": employee_id,
             "employee_name": employee.get("name", "Unknown"),
             "employee_email": employee.get("email", ""),
@@ -193,12 +226,72 @@ async def get_employee_agreement(
     }
 
 
-@router.get("/admin/all")
-async def get_all_agreements(admin_user: dict = Depends(get_admin_user)):
-    """Admin endpoint to get all contractor agreements"""
-    agreements = await db.contractor_agreements.find(
-        {},
-        {"_id": 0}
-    ).to_list(1000)
+@router.post("/admin/employee/{employee_id}/approve")
+async def approve_agreement(
+    employee_id: str,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Admin endpoint to approve a contractor agreement"""
+    agreement = await db.contractor_agreements.find_one({"employee_id": employee_id})
     
-    return {"agreements": agreements}
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Agreement not found")
+    
+    if agreement.get("status") == "approved":
+        raise HTTPException(status_code=400, detail="Agreement already approved")
+    
+    admin_name = admin_user.get("name", "Admin")
+    
+    await db.contractor_agreements.update_one(
+        {"employee_id": employee_id},
+        {"$set": {
+            "status": "approved",
+            "reviewed_at": datetime.now(timezone.utc).isoformat(),
+            "reviewed_by": admin_name,
+            "admin_feedback": None
+        }}
+    )
+    
+    # Also update the user document
+    await db.users.update_one(
+        {"_id": ObjectId(employee_id)},
+        {"$set": {"contractor_agreement_status": "approved"}}
+    )
+    
+    return {"success": True, "message": "Contractor agreement approved"}
+
+
+@router.post("/admin/employee/{employee_id}/reject")
+async def reject_agreement(
+    employee_id: str,
+    request: ReviewAgreementRequest,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Admin endpoint to reject a contractor agreement - requires re-signing"""
+    agreement = await db.contractor_agreements.find_one({"employee_id": employee_id})
+    
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Agreement not found")
+    
+    if agreement.get("status") == "approved":
+        raise HTTPException(status_code=400, detail="Cannot reject an approved agreement")
+    
+    admin_name = admin_user.get("name", "Admin")
+    
+    await db.contractor_agreements.update_one(
+        {"employee_id": employee_id},
+        {"$set": {
+            "status": "needs_correction",
+            "reviewed_at": datetime.now(timezone.utc).isoformat(),
+            "reviewed_by": admin_name,
+            "admin_feedback": request.feedback or "Please review and sign again"
+        }}
+    )
+    
+    # Also update the user document
+    await db.users.update_one(
+        {"_id": ObjectId(employee_id)},
+        {"$set": {"contractor_agreement_status": "needs_correction"}}
+    )
+    
+    return {"success": True, "message": "Contractor agreement rejected - employee must re-sign"}

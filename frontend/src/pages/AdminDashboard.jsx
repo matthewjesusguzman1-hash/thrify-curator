@@ -87,6 +87,7 @@ import TaxesSection from "@/components/admin/sections/TaxesSection";
 import InterviewSchedulerSection from "@/components/admin/sections/InterviewSchedulerSection";
 import ApplicantTestsSection from "@/components/admin/sections/ApplicantTestsSection";
 import EmployeeTerminationsSection from "@/components/admin/sections/EmployeeTerminationsSection";
+import PendingDocumentsSection from "@/components/admin/sections/PendingDocumentsSection";
 import SendApplicationLinkSection from "@/components/admin/sections/SendApplicationLinkSection";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
@@ -259,6 +260,18 @@ export default function AdminDashboard() {
   const [reviewingW9, setReviewingW9] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showW9ReviewSection, setShowW9ReviewSection] = useState(false);
+
+  // Contractor Agreement Review state
+  const [pendingAgreements, setPendingAgreements] = useState([]);
+  const [loadingPendingAgreements, setLoadingPendingAgreements] = useState(false);
+  const [reviewingAgreement, setReviewingAgreement] = useState(null);
+  const [agreementRejectReason, setAgreementRejectReason] = useState("");
+
+  // W-8BEN Review state  
+  const [pendingW8bens, setPendingW8bens] = useState([]);
+  const [loadingPendingW8bens, setLoadingPendingW8bens] = useState(false);
+  const [reviewingW8ben, setReviewingW8ben] = useState(null);
+  const [w8benRejectReason, setW8benRejectReason] = useState("");
 
   // Collapsible sections state - all collapsed by default
   const [showStatsSection, setShowStatsSection] = useState(false);
@@ -2239,6 +2252,86 @@ export default function AdminDashboard() {
     }
   };
 
+  // ==================== CONTRACTOR AGREEMENT REVIEW FUNCTIONS ====================
+  const fetchPendingAgreements = useCallback(async () => {
+    setLoadingPendingAgreements(true);
+    try {
+      const response = await axios.get(`${API}/contractor-agreement/admin/pending`, getAuthHeader());
+      setPendingAgreements(response.data.pending || []);
+    } catch (error) {
+      console.error("Failed to fetch pending agreements:", error);
+    } finally {
+      setLoadingPendingAgreements(false);
+    }
+  }, []);
+
+  const handleApproveAgreement = async (employeeId) => {
+    try {
+      await axios.post(`${API}/contractor-agreement/admin/employee/${employeeId}/approve`, {}, getAuthHeader());
+      toast.success("Contractor Agreement approved!");
+      setReviewingAgreement(null);
+      fetchPendingAgreements();
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to approve agreement");
+    }
+  };
+
+  const handleRejectAgreement = async (employeeId) => {
+    try {
+      await axios.post(`${API}/contractor-agreement/admin/employee/${employeeId}/reject`, { 
+        feedback: agreementRejectReason || "Please review and sign again" 
+      }, getAuthHeader());
+      toast.success("Agreement returned for corrections");
+      setReviewingAgreement(null);
+      setAgreementRejectReason("");
+      fetchPendingAgreements();
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to reject agreement");
+    }
+  };
+
+  // ==================== W-8BEN REVIEW FUNCTIONS ====================
+  const fetchPendingW8bens = useCallback(async () => {
+    setLoadingPendingW8bens(true);
+    try {
+      const response = await axios.get(`${API}/admin/w8ben/pending`, getAuthHeader());
+      setPendingW8bens(response.data.pending || []);
+    } catch (error) {
+      console.error("Failed to fetch pending W-8BENs:", error);
+    } finally {
+      setLoadingPendingW8bens(false);
+    }
+  }, []);
+
+  const handleApproveW8ben = async (employeeId, docId) => {
+    try {
+      await axios.post(`${API}/admin/employees/${employeeId}/w8ben/${docId}/approve`, {}, getAuthHeader());
+      toast.success("W-8BEN approved!");
+      setReviewingW8ben(null);
+      fetchPendingW8bens();
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to approve W-8BEN");
+    }
+  };
+
+  const handleRejectW8ben = async (employeeId, docId) => {
+    try {
+      await axios.post(`${API}/admin/employees/${employeeId}/w8ben/${docId}/reject`, { 
+        feedback: w8benRejectReason || "Please review and re-submit" 
+      }, getAuthHeader());
+      toast.success("W-8BEN returned for corrections");
+      setReviewingW8ben(null);
+      setW8benRejectReason("");
+      fetchPendingW8bens();
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to reject W-8BEN");
+    }
+  };
+
   // Edit time entry handlers
   const handleEditEntry = (entry) => {
     setEditingEntry(entry);
@@ -3456,6 +3549,11 @@ export default function AdminDashboard() {
                   getAuthHeader={getAuthHeader}
                   onEmployeeTerminated={fetchData}
                 />
+              </div>
+
+              {/* Pending Documents Review Section */}
+              <div data-testid="pending-documents-section">
+                <PendingDocumentsSection getAuthHeader={getAuthHeader} />
               </div>
             </DashboardGroup>
 

@@ -1895,13 +1895,25 @@ export default function EmployeeDashboard({
                     <h2 className="font-poppins text-lg font-semibold text-white">
                       Contractor Agreement
                     </h2>
-                    {contractorAgreement?.status === 'signed' && (
+                    {contractorAgreement?.status === 'approved' && (
                       <span className="bg-green-500/30 text-green-400 px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1">
                         <CheckCircle className="w-3 h-3" />
-                        Signed
+                        Approved
                       </span>
                     )}
-                    {contractorAgreement?.status === 'pending' && (
+                    {contractorAgreement?.status === 'pending_review' && (
+                      <span className="bg-blue-500/30 text-blue-400 px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Pending Review
+                      </span>
+                    )}
+                    {contractorAgreement?.status === 'needs_correction' && (
+                      <span className="bg-red-500/30 text-red-400 px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        Needs Correction
+                      </span>
+                    )}
+                    {(!contractorAgreement?.status || contractorAgreement?.status === 'not_submitted') && (
                       <span className="bg-yellow-500/30 text-yellow-400 px-2 py-0.5 rounded-full text-xs font-medium">
                         Action Required
                       </span>
@@ -1913,13 +1925,13 @@ export default function EmployeeDashboard({
               
               <CollapsibleContent>
                 <div className="px-6 pb-6 pt-2">
-                  {contractorAgreement?.status === 'signed' ? (
-                    /* Signed Agreement - Read Only View */
+                  {contractorAgreement?.status === 'approved' ? (
+                    /* Approved Agreement - Read Only View */
                     <div className="space-y-4">
                       <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <CheckCircle className="w-5 h-5 text-green-400" />
-                          <span className="font-semibold text-green-400">Agreement Signed</span>
+                          <span className="font-semibold text-green-400">Agreement Approved</span>
                         </div>
                         <p className="text-sm text-white/70">
                           Signed by <span className="text-white font-medium">{contractorAgreement.signed_name}</span> on{' '}
@@ -1927,6 +1939,11 @@ export default function EmployeeDashboard({
                             month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
                           })}
                         </p>
+                        {contractorAgreement.reviewed_by && (
+                          <p className="text-xs text-white/50 mt-1">
+                            Approved by {contractorAgreement.reviewed_by}
+                          </p>
+                        )}
                       </div>
                       
                       {/* Agreement Text (Read Only) */}
@@ -1949,9 +1966,53 @@ export default function EmployeeDashboard({
                         </p>
                       </div>
                     </div>
-                  ) : (
-                    /* Unsigned Agreement - Sign Form */
+                  ) : contractorAgreement?.status === 'pending_review' ? (
+                    /* Pending Review - Show submitted info */
                     <div className="space-y-4">
+                      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Clock className="w-5 h-5 text-blue-400" />
+                          <span className="font-semibold text-blue-400">Pending Admin Review</span>
+                        </div>
+                        <p className="text-sm text-white/70">
+                          Your agreement was signed on{' '}
+                          {new Date(contractorAgreement.signed_at).toLocaleDateString('en-US', {
+                            month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
+                          })}
+                        </p>
+                        <p className="text-sm text-white/50 mt-2">
+                          An administrator will review and approve your agreement shortly.
+                        </p>
+                      </div>
+                      
+                      {/* Signature Display */}
+                      <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                        <p className="text-xs text-white/50 mb-2">Your Signature</p>
+                        <p className="text-lg font-script italic text-[#EC4899]">
+                          {contractorAgreement.signature_text}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Not submitted or Needs Correction - Sign Form */
+                    <div className="space-y-4">
+                      {contractorAgreement?.status === 'needs_correction' && (
+                        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <AlertCircle className="w-5 h-5 text-red-400" />
+                            <span className="font-semibold text-red-400">Correction Required</span>
+                          </div>
+                          <p className="text-sm text-white/70">
+                            Your previous submission was not approved. Please review the feedback and sign again.
+                          </p>
+                          {contractorAgreement.admin_feedback && (
+                            <p className="text-sm text-yellow-400 mt-2 p-2 bg-yellow-500/10 rounded">
+                              <strong>Admin Feedback:</strong> {contractorAgreement.admin_feedback}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      
                       <p className="text-sm text-white/60">
                         Please read and sign the contractor agreement below. This is required to complete your onboarding.
                       </p>
@@ -2015,12 +2076,12 @@ export default function EmployeeDashboard({
                         {signingAgreement ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Signing...
+                            {contractorAgreement?.status === 'needs_correction' ? 'Re-signing...' : 'Signing...'}
                           </>
                         ) : (
                           <>
                             <FileSignature className="w-4 h-4 mr-2" />
-                            Sign Agreement
+                            {contractorAgreement?.status === 'needs_correction' ? 'Re-sign Agreement' : 'Sign Agreement'}
                           </>
                         )}
                       </Button>

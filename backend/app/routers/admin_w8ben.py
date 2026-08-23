@@ -156,7 +156,7 @@ async def update_w8ben_status(
     admin: dict = Depends(get_admin_user)
 ):
     """Update the status of a W-8BEN document."""
-    valid_statuses = ["submitted", "approved", "rejected", "pending_review", "expired"]
+    valid_statuses = ["submitted", "approved", "rejected", "needs_correction", "pending_review", "expired"]
     if update.status not in valid_statuses:
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
     
@@ -173,7 +173,81 @@ async def update_w8ben_status(
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="W-8BEN document not found")
     
+    # Update user document
+    await db.users.update_one(
+        {"id": employee_id},
+        {"$set": {"w8ben_status": update.status}}
+    )
+    
     return {"message": f"W-8BEN status updated to {update.status}"}
+
+
+@router.post("/employees/{employee_id}/w8ben/{doc_id}/approve")
+async def approve_w8ben(employee_id: str, doc_id: str, admin: dict = Depends(get_admin_user)):
+    """Approve a W-8BEN document."""
+    result = await db.w8ben_documents.update_one(
+        {"id": doc_id, "employee_id": employee_id},
+        {"$set": {
+            "status": "approved",
+            "status_updated_at": datetime.now(timezone.utc).isoformat(),
+            "status_updated_by": admin.get("name", admin["id"]),
+            "status_notes": None
+        }}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="W-8BEN document not found")
+    
+    await db.users.update_one(
+        {"id": employee_id},
+        {"$set": {"w8ben_status": "approved"}}
+    )
+    
+    return {"success": True, "message": "W-8BEN approved"}
+
+
+class W8BENRejectRequest(BaseModel):
+    feedback: Optional[str] = None
+
+
+@router.post("/employees/{employee_id}/w8ben/{doc_id}/reject")
+async def reject_w8ben(
+    employee_id: str, 
+    doc_id: str, 
+    request: W8BENRejectRequest,
+    admin: dict = Depends(get_admin_user)
+):
+    """Reject a W-8BEN document - employee must re-submit."""
+    result = await db.w8ben_documents.update_one(
+        {"id": doc_id, "employee_id": employee_id},
+        {"$set": {
+            "status": "needs_correction",
+            "status_updated_at": datetime.now(timezone.utc).isoformat(),
+            "status_updated_by": admin.get("name", admin["id"]),
+            "status_notes": request.feedback or "Please review and re-submit"
+        }}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="W-8BEN document not found")
+    
+    await db.users.update_one(
+        {"id": employee_id},
+        {"$set": {"w8ben_status": "needs_correction"}}
+    )
+    
+    return {"success": True, "message": "W-8BEN rejected - employee must re-submit"}
+
+
+@router.get("/w8ben/pending")
+async def get_pending_w8bens(admin: dict = Depends(get_admin_user)):
+    """Get all W-8BEN documents pending review."""
+    pending = await db.w8ben_documents.find(
+        {"status": {"$in": ["submitted", "pending_review"]}},
+        {"_id": 0, "content": 0}
+    ).to_list(100)
+    
+    return {"pending": pending, "count": len(pending)}
 
 
 # Employee self-service endpoints
