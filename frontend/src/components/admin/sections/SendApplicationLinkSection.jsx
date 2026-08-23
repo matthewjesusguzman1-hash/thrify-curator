@@ -59,12 +59,15 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
       setEmailPool(poolRes.data.emails || []);
       
       // Filter for onboarding applications - check if they have onboarding template
+      // Also exclude dismissed applications
       const allApps = applicationsRes.data || [];
       const onboardingApps = allApps.filter(app => 
-        app.invite_template === 'onboarding' || 
-        (app.invited && invitesRes.data.invites?.some(
-          inv => inv.email === app.email && inv.template === 'onboarding'
-        ))
+        !app.dismissed && (
+          app.invite_template === 'onboarding' || 
+          (app.invited && invitesRes.data.invites?.some(
+            inv => inv.email === app.email && inv.template === 'onboarding'
+          ))
+        )
       );
       setOnboardingApplications(onboardingApps);
     } catch (error) {
@@ -82,6 +85,25 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
       fetchData();
     } catch (error) {
       toast.error('Failed to delete');
+    }
+  };
+
+  const handleDismissApplication = async (application) => {
+    const reason = window.prompt(
+      'Why are you dismissing this application?\n(e.g., "Email already registered", "Test application", "Duplicate")',
+      'Email already registered'
+    );
+    if (reason === null) return; // User cancelled
+    
+    try {
+      await axios.patch(`${API}/api/forms/submissions/${application.id}`, {
+        dismissed: true,
+        dismissed_reason: reason || 'Dismissed by admin'
+      }, getAuthHeader());
+      toast.success('Application removed from onboarding list');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to dismiss application');
     }
   };
 
@@ -276,17 +298,29 @@ export default function SendApplicationLinkSection({ getAuthHeader }) {
                             </div>
                             <div className="flex flex-col gap-2">
                               {!app.employee_created ? (
-                                <Button
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedApplication(app);
-                                    setShowSetupLoginModal(true);
-                                  }}
-                                  className="bg-green-500 hover:bg-green-600 text-white"
-                                >
-                                  <UserPlus className="w-4 h-4 mr-1" />
-                                  Set Up Login
-                                </Button>
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedApplication(app);
+                                      setShowSetupLoginModal(true);
+                                    }}
+                                    className="bg-green-500 hover:bg-green-600 text-white"
+                                  >
+                                    <UserPlus className="w-4 h-4 mr-1" />
+                                    Set Up Login
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleDismissApplication(app)}
+                                    className="text-gray-400 hover:text-red-500 hover:bg-red-50"
+                                    title="Remove from onboarding list"
+                                  >
+                                    <X className="w-4 h-4 mr-1" />
+                                    Dismiss
+                                  </Button>
+                                </>
                               ) : (
                                 <Button
                                   size="sm"

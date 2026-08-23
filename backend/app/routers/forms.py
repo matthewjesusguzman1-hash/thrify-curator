@@ -1029,6 +1029,8 @@ class ApplicationUpdateRequest(BaseModel):
     employee_created: Optional[bool] = None
     employee_created_at: Optional[str] = None
     status: Optional[str] = None
+    dismissed: Optional[bool] = None  # For removing from onboarding list
+    dismissed_reason: Optional[str] = None
 
 
 @router.patch("/forms/submissions/{application_id}")
@@ -1037,7 +1039,7 @@ async def update_application(
     update: ApplicationUpdateRequest,
     admin: dict = Depends(get_admin_user)
 ):
-    """Update a job application (e.g., mark as employee created)"""
+    """Update a job application (e.g., mark as employee created or dismissed)"""
     update_data = {}
     if update.employee_created is not None:
         update_data["employee_created"] = update.employee_created
@@ -1045,6 +1047,11 @@ async def update_application(
         update_data["employee_created_at"] = update.employee_created_at
     if update.status:
         update_data["status"] = update.status
+    if update.dismissed is not None:
+        update_data["dismissed"] = update.dismissed
+        update_data["dismissed_at"] = datetime.now(timezone.utc).isoformat()
+    if update.dismissed_reason:
+        update_data["dismissed_reason"] = update.dismissed_reason
     
     if not update_data:
         raise HTTPException(status_code=400, detail="No update data provided")
