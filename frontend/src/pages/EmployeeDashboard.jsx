@@ -1876,8 +1876,8 @@ export default function EmployeeDashboard({
                                 
                                 {/* Show rejection reason if status is needs_correction */}
                                 {doc.status === 'needs_correction' && doc.rejection_reason && (
-                                  <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                                    <p className="text-xs text-red-300 font-medium mb-1 flex items-center gap-1">
+                                  <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                                    <p className="text-xs text-yellow-400 font-medium mb-1 flex items-center gap-1">
                                       <AlertCircle className="w-3 h-3" />
                                       Action Required
                                     </p>
@@ -1890,8 +1890,8 @@ export default function EmployeeDashboard({
                                 
                                 {/* Show generic message if needs correction but no reason */}
                                 {doc.status === 'needs_correction' && !doc.rejection_reason && (
-                                  <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                                    <p className="text-xs text-red-300 font-medium mb-1 flex items-center gap-1">
+                                  <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                                    <p className="text-xs text-yellow-400 font-medium mb-1 flex items-center gap-1">
                                       <AlertCircle className="w-3 h-3" />
                                       Action Required
                                     </p>
@@ -2343,7 +2343,7 @@ export default function EmployeeDashboard({
                     </h2>
                     {/* Action Required badge for remote workers without submitted W-8BEN */}
                     {isRemoteWorker() && (!w8benStatus?.status || w8benStatus?.status === 'not_submitted' || w8benStatus?.status === 'not_applicable') && (
-                      <span className="bg-red-500/90 text-white px-2 py-0.5 rounded-full text-xs font-bold animate-pulse">
+                      <span className="bg-yellow-500/30 text-yellow-400 px-2 py-0.5 rounded-full text-xs font-medium">
                         Action Required
                       </span>
                     )}
