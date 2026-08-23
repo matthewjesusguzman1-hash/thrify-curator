@@ -717,29 +717,21 @@ function SendFollowupModal({ application, onClose, onSent, getAuthHeader }) {
 function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
   const [name, setName] = useState(application?.full_name || '');
   const [email, setEmail] = useState(application?.email || '');
-  const [role, setRole] = useState('employee');
-  const [accessCode, setAccessCode] = useState('');
   const [creating, setCreating] = useState(false);
 
-  // Generate random 4-digit access code
-  useEffect(() => {
-    setAccessCode(Math.floor(1000 + Math.random() * 9000).toString());
-  }, []);
-
   const handleCreate = async () => {
-    if (!name || !email || !accessCode) {
+    if (!name || !email) {
       toast.error('Please fill in all fields');
       return;
     }
 
     setCreating(true);
     try {
-      // Create the employee account
-      await axios.post(`${API}/api/admin/employees`, {
+      // Create the employee account (employees don't need access codes - they log in with email)
+      await axios.post(`${API}/api/admin/create-employee`, {
         name,
         email,
-        role,
-        access_code: accessCode
+        role: 'employee'
       }, getAuthHeader());
       
       // Mark the application as having an employee created
@@ -807,19 +799,7 @@ function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
               placeholder="employee@email.com"
               className="border-2 focus:border-green-500"
             />
-          </div>
-
-          <div>
-            <Label className="text-sm font-medium text-gray-700 mb-1 block">Access Code (4 digits)</Label>
-            <Input
-              type="text"
-              value={accessCode}
-              onChange={(e) => setAccessCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              placeholder="1234"
-              maxLength={4}
-              className="border-2 focus:border-green-500 font-mono text-lg tracking-widest"
-            />
-            <p className="text-xs text-gray-500 mt-1">This code will be shared with the employee for login</p>
+            <p className="text-xs text-gray-500 mt-1">Employee will log in using this email</p>
           </div>
 
           {/* Info Box */}
@@ -829,9 +809,10 @@ function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
               After creating the login, you'll be prompted to send the onboarding email with:
             </p>
             <ul className="text-xs text-green-600 mt-2 ml-5 space-y-1 list-disc">
-              <li>Login instructions for the Employee Portal</li>
+              <li>Login instructions for the Employee Portal (email-based login)</li>
               <li>AnyDesk remote access code (1 396 262 135)</li>
               <li>Reminders about Contractor Agreement & W-8BEN forms</li>
+              <li>Option to set up a password for added security</li>
             </ul>
           </div>
         </div>
@@ -843,7 +824,7 @@ function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
           </Button>
           <Button
             onClick={handleCreate}
-            disabled={creating || !name || !email || accessCode.length !== 4}
+            disabled={creating || !name || !email}
             className="bg-green-500 hover:bg-green-600 text-white"
           >
             {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
