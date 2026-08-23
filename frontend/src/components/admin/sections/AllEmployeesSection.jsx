@@ -192,6 +192,17 @@ export default function AllEmployeesSection({
     return daysRemaining > 0 ? daysRemaining : 0;
   };
 
+  // Delete employee (for test accounts)
+  const handleDeleteEmployee = async (employeeId) => {
+    try {
+      await axios.delete(`${API}/admin/employees/${employeeId}`, getAuthHeader());
+      toast.success("Employee deleted");
+      onRefreshEmployees();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to delete employee");
+    }
+  };
+
   // W-9 upload
   const handleW9Upload = async (employeeId, file) => {
     if (!file) return;
@@ -434,8 +445,8 @@ export default function AllEmployeesSection({
                         <SortableHeader sortKey="role">Role</SortableHeader>
                         <SortableHeader sortKey="hourly_rate">Hourly Rate</SortableHeader>
                         <SortableHeader sortKey="created_at">Joined</SortableHeader>
-                        <th>W-9</th>
                         <th>Portal</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -589,17 +600,12 @@ export default function AllEmployeesSection({
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={(e) => { e.stopPropagation(); handleOpenW9Modal(emp); }}
-                                className={`h-8 px-2 ${
-                                  emp.has_w9 
-                                    ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50' 
-                                    : 'text-[#888] hover:text-[#666] hover:bg-[#F9F6F7]'
-                                }`}
-                                data-testid={`view-w9-${emp.id}`}
-                                title={emp.has_w9 ? "View W-9 Documents" : "No W-9 Submitted"}
+                                onClick={(e) => { e.stopPropagation(); onViewEmployeePortal(emp); }}
+                                className="text-[#00D4FF] hover:text-[#00A8CC] hover:bg-[#00D4FF]/10"
+                                data-testid={`view-portal-${emp.id}`}
                               >
-                                <FileText className="w-4 h-4" />
-                                {emp.has_w9 && <span className="ml-1 text-xs">View</span>}
+                                <Monitor className="w-4 h-4 mr-1" />
+                                View
                               </Button>
                             )}
                           </td>
@@ -608,12 +614,17 @@ export default function AllEmployeesSection({
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={(e) => { e.stopPropagation(); onViewEmployeePortal(emp); }}
-                                className="text-[#00D4FF] hover:text-[#00A8CC] hover:bg-[#00D4FF]/10"
-                                data-testid={`view-portal-${emp.id}`}
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  if (window.confirm(`Delete ${emp.name}?\n\nThis will permanently remove this employee and all their time entries. This cannot be undone.`)) {
+                                    handleDeleteEmployee(emp.id);
+                                  }
+                                }}
+                                className="text-red-400 hover:text-red-600 hover:bg-red-50"
+                                data-testid={`delete-employee-${emp.id}`}
+                                title="Delete employee (for test accounts)"
                               >
-                                <Monitor className="w-4 h-4 mr-1" />
-                                View Portal
+                                <Trash2 className="w-4 h-4" />
                               </Button>
                             )}
                           </td>
