@@ -1666,15 +1666,18 @@ async def send_rejection_letter(request: RejectionLetterRequest, admin: dict = D
             "html": email_html
         })
         
-        # Log the rejection in the database
-        await db.rejection_letters.insert_one({
-            "id": str(uuid.uuid4()),
-            "applicant_name": request.applicant_name,
-            "applicant_email": request.applicant_email,
-            "ask_future_consideration": request.ask_future_consideration,
-            "sent_by": admin.get("email"),
-            "sent_at": datetime.now(timezone.utc).isoformat()
-        })
+        # Log the rejection in the database (non-blocking)
+        try:
+            db.rejection_letters.insert_one({
+                "id": str(uuid.uuid4()),
+                "applicant_name": request.applicant_name,
+                "applicant_email": request.applicant_email,
+                "ask_future_consideration": request.ask_future_consideration,
+                "sent_by": admin.get("email"),
+                "sent_at": datetime.now(timezone.utc).isoformat()
+            })
+        except Exception as log_error:
+            print(f"Failed to log rejection (email still sent): {log_error}")
         
         return {"success": True, "message": f"Rejection letter sent to {request.applicant_email}"}
     except Exception as e:
