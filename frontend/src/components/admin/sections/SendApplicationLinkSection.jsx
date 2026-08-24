@@ -138,6 +138,11 @@ export default function SendApplicationLinkSection({ getAuthHeader, refreshKey }
 
   const onboardingInvites = invites.filter(inv => inv.template === 'onboarding');
 
+  // Get the invite status for an email (for showing email opened indicator)
+  const getInviteForEmail = (email) => {
+    return invites.find(inv => inv.email.toLowerCase() === email.toLowerCase());
+  };
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="send-application-link-section">
       {/* Header */}
@@ -273,7 +278,9 @@ export default function SendApplicationLinkSection({ getAuthHeader, refreshKey }
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {onboardingApplications.map(app => (
+                      {onboardingApplications.map(app => {
+                        const invite = getInviteForEmail(app.email);
+                        return (
                         <div key={app.id} className="border border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
@@ -288,6 +295,27 @@ export default function SendApplicationLinkSection({ getAuthHeader, refreshKey }
                                 {app.employee_created && (
                                   <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">
                                     Login Created
+                                  </span>
+                                )}
+                                {/* Email opened indicator */}
+                                {invite && (
+                                  <span 
+                                    className={`px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${
+                                      invite.status === 'opened' 
+                                        ? 'bg-blue-100 text-blue-700' 
+                                        : invite.status === 'completed'
+                                          ? 'bg-green-100 text-green-700'
+                                          : 'bg-yellow-100 text-yellow-700'
+                                    }`}
+                                    title={invite.status === 'opened' ? 'Email was opened' : invite.status === 'completed' ? 'Application completed' : 'Email sent'}
+                                  >
+                                    {invite.status === 'opened' ? (
+                                      <><ExternalLink className="w-3 h-3" />Opened</>
+                                    ) : invite.status === 'completed' ? (
+                                      <><CheckCircle className="w-3 h-3" />Done</>
+                                    ) : (
+                                      <><Clock className="w-3 h-3" />Sent</>
+                                    )}
                                   </span>
                                 )}
                               </div>
@@ -371,7 +399,7 @@ export default function SendApplicationLinkSection({ getAuthHeader, refreshKey }
                             </div>
                           </div>
                         </div>
-                      ))}
+                      )})}
                     </div>
                   )}
 
