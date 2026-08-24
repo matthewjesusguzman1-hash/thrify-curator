@@ -555,10 +555,10 @@ export default function ConversationsSection() {
                 </div>
               </div>
 
-              {/* Two-panel layout on desktop */}
-              <div className="flex flex-col md:flex-row gap-4 min-h-[500px]">
-                {/* Conversation List - narrower to give more room for messages */}
-                <div className={`${selectedConversation ? 'hidden md:block' : ''} md:w-[280px] lg:w-[300px] xl:w-[340px] flex-shrink-0 space-y-2 overflow-y-auto max-h-[500px] pr-2`}>
+              {/* Stacked layout - list on top, messages below */}
+              <div className="flex flex-col gap-4">
+                {/* Conversation List - collapses when conversation is selected */}
+                <div className={`${selectedConversation ? 'hidden' : ''} space-y-2 overflow-y-auto max-h-[300px] pr-2`}>
                   {loading && conversations.length === 0 ? (
                     <div className="text-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
@@ -589,8 +589,8 @@ export default function ConversationsSection() {
                   )}
                 </div>
 
-                {/* Conversation Detail */}
-                <div className={`${!selectedConversation ? 'hidden md:flex' : 'flex'} flex-1 flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden min-w-0`}>
+                {/* Conversation Detail - shows when conversation is selected */}
+                <div className={`${!selectedConversation ? 'hidden' : 'flex'} flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden min-h-[400px]`}>
                   {selectedConversation ? (
                     <>
                       {/* Header */}
@@ -601,29 +601,30 @@ export default function ConversationsSection() {
                               setSelectedConversation(null);
                               selectedConversationRef.current = null;
                             }}
-                            className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
+                            className="p-2 hover:bg-gray-100 rounded-lg"
+                            title="Back to conversations"
                           >
                             <ChevronDown className="w-5 h-5 rotate-90" />
                           </button>
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-white ${
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-white text-sm ${
                             selectedConversation.participant_type === 'employee' 
                               ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
                               : 'bg-gradient-to-r from-amber-500 to-orange-600'
                           }`}>
                             {selectedConversation.participant_name.charAt(0).toUpperCase()}
                           </div>
-                          <div>
-                            <p className="font-semibold text-[#333]">{selectedConversation.participant_name}</p>
-                            <p className="text-xs text-[#888]">{selectedConversation.participant_email}</p>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-[#333] text-sm truncate">{selectedConversation.participant_name}</p>
+                            <p className="text-xs text-[#888] truncate">{selectedConversation.participant_email}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs px-2 py-1 rounded-full ${
+                        <div className="flex items-center gap-1">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                             selectedConversation.participant_type === 'employee'
                               ? 'bg-green-100 text-green-700'
                               : 'bg-amber-100 text-amber-700'
                           }`}>
-                            {selectedConversation.participant_type === 'employee' ? 'Employee' : 'Consignor'}
+                            {selectedConversation.participant_type === 'employee' ? 'EMP' : 'CON'}
                           </span>
                           {/* Read Receipts Toggle */}
                           <button
