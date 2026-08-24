@@ -292,11 +292,9 @@ export default function SendApplicationLinkSection({ getAuthHeader, refreshKey }
                                 )}
                               </div>
                               <p className="text-sm text-gray-600 mt-1">{app.email}</p>
-                              {app.is_remote_worker && app.payment_method && (
+                              {app.is_remote_worker && (app.payment_first_name || app.payment_email) && (
                                 <p className="text-xs text-gray-500 mt-1">
-                                  Payment: {app.payment_method === 'e_wallet' 
-                                    ? `${app.wallet_provider} - ${app.wallet_number}` 
-                                    : `Wise @${app.wise_tag}`}
+                                  Payment: {app.payment_first_name} {app.payment_last_name} ({app.payment_country || 'Remitly'})
                                 </p>
                               )}
                               <p className="text-xs text-gray-400 mt-1">

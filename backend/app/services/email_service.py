@@ -1829,7 +1829,7 @@ async def send_onboarding_followup_email(
         <ol style="color: #475569; margin: 0; padding-left: 20px; line-height: 2;">
             <li><strong>Sign the Contractor Agreement</strong> - Available in your Employee Dashboard</li>
             <li><strong>Complete the W-8BEN Form</strong> - Required tax documentation (also in your Dashboard)</li>
-            <li><strong>Set Up Your Payment Method</strong> - Ensure your Wise or payment details are correct</li>
+            <li><strong>Set Up Your Payment Method</strong> - Ensure your Remitly payment details are correct</li>
         </ol>
     </div>
     
