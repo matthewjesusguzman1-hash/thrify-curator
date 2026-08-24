@@ -57,14 +57,8 @@ export default function InvitedApplicationPage() {
         may_contact: null
       }
     ],
-    // Remote worker fields
-    is_remote_worker: false,
-    // Payment info for Remitly transfers
-    payment_first_name: "",
-    payment_last_name: "",
-    payment_email: "",
-    payment_phone: "",
-    payment_country: ""
+    // Remote worker field
+    is_remote_worker: false
   });
   const [inviteTemplate, setInviteTemplate] = useState("generic");
 
@@ -592,15 +586,7 @@ export default function InvitedApplicationPage() {
                     checked={formData.is_remote_worker}
                     onCheckedChange={(checked) => setFormData({ 
                       ...formData, 
-                      is_remote_worker: checked,
-                      // Clear payment fields when unchecking
-                      ...(checked ? {} : { 
-                        payment_first_name: "", 
-                        payment_last_name: "", 
-                        payment_email: "", 
-                        payment_phone: "", 
-                        payment_country: "" 
-                      })
+                      is_remote_worker: checked
                     })}
                     className="w-6 h-6 border-2 border-[#8B5CF6] data-[state=checked]:bg-[#8B5CF6] data-[state=checked]:border-[#8B5CF6]"
                   />
@@ -608,101 +594,6 @@ export default function InvitedApplicationPage() {
                     I am a remote worker (working outside the US)
                   </Label>
                 </div>
-
-                {formData.is_remote_worker && (
-                  <div className="space-y-4 mt-4 pl-4 border-l-2 border-[#8B5CF6]/30">
-                    <Label className="text-sm font-semibold text-[#1A1A2E] block">
-                      Payment Information (via Remitly)
-                    </Label>
-                    <p className="text-xs text-gray-500 -mt-2">
-                      We use Remitly to send payments internationally. Upon processing your payment, you will receive a notification from Remitly to select your preferred disbursement method (bank deposit, mobile money, cash pickup, etc.).
-                    </p>
-                    
-                    {/* Payment Fields Grid */}
-                    <div className="space-y-3 bg-white/50 p-4 rounded-lg">
-                      {/* Important Notice */}
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
-                        <p className="text-sm text-amber-800 font-medium">
-                          ⚠️ Important: Your first and last name must match your government-issued ID exactly to receive payment.
-                        </p>
-                      </div>
-                      
-                      {/* Name Fields */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-sm text-[#1A1A2E] mb-1 block">First Name (as shown on ID) *</Label>
-                          <Input
-                            type="text"
-                            name="payment_first_name"
-                            value={formData.payment_first_name}
-                            onChange={handleChange}
-                            placeholder="First name exactly as on ID"
-                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Last Name (as shown on ID) *</Label>
-                          <Input
-                            type="text"
-                            name="payment_last_name"
-                            value={formData.payment_last_name}
-                            onChange={handleChange}
-                            placeholder="Last name exactly as on ID"
-                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
-                            required
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Contact Info */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Email Address *</Label>
-                          <Input
-                            type="email"
-                            name="payment_email"
-                            value={formData.payment_email}
-                            onChange={handleChange}
-                            placeholder="Email for payment notifications"
-                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Phone Number *</Label>
-                          <Input
-                            type="tel"
-                            name="payment_phone"
-                            value={formData.payment_phone}
-                            onChange={handleChange}
-                            placeholder="Include country code (e.g., +63...)"
-                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
-                            required
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Country */}
-                      <div>
-                        <Label className="text-sm text-[#1A1A2E] mb-1 block">Country of Residence *</Label>
-                        <Input
-                          type="text"
-                          name="payment_country"
-                          value={formData.payment_country}
-                          onChange={handleChange}
-                          placeholder="Country where you will receive payment"
-                          className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
-                          required
-                        />
-                      </div>
-                      
-                      <p className="text-xs text-gray-500 mt-2">
-                        Upon processing your payment, you will receive a notification from Remitly to select your preferred disbursement method (bank transfer, mobile money, cash pickup, etc.).
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 

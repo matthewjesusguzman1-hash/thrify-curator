@@ -52,14 +52,8 @@ class InvitedJobApplication(BaseModel):
     has_reliable_transportation: Optional[bool] = None
     additional_info: Optional[str] = ""
     preferred_contact: str = "email"
-    # Remote worker fields (only shown if is_remote_worker is True)
+    # Remote worker field
     is_remote_worker: Optional[bool] = False
-    # Payment info for Remitly transfers
-    payment_first_name: Optional[str] = None
-    payment_last_name: Optional[str] = None
-    payment_email: Optional[str] = None
-    payment_phone: Optional[str] = None
-    payment_country: Optional[str] = None
 
 # Ensure upload directory exists
 UPLOAD_DIR = "/app/uploads/consignment_photos"
@@ -386,14 +380,8 @@ async def submit_invited_application(
         "invited": True,
         "invite_id": invite["id"],
         "invite_template": invite.get("template", "generic"),
-        # Remote worker fields
-        "is_remote_worker": application.is_remote_worker or False,
-        # Payment info for Remitly
-        "payment_first_name": application.payment_first_name,
-        "payment_last_name": application.payment_last_name,
-        "payment_email": application.payment_email,
-        "payment_phone": application.payment_phone,
-        "payment_country": application.payment_country
+        # Remote worker field
+        "is_remote_worker": application.is_remote_worker or False
     }
     
     await db.job_applications.insert_one(app_doc)
