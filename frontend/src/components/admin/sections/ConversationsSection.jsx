@@ -590,35 +590,30 @@ export default function ConversationsSection() {
                 </div>
 
                 {/* Conversation Detail - shows when conversation is selected */}
-                <div className={`${!selectedConversation ? 'hidden' : 'flex'} flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden min-h-[400px]`}>
+                <div className={`${!selectedConversation ? 'hidden' : 'flex'} flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden`}>
                   {selectedConversation ? (
                     <>
-                      {/* Header */}
-                      <div className="p-4 bg-white border-b border-gray-200 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                      {/* Compact Header */}
+                      <div className="p-2 bg-white border-b border-gray-200 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => {
                               setSelectedConversation(null);
                               selectedConversationRef.current = null;
                             }}
-                            className="p-2 hover:bg-gray-100 rounded-lg"
+                            className="p-1.5 hover:bg-gray-100 rounded-lg"
                             title="Back to conversations"
                           >
-                            <ChevronDown className="w-5 h-5 rotate-90" />
+                            <ChevronDown className="w-4 h-4 rotate-90" />
                           </button>
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-white text-sm ${
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center font-semibold text-white text-xs ${
                             selectedConversation.participant_type === 'employee' 
                               ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
                               : 'bg-gradient-to-r from-amber-500 to-orange-600'
                           }`}>
                             {selectedConversation.participant_name.charAt(0).toUpperCase()}
                           </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-[#333] text-sm truncate">{selectedConversation.participant_name}</p>
-                            <p className="text-xs text-[#888] truncate">{selectedConversation.participant_email}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
+                          <span className="font-medium text-[#333] text-sm truncate max-w-[150px]">{selectedConversation.participant_name}</span>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                             selectedConversation.participant_type === 'employee'
                               ? 'bg-green-100 text-green-700'
@@ -626,35 +621,37 @@ export default function ConversationsSection() {
                           }`}>
                             {selectedConversation.participant_type === 'employee' ? 'EMP' : 'CON'}
                           </span>
+                        </div>
+                        <div className="flex items-center gap-1">
                           {/* Read Receipts Toggle */}
                           <button
                             onClick={toggleReadReceipts}
-                            className={`p-2 rounded-lg transition-colors ${
+                            className={`p-1.5 rounded-lg transition-colors ${
                               readReceiptsEnabled 
                                 ? 'text-blue-500 hover:bg-blue-50' 
                                 : 'text-gray-400 hover:bg-gray-100'
                             }`}
-                            title={readReceiptsEnabled ? "Read receipts on - click to disable" : "Read receipts off - click to enable"}
+                            title={readReceiptsEnabled ? "Read receipts on" : "Read receipts off"}
                             data-testid="read-receipts-toggle"
                           >
-                            {readReceiptsEnabled ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+                            {readReceiptsEnabled ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                           </button>
                           <button
                             onClick={() => showDeleteConfirmation(selectedConversation)}
-                            className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Delete conversation"
                             data-testid="delete-conversation-btn"
                           >
-                            <Trash2 className="w-5 h-5" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
 
-                      {/* Messages */}
+                      {/* Messages - more vertical space */}
                       <div 
                         ref={messagesContainerRef}
                         onScroll={handleMessagesScroll}
-                        className="flex-1 overflow-y-auto p-4 space-y-3 max-h-[300px]"
+                        className="flex-1 overflow-y-auto p-3 space-y-2 min-h-[250px]"
                       >
                         {selectedConversation.messages.length === 0 ? (
                           <div className="text-center py-8 text-[#888]">
