@@ -38,10 +38,45 @@ export default function ConversationsSection() {
   const pollingRef = useRef(null);
   const selectedConversationRef = useRef(null);
   const previousUnreadRef = useRef(0);
+  const messagesContainerRef = useRef(null);
+  const isAtBottomRef = useRef(true);
 
   const getToken = () => localStorage.getItem("token");
 
-  // Removed auto-scroll - user prefers manual scrolling
+  // Smart auto-scroll - only scroll if user is already at the bottom
+  const checkIfAtBottom = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return true;
+    const threshold = 50;
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+  };
+  
+  const scrollToBottomIfNeeded = () => {
+    if (isAtBottomRef.current && messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  };
+  
+  const handleMessagesScroll = () => {
+    isAtBottomRef.current = checkIfAtBottom();
+  };
+  
+  // Scroll to bottom when new messages arrive (only if already at bottom)
+  useEffect(() => {
+    scrollToBottomIfNeeded();
+  }, [selectedConversation?.messages?.length]);
+  
+  // Scroll to bottom when selecting a new conversation
+  useEffect(() => {
+    if (selectedConversation) {
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+          isAtBottomRef.current = true;
+        }
+      }, 100);
+    }
+  }, [selectedConversation?.id]);
 
   const fetchConversations = useCallback(async () => {
     const token = getToken();
@@ -501,7 +536,11 @@ export default function ConversationsSection() {
                       </div>
 
                       {/* Messages */}
-                      <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-[300px]">
+                      <div 
+                        ref={messagesContainerRef}
+                        onScroll={handleMessagesScroll}
+                        className="flex-1 overflow-y-auto p-4 space-y-3 max-h-[300px]"
+                      >
                         {selectedConversation.messages.length === 0 ? (
                           <div className="text-center py-8 text-[#888]">
                             <MessageCircle className="w-12 h-12 mx-auto mb-2 text-[#ccc]" />

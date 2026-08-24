@@ -36,14 +36,48 @@ export default function MessagingSection({
   const inputRef = useRef(null);
   const pollingRef = useRef(null);
   const sectionRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const previousMessageCountRef = useRef(0);
+  const isAtBottomRef = useRef(true);
   
-  // Focus input when expanded (no auto-scroll)
+  // Check if user is scrolled to bottom of messages
+  const checkIfAtBottom = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return true;
+    const threshold = 50; // pixels from bottom to consider "at bottom"
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+  };
+  
+  // Scroll to bottom only if user was already at bottom
+  const scrollToBottomIfNeeded = () => {
+    if (isAtBottomRef.current && messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  };
+  
+  // Track scroll position
+  const handleScroll = () => {
+    isAtBottomRef.current = checkIfAtBottom();
+  };
+  
+  // Focus input when expanded and scroll to bottom initially
   useEffect(() => {
     if (expanded) {
       inputRef.current?.focus();
+      // Initial scroll to bottom when opening
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+          isAtBottomRef.current = true;
+        }
+      }, 100);
     }
   }, [expanded]);
+  
+  // Scroll to bottom when new messages arrive (only if already at bottom)
+  useEffect(() => {
+    scrollToBottomIfNeeded();
+  }, [conversation?.messages?.length]);
 
   const fetchConversation = async () => {
     try {
@@ -236,7 +270,12 @@ export default function MessagingSection({
             className="border-t border-white/10"
           >
             {/* Messages area */}
-            <div className="h-64 overflow-y-auto p-4 space-y-3" data-testid="messages-container">
+            <div 
+              ref={messagesContainerRef}
+              onScroll={handleScroll}
+              className="h-64 overflow-y-auto p-4 space-y-3" 
+              data-testid="messages-container"
+            >
               {loading ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="w-6 h-6 text-white/50 animate-spin" />
