@@ -276,7 +276,7 @@ export default function AdminFullScreenMessaging({
   return (
     <div className="flex h-full bg-white">
       {/* Conversation List - Left Panel */}
-      <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-80 lg:w-96 border-r border-gray-200`}>
+      <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 lg:w-[420px] xl:w-[480px] border-r border-gray-200`}>
         {/* Search and Filter */}
         <div className="p-4 border-b border-gray-200 space-y-3">
           <div className="relative">
@@ -321,49 +321,69 @@ export default function AdminFullScreenMessaging({
               <div
                 key={conv.id}
                 className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                  selectedConversation?.id === conv.id ? 'bg-blue-50' : ''
+                  selectedConversation?.id === conv.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
                 }`}
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-4">
+                  {/* Avatar */}
                   <div 
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
                       conv.participant_type === 'employee' ? 'bg-blue-100' : 'bg-purple-100'
                     }`}
                     onClick={() => handleSelectConversation(conv)}
                   >
                     {conv.participant_type === 'employee' ? (
-                      <Briefcase className="w-5 h-5 text-blue-600" />
+                      <Briefcase className="w-6 h-6 text-blue-600" />
                     ) : (
-                      <Package className="w-5 h-5 text-purple-600" />
+                      <Package className="w-6 h-6 text-purple-600" />
                     )}
                   </div>
+                  
+                  {/* Content */}
                   <div className="flex-1 min-w-0" onClick={() => handleSelectConversation(conv)}>
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium text-gray-900 truncate">{conv.participant_name}</p>
+                    {/* Name and Badge Row */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-semibold text-gray-900 text-base">{conv.participant_name}</p>
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                        conv.participant_type === 'employee' 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : 'bg-purple-100 text-purple-700'
+                      }`}>
+                        {conv.participant_type === 'employee' ? 'Employee' : 'Consignor'}
+                      </span>
                       {conv.unread_count > 0 && (
-                        <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                        <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold ml-auto">
                           {conv.unread_count}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 capitalize">{conv.participant_type}</p>
-                    {conv.last_message && (
-                      <p className="text-sm text-gray-600 truncate mt-1">{conv.last_message}</p>
+                    
+                    {/* Email */}
+                    {conv.participant_email && (
+                      <p className="text-sm text-gray-500 mb-1">{conv.participant_email}</p>
                     )}
+                    
+                    {/* Last Message Preview */}
+                    {conv.last_message && (
+                      <p className="text-sm text-gray-600 line-clamp-2 mt-2">{conv.last_message}</p>
+                    )}
+                    
+                    {/* Time */}
                     {conv.last_message_at && (
-                      <p className="text-xs text-gray-400 mt-1">{formatLastMessage(conv.last_message_at)}</p>
+                      <p className="text-xs text-gray-400 mt-2">{formatLastMessage(conv.last_message_at)}</p>
                     )}
                   </div>
+                  
                   {/* Delete button */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       showDeleteConfirmation(conv);
                     }}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 self-start"
                     title="Delete thread"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
               </div>
