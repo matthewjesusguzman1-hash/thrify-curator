@@ -365,11 +365,17 @@ export default function MessagingSection({
                                 <span className="text-xs">{formatMessageTime(msg.sent_at)}</span>
                                 {/* Read receipt indicator for user's own messages */}
                                 {msg.sender_type !== "admin" && (
-                                  <span className="flex items-center ml-1" title={msg.read_at ? `Seen ${formatReadTime(msg.read_at)}` : "Delivered"}>
+                                  <span className="flex items-center ml-2" title={msg.read_at ? `Seen ${formatReadTime(msg.read_at)}` : "Delivered"}>
                                     {msg.read ? (
-                                      <CheckCheck className="w-3.5 h-3.5 text-blue-300" />
+                                      <>
+                                        <CheckCheck className="w-4 h-4 text-blue-300" />
+                                        <span className="text-xs ml-1 text-blue-300 font-medium">Read</span>
+                                      </>
                                     ) : (
-                                      <Check className="w-3.5 h-3.5" />
+                                      <>
+                                        <Check className="w-4 h-4" />
+                                        <span className="text-xs ml-1">Sent</span>
+                                      </>
                                     )}
                                   </span>
                                 )}

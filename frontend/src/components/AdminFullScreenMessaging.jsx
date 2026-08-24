@@ -10,7 +10,9 @@ import {
   Briefcase,
   Package,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Check,
+  CheckCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -225,6 +227,23 @@ export default function AdminFullScreenMessaging({
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
+  // Format read receipt time
+  const formatReadTime = (isoString) => {
+    if (!isoString) return null;
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
   // Delete conversation (soft delete)
@@ -464,11 +483,27 @@ export default function AdminFullScreenMessaging({
                         </p>
                       )}
                       <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                      <p className={`text-xs mt-2 ${
+                      <div className={`flex items-center gap-1 mt-2 ${
                         msg.sender_type === 'admin' ? 'text-white/70' : 'text-gray-400'
                       }`}>
-                        {formatMessageTime(msg.sent_at)}
-                      </p>
+                        <span className="text-xs">{formatMessageTime(msg.sent_at)}</span>
+                        {/* Read receipt indicator for admin messages */}
+                        {msg.sender_type === 'admin' && (
+                          <span className="flex items-center ml-2" title={msg.read_at ? `Seen ${formatReadTime(msg.read_at)}` : "Delivered"}>
+                            {msg.read ? (
+                              <>
+                                <CheckCheck className="w-4 h-4 text-blue-300" />
+                                <span className="text-xs ml-1 text-blue-300 font-medium">Read</span>
+                              </>
+                            ) : (
+                              <>
+                                <Check className="w-4 h-4" />
+                                <span className="text-xs ml-1">Sent</span>
+                              </>
+                            )}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))

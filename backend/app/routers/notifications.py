@@ -10,12 +10,27 @@ router = APIRouter(prefix="/admin/notifications", tags=["Admin Notifications"])
 
 @router.get("")
 async def get_admin_notifications(admin: dict = Depends(get_admin_user), limit: int = 50):
-    """Get recent notifications for admin"""
+    """Get recent notifications for admin (excluding message notifications)
+    
+    Message notifications are handled separately by the Messages icon badge.
+    The bell notification only shows non-message notifications like:
+    - Clock in/out events
+    - W-9 submissions
+    - Job applications
+    - Consignment inquiries/agreements
+    - Payment method changes
+    """
+    # Exclude message-type notifications from bell - they show on Messages icon instead
+    message_types = ["new_message", "employee_message", "consignor_message"]
+    
     notifications = await db.admin_notifications.find(
-        {}, {"_id": 0}
+        {"type": {"$nin": message_types}}, {"_id": 0}
     ).sort("created_at", -1).to_list(limit)
     
-    unread_count = await db.admin_notifications.count_documents({"read": False})
+    unread_count = await db.admin_notifications.count_documents({
+        "read": False,
+        "type": {"$nin": message_types}
+    })
     
     return {
         "notifications": notifications,
@@ -25,16 +40,17 @@ async def get_admin_notifications(admin: dict = Depends(get_admin_user), limit: 
 
 @router.post("/mark-read")
 async def mark_notifications_read(request: MarkReadRequest = None, admin: dict = Depends(get_admin_user)):
-    """Mark notifications as read"""
+    """Mark notifications as read (excludes message notifications)"""
+    message_types = ["new_message", "employee_message", "consignor_message"]
     notification_ids = request.notification_ids if request else None
     if notification_ids:
         await db.admin_notifications.update_many(
-            {"id": {"$in": notification_ids}},
+            {"id": {"$in": notification_ids}, "type": {"$nin": message_types}},
             {"$set": {"read": True}}
         )
     else:
         await db.admin_notifications.update_many(
-            {"read": False},
+            {"read": False, "type": {"$nin": message_types}},
             {"$set": {"read": True}}
         )
     return {"message": "Notifications marked as read"}
@@ -51,6 +67,7 @@ async def delete_notification(notification_id: str, admin: dict = Depends(get_ad
 
 @router.delete("")
 async def clear_all_notifications(admin: dict = Depends(get_admin_user)):
-    """Clear all notifications"""
-    await db.admin_notifications.delete_many({})
+    """Clear all notifications (excludes message notifications)"""
+    message_types = ["new_message", "employee_message", "consignor_message"]
+    await db.admin_notifications.delete_many({"type": {"$nin": message_types}})
     return {"message": "All notifications cleared"}

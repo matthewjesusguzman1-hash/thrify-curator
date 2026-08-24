@@ -33,122 +33,66 @@ const POLLING_INTERVAL = 3000;
 // Local storage key for read receipts preference
 const READ_RECEIPTS_KEY = "admin_read_receipts_enabled";
 
-// Swipeable Conversation Item Component with visible delete button for iOS
+// Conversation Item Component with delete button
 function SwipeableConversationItem({ conv, isSelected, onSelect, onDelete, formatMessageTime }) {
-  const [showDelete, setShowDelete] = useState(false);
-  
-  const handleDeleteClick = (e) => {
-    e.stopPropagation();
-    onDelete(conv);
-    setShowDelete(false);
-  };
-  
-  const handleCardClick = () => {
-    if (showDelete) {
-      setShowDelete(false);
-    } else {
-      onSelect(conv);
-    }
-  };
-  
-  // Long press to reveal delete
-  const handleLongPress = (e) => {
-    e.preventDefault();
-    setShowDelete(true);
-  };
-
   return (
-    <div className="relative overflow-hidden rounded-xl" data-testid={`conversation-item-${conv.id}`}>
-      {/* Delete button that slides in */}
-      <AnimatePresence>
-        {showDelete && (
-          <motion.div 
-            initial={{ x: -80 }}
-            animate={{ x: 0 }}
-            exit={{ x: -80 }}
-            className="absolute inset-y-0 left-0 w-20 bg-red-500 flex items-center justify-center rounded-l-xl z-10"
-          >
-            <button
-              onClick={handleDeleteClick}
-              className="flex flex-col items-center text-white p-2"
-              data-testid={`delete-thread-btn-${conv.id}`}
-            >
-              <Trash2 className="w-6 h-6" />
-              <span className="text-xs mt-1">Delete</span>
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      
-      {/* Conversation card */}
-      <motion.div
-        onClick={handleCardClick}
-        onContextMenu={handleLongPress}
-        animate={{ x: showDelete ? 80 : 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className={`relative p-4 cursor-pointer transition-colors border ${
-          isSelected
-            ? 'bg-blue-50 border-blue-400 border-l-4 border-l-blue-500'
-            : conv.unread_count > 0
-              ? 'bg-blue-50/50 border-blue-200 hover:bg-blue-50'
-              : 'bg-white border-gray-200 hover:bg-gray-50'
-        } rounded-xl shadow-sm`}
-      >
-        <div className="flex gap-3">
-          {/* Avatar */}
-          <div className={`w-11 h-11 rounded-full flex items-center justify-center font-semibold text-white text-lg flex-shrink-0 ${
-            conv.participant_type === 'employee' 
-              ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
-              : 'bg-gradient-to-r from-amber-500 to-orange-600'
-          }`}>
-            {conv.participant_name.charAt(0).toUpperCase()}
-          </div>
-          
-          {/* Content */}
-          <div className="flex-1 min-w-0 overflow-hidden">
-            {/* Row 1: Name + Badge + Unread */}
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="font-semibold text-gray-900 truncate">{conv.participant_name}</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${
-                conv.participant_type === 'employee'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-amber-100 text-amber-700'
-              }`}>
-                {conv.participant_type === 'employee' ? 'EMP' : 'CON'}
+    <div 
+      className={`relative p-3 cursor-pointer transition-colors border rounded-xl ${
+        isSelected
+          ? 'bg-blue-50 border-blue-400 border-l-4 border-l-blue-500'
+          : conv.unread_count > 0
+            ? 'bg-blue-50/50 border-blue-200 hover:bg-blue-50'
+            : 'bg-white border-gray-200 hover:bg-gray-50'
+      }`}
+      onClick={() => onSelect(conv)}
+      data-testid={`conversation-item-${conv.id}`}
+    >
+      <div className="flex items-center gap-3">
+        {/* Avatar */}
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-white flex-shrink-0 ${
+          conv.participant_type === 'employee' 
+            ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
+            : 'bg-gradient-to-r from-amber-500 to-orange-600'
+        }`}>
+          {conv.participant_name.charAt(0).toUpperCase()}
+        </div>
+        
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-gray-900 truncate text-sm">{conv.participant_name}</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${
+              conv.participant_type === 'employee'
+                ? 'bg-green-100 text-green-700'
+                : 'bg-amber-100 text-amber-700'
+            }`}>
+              {conv.participant_type === 'employee' ? 'EMP' : 'CON'}
+            </span>
+            {conv.unread_count > 0 && (
+              <span className="px-1.5 py-0.5 bg-blue-500 text-white text-[10px] rounded-full font-bold flex-shrink-0">
+                {conv.unread_count}
               </span>
-              {conv.unread_count > 0 && (
-                <span className="ml-auto px-1.5 py-0.5 bg-blue-500 text-white text-[10px] rounded-full font-bold flex-shrink-0">
-                  {conv.unread_count}
-                </span>
-              )}
-            </div>
-            
-            {/* Row 2: Email */}
-            <p className="text-xs text-gray-500 truncate mb-1">{conv.participant_email}</p>
-            
-            {/* Row 3: Last message */}
-            {conv.last_message && (
-              <p className="text-xs text-gray-600 truncate">{conv.last_message}</p>
             )}
-            
-            {/* Row 4: Time */}
-            <p className="text-[10px] text-gray-400 mt-1">{formatMessageTime(conv.last_message_at)}</p>
           </div>
-          
-          {/* Delete icon */}
+          <p className="text-xs text-gray-500 truncate">{conv.participant_email}</p>
+        </div>
+        
+        {/* Time + Delete */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <span className="text-[10px] text-gray-400">{formatMessageTime(conv.last_message_at)}</span>
           <button
             onClick={(e) => {
               e.stopPropagation();
               onDelete(conv);
             }}
-            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 self-start"
+            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
             title="Delete thread"
             data-testid={`delete-icon-${conv.id}`}
           >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -613,8 +557,8 @@ export default function ConversationsSection() {
 
               {/* Two-panel layout on desktop */}
               <div className="flex flex-col lg:flex-row gap-4 min-h-[500px]">
-                {/* Conversation List - wider on desktop */}
-                <div className={`${selectedConversation ? 'hidden lg:block' : ''} lg:w-[380px] xl:w-[420px] flex-shrink-0 space-y-3 overflow-y-auto max-h-[500px] pr-2`}>
+                {/* Conversation List - narrower to give more room for messages */}
+                <div className={`${selectedConversation ? 'hidden lg:block' : ''} lg:w-[300px] xl:w-[340px] flex-shrink-0 space-y-2 overflow-y-auto max-h-[500px] pr-2`}>
                   {loading && conversations.length === 0 ? (
                     <div className="text-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
@@ -761,11 +705,17 @@ export default function ConversationsSection() {
                                           <span className="text-xs">{formatMessageTime(msg.sent_at)}</span>
                                           {/* Read receipt indicator for admin messages */}
                                           {msg.sender_type === 'admin' && readReceiptsEnabled && (
-                                            <span className="flex items-center ml-1" title={msg.read_at ? `Seen ${formatReadTime(msg.read_at)}` : "Delivered"}>
+                                            <span className="flex items-center ml-2" title={msg.read_at ? `Seen ${formatReadTime(msg.read_at)}` : "Delivered"}>
                                               {msg.read ? (
-                                                <CheckCheck className="w-3.5 h-3.5 text-blue-300" />
+                                                <>
+                                                  <CheckCheck className="w-4 h-4 text-blue-300" />
+                                                  <span className="text-xs ml-1 text-blue-300 font-medium">Read</span>
+                                                </>
                                               ) : (
-                                                <Check className="w-3.5 h-3.5" />
+                                                <>
+                                                  <Check className="w-4 h-4" />
+                                                  <span className="text-xs ml-1">Sent</span>
+                                                </>
                                               )}
                                             </span>
                                           )}

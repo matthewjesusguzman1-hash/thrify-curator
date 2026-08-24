@@ -288,3 +288,17 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - Employee/consignor messages also show when admin has read them
   - Blue double checkmarks indicate read, gray single checkmark indicates delivered
 
+### Messaging UX Improvements (2026-08-24) - NEW
+- **Explicit "Read" Labels**:
+  - Added visible "Read" and "Sent" text labels next to checkmark icons
+  - Increased icon size from w-3.5 to w-4 for better visibility
+  - Applied to ConversationsSection, AdminFullScreenMessaging, and MessagingSection
+- **Notification Bell vs Messages Icon Separation**:
+  - Bell (Alerts) now only shows non-message notifications (clock in/out, job apps, etc.)
+  - Message-type notifications (employee_message, consignor_message, new_message) excluded from bell
+  - Messages icon in header shows unread message count badge separately
+  - This prevents duplicate message alerts and gives Messages its own dedicated indicator
+- **Backend Changes**:
+  - `/api/admin/notifications` now filters out message types from count and list
+  - Mark-read and clear-all also exclude message types
+  - Message unread counts handled separately by `/api/conversations/admin/unread-count`
