@@ -83,7 +83,7 @@ Compensation Tier Structure:
 
 Payment Logistics & Remitly Designation: Compensation shall be calculated in United States Dollars ($ USD) and remitted on a bi-weekly schedule via the REMITLY payment platform.
 
-Upon payment, the Contractor will receive a notification from Remitly allowing them to select their preferred method of receiving funds (bank deposit, mobile money, cash pickup, etc.).
+Upon payment, the Contractor will receive a notification from Remitly to select their preferred disbursement method (bank deposit, mobile money, cash pickup, etc.).
 
 The Contractor is responsible for any recipient-side conversion fees, cash-out fees, or local banking charges.
 

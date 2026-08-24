@@ -2667,7 +2667,7 @@ export default function EmployeeDashboard({
                         {/* Payment Method Selection - Remitly */}
                         <div>
                           <label className="text-sm text-white/70 block mb-2">Payment Information (via Remitly)</label>
-                          <p className="text-xs text-white/40 mb-2">We use Remitly to send payments. When paid, you will choose how to receive your money.</p>
+                          <p className="text-xs text-white/40 mb-2">We use Remitly to send payments. Upon processing your payment, you will receive a notification to select your preferred disbursement method.</p>
                           <div className="bg-amber-500/20 border border-amber-500/30 rounded-lg p-3 mb-4">
                             <p className="text-xs text-amber-300 font-medium">
                               ⚠️ Important: Your first and last name must match your government-issued ID exactly to receive payment.

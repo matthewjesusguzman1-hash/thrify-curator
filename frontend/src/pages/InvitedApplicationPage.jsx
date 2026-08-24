@@ -615,7 +615,7 @@ export default function InvitedApplicationPage() {
                       Payment Information (via Remitly)
                     </Label>
                     <p className="text-xs text-gray-500 -mt-2">
-                      We use Remitly to send payments internationally. When you receive payment, Remitly will allow you to choose how you want to receive your money (bank deposit, mobile money, cash pickup, etc.).
+                      We use Remitly to send payments internationally. Upon processing your payment, you will receive a notification from Remitly to select your preferred disbursement method (bank deposit, mobile money, cash pickup, etc.).
                     </p>
                     
                     {/* Payment Fields Grid */}
@@ -698,7 +698,7 @@ export default function InvitedApplicationPage() {
                       </div>
                       
                       <p className="text-xs text-gray-500 mt-2">
-                        When you are paid, you will receive a notification from Remitly allowing you to choose your preferred payment method (bank transfer, mobile money, cash pickup, etc.).
+                        Upon processing your payment, you will receive a notification from Remitly to select your preferred disbursement method (bank transfer, mobile money, cash pickup, etc.).
                       </p>
                     </div>
                   </div>
