@@ -2709,18 +2709,16 @@ export default function AdminDashboard() {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+            className="px-2 py-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
             onClick={() => {
               lightTap();
               handleMasterRefresh();
             }}
             disabled={masterRefreshing}
             data-testid="refresh-button"
+            title="Refresh dashboard"
           >
             <RefreshCw className={`w-5 h-5 ${masterRefreshing ? 'animate-spin' : ''}`} />
-            <span className="ml-1.5 text-sm font-medium hidden sm:inline">
-              {masterRefreshing ? 'Refreshing...' : 'Refresh'}
-            </span>
           </Button>
 
           {/* Notification Bell */}
@@ -3016,19 +3014,6 @@ export default function AdminDashboard() {
               >
                 Admin Dashboard
               </h1>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  lightTap();
-                  handleMasterRefresh();
-                }}
-                disabled={masterRefreshing}
-                className="h-9 px-3 border-white/30 text-white hover:bg-white/10 transition-all"
-                data-testid="master-refresh-btn"
-              >
-                <RefreshCw className={`w-4 h-4 ${masterRefreshing ? 'animate-spin' : ''}`} />
-              </Button>
             </div>
             <div className="flex gap-2 items-start">
               {/* Employee Management + Start Trip */}
