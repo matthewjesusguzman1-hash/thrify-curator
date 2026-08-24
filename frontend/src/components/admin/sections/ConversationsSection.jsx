@@ -604,20 +604,13 @@ export default function ConversationsSection() {
                           <textarea
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleSendReply(e);
-                              }
-                            }}
                             placeholder="Type a message..."
                             rows={6}
                             className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[150px]"
                             disabled={sending}
                             data-testid="admin-message-input"
                           />
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-400 text-xs">Enter to send, Shift+Enter for new line</span>
+                          <div className="flex justify-end items-center">
                             <Button
                               type="submit"
                               disabled={!newMessage.trim() || sending}

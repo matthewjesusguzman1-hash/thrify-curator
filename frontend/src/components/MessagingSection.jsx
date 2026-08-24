@@ -339,21 +339,13 @@ export default function MessagingSection({
                   ref={inputRef}
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) => {
-                    // Submit on Enter (without shift), but allow Shift+Enter for new lines
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage(e);
-                    }
-                  }}
                   placeholder="Type a message..."
                   rows={6}
                   className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 resize-none min-h-[150px]"
                   disabled={sending}
                   data-testid="message-input"
                 />
-                <div className="flex justify-between items-center">
-                  <span className="text-white/30 text-xs">Press Enter to send, Shift+Enter for new line</span>
+                <div className="flex justify-end items-center">
                   <Button
                     type="submit"
                     disabled={!newMessage.trim() || sending}
