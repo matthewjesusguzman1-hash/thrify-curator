@@ -2688,9 +2688,9 @@ export default function AdminDashboard() {
 
   return (
     <div className="dashboard-container" data-testid="admin-dashboard">
-      {/* Header */}
+      {/* Header - Sticky */}
       <header 
-        className="dashboard-header" 
+        className="dashboard-header sticky top-0 z-40" 
         style={{ 
           background: 'linear-gradient(90deg, #1A1A2E 0%, #16213E 100%)',
           paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)'
@@ -2705,6 +2705,24 @@ export default function AdminDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Refresh Button */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+            onClick={() => {
+              lightTap();
+              handleMasterRefresh();
+            }}
+            disabled={masterRefreshing}
+            data-testid="refresh-button"
+          >
+            <RefreshCw className={`w-5 h-5 ${masterRefreshing ? 'animate-spin' : ''}`} />
+            <span className="ml-1.5 text-sm font-medium hidden sm:inline">
+              {masterRefreshing ? 'Refreshing...' : 'Refresh'}
+            </span>
+          </Button>
+
           {/* Notification Bell */}
           <div className="relative" ref={notificationRef}>
             <Button 
