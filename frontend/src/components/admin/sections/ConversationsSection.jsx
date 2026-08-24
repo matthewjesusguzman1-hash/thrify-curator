@@ -555,94 +555,160 @@ export default function ConversationsSection() {
                 </div>
               </div>
 
-              {/* Stacked layout - conversation list on top, messages below */}
-              <div className="flex flex-col gap-4">
-                {/* Conversation List - always visible on top */}
-                <div className="space-y-2 overflow-y-auto max-h-[200px] pr-2">
-                  {loading && conversations.length === 0 ? (
-                    <div className="text-center py-4">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
-                      <p className="text-[#888] mt-2 text-sm">Loading...</p>
-                    </div>
-                  ) : filteredConversations.length === 0 ? (
-                    <div className="text-center py-4">
-                      <Users className="w-8 h-8 text-[#ccc] mx-auto mb-2" />
-                      <p className="text-[#888] text-sm">
-                        {conversations.length === 0 
-                          ? "No conversations yet"
-                          : "No conversations match your filters"}
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      {filteredConversations.map((conv) => (
-                        <SwipeableConversationItem
-                          key={conv.id}
-                          conv={conv}
-                          isSelected={selectedConversation?.id === conv.id}
-                          onSelect={handleSelectConversation}
-                          onDelete={showDeleteConfirmation}
-                          formatMessageTime={formatMessageTime}
-                        />
-                      ))}
-                    </>
-                  )}
-                </div>
-
-                {/* Conversation Detail - always visible below */}
-                <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden min-h-[300px]">
-                  {selectedConversation ? (
-                    <>
-                      {/* Compact Header */}
-                      <div className="p-2 bg-white border-b border-gray-200 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center font-semibold text-white text-xs ${
-                            selectedConversation.participant_type === 'employee' 
-                              ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
-                              : 'bg-gradient-to-r from-amber-500 to-orange-600'
-                          }`}>
-                            {selectedConversation.participant_name.charAt(0).toUpperCase()}
-                          </div>
-                          <span className="font-medium text-[#333] text-sm">{selectedConversation.participant_name}</span>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                            selectedConversation.participant_type === 'employee'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-amber-100 text-amber-700'
-                          }`}>
-                            {selectedConversation.participant_type === 'employee' ? 'Employee' : 'Consignor'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {/* Read Receipts Toggle */}
-                          <button
-                            onClick={toggleReadReceipts}
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              readReceiptsEnabled 
-                                ? 'text-blue-500 hover:bg-blue-50' 
-                                : 'text-gray-400 hover:bg-gray-100'
+              {/* Full-width Conversation List */}
+              <div className="space-y-2 mb-4">
+                {loading && conversations.length === 0 ? (
+                  <div className="text-center py-6">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
+                    <p className="text-[#888] mt-2 text-sm">Loading conversations...</p>
+                  </div>
+                ) : filteredConversations.length === 0 ? (
+                  <div className="text-center py-6">
+                    <Users className="w-10 h-10 text-[#ccc] mx-auto mb-2" />
+                    <p className="text-[#888] text-sm">
+                      {conversations.length === 0 
+                        ? "No conversations yet"
+                        : "No conversations match your filters"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-[#666] border-b border-gray-200">
+                          <th className="pb-2 font-medium">Name</th>
+                          <th className="pb-2 font-medium">Type</th>
+                          <th className="pb-2 font-medium hidden sm:table-cell">Email</th>
+                          <th className="pb-2 font-medium">Last Message</th>
+                          <th className="pb-2 font-medium text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredConversations.map((conv) => (
+                          <tr 
+                            key={conv.id}
+                            onClick={() => handleSelectConversation(conv)}
+                            className={`border-b border-gray-100 cursor-pointer transition-colors ${
+                              selectedConversation?.id === conv.id
+                                ? 'bg-blue-50'
+                                : conv.unread_count > 0
+                                  ? 'bg-blue-50/30 hover:bg-blue-50'
+                                  : 'hover:bg-gray-50'
                             }`}
-                            title={readReceiptsEnabled ? "Read receipts on" : "Read receipts off"}
-                            data-testid="read-receipts-toggle"
+                            data-testid={`conversation-row-${conv.id}`}
                           >
-                            {readReceiptsEnabled ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                          </button>
-                          <button
-                            onClick={() => showDeleteConfirmation(selectedConversation)}
-                            className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete conversation"
-                            data-testid="delete-conversation-btn"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
+                            <td className="py-2">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-white text-sm flex-shrink-0 ${
+                                  conv.participant_type === 'employee' 
+                                    ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
+                                    : 'bg-gradient-to-r from-amber-500 to-orange-600'
+                                }`}>
+                                  {conv.participant_name.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="font-medium text-gray-900">{conv.participant_name}</span>
+                                {conv.unread_count > 0 && (
+                                  <span className="px-1.5 py-0.5 bg-blue-500 text-white text-[10px] rounded-full font-bold">
+                                    {conv.unread_count}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-2">
+                              <span className={`text-xs px-2 py-1 rounded font-medium ${
+                                conv.participant_type === 'employee'
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {conv.participant_type === 'employee' ? 'Employee' : 'Consignor'}
+                              </span>
+                            </td>
+                            <td className="py-2 text-gray-500 hidden sm:table-cell">{conv.participant_email}</td>
+                            <td className="py-2 text-gray-400 text-xs">{formatMessageTime(conv.last_message_at)}</td>
+                            <td className="py-2 text-right">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  showDeleteConfirmation(conv);
+                                }}
+                                className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete thread"
+                                data-testid={`delete-conv-${conv.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
 
-                      {/* Messages - more vertical space */}
-                      <div 
-                        ref={messagesContainerRef}
-                        onScroll={handleMessagesScroll}
-                        className="flex-1 overflow-y-auto p-3 space-y-2 min-h-[250px]"
+              {/* Messages Area - shows below when conversation is selected */}
+              {selectedConversation && (
+                <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+                  {/* Compact Header */}
+                  <div className="p-2 bg-white border-b border-gray-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedConversation(null);
+                          selectedConversationRef.current = null;
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded"
+                        title="Close"
                       >
+                        <X className="w-4 h-4 text-gray-500" />
+                      </button>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center font-semibold text-white text-xs ${
+                        selectedConversation.participant_type === 'employee' 
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
+                          : 'bg-gradient-to-r from-amber-500 to-orange-600'
+                      }`}>
+                        {selectedConversation.participant_name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="font-medium text-[#333] text-sm">{selectedConversation.participant_name}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                        selectedConversation.participant_type === 'employee'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {selectedConversation.participant_type === 'employee' ? 'Employee' : 'Consignor'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {/* Read Receipts Toggle */}
+                      <button
+                        onClick={toggleReadReceipts}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          readReceiptsEnabled 
+                            ? 'text-blue-500 hover:bg-blue-50' 
+                            : 'text-gray-400 hover:bg-gray-100'
+                        }`}
+                        title={readReceiptsEnabled ? "Read receipts on" : "Read receipts off"}
+                        data-testid="read-receipts-toggle"
+                      >
+                        {readReceiptsEnabled ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                      </button>
+                      <button
+                        onClick={() => showDeleteConfirmation(selectedConversation)}
+                        className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete conversation"
+                        data-testid="delete-conversation-btn"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Messages */}
+                  <div 
+                    ref={messagesContainerRef}
+                    onScroll={handleMessagesScroll}
+                    className="flex-1 overflow-y-auto p-3 space-y-2 min-h-[200px] max-h-[350px]"
+                  >
                         {selectedConversation.messages.length === 0 ? (
                           <div className="text-center py-8 text-[#888]">
                             <MessageCircle className="w-12 h-12 mx-auto mb-2 text-[#ccc]" />
@@ -729,47 +795,34 @@ export default function ConversationsSection() {
                         )}
                       </div>
 
-                      {/* Reply Input - larger textarea */}
-                      <form onSubmit={handleSendReply} className="p-4 bg-white border-t border-gray-200">
-                        <div className="flex flex-col gap-2">
+                      {/* Reply Input */}
+                      <form onSubmit={handleSendReply} className="p-3 bg-white border-t border-gray-200">
+                        <div className="flex gap-2">
                           <textarea
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                             placeholder="Type a message..."
-                            rows={6}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[150px]"
+                            rows={2}
+                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
                             disabled={sending}
                             data-testid="admin-message-input"
                           />
-                          <div className="flex justify-end items-center">
-                            <Button
-                              type="submit"
-                              disabled={!newMessage.trim() || sending}
-                              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90"
-                              data-testid="admin-send-message-btn"
-                            >
-                              {sending ? (
-                                <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                              ) : (
-                                <Send className="w-4 h-4 mr-2" />
-                              )}
-                              Send
-                            </Button>
-                          </div>
+                          <Button
+                            type="submit"
+                            disabled={!newMessage.trim() || sending}
+                            className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 self-end"
+                            data-testid="admin-send-message-btn"
+                          >
+                            {sending ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Send className="w-4 h-4" />
+                            )}
+                          </Button>
                         </div>
                       </form>
-                    </>
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center text-[#888]">
-                      <div className="text-center">
-                        <MessageCircle className="w-16 h-16 mx-auto mb-4 text-[#ccc]" />
-                        <p className="font-medium">Select a conversation</p>
-                        <p className="text-sm">Choose from the list to view messages</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
-              </div>
+              )}
             </div>
           </motion.div>
         )}
