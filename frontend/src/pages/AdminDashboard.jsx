@@ -1629,8 +1629,8 @@ export default function AdminDashboard() {
           week_hours: 0,
           period_hours: employeeStats.hours,
           period_shifts: employeeStats.shifts,
-          hourly_rate: employee.hourly_rate || payrollSettings.default_hourly_rate || 15,
-          estimated_pay: employeeStats.hours * (employee.hourly_rate || payrollSettings.default_hourly_rate || 15)
+          hourly_rate: employee.hourly_rate || payrollSettings.default_hourly_rate || 20,
+          estimated_pay: employeeStats.hours * (employee.hourly_rate || payrollSettings.default_hourly_rate || 20)
         },
         w9Status: { has_w9: false, status: 'not_submitted' },
         w8benStatus: { has_w8ben: false, w8ben_documents: [] },

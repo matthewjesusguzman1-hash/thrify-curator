@@ -12,9 +12,11 @@ export default function EmployeePortalViewModal({
   if (!isOpen || !employee) return null;
 
   // Prepare initial data from the admin-fetched portal data
+  // NOTE: Don't pass summary in initialData - let the dashboard fetch fresh data
+  // to ensure hourly_rate is always current
   const initialData = portalData ? {
     entries: portalData.entries || [],
-    summary: portalData.summary || {},
+    summary: null,  // Force fresh fetch for summary to get current hourly_rate
     w9Status: portalData.w9Status || null,
     w8benStatus: portalData.w8benStatus || null,
     my1099s: portalData.my1099s || { documents: [], count: 0 },
