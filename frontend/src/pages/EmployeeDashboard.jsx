@@ -2784,7 +2784,8 @@ export default function EmployeeDashboard({
             </div>
           </Collapsible>
 
-          {/* W-8BEN Tax Form Section - Collapsible */}
+          {/* W-8BEN Tax Form Section - Only show for remote workers */}
+          {isRemoteWorker() && (
           <Collapsible open={w8benExpanded} onOpenChange={setW8benExpanded}>
             <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl shadow-2xl overflow-hidden border border-white/10" data-testid="w8ben-section">
               <div className="h-1.5 bg-gradient-to-r from-[#FF6B6B] via-[#FFE66D] to-[#4ECDC4]" />
@@ -3129,6 +3130,7 @@ export default function EmployeeDashboard({
               </CollapsibleContent>
             </div>
           </Collapsible>
+          )}
           
           {/* 1099-NEC Forms Section - Collapsible */}
           {my1099s.count > 0 && (
