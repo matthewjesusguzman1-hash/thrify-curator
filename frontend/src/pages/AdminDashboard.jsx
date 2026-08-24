@@ -2718,7 +2718,7 @@ export default function AdminDashboard() {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="p-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+            className="p-2.5 bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
             onClick={() => {
               lightTap();
               handleMasterRefresh();
@@ -2727,7 +2727,7 @@ export default function AdminDashboard() {
             data-testid="refresh-button"
             title="Refresh dashboard"
           >
-            <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${masterRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-5 h-5 ${masterRefreshing ? 'animate-spin' : ''}`} />
           </Button>
 
           {/* Notification Bell */}
@@ -2735,7 +2735,7 @@ export default function AdminDashboard() {
             <Button 
               variant="ghost" 
               size="sm" 
-              className={`relative p-2 transition-all duration-300 ${
+              className={`relative p-2.5 transition-all duration-300 ${
                 unreadCount > 0 
                   ? 'bg-[#FF1493]/20 border-2 border-[#FF1493] text-white hover:bg-[#FF1493]/30 shadow-lg shadow-[#FF1493]/30 animate-pulse' 
                   : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20'
@@ -2746,9 +2746,9 @@ export default function AdminDashboard() {
               }}
               data-testid="notification-bell"
             >
-              <Bell className={`w-4 h-4 sm:w-5 sm:h-5 ${unreadCount > 0 ? 'text-[#FF1493]' : ''}`} />
+              <Bell className={`w-5 h-5 ${unreadCount > 0 ? 'text-[#FF1493]' : ''}`} />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-[#FF1493] text-white text-[10px] sm:text-xs rounded-full flex items-center justify-center font-bold shadow-lg shadow-[#FF1493]/50" data-testid="notification-badge">
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#FF1493] text-white text-[10px] rounded-full flex items-center justify-center font-bold shadow-lg shadow-[#FF1493]/50" data-testid="notification-badge">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -2966,13 +2966,13 @@ export default function AdminDashboard() {
           </div>
 
           <Link to="/" onClick={() => lightTap()}>
-            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 p-2" data-testid="home-btn" title="Home">
-              <Home className="w-4 h-4" />
+            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 p-2.5" data-testid="home-btn" title="Home">
+              <Home className="w-5 h-5" />
             </Button>
           </Link>
           <Link to="/dashboard" onClick={() => lightTap()}>
-            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 p-2" data-testid="my-dashboard-btn" title="My Dashboard">
-              <User className="w-4 h-4" />
+            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 p-2.5" data-testid="my-dashboard-btn" title="My Dashboard">
+              <User className="w-5 h-5" />
             </Button>
           </Link>
           {/* Messages Shortcut */}
@@ -2983,13 +2983,13 @@ export default function AdminDashboard() {
               lightTap();
               setShowFullScreenMessages(true);
             }}
-            className="text-white/70 hover:text-white hover:bg-white/10 relative p-2"
+            className="text-white/70 hover:text-white hover:bg-white/10 relative p-2.5"
             data-testid="admin-messages-shortcut-btn"
             title="Messages"
           >
-            <MessageSquare className="w-4 h-4" />
+            <MessageSquare className="w-5 h-5" />
             {adminUnreadMessageCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
                 {adminUnreadMessageCount > 9 ? '9+' : adminUnreadMessageCount}
               </span>
             )}
@@ -3001,11 +3001,11 @@ export default function AdminDashboard() {
               lightTap();
               handleLogout();
             }}
-            className="text-white/70 hover:text-white hover:bg-white/10 p-2"
+            className="text-white/70 hover:text-white hover:bg-white/10 p-2.5"
             data-testid="logout-btn"
             title="Logout"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-5 h-5" />
           </Button>
         </div>
       </header>
