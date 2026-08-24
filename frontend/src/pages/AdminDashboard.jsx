@@ -2705,20 +2705,20 @@ export default function AdminDashboard() {
           paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)'
         }}
       >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full flex items-center justify-center flex-shrink-0">
-            <Shield className="w-5 h-5 text-white" />
+        {/* Left side: Admin info + Refresh + Notifications */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full flex items-center justify-center flex-shrink-0">
+            <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 hidden sm:block">
             <p className="font-semibold text-white text-sm sm:text-base truncate" data-testid="admin-name">{currentAdminName}</p>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
+          
           {/* Refresh Button */}
           <Button 
             variant="ghost" 
             size="sm" 
-            className="p-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+            className="p-2 sm:p-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
             onClick={() => {
               lightTap();
               handleMasterRefresh();
@@ -2727,7 +2727,7 @@ export default function AdminDashboard() {
             data-testid="refresh-button"
             title="Refresh dashboard"
           >
-            <RefreshCw className={`w-6 h-6 ${masterRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-5 h-5 sm:w-6 sm:h-6 ${masterRefreshing ? 'animate-spin' : ''}`} />
           </Button>
 
           {/* Notification Bell */}
@@ -2735,7 +2735,7 @@ export default function AdminDashboard() {
             <Button 
               variant="ghost" 
               size="sm" 
-              className={`relative p-3 transition-all duration-300 ${
+              className={`relative p-2 sm:p-3 transition-all duration-300 ${
                 unreadCount > 0 
                   ? 'bg-[#FF1493]/20 border-2 border-[#FF1493] text-white hover:bg-[#FF1493]/30 shadow-lg shadow-[#FF1493]/30 animate-pulse' 
                   : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20'
@@ -2746,9 +2746,9 @@ export default function AdminDashboard() {
               }}
               data-testid="notification-bell"
             >
-              <Bell className={`w-6 h-6 ${unreadCount > 0 ? 'text-[#FF1493]' : ''}`} />
+              <Bell className={`w-5 h-5 sm:w-6 sm:h-6 ${unreadCount > 0 ? 'text-[#FF1493]' : ''}`} />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FF1493] text-white text-[10px] rounded-full flex items-center justify-center font-bold shadow-lg shadow-[#FF1493]/50" data-testid="notification-badge">
+                <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-[#FF1493] text-white text-[9px] sm:text-[10px] rounded-full flex items-center justify-center font-bold shadow-lg shadow-[#FF1493]/50" data-testid="notification-badge">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -2761,7 +2761,7 @@ export default function AdminDashboard() {
                   initial={{ opacity: 0, y: -10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  className="fixed md:absolute left-1 right-1 md:left-auto md:right-0 top-[120px] md:top-full md:mt-2 w-auto md:w-96 max-w-[400px] bg-white rounded-2xl shadow-2xl border border-[#eee] z-50 overflow-hidden"
+                  className="fixed md:absolute left-1 right-1 md:left-0 md:right-auto top-[120px] md:top-full md:mt-2 w-auto md:w-96 max-w-[400px] bg-white rounded-2xl shadow-2xl border border-[#eee] z-50 overflow-hidden"
                   data-testid="notification-dropdown"
                 >
                   {/* Header */}
@@ -2964,15 +2964,18 @@ export default function AdminDashboard() {
               )}
             </AnimatePresence>
           </div>
+        </div>
 
+        {/* Right side: Navigation icons */}
+        <div className="flex items-center gap-1 sm:gap-2">
           <Link to="/" onClick={() => lightTap()}>
-            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 p-3" data-testid="home-btn" title="Home">
-              <Home className="w-6 h-6" />
+            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 p-2 sm:p-3" data-testid="home-btn" title="Home">
+              <Home className="w-5 h-5 sm:w-6 sm:h-6" />
             </Button>
           </Link>
           <Link to="/dashboard" onClick={() => lightTap()}>
-            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 p-3" data-testid="my-dashboard-btn" title="My Dashboard">
-              <User className="w-6 h-6" />
+            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 p-2 sm:p-3" data-testid="my-dashboard-btn" title="My Dashboard">
+              <User className="w-5 h-5 sm:w-6 sm:h-6" />
             </Button>
           </Link>
           {/* Messages Shortcut */}
@@ -2983,13 +2986,13 @@ export default function AdminDashboard() {
               lightTap();
               setShowFullScreenMessages(true);
             }}
-            className="text-white/70 hover:text-white hover:bg-white/10 relative p-3"
+            className="text-white/70 hover:text-white hover:bg-white/10 relative p-2 sm:p-3"
             data-testid="admin-messages-shortcut-btn"
             title="Messages"
           >
-            <MessageSquare className="w-6 h-6" />
+            <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
             {adminUnreadMessageCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+              <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 text-white text-[9px] sm:text-[10px] rounded-full flex items-center justify-center font-bold">
                 {adminUnreadMessageCount > 9 ? '9+' : adminUnreadMessageCount}
               </span>
             )}
@@ -3001,11 +3004,11 @@ export default function AdminDashboard() {
               lightTap();
               handleLogout();
             }}
-            className="text-white/70 hover:text-white hover:bg-white/10 p-3"
+            className="text-white/70 hover:text-white hover:bg-white/10 p-2 sm:p-3"
             data-testid="logout-btn"
             title="Logout"
           >
-            <LogOut className="w-6 h-6" />
+            <LogOut className="w-5 h-5 sm:w-6 sm:h-6" />
           </Button>
         </div>
       </header>
