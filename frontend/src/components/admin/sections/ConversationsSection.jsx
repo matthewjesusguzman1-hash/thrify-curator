@@ -555,19 +555,19 @@ export default function ConversationsSection() {
                 </div>
               </div>
 
-              {/* Stacked layout - list on top, messages below */}
+              {/* Stacked layout - conversation list on top, messages below */}
               <div className="flex flex-col gap-4">
-                {/* Conversation List - collapses when conversation is selected */}
-                <div className={`${selectedConversation ? 'hidden' : ''} space-y-2 overflow-y-auto max-h-[300px] pr-2`}>
+                {/* Conversation List - always visible on top */}
+                <div className="space-y-2 overflow-y-auto max-h-[200px] pr-2">
                   {loading && conversations.length === 0 ? (
-                    <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                      <p className="text-[#888] mt-2">Loading...</p>
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
+                      <p className="text-[#888] mt-2 text-sm">Loading...</p>
                     </div>
                   ) : filteredConversations.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Users className="w-12 h-12 text-[#ccc] mx-auto mb-2" />
-                      <p className="text-[#888]">
+                    <div className="text-center py-4">
+                      <Users className="w-8 h-8 text-[#ccc] mx-auto mb-2" />
+                      <p className="text-[#888] text-sm">
                         {conversations.length === 0 
                           ? "No conversations yet"
                           : "No conversations match your filters"}
@@ -589,23 +589,13 @@ export default function ConversationsSection() {
                   )}
                 </div>
 
-                {/* Conversation Detail - shows when conversation is selected */}
-                <div className={`${!selectedConversation ? 'hidden' : 'flex'} flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden`}>
+                {/* Conversation Detail - always visible below */}
+                <div className="flex flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden min-h-[300px]">
                   {selectedConversation ? (
                     <>
                       {/* Compact Header */}
                       <div className="p-2 bg-white border-b border-gray-200 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedConversation(null);
-                              selectedConversationRef.current = null;
-                            }}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg"
-                            title="Back to conversations"
-                          >
-                            <ChevronDown className="w-4 h-4 rotate-90" />
-                          </button>
                           <div className={`w-6 h-6 rounded-full flex items-center justify-center font-semibold text-white text-xs ${
                             selectedConversation.participant_type === 'employee' 
                               ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
@@ -613,13 +603,13 @@ export default function ConversationsSection() {
                           }`}>
                             {selectedConversation.participant_name.charAt(0).toUpperCase()}
                           </div>
-                          <span className="font-medium text-[#333] text-sm truncate max-w-[150px]">{selectedConversation.participant_name}</span>
+                          <span className="font-medium text-[#333] text-sm">{selectedConversation.participant_name}</span>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                             selectedConversation.participant_type === 'employee'
                               ? 'bg-green-100 text-green-700'
                               : 'bg-amber-100 text-amber-700'
                           }`}>
-                            {selectedConversation.participant_type === 'employee' ? 'EMP' : 'CON'}
+                            {selectedConversation.participant_type === 'employee' ? 'Employee' : 'Consignor'}
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
