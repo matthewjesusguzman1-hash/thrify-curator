@@ -12,6 +12,7 @@ from app.models.conversations import (
     ConversationListItem,
     AdminReplyCreate
 )
+from app.services.web_push_service import get_web_push_service
 
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
 
@@ -445,17 +446,42 @@ async def admin_reply(reply: AdminReplyCreate, admin: dict = Depends(get_admin_u
     participant_type = conversation["participant_type"]
     participant_id = conversation["participant_id"]
     
+    # Determine the URL to open when notification is clicked
+    # For employees, go to dashboard with messages section expanded
+    # For consignors, go to their portal with messages section
+    notification_url = "/employee?section=messages" if participant_type == "employee" else "/consignor?section=messages"
+    
     try:
         await send_user_push_notification(
             user_type=participant_type,
             user_id=participant_id,
-            title="New message from Thrifty Curator",
+            title=f"New message from {admin_name}",
             body=reply.content[:100] + "..." if len(reply.content) > 100 else reply.content,
             notification_type="admin_message",
             exclude_device_token=admin_device_token
         )
     except Exception as e:
-        print(f"Failed to send admin reply push: {e}")
+        print(f"Failed to send admin reply APNs push: {e}")
+    
+    # Also send web push notification for PWA users
+    try:
+        # Find user's web push subscription
+        subscription = await db.web_push_subscriptions.find_one({
+            "user_id": participant_id,
+            "user_type": participant_type
+        })
+        
+        if subscription:
+            web_push = get_web_push_service()
+            await web_push.send_notification(
+                subscription_info=subscription,
+                title=f"New message from {admin_name}",
+                body=reply.content[:100] + "..." if len(reply.content) > 100 else reply.content,
+                url=notification_url,
+                tag="admin_message"
+            )
+    except Exception as e:
+        print(f"Failed to send admin reply web push: {e}")
     
     return {"success": True, "message_id": new_message["id"]}
 

@@ -17,26 +17,38 @@ const POLLING_INTERVAL = 10000;
  * @param {string} userName - Display name of the user
  * @param {string} userEmail - Email of the user
  * @param {function} getAuthHeader - Function to get auth header (for employees)
+ * @param {boolean} autoExpand - If true, automatically expand the section on mount
  */
 export default function MessagingSection({ 
   userType, 
   userId, 
   userName, 
   userEmail,
-  getAuthHeader = () => ({})
+  getAuthHeader = () => ({}),
+  autoExpand = false
 }) {
   const [conversation, setConversation] = useState(null);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(autoExpand);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const pollingRef = useRef(null);
+  const sectionRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+  
+  // Auto-scroll to messages section when auto-expanding
+  useEffect(() => {
+    if (autoExpand && sectionRef.current) {
+      setTimeout(() => {
+        sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 300);
+    }
+  }, [autoExpand]);
 
   useEffect(() => {
     if (expanded) {
@@ -151,7 +163,7 @@ export default function MessagingSection({
   const unreadCount = messages.filter(m => m.sender_type === "admin" && !m.read).length;
 
   return (
-    <div className="bg-[#1a1a2e]/80 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden">
+    <div ref={sectionRef} className="bg-[#1a1a2e]/80 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden">
       {/* Header - Always visible */}
       <button
         onClick={() => setExpanded(!expanded)}
@@ -233,7 +245,7 @@ export default function MessagingSection({
                             {msg.sender_type === "admin" && (
                               <p className="text-xs text-white/50 mb-1 flex items-center gap-1">
                                 <User className="w-3 h-3" />
-                                Admin
+                                {msg.sender_name || "Admin"}
                               </p>
                             )}
                             <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
@@ -267,8 +279,8 @@ export default function MessagingSection({
                     }
                   }}
                   placeholder="Type a message..."
-                  rows={3}
-                  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 resize-none"
+                  rows={4}
+                  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 resize-none min-h-[100px]"
                   disabled={sending}
                   data-testid="message-input"
                 />

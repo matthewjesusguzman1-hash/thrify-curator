@@ -42,7 +42,7 @@ test.describe('Additional Bug Fix Verification Tests', () => {
     }
   });
 
-  test('Messaging section has larger textarea (3 rows) instead of single line input', async ({ page }) => {
+  test('Messaging section has larger textarea (4 rows) instead of single line input', async ({ page }) => {
     // Login as test employee
     await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle');
@@ -54,15 +54,29 @@ test.describe('Additional Bug Fix Verification Tests', () => {
     // Wait for dashboard to load
     await page.waitForLoadState('networkidle');
     
+    // Dismiss any walkthrough modal
+    const walkthroughModal = page.locator('.fixed.inset-0.bg-black\\/70');
+    const hasWalkthrough = await walkthroughModal.isVisible().catch(() => false);
+    if (hasWalkthrough) {
+      const skipButton = page.locator('button:has-text("Skip")').first();
+      const hasSkip = await skipButton.isVisible().catch(() => false);
+      if (hasSkip) {
+        await skipButton.click();
+      } else {
+        await page.keyboard.press('Escape');
+      }
+      await page.waitForLoadState('networkidle');
+    }
+    
     // Expand messaging section
     const messagingToggle = page.getByTestId('messaging-toggle');
     await expect(messagingToggle).toBeVisible();
-    await messagingToggle.click();
+    await messagingToggle.click({ force: true });
     
     // Wait for messages container to appear
     await page.waitForSelector('[data-testid="messages-container"]');
     
-    // Check that the message input is a textarea with rows=3
+    // Check that the message input is a textarea with rows=4
     const messageInput = page.getByTestId('message-input');
     await expect(messageInput).toBeVisible();
     
@@ -70,11 +84,11 @@ test.describe('Additional Bug Fix Verification Tests', () => {
     const tagName = await messageInput.evaluate(el => el.tagName.toLowerCase());
     expect(tagName).toBe('textarea');
     
-    // Verify it has rows=3
+    // Verify it has rows=4 (updated from 3)
     const rows = await messageInput.getAttribute('rows');
-    expect(rows).toBe('3');
+    expect(rows).toBe('4');
     
-    await page.screenshot({ path: 'messaging-textarea-3rows.jpeg', quality: 20, fullPage: false });
+    await page.screenshot({ path: 'messaging-textarea-4rows.jpeg', quality: 20, fullPage: false });
   });
 
   test('Messaging section auto-refreshes when expanded (verify polling setup)', async ({ page }) => {
@@ -89,10 +103,24 @@ test.describe('Additional Bug Fix Verification Tests', () => {
     // Wait for dashboard to load
     await page.waitForLoadState('networkidle');
     
+    // Dismiss any walkthrough modal
+    const walkthroughModal = page.locator('.fixed.inset-0.bg-black\\/70');
+    const hasWalkthrough = await walkthroughModal.isVisible().catch(() => false);
+    if (hasWalkthrough) {
+      const skipButton = page.locator('button:has-text("Skip")').first();
+      const hasSkip = await skipButton.isVisible().catch(() => false);
+      if (hasSkip) {
+        await skipButton.click();
+      } else {
+        await page.keyboard.press('Escape');
+      }
+      await page.waitForLoadState('networkidle');
+    }
+    
     // Expand messaging section
     const messagingToggle = page.getByTestId('messaging-toggle');
     await expect(messagingToggle).toBeVisible();
-    await messagingToggle.click();
+    await messagingToggle.click({ force: true });
     
     // Wait for messages container to appear
     await page.waitForSelector('[data-testid="messages-container"]');

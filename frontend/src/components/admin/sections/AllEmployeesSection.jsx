@@ -609,23 +609,6 @@ export default function AllEmployeesSection({
                                       ) : null}
                                     </div>
                                   )}
-                                  {/* AnyDesk Address - shows for any employee who shared their address */}
-                                  {emp.anydesk_address && (
-                                    <div 
-                                      className="flex items-center gap-1 ml-2 bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer hover:bg-pink-200 transition-colors"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigator.clipboard.writeText(emp.anydesk_address);
-                                        toast.success("AnyDesk address copied!", { description: emp.anydesk_address });
-                                      }}
-                                      title={`AnyDesk: ${emp.anydesk_address} - Click to copy`}
-                                      data-testid={`anydesk-address-${emp.id}`}
-                                    >
-                                      <Briefcase className="w-3 h-3" />
-                                      <span className="font-mono">{emp.anydesk_address}</span>
-                                      <Copy className="w-2.5 h-2.5" />
-                                    </div>
-                                  )}
                                 </div>
                               )
                             ) : (

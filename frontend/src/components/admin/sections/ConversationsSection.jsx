@@ -477,6 +477,12 @@ export default function ConversationsSection() {
                                           : 'bg-white border border-gray-200 text-[#333] rounded-tl-sm'
                                       }`}
                                     >
+                                      {msg.sender_type === 'admin' && msg.sender_name && (
+                                        <p className="text-xs text-white/70 mb-1 flex items-center gap-1">
+                                          <User className="w-3 h-3" />
+                                          {msg.sender_name}
+                                        </p>
+                                      )}
                                       {msg.sender_type !== 'admin' && (
                                         <p className="text-xs text-[#888] mb-1 flex items-center gap-1">
                                           <User className="w-3 h-3" />
@@ -499,30 +505,40 @@ export default function ConversationsSection() {
                         )}
                       </div>
 
-                      {/* Reply Input */}
+                      {/* Reply Input - larger textarea */}
                       <form onSubmit={handleSendReply} className="p-4 bg-white border-t border-gray-200">
-                        <div className="flex gap-2">
-                          <Input
-                            type="text"
+                        <div className="flex flex-col gap-2">
+                          <textarea
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendReply(e);
+                              }
+                            }}
                             placeholder="Type a message..."
-                            className="flex-1"
+                            rows={4}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[100px]"
                             disabled={sending}
                             data-testid="admin-message-input"
                           />
-                          <Button
-                            type="submit"
-                            disabled={!newMessage.trim() || sending}
-                            className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 flex-shrink-0 min-w-[44px]"
-                            data-testid="admin-send-message-btn"
-                          >
-                            {sending ? (
-                              <RefreshCw className="w-5 h-5 animate-spin" />
-                            ) : (
-                              <Send className="w-5 h-5" />
-                            )}
-                          </Button>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-400 text-xs">Enter to send, Shift+Enter for new line</span>
+                            <Button
+                              type="submit"
+                              disabled={!newMessage.trim() || sending}
+                              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90"
+                              data-testid="admin-send-message-btn"
+                            >
+                              {sending ? (
+                                <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                              ) : (
+                                <Send className="w-4 h-4 mr-2" />
+                              )}
+                              Send
+                            </Button>
+                          </div>
                         </div>
                       </form>
                     </>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Clock, 
@@ -140,6 +140,7 @@ export default function EmployeeDashboard({
   initialData = null  // Pre-fetched data from admin dashboard
 }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [user, setUser] = useState(null);
   const [clockedIn, setClockedIn] = useState(initialData?.clockStatus?.is_clocked_in || false);
   const [currentEntry, setCurrentEntry] = useState(initialData?.clockStatus?.current_entry || null);
@@ -158,6 +159,9 @@ export default function EmployeeDashboard({
     ytd_paid: 0,
     ytd_payment_count: 0
   });
+  
+  // Check if we should auto-expand messages section (from notification click)
+  const autoExpandMessages = searchParams.get('section') === 'messages';
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -1764,6 +1768,7 @@ export default function EmployeeDashboard({
               getAuthHeader={() => ({
                 headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
               })}
+              autoExpand={autoExpandMessages}
             />
           )}
 
