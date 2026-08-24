@@ -43,14 +43,14 @@ const WALKTHROUGH_STEPS = [
   {
     id: 'password',
     title: 'Set Your Password',
-    description: 'For added security, we recommend setting up a password. Go to Account Settings to create your password and optionally enable Face ID/biometric login.',
+    description: 'For added security, we recommend setting up a password. Go to Account Settings to create your password for secure login.',
     icon: Lock,
     color: 'from-orange-500 to-amber-500',
     tips: [
       'Tap "Account Settings" in the menu',
       'Choose "Set Password"',
       'Create a secure password',
-      'Enable Face ID for quick login (optional)'
+      'Use your password to log in securely'
     ]
   },
   {
@@ -69,13 +69,13 @@ const WALKTHROUGH_STEPS = [
   {
     id: 'messages',
     title: 'Messages & Communication',
-    description: 'Stay connected! Check the Messages section for important updates from management. You can also request time off or submit questions through the portal.',
+    description: 'Stay connected! Check the Messages section for important updates from management. You can communicate with your supervisor directly through the messaging system.',
     icon: MessageSquare,
     color: 'from-pink-500 to-rose-500',
     tips: [
       'Check messages regularly for updates',
-      'Use the portal for time-off requests',
-      'Contact management through the messaging system'
+      'Send questions to management',
+      'Get notified of new messages'
     ]
   },
   {
