@@ -54,14 +54,12 @@ class InvitedJobApplication(BaseModel):
     preferred_contact: str = "email"
     # Remote worker fields (only shown if is_remote_worker is True)
     is_remote_worker: Optional[bool] = False
-    # Payment info - same fields as contractor agreement for prefill
-    payment_holder_name: Optional[str] = None
-    payment_holder_email: Optional[str] = None
-    payment_wallet_provider: Optional[str] = None
-    payment_wallet_number: Optional[str] = None
-    payment_address: Optional[str] = None
+    # Payment info for Remitly transfers
+    payment_first_name: Optional[str] = None
+    payment_last_name: Optional[str] = None
+    payment_email: Optional[str] = None
+    payment_phone: Optional[str] = None
     payment_country: Optional[str] = None
-    payment_wise_tag: Optional[str] = None
 
 # Ensure upload directory exists
 UPLOAD_DIR = "/app/uploads/consignment_photos"

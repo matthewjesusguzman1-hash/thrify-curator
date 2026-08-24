@@ -25,14 +25,12 @@ class SignAgreementRequest(BaseModel):
     agreed_to_terms: bool
     # Contractor fillable fields
     contact_email: Optional[str] = None
-    # Payment info - user fills in what applies to them
-    payment_holder_name: Optional[str] = None
-    payment_holder_email: Optional[str] = None
-    payment_wallet_provider: Optional[str] = None
-    payment_wallet_number: Optional[str] = None
-    payment_address: Optional[str] = None
+    # Payment info for Remitly transfers
+    payment_first_name: Optional[str] = None
+    payment_last_name: Optional[str] = None
+    payment_email: Optional[str] = None
+    payment_phone: Optional[str] = None
     payment_country: Optional[str] = None
-    payment_wise_tag: Optional[str] = None
 
 
 class ReviewAgreementRequest(BaseModel):
@@ -83,7 +81,9 @@ Compensation Tier Structure:
 
 3. Maximum Compensation Cap: Hourly rates are strictly capped at the maximum rate established by the Business Owner ($5.00 USD/hour unless formally revised).
 
-Payment Logistics & Wise Designation: Compensation shall be calculated in United States Dollars ($ USD) and remitted on a bi-weekly schedule exclusively via the WISE payment platform.
+Payment Logistics & Remitly Designation: Compensation shall be calculated in United States Dollars ($ USD) and remitted on a bi-weekly schedule via the REMITLY payment platform.
+
+Upon payment, the Contractor will receive a notification from Remitly allowing them to select their preferred method of receiving funds (bank deposit, mobile money, cash pickup, etc.).
 
 The Contractor is responsible for any recipient-side conversion fees, cash-out fees, or local banking charges.
 
@@ -185,14 +185,12 @@ async def get_agreement_status(current_user: dict = Depends(get_current_user)):
         "admin_feedback": agreement.get("admin_feedback"),
         # Contractor details
         "contact_email": agreement.get("contact_email"),
-        # Payment info
-        "payment_holder_name": agreement.get("payment_holder_name"),
-        "payment_holder_email": agreement.get("payment_holder_email"),
-        "payment_wallet_provider": agreement.get("payment_wallet_provider"),
-        "payment_wallet_number": agreement.get("payment_wallet_number"),
-        "payment_address": agreement.get("payment_address"),
+        # Payment info for Remitly
+        "payment_first_name": agreement.get("payment_first_name"),
+        "payment_last_name": agreement.get("payment_last_name"),
+        "payment_email": agreement.get("payment_email"),
+        "payment_phone": agreement.get("payment_phone"),
         "payment_country": agreement.get("payment_country"),
-        "payment_wise_tag": agreement.get("payment_wise_tag"),
         "reviewed_by": agreement.get("reviewed_by")
     }
 
@@ -237,14 +235,12 @@ async def sign_agreement(
         "created_at": datetime.now(timezone.utc).isoformat(),
         # Contractor fillable fields
         "contact_email": request.contact_email or employee_email,
-        # Payment info - all fields user fills in
-        "payment_holder_name": request.payment_holder_name,
-        "payment_holder_email": request.payment_holder_email,
-        "payment_wallet_provider": request.payment_wallet_provider,
-        "payment_wallet_number": request.payment_wallet_number,
-        "payment_address": request.payment_address,
-        "payment_country": request.payment_country,
-        "payment_wise_tag": request.payment_wise_tag
+        # Payment info for Remitly
+        "payment_first_name": request.payment_first_name,
+        "payment_last_name": request.payment_last_name,
+        "payment_email": request.payment_email,
+        "payment_phone": request.payment_phone,
+        "payment_country": request.payment_country
     }
     
     if existing:

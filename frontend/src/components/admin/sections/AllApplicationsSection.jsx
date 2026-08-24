@@ -377,36 +377,32 @@ function ApplicationDetailModal({ application, onClose }) {
             <div className="mt-6 p-4 bg-purple-50 rounded-lg">
               <h3 className="font-semibold text-purple-900 flex items-center gap-2 mb-3">
                 <DollarSign className="w-4 h-4" />
-                Payment Information
+                Payment Information (Remitly)
               </h3>
               <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-gray-500">Payment Method:</span>{' '}
-                  <span className="font-medium">
-                    {application.payment_method === 'wise_account' ? 'Wise Account' : 'E-Wallet'}
-                  </span>
-                </div>
-                {application.payment_method === 'wise_account' && application.wise_tag && (
+                {application.payment_first_name && (
                   <div>
-                    <span className="text-gray-500">Wise Tag:</span>{' '}
-                    <span className="font-medium">{application.wise_tag}</span>
+                    <span className="text-gray-500">Name (on ID):</span>{' '}
+                    <span className="font-medium">{application.payment_first_name} {application.payment_last_name}</span>
                   </div>
                 )}
-                {application.payment_method === 'e_wallet' && (
-                  <>
-                    {application.wallet_provider && (
-                      <div>
-                        <span className="text-gray-500">Wallet Provider:</span>{' '}
-                        <span className="font-medium">{application.wallet_provider}</span>
-                      </div>
-                    )}
-                    {application.wallet_number && (
-                      <div>
-                        <span className="text-gray-500">Wallet Number:</span>{' '}
-                        <span className="font-medium">{application.wallet_number}</span>
-                      </div>
-                    )}
-                  </>
+                {application.payment_email && (
+                  <div>
+                    <span className="text-gray-500">Email:</span>{' '}
+                    <span className="font-medium">{application.payment_email}</span>
+                  </div>
+                )}
+                {application.payment_phone && (
+                  <div>
+                    <span className="text-gray-500">Phone:</span>{' '}
+                    <span className="font-medium">{application.payment_phone}</span>
+                  </div>
+                )}
+                {application.payment_country && (
+                  <div>
+                    <span className="text-gray-500">Country:</span>{' '}
+                    <span className="font-medium">{application.payment_country}</span>
+                  </div>
                 )}
               </div>
             </div>

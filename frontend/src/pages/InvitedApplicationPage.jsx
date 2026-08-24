@@ -59,14 +59,12 @@ export default function InvitedApplicationPage() {
     ],
     // Remote worker fields
     is_remote_worker: false,
-    // Payment info - same fields as contractor agreement
-    payment_holder_name: "",
-    payment_holder_email: "",
-    payment_wallet_provider: "",
-    payment_wallet_number: "",
-    payment_address: "",
-    payment_country: "",
-    payment_wise_tag: ""
+    // Payment info for Remitly transfers
+    payment_first_name: "",
+    payment_last_name: "",
+    payment_email: "",
+    payment_phone: "",
+    payment_country: ""
   });
   const [inviteTemplate, setInviteTemplate] = useState("generic");
 
@@ -597,13 +595,11 @@ export default function InvitedApplicationPage() {
                       is_remote_worker: checked,
                       // Clear payment fields when unchecking
                       ...(checked ? {} : { 
-                        payment_holder_name: "", 
-                        payment_holder_email: "", 
-                        payment_wallet_provider: "", 
-                        payment_wallet_number: "", 
-                        payment_address: "", 
-                        payment_country: "", 
-                        payment_wise_tag: "" 
+                        payment_first_name: "", 
+                        payment_last_name: "", 
+                        payment_email: "", 
+                        payment_phone: "", 
+                        payment_country: "" 
                       })
                     })}
                     className="w-6 h-6 border-2 border-[#8B5CF6] data-[state=checked]:bg-[#8B5CF6] data-[state=checked]:border-[#8B5CF6]"
@@ -616,105 +612,94 @@ export default function InvitedApplicationPage() {
                 {formData.is_remote_worker && (
                   <div className="space-y-4 mt-4 pl-4 border-l-2 border-[#8B5CF6]/30">
                     <Label className="text-sm font-semibold text-[#1A1A2E] block">
-                      Payment Information (via Wise)
+                      Payment Information (via Remitly)
                     </Label>
                     <p className="text-xs text-gray-500 -mt-2">
-                      Fill in the payment details that apply to you. This will be used for the Contractor Agreement.
+                      We use Remitly to send payments internationally. When you receive payment, Remitly will allow you to choose how you want to receive your money (bank deposit, mobile money, cash pickup, etc.).
                     </p>
                     
                     {/* Payment Fields Grid */}
                     <div className="space-y-3 bg-white/50 p-4 rounded-lg">
-                      {/* Account Holder Info */}
+                      {/* Important Notice */}
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+                        <p className="text-sm text-amber-800 font-medium">
+                          ⚠️ Important: Your first and last name must match your government-issued ID exactly to receive payment.
+                        </p>
+                      </div>
+                      
+                      {/* Name Fields */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Account Holder Name</Label>
+                          <Label className="text-sm text-[#1A1A2E] mb-1 block">First Name (as shown on ID) *</Label>
                           <Input
                             type="text"
-                            name="payment_holder_name"
-                            value={formData.payment_holder_name}
+                            name="payment_first_name"
+                            value={formData.payment_first_name}
                             onChange={handleChange}
-                            placeholder="Full name on account"
+                            placeholder="First name exactly as on ID"
                             className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                            required
                           />
                         </div>
                         <div>
-                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Account Holder Email</Label>
+                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Last Name (as shown on ID) *</Label>
+                          <Input
+                            type="text"
+                            name="payment_last_name"
+                            value={formData.payment_last_name}
+                            onChange={handleChange}
+                            placeholder="Last name exactly as on ID"
+                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Contact Info */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Email Address *</Label>
                           <Input
                             type="email"
-                            name="payment_holder_email"
-                            value={formData.payment_holder_email}
+                            name="payment_email"
+                            value={formData.payment_email}
                             onChange={handleChange}
-                            placeholder="Email linked to account"
+                            placeholder="Email for payment notifications"
                             className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Phone Number *</Label>
+                          <Input
+                            type="tel"
+                            name="payment_phone"
+                            value={formData.payment_phone}
+                            onChange={handleChange}
+                            placeholder="Include country code (e.g., +63...)"
+                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                            required
                           />
                         </div>
                       </div>
                       
-                      {/* Wallet Info */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Wallet Provider</Label>
-                          <Input
-                            type="text"
-                            name="payment_wallet_provider"
-                            value={formData.payment_wallet_provider}
-                            onChange={handleChange}
-                            placeholder="e.g., Wise, GCash, Maya, PayPal"
-                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Wallet Number / Account</Label>
-                          <Input
-                            type="text"
-                            name="payment_wallet_number"
-                            value={formData.payment_wallet_number}
-                            onChange={handleChange}
-                            placeholder="Your wallet number or account"
-                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Address */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Address</Label>
-                          <Input
-                            type="text"
-                            name="payment_address"
-                            value={formData.payment_address}
-                            onChange={handleChange}
-                            placeholder="Street address, city, state/province"
-                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-sm text-[#1A1A2E] mb-1 block">Country</Label>
-                          <Input
-                            type="text"
-                            name="payment_country"
-                            value={formData.payment_country}
-                            onChange={handleChange}
-                            placeholder="Country of residence"
-                            className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Wise Tag */}
+                      {/* Country */}
                       <div>
-                        <Label className="text-sm text-[#1A1A2E] mb-1 block">Wise Tag (if using Wise)</Label>
+                        <Label className="text-sm text-[#1A1A2E] mb-1 block">Country of Residence *</Label>
                         <Input
                           type="text"
-                          name="payment_wise_tag"
-                          value={formData.payment_wise_tag}
+                          name="payment_country"
+                          value={formData.payment_country}
                           onChange={handleChange}
-                          placeholder="@yourtag"
+                          placeholder="Country where you will receive payment"
                           className="border-2 border-gray-200 focus:border-[#8B5CF6] rounded-lg"
+                          required
                         />
-                        <p className="text-xs text-gray-500 mt-1">Found in Wise app under Account → Wise tag</p>
                       </div>
+                      
+                      <p className="text-xs text-gray-500 mt-2">
+                        When you are paid, you will receive a notification from Remitly allowing you to choose your preferred payment method (bank transfer, mobile money, cash pickup, etc.).
+                      </p>
                     </div>
                   </div>
                 )}

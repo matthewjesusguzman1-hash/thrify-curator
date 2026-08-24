@@ -199,14 +199,12 @@ export default function EmployeeDashboard({
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   // Contractor fillable fields
   const [contractorEmail, setContractorEmail] = useState("");
-  // Payment fields - user fills in what applies to them
-  const [paymentHolderName, setPaymentHolderName] = useState("");
-  const [paymentHolderEmail, setPaymentHolderEmail] = useState("");
-  const [paymentWalletProvider, setPaymentWalletProvider] = useState("");
-  const [paymentWalletNumber, setPaymentWalletNumber] = useState("");
-  const [paymentAddress, setPaymentAddress] = useState("");
+  // Payment fields for Remitly
+  const [paymentFirstName, setPaymentFirstName] = useState("");
+  const [paymentLastName, setPaymentLastName] = useState("");
+  const [paymentEmail, setPaymentEmail] = useState("");
+  const [paymentPhone, setPaymentPhone] = useState("");
   const [paymentCountry, setPaymentCountry] = useState("");
-  const [paymentWiseTag, setPaymentWiseTag] = useState("");
   
   // AnyDesk state for remote workers
   const [anydeskAddress, setAnydeskAddress] = useState("");
@@ -815,36 +813,21 @@ export default function EmployeeDashboard({
           
           // Pre-populate payment info if remote worker
           if (onboardingRes.data.is_remote_worker) {
-            // New unified fields
-            if (onboardingRes.data.payment_holder_name) {
-              setPaymentHolderName(onboardingRes.data.payment_holder_name);
+            // Remitly payment fields
+            if (onboardingRes.data.payment_first_name) {
+              setPaymentFirstName(onboardingRes.data.payment_first_name);
             }
-            if (onboardingRes.data.payment_holder_email) {
-              setPaymentHolderEmail(onboardingRes.data.payment_holder_email);
+            if (onboardingRes.data.payment_last_name) {
+              setPaymentLastName(onboardingRes.data.payment_last_name);
             }
-            if (onboardingRes.data.payment_wallet_provider) {
-              setPaymentWalletProvider(onboardingRes.data.payment_wallet_provider);
-            } else if (onboardingRes.data.wallet_provider) {
-              // Fallback to legacy field
-              setPaymentWalletProvider(onboardingRes.data.wallet_provider);
+            if (onboardingRes.data.payment_email) {
+              setPaymentEmail(onboardingRes.data.payment_email);
             }
-            if (onboardingRes.data.payment_wallet_number) {
-              setPaymentWalletNumber(onboardingRes.data.payment_wallet_number);
-            } else if (onboardingRes.data.wallet_number) {
-              // Fallback to legacy field
-              setPaymentWalletNumber(onboardingRes.data.wallet_number);
-            }
-            if (onboardingRes.data.payment_address) {
-              setPaymentAddress(onboardingRes.data.payment_address);
+            if (onboardingRes.data.payment_phone) {
+              setPaymentPhone(onboardingRes.data.payment_phone);
             }
             if (onboardingRes.data.payment_country) {
               setPaymentCountry(onboardingRes.data.payment_country);
-            }
-            if (onboardingRes.data.payment_wise_tag) {
-              setPaymentWiseTag(onboardingRes.data.payment_wise_tag);
-            } else if (onboardingRes.data.wise_tag) {
-              // Fallback to legacy field
-              setPaymentWiseTag(onboardingRes.data.wise_tag);
             }
           }
         }
@@ -995,14 +978,12 @@ export default function EmployeeDashboard({
         signature_text: agreementSignature,
         agreed_to_terms: agreedToTerms,
         contact_email: contractorEmail,
-        // Payment info - user fills what applies to them
-        payment_holder_name: paymentHolderName || null,
-        payment_holder_email: paymentHolderEmail || null,
-        payment_wallet_provider: paymentWalletProvider || null,
-        payment_wallet_number: paymentWalletNumber || null,
-        payment_address: paymentAddress || null,
-        payment_country: paymentCountry || null,
-        payment_wise_tag: paymentWiseTag || null
+        // Payment info for Remitly
+        payment_first_name: paymentFirstName || null,
+        payment_last_name: paymentLastName || null,
+        payment_email: paymentEmail || null,
+        payment_phone: paymentPhone || null,
+        payment_country: paymentCountry || null
       }, getAuthHeader());
       
       toast.success("Contractor Agreement submitted for review!");
@@ -1010,13 +991,11 @@ export default function EmployeeDashboard({
       setAgreementSignature("");
       setAgreedToTerms(false);
       setContractorEmail("");
-      setPaymentHolderName("");
-      setPaymentHolderEmail("");
-      setPaymentWalletProvider("");
-      setPaymentWalletNumber("");
-      setPaymentAddress("");
+      setPaymentFirstName("");
+      setPaymentLastName("");
+      setPaymentEmail("");
+      setPaymentPhone("");
       setPaymentCountry("");
-      setPaymentWiseTag("");
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to sign agreement");
@@ -2563,46 +2542,28 @@ export default function EmployeeDashboard({
                             <p className="text-white/50">Contact Email</p>
                             <p className="text-white font-medium">{contractorAgreement.contact_email || '-'}</p>
                           </div>
-                          {contractorAgreement.payment_holder_name && (
+                          {contractorAgreement.payment_first_name && (
                             <div>
-                              <p className="text-white/50">Account Holder</p>
-                              <p className="text-white font-medium">{contractorAgreement.payment_holder_name}</p>
+                              <p className="text-white/50">Name (on ID)</p>
+                              <p className="text-white font-medium">{contractorAgreement.payment_first_name} {contractorAgreement.payment_last_name}</p>
                             </div>
                           )}
-                          {contractorAgreement.payment_holder_email && (
+                          {contractorAgreement.payment_email && (
                             <div>
-                              <p className="text-white/50">Holder Email</p>
-                              <p className="text-white font-medium">{contractorAgreement.payment_holder_email}</p>
+                              <p className="text-white/50">Payment Email</p>
+                              <p className="text-white font-medium">{contractorAgreement.payment_email}</p>
                             </div>
                           )}
-                          {contractorAgreement.payment_wallet_provider && (
+                          {contractorAgreement.payment_phone && (
                             <div>
-                              <p className="text-white/50">Wallet Provider</p>
-                              <p className="text-white font-medium">{contractorAgreement.payment_wallet_provider}</p>
-                            </div>
-                          )}
-                          {contractorAgreement.payment_wallet_number && (
-                            <div>
-                              <p className="text-white/50">Wallet Number</p>
-                              <p className="text-white font-medium">{contractorAgreement.payment_wallet_number}</p>
-                            </div>
-                          )}
-                          {contractorAgreement.payment_address && (
-                            <div className="col-span-2">
-                              <p className="text-white/50">Address</p>
-                              <p className="text-white font-medium">{contractorAgreement.payment_address}</p>
+                              <p className="text-white/50">Phone</p>
+                              <p className="text-white font-medium">{contractorAgreement.payment_phone}</p>
                             </div>
                           )}
                           {contractorAgreement.payment_country && (
                             <div>
                               <p className="text-white/50">Country</p>
                               <p className="text-white font-medium">{contractorAgreement.payment_country}</p>
-                            </div>
-                          )}
-                          {contractorAgreement.payment_wise_tag && (
-                            <div>
-                              <p className="text-white/50">Wise Tag</p>
-                              <p className="text-white font-medium">@{contractorAgreement.payment_wise_tag}</p>
                             </div>
                           )}
                         </div>
@@ -2703,95 +2664,75 @@ export default function EmployeeDashboard({
                           />
                         </div>
                         
-                        {/* Payment Method Selection */}
+                        {/* Payment Method Selection - Remitly */}
                         <div>
-                          <label className="text-sm text-white/70 block mb-2">Payment Information</label>
-                          <p className="text-xs text-white/40 mb-4">Fill in the payment details that apply to you</p>
+                          <label className="text-sm text-white/70 block mb-2">Payment Information (via Remitly)</label>
+                          <p className="text-xs text-white/40 mb-2">We use Remitly to send payments. When paid, you will choose how to receive your money.</p>
+                          <div className="bg-amber-500/20 border border-amber-500/30 rounded-lg p-3 mb-4">
+                            <p className="text-xs text-amber-300 font-medium">
+                              ⚠️ Important: Your first and last name must match your government-issued ID exactly to receive payment.
+                            </p>
+                          </div>
                           
                           <div className="space-y-4">
-                            {/* Account Holder Info */}
+                            {/* Name Fields */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div>
-                                <label className="text-sm text-white/70 block mb-2">Account Holder Name</label>
+                                <label className="text-sm text-white/70 block mb-2">First Name (as on ID) *</label>
                                 <input
                                   type="text"
-                                  value={paymentHolderName}
-                                  onChange={(e) => setPaymentHolderName(e.target.value)}
-                                  placeholder="Full name on account"
+                                  value={paymentFirstName}
+                                  onChange={(e) => setPaymentFirstName(e.target.value)}
+                                  placeholder="First name exactly as on ID"
                                   className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
                                 />
                               </div>
                               <div>
-                                <label className="text-sm text-white/70 block mb-2">Account Holder Email</label>
+                                <label className="text-sm text-white/70 block mb-2">Last Name (as on ID) *</label>
+                                <input
+                                  type="text"
+                                  value={paymentLastName}
+                                  onChange={(e) => setPaymentLastName(e.target.value)}
+                                  placeholder="Last name exactly as on ID"
+                                  className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Contact Info */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm text-white/70 block mb-2">Email *</label>
                                 <input
                                   type="email"
-                                  value={paymentHolderEmail}
-                                  onChange={(e) => setPaymentHolderEmail(e.target.value)}
-                                  placeholder="Email linked to account"
+                                  value={paymentEmail}
+                                  onChange={(e) => setPaymentEmail(e.target.value)}
+                                  placeholder="Email for payment notifications"
+                                  className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm text-white/70 block mb-2">Phone Number *</label>
+                                <input
+                                  type="tel"
+                                  value={paymentPhone}
+                                  onChange={(e) => setPaymentPhone(e.target.value)}
+                                  placeholder="Include country code (e.g., +63...)"
                                   className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
                                 />
                               </div>
                             </div>
                             
-                            {/* Wallet Info */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-sm text-white/70 block mb-2">Wallet Provider</label>
-                                <input
-                                  type="text"
-                                  value={paymentWalletProvider}
-                                  onChange={(e) => setPaymentWalletProvider(e.target.value)}
-                                  placeholder="e.g., Wise, GCash, Maya, PayPal"
-                                  className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-sm text-white/70 block mb-2">Wallet Number / Account</label>
-                                <input
-                                  type="text"
-                                  value={paymentWalletNumber}
-                                  onChange={(e) => setPaymentWalletNumber(e.target.value)}
-                                  placeholder="Your wallet number or account"
-                                  className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
-                                />
-                              </div>
-                            </div>
-                            
-                            {/* Address */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-sm text-white/70 block mb-2">Address</label>
-                                <input
-                                  type="text"
-                                  value={paymentAddress}
-                                  onChange={(e) => setPaymentAddress(e.target.value)}
-                                  placeholder="Street address, city, state/province"
-                                  className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-sm text-white/70 block mb-2">Country</label>
-                                <input
-                                  type="text"
-                                  value={paymentCountry}
-                                  onChange={(e) => setPaymentCountry(e.target.value)}
-                                  placeholder="Country of residence"
-                                  className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
-                                />
-                              </div>
-                            </div>
-                            
-                            {/* Wise Tag */}
+                            {/* Country */}
                             <div>
-                              <label className="text-sm text-white/70 block mb-2">Wise Tag (if using Wise)</label>
+                              <label className="text-sm text-white/70 block mb-2">Country *</label>
                               <input
                                 type="text"
-                                value={paymentWiseTag}
-                                onChange={(e) => setPaymentWiseTag(e.target.value)}
-                                placeholder="@yourtag"
+                                value={paymentCountry}
+                                onChange={(e) => setPaymentCountry(e.target.value)}
+                                placeholder="Country where you will receive payment"
                                 className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-[#EC4899] focus:outline-none"
                               />
-                              <p className="text-xs text-white/40 mt-1">Found in Wise app under Account → Wise tag</p>
                             </div>
                           </div>
                         </div>

@@ -433,13 +433,10 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
                                 <div class="info-item"><span class="info-label">Contractor Name:</span><span class="info-value">${reviewingDoc.data.employee_name}</span></div>
                                 <div class="info-item"><span class="info-label">Role / Specialty:</span><span class="info-value">Virtual Assistant - E-Commerce</span></div>
                                 <div class="info-item"><span class="info-label">Contact Email:</span><span class="info-value">${reviewingDoc.data.contact_email || reviewingDoc.data.employee_email}</span></div>
-                                ${reviewingDoc.data.payment_holder_name ? `<div class="info-item"><span class="info-label">Account Holder:</span><span class="info-value">${reviewingDoc.data.payment_holder_name}</span></div>` : ''}
-                                ${reviewingDoc.data.payment_holder_email ? `<div class="info-item"><span class="info-label">Holder Email:</span><span class="info-value">${reviewingDoc.data.payment_holder_email}</span></div>` : ''}
-                                ${reviewingDoc.data.payment_wallet_provider ? `<div class="info-item"><span class="info-label">Wallet Provider:</span><span class="info-value">${reviewingDoc.data.payment_wallet_provider}</span></div>` : ''}
-                                ${reviewingDoc.data.payment_wallet_number ? `<div class="info-item"><span class="info-label">Wallet Number:</span><span class="info-value">${reviewingDoc.data.payment_wallet_number}</span></div>` : ''}
-                                ${reviewingDoc.data.payment_address ? `<div class="info-item"><span class="info-label">Address:</span><span class="info-value">${reviewingDoc.data.payment_address}</span></div>` : ''}
+                                ${reviewingDoc.data.payment_first_name ? `<div class="info-item"><span class="info-label">Payment Name:</span><span class="info-value">${reviewingDoc.data.payment_first_name} ${reviewingDoc.data.payment_last_name || ''}</span></div>` : ''}
+                                ${reviewingDoc.data.payment_email ? `<div class="info-item"><span class="info-label">Payment Email:</span><span class="info-value">${reviewingDoc.data.payment_email}</span></div>` : ''}
+                                ${reviewingDoc.data.payment_phone ? `<div class="info-item"><span class="info-label">Phone:</span><span class="info-value">${reviewingDoc.data.payment_phone}</span></div>` : ''}
                                 ${reviewingDoc.data.payment_country ? `<div class="info-item"><span class="info-label">Country:</span><span class="info-value">${reviewingDoc.data.payment_country}</span></div>` : ''}
-                                ${reviewingDoc.data.payment_wise_tag ? `<div class="info-item"><span class="info-label">Wise Tag:</span><span class="info-value">@${reviewingDoc.data.payment_wise_tag}</span></div>` : ''}
                               </div>
                               
                               <div class="section">
@@ -508,37 +505,32 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
                       </div>
                     )}
                     
-                    {/* Payment Info Grid */}
+                    {/* Payment Info Grid - Remitly */}
                     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <p className="text-xs text-gray-500 mb-3 font-medium">REMITLY PAYMENT DETAILS</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        {reviewingDoc.data.payment_holder_name && (
+                        {reviewingDoc.data.payment_first_name && (
                           <div>
-                            <p className="text-gray-500">Account Holder Name</p>
-                            <p className="font-medium">{reviewingDoc.data.payment_holder_name}</p>
+                            <p className="text-gray-500">First Name (on ID)</p>
+                            <p className="font-medium">{reviewingDoc.data.payment_first_name}</p>
                           </div>
                         )}
-                        {reviewingDoc.data.payment_holder_email && (
+                        {reviewingDoc.data.payment_last_name && (
                           <div>
-                            <p className="text-gray-500">Account Holder Email</p>
-                            <p className="font-medium">{reviewingDoc.data.payment_holder_email}</p>
+                            <p className="text-gray-500">Last Name (on ID)</p>
+                            <p className="font-medium">{reviewingDoc.data.payment_last_name}</p>
                           </div>
                         )}
-                        {reviewingDoc.data.payment_wallet_provider && (
+                        {reviewingDoc.data.payment_email && (
                           <div>
-                            <p className="text-gray-500">Wallet Provider</p>
-                            <p className="font-medium">{reviewingDoc.data.payment_wallet_provider}</p>
+                            <p className="text-gray-500">Email</p>
+                            <p className="font-medium">{reviewingDoc.data.payment_email}</p>
                           </div>
                         )}
-                        {reviewingDoc.data.payment_wallet_number && (
+                        {reviewingDoc.data.payment_phone && (
                           <div>
-                            <p className="text-gray-500">Wallet Number</p>
-                            <p className="font-medium">{reviewingDoc.data.payment_wallet_number}</p>
-                          </div>
-                        )}
-                        {reviewingDoc.data.payment_address && (
-                          <div className="md:col-span-2">
-                            <p className="text-gray-500">Address</p>
-                            <p className="font-medium">{reviewingDoc.data.payment_address}</p>
+                            <p className="text-gray-500">Phone Number</p>
+                            <p className="font-medium">{reviewingDoc.data.payment_phone}</p>
                           </div>
                         )}
                         {reviewingDoc.data.payment_country && (
@@ -547,17 +539,11 @@ export default function PendingDocumentsSection({ getAuthHeader }) {
                             <p className="font-medium">{reviewingDoc.data.payment_country}</p>
                           </div>
                         )}
-                        {reviewingDoc.data.payment_wise_tag && (
-                          <div>
-                            <p className="text-gray-500">Wise Tag</p>
-                            <p className="font-medium text-green-700">@{reviewingDoc.data.payment_wise_tag}</p>
-                          </div>
-                        )}
                       </div>
                       
                       {/* No payment info provided */}
-                      {!reviewingDoc.data.payment_holder_name && !reviewingDoc.data.payment_wallet_provider && !reviewingDoc.data.payment_wise_tag && (
-                        <div className="flex items-center gap-2 text-yellow-600">
+                      {!reviewingDoc.data.payment_first_name && !reviewingDoc.data.payment_email && (
+                        <div className="flex items-center gap-2 text-yellow-600 mt-2">
                           <AlertTriangle className="w-4 h-4" />
                           <p className="text-sm">No payment information provided</p>
                         </div>
