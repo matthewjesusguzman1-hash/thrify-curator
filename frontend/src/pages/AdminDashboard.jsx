@@ -2967,14 +2967,15 @@ export default function AdminDashboard() {
           </div>
 
           <Link to="/" onClick={() => lightTap()}>
-            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10" data-testid="home-btn">
-              <Home className="w-4 h-4 mr-1" />
-              Home
+            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 px-2 sm:px-3" data-testid="home-btn">
+              <Home className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Home</span>
             </Button>
           </Link>
           <Link to="/dashboard" onClick={() => lightTap()}>
-            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10" data-testid="my-dashboard-btn">
-              My Dashboard
+            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 px-2 sm:px-3" data-testid="my-dashboard-btn">
+              <User className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">My Dashboard</span>
             </Button>
           </Link>
           {/* Messages Shortcut */}
@@ -2985,11 +2986,11 @@ export default function AdminDashboard() {
               lightTap();
               setShowFullScreenMessages(true);
             }}
-            className="text-white/70 hover:text-white hover:bg-white/10 relative"
+            className="text-white/70 hover:text-white hover:bg-white/10 relative px-2 sm:px-3"
             data-testid="admin-messages-shortcut-btn"
           >
-            <MessageSquare className="w-4 h-4 mr-1" />
-            Messages
+            <MessageSquare className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">Messages</span>
             {adminUnreadMessageCount > 0 && (
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
                 {adminUnreadMessageCount > 9 ? '9+' : adminUnreadMessageCount}
@@ -3003,11 +3004,11 @@ export default function AdminDashboard() {
               lightTap();
               handleLogout();
             }}
-            className="text-white/70 hover:text-white hover:bg-white/10"
+            className="text-white/70 hover:text-white hover:bg-white/10 px-2 sm:px-3"
             data-testid="logout-btn"
           >
-            <LogOut className="w-4 h-4 mr-1" />
-            Logout
+            <LogOut className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">Logout</span>
           </Button>
         </div>
       </header>

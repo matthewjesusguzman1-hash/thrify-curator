@@ -95,10 +95,11 @@ async def get_employee_conversation(user: dict = Depends(get_current_user)):
     user_email = user.get("email")
     user_name = user.get("name") or user.get("email")
     
-    # Find existing conversation
+    # Find existing conversation (exclude soft-deleted)
     conversation = await db.conversations.find_one({
         "participant_type": "employee",
-        "participant_id": user_id
+        "participant_id": user_id,
+        "deleted_at": {"$exists": False}
     }, {"_id": 0})
     
     if not conversation:
@@ -116,6 +117,13 @@ async def get_employee_conversation(user: dict = Depends(get_current_user)):
         }
         await db.conversations.insert_one(conversation)
         del conversation["_id"]
+    
+    # Filter out deleted messages from the response
+    if "messages" in conversation:
+        conversation["messages"] = [
+            msg for msg in conversation["messages"] 
+            if not msg.get("deleted_at")
+        ]
     
     # Mark admin messages as read
     if conversation.get("messages"):
@@ -236,10 +244,11 @@ async def get_consignor_conversation(email: str):
     
     user_name = agreement.get("full_name", email)
     
-    # Find existing conversation
+    # Find existing conversation (exclude soft-deleted)
     conversation = await db.conversations.find_one({
         "participant_type": "consignor",
-        "participant_id": email
+        "participant_id": email,
+        "deleted_at": {"$exists": False}
     }, {"_id": 0})
     
     if not conversation:
@@ -257,6 +266,13 @@ async def get_consignor_conversation(email: str):
         }
         await db.conversations.insert_one(conversation)
         del conversation["_id"]
+    
+    # Filter out deleted messages from the response
+    if "messages" in conversation:
+        conversation["messages"] = [
+            msg for msg in conversation["messages"] 
+            if not msg.get("deleted_at")
+        ]
     
     # Mark admin messages as read
     if conversation.get("messages"):
@@ -372,16 +388,22 @@ async def consignor_send_message(email: str, message: ConversationCreate):
 
 @router.get("/admin/list", response_model=List[ConversationListItem])
 async def get_all_conversations(admin: dict = Depends(get_admin_user)):
-    """Admin: Get all conversations"""
-    conversations = await db.conversations.find({}, {"_id": 0}).sort("last_message_at", -1).to_list(500)
+    """Admin: Get all active (non-deleted) conversations"""
+    # Exclude soft-deleted conversations
+    conversations = await db.conversations.find(
+        {"deleted_at": {"$exists": False}}, 
+        {"_id": 0}
+    ).sort("last_message_at", -1).to_list(500)
     
     result = []
     for conv in conversations:
         messages = conv.get("messages", [])
-        last_message = messages[-1] if messages else None
+        # Filter out deleted messages
+        active_messages = [m for m in messages if not m.get("deleted_at")]
+        last_message = active_messages[-1] if active_messages else None
         
-        # Count unread messages FROM the participant (not from admin)
-        unread = sum(1 for m in messages if m.get("sender_type") != "admin" and not m.get("read", False))
+        # Count unread messages FROM the participant (not from admin), excluding deleted
+        unread = sum(1 for m in active_messages if m.get("sender_type") != "admin" and not m.get("read", False))
         
         result.append(ConversationListItem(
             id=conv["id"],
@@ -400,12 +422,19 @@ async def get_all_conversations(admin: dict = Depends(get_admin_user)):
 
 @router.get("/admin/unread-count")
 async def get_admin_unread_count(admin: dict = Depends(get_admin_user)):
-    """Admin: Get total unread message count across all conversations"""
-    conversations = await db.conversations.find({}, {"messages": 1}).to_list(1000)
+    """Admin: Get total unread message count across all active conversations"""
+    # Exclude soft-deleted conversations
+    conversations = await db.conversations.find(
+        {"deleted_at": {"$exists": False}}, 
+        {"messages": 1}
+    ).to_list(1000)
     
     total_unread = 0
     for conv in conversations:
         for msg in conv.get("messages", []):
+            # Skip deleted messages
+            if msg.get("deleted_at"):
+                continue
             if msg.get("sender_type") != "admin" and not msg.get("read", False):
                 total_unread += 1
     
@@ -414,11 +443,21 @@ async def get_admin_unread_count(admin: dict = Depends(get_admin_user)):
 
 @router.get("/admin/conversation/{conversation_id}")
 async def get_conversation(conversation_id: str, admin: dict = Depends(get_admin_user)):
-    """Admin: Get a specific conversation"""
-    conversation = await db.conversations.find_one({"id": conversation_id}, {"_id": 0})
+    """Admin: Get a specific conversation (excluding soft-deleted)"""
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "deleted_at": {"$exists": False}
+    }, {"_id": 0})
     
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    # Filter out deleted messages from the response
+    if "messages" in conversation:
+        conversation["messages"] = [
+            msg for msg in conversation["messages"] 
+            if not msg.get("deleted_at")
+        ]
     
     # Mark participant messages as read
     await db.conversations.update_one(
@@ -426,6 +465,8 @@ async def get_conversation(conversation_id: str, admin: dict = Depends(get_admin
         {"$set": {"messages.$[elem].read": True}},
         array_filters=[{"elem.sender_type": {"$ne": "admin"}, "elem.read": False}]
     )
+    
+    return conversation
     
     return conversation
 
@@ -515,19 +556,33 @@ async def admin_reply(reply: AdminReplyCreate, admin: dict = Depends(get_admin_u
 
 @router.delete("/admin/conversation/{conversation_id}")
 async def delete_conversation(conversation_id: str, admin: dict = Depends(get_admin_user)):
-    """Admin: Delete a conversation thread. This removes the entire conversation
-    so neither party can see the messages anymore."""
+    """Admin: Soft-delete a conversation thread. The conversation is hidden but recoverable."""
     
-    # Find the conversation first to verify it exists
-    conversation = await db.conversations.find_one({"id": conversation_id})
+    # Find the conversation first to verify it exists and is not already deleted
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "deleted_at": {"$exists": False}
+    })
     
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
     
-    # Delete the conversation (this removes it for both parties)
-    result = await db.conversations.delete_one({"id": conversation_id})
+    # Soft-delete the conversation by adding deleted_at and deleted_by fields
+    admin_name = admin.get("name", "Admin")
+    admin_id = admin.get("id") or admin.get("email")
     
-    if result.deleted_count == 0:
+    result = await db.conversations.update_one(
+        {"id": conversation_id},
+        {
+            "$set": {
+                "deleted_at": datetime.now(timezone.utc).isoformat(),
+                "deleted_by": admin_id,
+                "deleted_by_name": admin_name
+            }
+        }
+    )
+    
+    if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Failed to delete conversation")
     
     return {
@@ -536,3 +591,136 @@ async def delete_conversation(conversation_id: str, admin: dict = Depends(get_ad
         "participant_name": conversation.get("participant_name"),
         "participant_type": conversation.get("participant_type")
     }
+
+
+@router.delete("/admin/message/{conversation_id}/{message_id}")
+async def delete_message(conversation_id: str, message_id: str, admin: dict = Depends(get_admin_user)):
+    """Admin: Delete a specific message that was sent by this admin"""
+    
+    admin_id = admin.get("id") or admin.get("email")
+    admin_name = admin.get("name", "Admin")
+    
+    # Find the conversation
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "deleted_at": {"$exists": False}
+    })
+    
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    # Find the message and verify it belongs to this admin (or any admin sender)
+    messages = conversation.get("messages", [])
+    message_found = False
+    for msg in messages:
+        if msg.get("id") == message_id:
+            # Admin can only delete messages sent by admins (sender_type == "admin")
+            if msg.get("sender_type") == "admin":
+                message_found = True
+            else:
+                raise HTTPException(status_code=403, detail="You can only delete your own messages")
+            break
+    
+    if not message_found:
+        raise HTTPException(status_code=404, detail="Message not found or not deletable")
+    
+    # Soft-delete the message by adding deleted_at field
+    await db.conversations.update_one(
+        {"id": conversation_id, "messages.id": message_id},
+        {
+            "$set": {
+                "messages.$.deleted_at": datetime.now(timezone.utc).isoformat(),
+                "messages.$.deleted_by": admin_id
+            }
+        }
+    )
+    
+    return {"success": True, "message": "Message deleted successfully"}
+
+
+@router.delete("/employee/message/{message_id}")
+async def employee_delete_message(message_id: str, user: dict = Depends(get_current_user)):
+    """Employee: Delete a specific message that was sent by this employee"""
+    
+    user_id = user.get("id") or user.get("email")
+    
+    # Find the employee's conversation
+    conversation = await db.conversations.find_one({
+        "participant_type": "employee",
+        "participant_id": user_id,
+        "deleted_at": {"$exists": False}
+    })
+    
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    # Find the message and verify it belongs to this employee
+    messages = conversation.get("messages", [])
+    message_found = False
+    for msg in messages:
+        if msg.get("id") == message_id:
+            if msg.get("sender_type") == "employee" and msg.get("sender_id") == user_id:
+                message_found = True
+            else:
+                raise HTTPException(status_code=403, detail="You can only delete your own messages")
+            break
+    
+    if not message_found:
+        raise HTTPException(status_code=404, detail="Message not found")
+    
+    # Soft-delete the message
+    await db.conversations.update_one(
+        {"id": conversation["id"], "messages.id": message_id},
+        {
+            "$set": {
+                "messages.$.deleted_at": datetime.now(timezone.utc).isoformat(),
+                "messages.$.deleted_by": user_id
+            }
+        }
+    )
+    
+    return {"success": True, "message": "Message deleted successfully"}
+
+
+@router.delete("/consignor/message/{message_id}")
+async def consignor_delete_message(message_id: str, email: str):
+    """Consignor: Delete a specific message that was sent by this consignor"""
+    
+    email = email.lower()
+    
+    # Find the consignor's conversation
+    conversation = await db.conversations.find_one({
+        "participant_type": "consignor",
+        "participant_id": email,
+        "deleted_at": {"$exists": False}
+    })
+    
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    # Find the message and verify it belongs to this consignor
+    messages = conversation.get("messages", [])
+    message_found = False
+    for msg in messages:
+        if msg.get("id") == message_id:
+            if msg.get("sender_type") == "consignor" and msg.get("sender_id") == email:
+                message_found = True
+            else:
+                raise HTTPException(status_code=403, detail="You can only delete your own messages")
+            break
+    
+    if not message_found:
+        raise HTTPException(status_code=404, detail="Message not found")
+    
+    # Soft-delete the message
+    await db.conversations.update_one(
+        {"id": conversation["id"], "messages.id": message_id},
+        {
+            "$set": {
+                "messages.$.deleted_at": datetime.now(timezone.utc).isoformat(),
+                "messages.$.deleted_by": email
+            }
+        }
+    )
+    
+    return {"success": True, "message": "Message deleted successfully"}

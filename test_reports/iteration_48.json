@@ -1,0 +1,73 @@
+{
+  "summary": "Tested new message deletion functionality: 1) Admin soft-delete for conversation threads, 2) Swipe-to-delete gesture on conversation list items, 3) Delete confirmation dialog, 4) Individual message deletion for admin/employee/consignor own messages, 5) Deleted messages/conversations filtered from responses",
+  "mode": "generate",
+  "baseline_commit": "a1206c8f1e40c7eccc4f72861ea05686e0f50a81",
+  "head_commit": "f746f1c66128f9a090e3a3f5fb95525add4c782a",
+  "specs_created": [
+    "/app/tests/e2e/message-deletion.spec.ts",
+    "/app/backend/tests/test_message_deletion.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/tests/e2e/message-deletion.spec.ts",
+    "/app/backend/tests/test_message_deletion.py",
+    "/app/test_reports/pytest/test_message_deletion.xml"
+  ],
+  "regression_results": {
+    "total_specs": 20,
+    "passed": 20,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/.emergent/testing_baseline_commit",
+    "/app/tests/e2e/message-deletion.spec.ts",
+    "/app/backend/tests/test_message_deletion.py",
+    "/app/tests/playwright.config.ts"
+  ],
+  "test_results": {
+    "backend": "100% (12/12 passed)",
+    "frontend": "100% (8/8 passed)"
+  },
+  "seed_data_creation": "None - used existing test data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Message deletion feature fully tested. Backend tests cover: admin conversation list/detail retrieval, admin reply sending, admin message deletion (own messages only), employee message deletion (own messages only), consignor message deletion (own messages only), unread count filtering. Frontend tests cover: conversations section visibility, swipe hint visibility, delete button in DOM, delete confirmation dialog, admin send/delete message flow, message input styling (6 rows, 150px min-height), participant type badges, filter buttons functionality.",
+  "features_verified": {
+    "admin_thread_soft_delete": {
+      "status": "PASS",
+      "details": "DELETE /api/conversations/admin/conversation/{id} soft-deletes thread with deleted_at, deleted_by fields"
+    },
+    "admin_message_deletion": {
+      "status": "PASS",
+      "details": "DELETE /api/conversations/admin/message/{conversation_id}/{message_id} deletes admin's own messages only"
+    },
+    "employee_message_deletion": {
+      "status": "PASS",
+      "details": "DELETE /api/conversations/employee/message/{message_id} deletes employee's own messages only"
+    },
+    "consignor_message_deletion": {
+      "status": "PASS",
+      "details": "DELETE /api/conversations/consignor/message/{message_id}?email={email} deletes consignor's own messages only"
+    },
+    "swipe_to_delete_gesture": {
+      "status": "PASS",
+      "details": "Swipe hint visible on conversation items, delete button revealed on swipe"
+    },
+    "delete_confirmation_dialog": {
+      "status": "PASS",
+      "details": "Confirmation dialog appears with cancel/confirm buttons when deleting thread"
+    },
+    "deleted_messages_filtered": {
+      "status": "PASS",
+      "details": "Deleted messages are filtered out from conversation responses"
+    },
+    "deleted_conversations_filtered": {
+      "status": "PASS",
+      "details": "Soft-deleted conversations are filtered out from conversation list"
+    }
+  }
+}

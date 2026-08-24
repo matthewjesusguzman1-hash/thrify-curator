@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, useAnimation } from "framer-motion";
 import { 
   MessageCircle, 
   ChevronDown, 
@@ -12,7 +12,8 @@ import {
   X,
   Briefcase,
   Package,
-  Trash2
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,118 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 // Polling interval for real-time updates (3 seconds for instant messaging feel)
 const POLLING_INTERVAL = 3000;
 
+// Swipe threshold to trigger delete
+const SWIPE_THRESHOLD = 80;
+
+// Swipeable Conversation Item Component
+function SwipeableConversationItem({ conv, isSelected, onSelect, onDelete, formatMessageTime }) {
+  const x = useMotionValue(0);
+  const controls = useAnimation();
+  const deleteOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1]);
+  const deleteScale = useTransform(x, [0, SWIPE_THRESHOLD], [0.5, 1]);
+  
+  const handleDragEnd = async (event, info) => {
+    if (info.offset.x > SWIPE_THRESHOLD) {
+      // Swiped enough to delete - show delete action
+      await controls.start({ x: SWIPE_THRESHOLD + 20 });
+    } else {
+      // Snap back
+      controls.start({ x: 0 });
+    }
+  };
+  
+  const handleDeleteClick = (e) => {
+    e.stopPropagation();
+    onDelete(conv);
+    controls.start({ x: 0 });
+  };
+  
+  const handleCardClick = () => {
+    // Only select if not swiped
+    if (x.get() < 20) {
+      onSelect(conv);
+    } else {
+      controls.start({ x: 0 });
+    }
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-xl" data-testid={`conversation-item-${conv.id}`}>
+      {/* Delete background that appears when swiping */}
+      <motion.div 
+        className="absolute inset-y-0 left-0 w-24 bg-red-500 flex items-center justify-center rounded-l-xl"
+        style={{ opacity: deleteOpacity }}
+      >
+        <motion.button
+          style={{ scale: deleteScale }}
+          onClick={handleDeleteClick}
+          className="flex flex-col items-center text-white p-2"
+          data-testid={`delete-thread-btn-${conv.id}`}
+        >
+          <Trash2 className="w-6 h-6" />
+          <span className="text-xs mt-1">Delete</span>
+        </motion.button>
+      </motion.div>
+      
+      {/* Swipeable card */}
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: 0, right: SWIPE_THRESHOLD + 30 }}
+        dragElastic={0.1}
+        onDragEnd={handleDragEnd}
+        animate={controls}
+        style={{ x }}
+        onClick={handleCardClick}
+        className={`relative p-3 cursor-pointer transition-colors border ${
+          isSelected
+            ? 'bg-blue-50 border-blue-300'
+            : conv.unread_count > 0
+              ? 'bg-blue-50/50 border-blue-200'
+              : 'bg-gray-50 border-gray-200'
+        } rounded-xl`}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-white ${
+            conv.participant_type === 'employee' 
+              ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
+              : 'bg-gradient-to-r from-amber-500 to-orange-600'
+          }`}>
+            {conv.participant_name.charAt(0).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-[#333] truncate">{conv.participant_name}</p>
+              {conv.unread_count > 0 && (
+                <span className="px-1.5 py-0.5 bg-blue-500 text-white text-xs rounded-full font-medium flex-shrink-0">
+                  {conv.unread_count}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-[#888] truncate">{conv.last_message}</p>
+          </div>
+          <div className="text-xs text-[#888] flex-shrink-0">
+            {formatMessageTime(conv.last_message_at)}
+          </div>
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <span className={`text-xs px-2 py-0.5 rounded-full ${
+            conv.participant_type === 'employee'
+              ? 'bg-green-100 text-green-700'
+              : 'bg-amber-100 text-amber-700'
+          }`}>
+            {conv.participant_type === 'employee' ? 'Employee' : 'Consignor'}
+          </span>
+          <span className="text-xs text-[#888] truncate">{conv.participant_email}</span>
+        </div>
+        {/* Swipe hint on first conversation */}
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[#ccc] text-xs pointer-events-none opacity-50">
+          ← swipe
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function ConversationsSection() {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -35,6 +148,7 @@ export default function ConversationsSection() {
   const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all"); // all, employee, consignor
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { conv: conversation } or null
   const pollingRef = useRef(null);
   const selectedConversationRef = useRef(null);
   const previousUnreadRef = useRef(0);
@@ -257,10 +371,7 @@ export default function ConversationsSection() {
   };
 
   const handleDeleteConversation = async (conversationId, participantName) => {
-    if (!window.confirm(`Delete entire conversation with ${participantName}? This cannot be undone and will remove messages for both parties.`)) {
-      return;
-    }
-
+    // This is called after confirmation
     const token = getToken();
     try {
       await axios.delete(`${API}/conversations/admin/conversation/${conversationId}`, {
@@ -280,6 +391,49 @@ export default function ConversationsSection() {
     } catch (error) {
       console.error("Error deleting conversation:", error);
       toast.error("Failed to delete conversation");
+    }
+  };
+
+  // Show delete confirmation dialog
+  const showDeleteConfirmation = (conv) => {
+    setDeleteConfirmation(conv);
+  };
+
+  // Confirm and execute deletion
+  const confirmDelete = async () => {
+    if (deleteConfirmation) {
+      await handleDeleteConversation(deleteConfirmation.id, deleteConfirmation.participant_name);
+      setDeleteConfirmation(null);
+    }
+  };
+
+  // Cancel deletion
+  const cancelDelete = () => {
+    setDeleteConfirmation(null);
+  };
+
+  // Delete a single message (admin can only delete their own messages)
+  const handleDeleteMessage = async (messageId) => {
+    if (!selectedConversation) return;
+    
+    const token = getToken();
+    try {
+      await axios.delete(
+        `${API}/conversations/admin/message/${selectedConversation.id}/${messageId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      toast.success("Message deleted");
+      
+      // Refresh the conversation to get updated messages
+      const res = await axios.get(`${API}/conversations/admin/conversation/${selectedConversation.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSelectedConversation(res.data);
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      const errorMsg = error.response?.data?.detail || "Failed to delete message";
+      toast.error(errorMsg);
     }
   };
 
@@ -445,54 +599,19 @@ export default function ConversationsSection() {
                       </p>
                     </div>
                   ) : (
-                    filteredConversations.map((conv) => (
-                      <div
-                        key={conv.id}
-                        onClick={() => handleSelectConversation(conv)}
-                        className={`p-3 rounded-xl cursor-pointer transition-all border ${
-                          selectedConversation?.id === conv.id
-                            ? 'bg-blue-50 border-blue-300'
-                            : conv.unread_count > 0
-                              ? 'bg-blue-50/50 border-blue-200 hover:bg-blue-50'
-                              : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                        }`}
-                        data-testid={`conversation-item-${conv.id}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-white ${
-                            conv.participant_type === 'employee' 
-                              ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
-                              : 'bg-gradient-to-r from-amber-500 to-orange-600'
-                          }`}>
-                            {conv.participant_name.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-semibold text-[#333] truncate">{conv.participant_name}</p>
-                              {conv.unread_count > 0 && (
-                                <span className="px-1.5 py-0.5 bg-blue-500 text-white text-xs rounded-full font-medium flex-shrink-0">
-                                  {conv.unread_count}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-[#888] truncate">{conv.last_message}</p>
-                          </div>
-                          <div className="text-xs text-[#888] flex-shrink-0">
-                            {formatMessageTime(conv.last_message_at)}
-                          </div>
-                        </div>
-                        <div className="mt-2 flex items-center gap-2">
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            conv.participant_type === 'employee'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-amber-100 text-amber-700'
-                          }`}>
-                            {conv.participant_type === 'employee' ? 'Employee' : 'Consignor'}
-                          </span>
-                          <span className="text-xs text-[#888] truncate">{conv.participant_email}</span>
-                        </div>
-                      </div>
-                    ))
+                    <>
+                      <p className="text-xs text-center text-[#888] mb-2 italic">← Swipe right to delete a thread</p>
+                      {filteredConversations.map((conv) => (
+                        <SwipeableConversationItem
+                          key={conv.id}
+                          conv={conv}
+                          isSelected={selectedConversation?.id === conv.id}
+                          onSelect={handleSelectConversation}
+                          onDelete={showDeleteConfirmation}
+                          formatMessageTime={formatMessageTime}
+                        />
+                      ))}
+                    </>
                   )}
                 </div>
 
@@ -533,7 +652,7 @@ export default function ConversationsSection() {
                             {selectedConversation.participant_type === 'employee' ? 'Employee' : 'Consignor'}
                           </span>
                           <button
-                            onClick={() => handleDeleteConversation(selectedConversation.id, selectedConversation.participant_name)}
+                            onClick={() => showDeleteConfirmation(selectedConversation)}
                             className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Delete conversation"
                             data-testid="delete-conversation-btn"
@@ -572,31 +691,44 @@ export default function ConversationsSection() {
                                     </div>
                                   )}
                                   <div className={`flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}>
-                                    <div
-                                      className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                                        msg.sender_type === 'admin'
-                                          ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-tr-sm'
-                                          : 'bg-white border border-gray-200 text-[#333] rounded-tl-sm'
-                                      }`}
-                                    >
-                                      {msg.sender_type === 'admin' && msg.sender_name && (
-                                        <p className="text-xs text-white/70 mb-1 flex items-center gap-1">
-                                          <User className="w-3 h-3" />
-                                          {msg.sender_name}
+                                    <div className="group relative">
+                                      <div
+                                        className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                                          msg.sender_type === 'admin'
+                                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-tr-sm'
+                                            : 'bg-white border border-gray-200 text-[#333] rounded-tl-sm'
+                                        }`}
+                                      >
+                                        {msg.sender_type === 'admin' && msg.sender_name && (
+                                          <p className="text-xs text-white/70 mb-1 flex items-center gap-1">
+                                            <User className="w-3 h-3" />
+                                            {msg.sender_name}
+                                          </p>
+                                        )}
+                                        {msg.sender_type !== 'admin' && (
+                                          <p className="text-xs text-[#888] mb-1 flex items-center gap-1">
+                                            <User className="w-3 h-3" />
+                                            {msg.sender_name}
+                                          </p>
+                                        )}
+                                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                        <p className={`text-xs mt-1 ${
+                                          msg.sender_type === 'admin' ? 'text-white/70' : 'text-[#888]'
+                                        }`}>
+                                          {formatMessageTime(msg.sent_at)}
                                         </p>
+                                      </div>
+                                      {/* Delete button for admin's own messages */}
+                                      {msg.sender_type === 'admin' && (
+                                        <button
+                                          onClick={() => handleDeleteMessage(msg.id)}
+                                          className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 bg-red-100 hover:bg-red-200 text-red-500 rounded-full transition-all"
+                                          title="Delete message"
+                                          data-testid={`delete-message-${msg.id}`}
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
                                       )}
-                                      {msg.sender_type !== 'admin' && (
-                                        <p className="text-xs text-[#888] mb-1 flex items-center gap-1">
-                                          <User className="w-3 h-3" />
-                                          {msg.sender_name}
-                                        </p>
-                                      )}
-                                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                                      <p className={`text-xs mt-1 ${
-                                        msg.sender_type === 'admin' ? 'text-white/70' : 'text-[#888]'
-                                      }`}>
-                                        {formatMessageTime(msg.sent_at)}
-                                      </p>
                                     </div>
                                   </div>
                                 </div>
@@ -648,6 +780,64 @@ export default function ConversationsSection() {
                 </div>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {deleteConfirmation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={cancelDelete}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+              data-testid="delete-confirmation-dialog"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg text-[#333]">Delete Conversation?</h3>
+                  <p className="text-sm text-[#888]">This action can be undone by admin</p>
+                </div>
+              </div>
+              
+              <p className="text-[#666] mb-6">
+                Are you sure you want to delete the entire conversation with{' '}
+                <span className="font-semibold">{deleteConfirmation.participant_name}</span>?
+                The conversation will be hidden from both parties.
+              </p>
+              
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={cancelDelete}
+                  data-testid="cancel-delete-btn"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1 bg-red-500 hover:bg-red-600"
+                  onClick={confirmDelete}
+                  data-testid="confirm-delete-btn"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

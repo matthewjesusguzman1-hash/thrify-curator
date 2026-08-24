@@ -253,3 +253,24 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - Print/PDF template updated with new payment field format
   - Agreement text is now properly returned from pending list endpoint
 
+### Message Deletion Feature (2026-08-24) - NEW
+- **Thread Deletion (Admin Only)**:
+  - Soft-delete: Threads are hidden but recoverable (deleted_at, deleted_by fields)
+  - Swipe-to-delete gesture on conversation list items (swipe right to reveal delete button)
+  - Confirmation dialog required before thread deletion
+  - Deleted conversations filtered from both admin list and employee/consignor views
+- **Individual Message Deletion**:
+  - Senders can only delete their own messages
+  - Admin messages: Delete button appears on hover (left side of message)
+  - Employee/consignor messages: Delete button on their own messages
+  - Soft-delete with deleted_at field, messages filtered from responses
+- **Backend Endpoints**:
+  - `DELETE /api/conversations/admin/conversation/{id}` - Admin soft-deletes thread
+  - `DELETE /api/conversations/admin/message/{conversation_id}/{message_id}` - Admin deletes own message
+  - `DELETE /api/conversations/employee/message/{message_id}` - Employee deletes own message
+  - `DELETE /api/conversations/consignor/message/{message_id}?email={email}` - Consignor deletes own message
+- **UI Components**:
+  - SwipeableConversationItem component with framer-motion drag gestures
+  - Delete confirmation dialog with AlertTriangle icon and cancel/confirm buttons
+  - "← Swipe right to delete a thread" hint text in conversation list
+

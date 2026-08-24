@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Send, X, Loader2, ChevronDown, User } from "lucide-react";
+import { MessageSquare, Send, X, Loader2, ChevronDown, User, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import axios from "axios";
@@ -223,6 +223,29 @@ export default function MessagingSection({
     return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
   };
 
+  // Delete a message (user can only delete their own messages)
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      if (userType === "employee") {
+        await axios.delete(
+          `${API}/conversations/employee/message/${messageId}`,
+          getAuthHeader()
+        );
+      } else {
+        await axios.delete(
+          `${API}/conversations/consignor/message/${messageId}?email=${encodeURIComponent(userEmail)}`
+        );
+      }
+      
+      toast.success("Message deleted");
+      await fetchConversation();
+    } catch (error) {
+      console.error("Failed to delete message:", error);
+      const errorMsg = error.response?.data?.detail || "Failed to delete message";
+      toast.error(errorMsg);
+    }
+  };
+
   const messages = conversation?.messages || [];
   const unreadCount = messages.filter(m => m.sender_type === "admin" && !m.read).length;
 
@@ -304,25 +327,38 @@ export default function MessagingSection({
                           </div>
                         )}
                         <div className={`flex ${msg.sender_type === "admin" ? "justify-start" : "justify-end"}`}>
-                          <div
-                            className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                              msg.sender_type === "admin"
-                                ? "bg-white/10 text-white rounded-tl-sm"
-                                : "bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-tr-sm"
-                            }`}
-                          >
-                            {msg.sender_type === "admin" && (
-                              <p className="text-xs text-white/50 mb-1 flex items-center gap-1">
-                                <User className="w-3 h-3" />
-                                {msg.sender_name || "Admin"}
+                          <div className="group relative">
+                            <div
+                              className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                                msg.sender_type === "admin"
+                                  ? "bg-white/10 text-white rounded-tl-sm"
+                                  : "bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-tr-sm"
+                              }`}
+                            >
+                              {msg.sender_type === "admin" && (
+                                <p className="text-xs text-white/50 mb-1 flex items-center gap-1">
+                                  <User className="w-3 h-3" />
+                                  {msg.sender_name || "Admin"}
+                                </p>
+                              )}
+                              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                              <p className={`text-xs mt-1 ${
+                                msg.sender_type === "admin" ? "text-white/40" : "text-white/70"
+                              }`}>
+                                {formatMessageTime(msg.sent_at)}
                               </p>
+                            </div>
+                            {/* Delete button for user's own messages */}
+                            {msg.sender_type !== "admin" && (
+                              <button
+                                onClick={() => handleDeleteMessage(msg.id)}
+                                className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-400 rounded-full transition-all"
+                                title="Delete message"
+                                data-testid={`delete-message-${msg.id}`}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
                             )}
-                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                            <p className={`text-xs mt-1 ${
-                              msg.sender_type === "admin" ? "text-white/40" : "text-white/70"
-                            }`}>
-                              {formatMessageTime(msg.sent_at)}
-                            </p>
                           </div>
                         </div>
                       </div>
