@@ -15,6 +15,7 @@ import {
   FileText,
   Users,
   CheckCircle,
+  XCircle,
   Clock,
   X,
   GripVertical,
@@ -1100,6 +1101,7 @@ function SubmissionsModal({ test, onClose, onViewDetail, getAuthHeader }) {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showBulkRejectModal, setShowBulkRejectModal] = useState(false);
   const [selectedEmails, setSelectedEmails] = useState([]);
 
   useEffect(() => {
@@ -1187,14 +1189,24 @@ function SubmissionsModal({ test, onClose, onViewDetail, getAuthHeader }) {
                 </label>
                 
                 {selectedEmails.length > 0 && (
-                  <Button
-                    size="sm"
-                    onClick={() => setShowScheduleModal(true)}
-                    className="bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] text-white"
-                  >
-                    <Video className="w-4 h-4 mr-1" />
-                    Schedule Interviews ({selectedEmails.length})
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => setShowScheduleModal(true)}
+                      className="bg-gradient-to-r from-[#8B5CF6] to-[#00D4FF] text-white"
+                    >
+                      <Video className="w-4 h-4 mr-1" />
+                      Schedule ({selectedEmails.length})
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => setShowBulkRejectModal(true)}
+                      className="bg-red-500 hover:bg-red-600 text-white"
+                    >
+                      <XCircle className="w-4 h-4 mr-1" />
+                      Reject ({selectedEmails.length})
+                    </Button>
+                  </div>
                 )}
               </div>
 
@@ -1245,6 +1257,20 @@ function SubmissionsModal({ test, onClose, onViewDetail, getAuthHeader }) {
           selectedEmails={selectedEmails}
           submissions={submissions}
           onClose={() => setShowScheduleModal(false)}
+          getAuthHeader={getAuthHeader}
+        />
+      )}
+
+      {/* Bulk Reject Modal */}
+      {showBulkRejectModal && (
+        <BulkRejectModal
+          selectedEmails={selectedEmails}
+          submissions={submissions}
+          onClose={() => setShowBulkRejectModal(false)}
+          onSuccess={() => {
+            setShowBulkRejectModal(false);
+            setSelectedEmails([]);
+          }}
           getAuthHeader={getAuthHeader}
         />
       )}
@@ -4350,5 +4376,183 @@ function RejectionLetterSection({ applicantName, applicantEmail, getAuthHeader }
         )}
       </Button>
     </div>
+  );
+}
+
+
+// Bulk Reject Modal - allows rejecting multiple applicants with different future consideration options
+function BulkRejectModal({ selectedEmails, submissions, onClose, onSuccess, getAuthHeader }) {
+  const [sending, setSending] = useState(false);
+  const [progress, setProgress] = useState({ sent: 0, total: 0 });
+  
+  // Track which applicants should be asked about future consideration
+  const [futureConsiderationMap, setFutureConsiderationMap] = useState(() => {
+    const map = {};
+    selectedEmails.forEach(email => {
+      map[email] = true; // Default to asking about future
+    });
+    return map;
+  });
+
+  const selectedSubmissions = submissions.filter(s => selectedEmails.includes(s.applicant_email));
+
+  const toggleFutureConsideration = (email) => {
+    setFutureConsiderationMap(prev => ({
+      ...prev,
+      [email]: !prev[email]
+    }));
+  };
+
+  const setAllFutureConsideration = (value) => {
+    const newMap = {};
+    selectedEmails.forEach(email => {
+      newMap[email] = value;
+    });
+    setFutureConsiderationMap(newMap);
+  };
+
+  const handleBulkReject = async () => {
+    if (!window.confirm(`Send rejection letters to ${selectedEmails.length} applicants?`)) return;
+    
+    setSending(true);
+    setProgress({ sent: 0, total: selectedEmails.length });
+    
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const sub of selectedSubmissions) {
+      try {
+        await axios.post(`${API}/api/applicant-tests/send-rejection`, {
+          applicant_name: sub.applicant_name,
+          applicant_email: sub.applicant_email,
+          ask_future_consideration: futureConsiderationMap[sub.applicant_email]
+        }, getAuthHeader());
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to send to ${sub.applicant_email}:`, error);
+        failCount++;
+      }
+      setProgress(prev => ({ ...prev, sent: prev.sent + 1 }));
+    }
+
+    setSending(false);
+    
+    if (failCount === 0) {
+      toast.success(`Rejection letters sent to ${successCount} applicants`);
+    } else {
+      toast.warning(`Sent ${successCount}, failed ${failCount}`);
+    }
+    
+    onSuccess();
+  };
+
+  const askingFutureCount = Object.values(futureConsiderationMap).filter(Boolean).length;
+
+  return ReactDOM.createPortal(
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+      style={{ zIndex: 10001 }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.95 }}
+        className="bg-white rounded-2xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-[#333]">Bulk Rejection</h2>
+              <p className="text-sm text-gray-500">{selectedEmails.length} applicants selected</p>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Quick Actions */}
+          <div className="flex gap-2 mb-4">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setAllFutureConsideration(true)}
+              className="text-green-600 border-green-300 hover:bg-green-50"
+            >
+              <CheckCircle className="w-4 h-4 mr-1" />
+              All Ask Future
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setAllFutureConsideration(false)}
+              className="text-red-600 border-red-300 hover:bg-red-50"
+            >
+              <XCircle className="w-4 h-4 mr-1" />
+              None Ask Future
+            </Button>
+          </div>
+
+          {/* Applicant List */}
+          <div className="space-y-2">
+            {selectedSubmissions.map(sub => (
+              <div
+                key={sub.id}
+                className={`p-3 rounded-lg border flex items-center justify-between ${
+                  futureConsiderationMap[sub.applicant_email] 
+                    ? 'bg-green-50 border-green-200' 
+                    : 'bg-red-50 border-red-200'
+                }`}
+              >
+                <div>
+                  <p className="font-medium text-gray-800">{sub.applicant_name}</p>
+                  <p className="text-xs text-gray-500">{sub.applicant_email}</p>
+                </div>
+                <button
+                  onClick={() => toggleFutureConsideration(sub.applicant_email)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    futureConsiderationMap[sub.applicant_email]
+                      ? 'bg-green-500 text-white'
+                      : 'bg-red-500 text-white'
+                  }`}
+                >
+                  {futureConsiderationMap[sub.applicant_email] ? 'Ask Future' : 'No Future'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-gray-200 bg-gray-50">
+          {sending ? (
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-2" />
+              <p className="text-sm text-gray-600">Sending... {progress.sent}/{progress.total}</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600 mb-3 text-center">
+                <span className="text-green-600 font-medium">{askingFutureCount}</span> will be asked about future •{' '}
+                <span className="text-red-600 font-medium">{selectedEmails.length - askingFutureCount}</span> will not
+              </p>
+              <Button
+                onClick={handleBulkReject}
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Send {selectedEmails.length} Rejection Letters
+              </Button>
+            </>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>,
+    document.body
   );
 }
