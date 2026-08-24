@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform, useAnimation } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   MessageCircle, 
   ChevronDown, 
@@ -30,71 +30,62 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 // Polling interval for real-time updates (3 seconds for instant messaging feel)
 const POLLING_INTERVAL = 3000;
 
-// Swipe threshold to trigger delete
-const SWIPE_THRESHOLD = 80;
-
 // Local storage key for read receipts preference
 const READ_RECEIPTS_KEY = "admin_read_receipts_enabled";
 
-// Swipeable Conversation Item Component
+// Swipeable Conversation Item Component with visible delete button for iOS
 function SwipeableConversationItem({ conv, isSelected, onSelect, onDelete, formatMessageTime }) {
-  const x = useMotionValue(0);
-  const controls = useAnimation();
-  const deleteOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1]);
-  const deleteScale = useTransform(x, [0, SWIPE_THRESHOLD], [0.5, 1]);
-  
-  const handleDragEnd = async (event, info) => {
-    if (info.offset.x > SWIPE_THRESHOLD) {
-      // Swiped enough to delete - show delete action
-      await controls.start({ x: SWIPE_THRESHOLD + 20 });
-    } else {
-      // Snap back
-      controls.start({ x: 0 });
-    }
-  };
+  const [showDelete, setShowDelete] = useState(false);
   
   const handleDeleteClick = (e) => {
     e.stopPropagation();
     onDelete(conv);
-    controls.start({ x: 0 });
+    setShowDelete(false);
   };
   
   const handleCardClick = () => {
-    // Only select if not swiped
-    if (x.get() < 20) {
-      onSelect(conv);
+    if (showDelete) {
+      setShowDelete(false);
     } else {
-      controls.start({ x: 0 });
+      onSelect(conv);
     }
+  };
+  
+  // Long press to reveal delete
+  const handleLongPress = (e) => {
+    e.preventDefault();
+    setShowDelete(true);
   };
 
   return (
     <div className="relative overflow-hidden rounded-xl" data-testid={`conversation-item-${conv.id}`}>
-      {/* Delete background that appears when swiping */}
-      <motion.div 
-        className="absolute inset-y-0 left-0 w-24 bg-red-500 flex items-center justify-center rounded-l-xl"
-        style={{ opacity: deleteOpacity }}
-      >
-        <motion.button
-          style={{ scale: deleteScale }}
-          onClick={handleDeleteClick}
-          className="flex flex-col items-center text-white p-2"
-          data-testid={`delete-thread-btn-${conv.id}`}
-        >
-          <Trash2 className="w-6 h-6" />
-          <span className="text-xs mt-1">Delete</span>
-        </motion.button>
-      </motion.div>
+      {/* Delete button that slides in */}
+      <AnimatePresence>
+        {showDelete && (
+          <motion.div 
+            initial={{ x: -80 }}
+            animate={{ x: 0 }}
+            exit={{ x: -80 }}
+            className="absolute inset-y-0 left-0 w-20 bg-red-500 flex items-center justify-center rounded-l-xl z-10"
+          >
+            <button
+              onClick={handleDeleteClick}
+              className="flex flex-col items-center text-white p-2"
+              data-testid={`delete-thread-btn-${conv.id}`}
+            >
+              <Trash2 className="w-6 h-6" />
+              <span className="text-xs mt-1">Delete</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
-      {/* Swipeable card */}
+      {/* Conversation card */}
       <motion.div
-        drag="x"
-        dragConstraints={{ left: 0, right: SWIPE_THRESHOLD + 30 }}
-        dragElastic={0.1}
-        onDragEnd={handleDragEnd}
-        animate={controls}
-        style={{ x }}
         onClick={handleCardClick}
+        onContextMenu={handleLongPress}
+        animate={{ x: showDelete ? 80 : 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={`relative p-3 cursor-pointer transition-colors border ${
           isSelected
             ? 'bg-blue-50 border-blue-300'
@@ -122,23 +113,33 @@ function SwipeableConversationItem({ conv, isSelected, onSelect, onDelete, forma
             </div>
             <p className="text-xs text-[#888] truncate">{conv.last_message}</p>
           </div>
-          <div className="text-xs text-[#888] flex-shrink-0">
-            {formatMessageTime(conv.last_message_at)}
+          {/* Delete icon button - always visible */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(conv);
+            }}
+            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+            title="Delete thread"
+            data-testid={`delete-icon-${conv.id}`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className={`text-xs px-2 py-0.5 rounded-full ${
+              conv.participant_type === 'employee'
+                ? 'bg-green-100 text-green-700'
+                : 'bg-amber-100 text-amber-700'
+            }`}>
+              {conv.participant_type === 'employee' ? 'Employee' : 'Consignor'}
+            </span>
+            <span className="text-xs text-[#888] truncate">{conv.participant_email}</span>
           </div>
-        </div>
-        <div className="mt-2 flex items-center gap-2">
-          <span className={`text-xs px-2 py-0.5 rounded-full ${
-            conv.participant_type === 'employee'
-              ? 'bg-green-100 text-green-700'
-              : 'bg-amber-100 text-amber-700'
-          }`}>
-            {conv.participant_type === 'employee' ? 'Employee' : 'Consignor'}
+          <span className="text-xs text-[#888] flex-shrink-0">
+            {formatMessageTime(conv.last_message_at)}
           </span>
-          <span className="text-xs text-[#888] truncate">{conv.participant_email}</span>
-        </div>
-        {/* Swipe hint on first conversation */}
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[#ccc] text-xs pointer-events-none opacity-50">
-          ← swipe
         </div>
       </motion.div>
     </div>
@@ -287,24 +288,11 @@ export default function ConversationsSection() {
         
         setConversations(convRes.data);
         
-        // Check if there are new unread messages and show notification
+        // Check if there are new unread messages (silent notification - no toast)
         const newUnreadCount = countRes.data.unread_count;
         if (newUnreadCount > previousUnreadRef.current && previousUnreadRef.current >= 0) {
-          toast.info("New message received!", {
-            description: "You have a new message from an employee or consignor"
-          });
-          
           // Vibrate device if enabled
           triggerVibration([200, 100, 200]);
-          
-          // Play notification sound if available
-          try {
-            const audio = new Audio('/notification.mp3');
-            audio.volume = 0.3;
-            audio.play().catch(() => {});
-          } catch (e) {
-            // Audio playback not supported, ignore
-          }
         }
         previousUnreadRef.current = newUnreadCount;
         setUnreadCount(newUnreadCount);
@@ -636,7 +624,6 @@ export default function ConversationsSection() {
                     </div>
                   ) : (
                     <>
-                      <p className="text-xs text-center text-[#888] mb-2 italic">← Swipe right to delete a thread</p>
                       {filteredConversations.map((conv) => (
                         <SwipeableConversationItem
                           key={conv.id}

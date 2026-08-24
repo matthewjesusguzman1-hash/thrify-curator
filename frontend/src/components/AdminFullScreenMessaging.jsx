@@ -8,7 +8,9 @@ import {
   Search,
   ChevronLeft,
   Briefcase,
-  Package
+  Package,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +38,7 @@ export default function AdminFullScreenMessaging({
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   const messagesContainerRef = useRef(null);
   const pollingRef = useRef(null);
   const isAtBottomRef = useRef(true);
@@ -85,11 +88,8 @@ export default function AdminFullScreenMessaging({
       
       const newUnreadCount = countRes.data.unread_count;
       
-      // Notify if new messages and not muted
+      // Notify if new messages and not muted (only vibrate, no toast spam)
       if (newUnreadCount > previousUnreadRef.current && previousUnreadRef.current >= 0 && !muted) {
-        toast.info("New message received!", {
-          description: "You have a new message"
-        });
         triggerVibration([200, 100, 200]);
       }
       previousUnreadRef.current = newUnreadCount;
@@ -227,6 +227,42 @@ export default function AdminFullScreenMessaging({
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
+  // Delete conversation (soft delete)
+  const handleDeleteConversation = async (conversationId, participantName) => {
+    const token = getToken();
+    try {
+      await axios.delete(`${API}/conversations/admin/conversation/${conversationId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success(`Conversation with ${participantName} deleted`);
+      
+      if (selectedConversation?.id === conversationId) {
+        setSelectedConversation(null);
+      }
+      
+      fetchConversations();
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      toast.error("Failed to delete conversation");
+    }
+  };
+
+  const showDeleteConfirmation = (conv) => {
+    setDeleteConfirmation(conv);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteConfirmation) {
+      await handleDeleteConversation(deleteConfirmation.id, deleteConfirmation.participant_name);
+      setDeleteConfirmation(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmation(null);
+  };
+
   // Filter conversations
   const filteredConversations = conversations.filter(conv => {
     const matchesSearch = conv.participant_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -284,22 +320,24 @@ export default function AdminFullScreenMessaging({
             filteredConversations.map((conv) => (
               <div
                 key={conv.id}
-                onClick={() => handleSelectConversation(conv)}
                 className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
                   selectedConversation?.id === conv.id ? 'bg-blue-50' : ''
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    conv.participant_type === 'employee' ? 'bg-blue-100' : 'bg-purple-100'
-                  }`}>
+                  <div 
+                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      conv.participant_type === 'employee' ? 'bg-blue-100' : 'bg-purple-100'
+                    }`}
+                    onClick={() => handleSelectConversation(conv)}
+                  >
                     {conv.participant_type === 'employee' ? (
                       <Briefcase className="w-5 h-5 text-blue-600" />
                     ) : (
                       <Package className="w-5 h-5 text-purple-600" />
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0" onClick={() => handleSelectConversation(conv)}>
                     <div className="flex items-center justify-between">
                       <p className="font-medium text-gray-900 truncate">{conv.participant_name}</p>
                       {conv.unread_count > 0 && (
@@ -316,6 +354,17 @@ export default function AdminFullScreenMessaging({
                       <p className="text-xs text-gray-400 mt-1">{formatLastMessage(conv.last_message_at)}</p>
                     )}
                   </div>
+                  {/* Delete button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      showDeleteConfirmation(conv);
+                    }}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                    title="Delete thread"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))
@@ -344,10 +393,18 @@ export default function AdminFullScreenMessaging({
                   <Package className="w-5 h-5 text-purple-600" />
                 )}
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="font-medium text-gray-900">{selectedConversation.participant_name}</p>
                 <p className="text-xs text-gray-500 capitalize">{selectedConversation.participant_type}</p>
               </div>
+              {/* Delete button in header */}
+              <button
+                onClick={() => showDeleteConfirmation(selectedConversation)}
+                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                title="Delete conversation"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
             </div>
             
             {/* Messages */}
@@ -436,6 +493,60 @@ export default function AdminFullScreenMessaging({
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {deleteConfirmation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={cancelDelete}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg text-gray-900">Delete Conversation?</h3>
+                  <p className="text-sm text-gray-500">This action can be undone by admin</p>
+                </div>
+              </div>
+              
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete the conversation with{' '}
+                <span className="font-semibold">{deleteConfirmation.participant_name}</span>?
+              </p>
+              
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={cancelDelete}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1 bg-red-500 hover:bg-red-600"
+                  onClick={confirmDelete}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
