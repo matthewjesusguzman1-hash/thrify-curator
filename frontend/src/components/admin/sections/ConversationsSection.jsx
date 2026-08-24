@@ -86,60 +86,67 @@ function SwipeableConversationItem({ conv, isSelected, onSelect, onDelete, forma
         onContextMenu={handleLongPress}
         animate={{ x: showDelete ? 80 : 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className={`relative p-3 cursor-pointer transition-colors border ${
+        className={`relative p-4 cursor-pointer transition-colors border ${
           isSelected
-            ? 'bg-blue-50 border-blue-300'
+            ? 'bg-blue-50 border-blue-400 border-l-4 border-l-blue-500'
             : conv.unread_count > 0
-              ? 'bg-blue-50/50 border-blue-200'
-              : 'bg-gray-50 border-gray-200'
-        } rounded-xl`}
+              ? 'bg-blue-50/50 border-blue-200 hover:bg-blue-50'
+              : 'bg-white border-gray-200 hover:bg-gray-50'
+        } rounded-xl shadow-sm`}
       >
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-white ${
+        <div className="flex gap-3">
+          {/* Avatar */}
+          <div className={`w-11 h-11 rounded-full flex items-center justify-center font-semibold text-white text-lg flex-shrink-0 ${
             conv.participant_type === 'employee' 
               ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
               : 'bg-gradient-to-r from-amber-500 to-orange-600'
           }`}>
             {conv.participant_name.charAt(0).toUpperCase()}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="font-semibold text-[#333] truncate">{conv.participant_name}</p>
+          
+          {/* Content */}
+          <div className="flex-1 min-w-0 overflow-hidden">
+            {/* Row 1: Name + Badge + Unread */}
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="font-semibold text-gray-900 truncate">{conv.participant_name}</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${
+                conv.participant_type === 'employee'
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-amber-100 text-amber-700'
+              }`}>
+                {conv.participant_type === 'employee' ? 'EMP' : 'CON'}
+              </span>
               {conv.unread_count > 0 && (
-                <span className="px-1.5 py-0.5 bg-blue-500 text-white text-xs rounded-full font-medium flex-shrink-0">
+                <span className="ml-auto px-1.5 py-0.5 bg-blue-500 text-white text-[10px] rounded-full font-bold flex-shrink-0">
                   {conv.unread_count}
                 </span>
               )}
             </div>
-            <p className="text-xs text-[#888] truncate">{conv.last_message}</p>
+            
+            {/* Row 2: Email */}
+            <p className="text-xs text-gray-500 truncate mb-1">{conv.participant_email}</p>
+            
+            {/* Row 3: Last message */}
+            {conv.last_message && (
+              <p className="text-xs text-gray-600 truncate">{conv.last_message}</p>
+            )}
+            
+            {/* Row 4: Time */}
+            <p className="text-[10px] text-gray-400 mt-1">{formatMessageTime(conv.last_message_at)}</p>
           </div>
-          {/* Delete icon button - always visible */}
+          
+          {/* Delete icon */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               onDelete(conv);
             }}
-            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 self-start"
             title="Delete thread"
             data-testid={`delete-icon-${conv.id}`}
           >
             <Trash2 className="w-4 h-4" />
           </button>
-        </div>
-        <div className="mt-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className={`text-xs px-2 py-0.5 rounded-full ${
-              conv.participant_type === 'employee'
-                ? 'bg-green-100 text-green-700'
-                : 'bg-amber-100 text-amber-700'
-            }`}>
-              {conv.participant_type === 'employee' ? 'Employee' : 'Consignor'}
-            </span>
-            <span className="text-xs text-[#888] truncate">{conv.participant_email}</span>
-          </div>
-          <span className="text-xs text-[#888] flex-shrink-0">
-            {formatMessageTime(conv.last_message_at)}
-          </span>
         </div>
       </motion.div>
     </div>
@@ -605,9 +612,9 @@ export default function ConversationsSection() {
               </div>
 
               {/* Two-panel layout on desktop */}
-              <div className="flex flex-col lg:flex-row gap-4 min-h-[400px]">
-                {/* Conversation List */}
-                <div className={`${selectedConversation ? 'hidden lg:block' : ''} lg:w-1/3 space-y-2 overflow-y-auto max-h-[400px]`}>
+              <div className="flex flex-col lg:flex-row gap-4 min-h-[500px]">
+                {/* Conversation List - wider on desktop */}
+                <div className={`${selectedConversation ? 'hidden lg:block' : ''} lg:w-[380px] xl:w-[420px] flex-shrink-0 space-y-3 overflow-y-auto max-h-[500px] pr-2`}>
                   {loading && conversations.length === 0 ? (
                     <div className="text-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
@@ -639,7 +646,7 @@ export default function ConversationsSection() {
                 </div>
 
                 {/* Conversation Detail */}
-                <div className={`${!selectedConversation ? 'hidden lg:flex' : ''} lg:w-2/3 flex flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden`}>
+                <div className={`${!selectedConversation ? 'hidden lg:flex' : ''} flex-1 flex flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden min-w-0`}>
                   {selectedConversation ? (
                     <>
                       {/* Header */}
