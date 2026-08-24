@@ -556,9 +556,9 @@ export default function ConversationsSection() {
               </div>
 
               {/* Two-panel layout on desktop */}
-              <div className="flex flex-col lg:flex-row gap-4 min-h-[500px]">
+              <div className="flex flex-col md:flex-row gap-4 min-h-[500px]">
                 {/* Conversation List - narrower to give more room for messages */}
-                <div className={`${selectedConversation ? 'hidden lg:block' : ''} lg:w-[300px] xl:w-[340px] flex-shrink-0 space-y-2 overflow-y-auto max-h-[500px] pr-2`}>
+                <div className={`${selectedConversation ? 'hidden md:block' : ''} md:w-[280px] lg:w-[300px] xl:w-[340px] flex-shrink-0 space-y-2 overflow-y-auto max-h-[500px] pr-2`}>
                   {loading && conversations.length === 0 ? (
                     <div className="text-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
@@ -590,7 +590,7 @@ export default function ConversationsSection() {
                 </div>
 
                 {/* Conversation Detail */}
-                <div className={`${!selectedConversation ? 'hidden lg:flex' : ''} flex-1 flex flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden min-w-0`}>
+                <div className={`${!selectedConversation ? 'hidden md:flex' : 'flex'} flex-1 flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden min-w-0`}>
                   {selectedConversation ? (
                     <>
                       {/* Header */}
@@ -601,7 +601,7 @@ export default function ConversationsSection() {
                               setSelectedConversation(null);
                               selectedConversationRef.current = null;
                             }}
-                            className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
+                            className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
                           >
                             <ChevronDown className="w-5 h-5 rotate-90" />
                           </button>
