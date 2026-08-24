@@ -76,8 +76,7 @@ import useGPSTracking from "@/hooks/useGPSTracking";
 import PaymentRecordsSection from "@/components/admin/sections/PaymentRecordsSection";
 import PayrollHistorySection from "@/components/admin/sections/PayrollHistorySection";
 import FormSubmissionsSection from "@/components/admin/sections/FormSubmissionsSection";
-import MessagesSection from "@/components/admin/sections/MessagesSection";
-import ConversationsSection from "@/components/admin/sections/ConversationsSection";
+
 import AllEmployeesSection from "@/components/admin/sections/AllEmployeesSection";
 import HoursByEmployeeSection from "@/components/admin/sections/HoursByEmployeeSection";
 import PasswordManagementSection from "@/components/admin/sections/PasswordManagementSection";
@@ -3735,16 +3734,6 @@ export default function AdminDashboard() {
                   getAuthHeader={getAuthHeader}
                   onViewConsignorPortal={handleViewConsignorPortal}
                 />
-              </div>
-
-              {/* Messaging Section: Side by Side */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                <div data-testid="conversations-section">
-                  <ConversationsSection />
-                </div>
-                <div data-testid="messages-section">
-                  <MessagesSection />
-                </div>
               </div>
 
               {/* Additional Tools removed - Interview Scheduler moved to Hiring section */}
