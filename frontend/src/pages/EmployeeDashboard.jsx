@@ -1523,8 +1523,8 @@ export default function EmployeeDashboard({
             className="space-y-6"
           >
           
-          {/* PWA Install Banner - Only show if not installed and not in admin view */}
-          {!isAdminView && showInstallBanner && !isStandalone && (
+          {/* PWA Install Banner - Only show on MOBILE, if not installed and not in admin view */}
+          {!isAdminView && !isDesktop && showInstallBanner && !isStandalone && (
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}

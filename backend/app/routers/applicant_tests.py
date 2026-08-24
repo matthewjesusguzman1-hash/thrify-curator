@@ -1592,3 +1592,91 @@ async def submit_interview_availability(
     
     return {"message": "Availability submitted successfully! You will receive a confirmation email with the meeting details."}
 
+
+
+class RejectionLetterRequest(BaseModel):
+    applicant_name: str
+    applicant_email: str
+    ask_future_consideration: bool = True
+
+@router.post("/send-rejection")
+async def send_rejection_letter(request: RejectionLetterRequest, admin: dict = Depends(get_admin_user)):
+    """Send a professional rejection letter to an applicant"""
+    import resend
+    
+    db = get_db()
+    
+    # Build the email content
+    future_consideration_text = ""
+    if request.ask_future_consideration:
+        future_consideration_text = """
+<p>While we are unable to offer you a position at this time, we were impressed with your application. If you would be open to being contacted for future opportunities, please reply to this email and let us know. We would love to keep you in mind for upcoming positions that may be a better fit.</p>
+"""
+    
+    email_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
+    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+    .header {{ text-align: center; margin-bottom: 30px; }}
+    .logo {{ font-size: 24px; font-weight: bold; color: #8B5CF6; }}
+    .content {{ background: #f9fafb; border-radius: 12px; padding: 30px; }}
+    p {{ margin: 0 0 16px 0; }}
+    .signature {{ margin-top: 30px; color: #666; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">Thrifty Curator</div>
+    </div>
+    <div class="content">
+      <p>Dear {request.applicant_name},</p>
+      
+      <p>Thank you for taking the time to apply for a position with Thrifty Curator and for completing our skills assessment. We truly appreciate your interest in joining our team.</p>
+      
+      <p>After careful consideration, we have decided to move forward with other candidates whose qualifications more closely match our current needs. This was not an easy decision, as we received many strong applications.</p>
+      
+      {future_consideration_text}
+      
+      <p>We wish you the best of luck in your job search and future endeavors.</p>
+      
+      <div class="signature">
+        <p>Warm regards,</p>
+        <p><strong>The Thrifty Curator Team</strong></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+"""
+    
+    try:
+        resend.api_key = os.environ.get("RESEND_API_KEY")
+        if not resend.api_key:
+            raise HTTPException(status_code=500, detail="Email service not configured")
+        
+        emails_client = resend.Emails()
+        emails_client.send({
+            "from": "Thrifty Curator <noreply@thrifty-curator.com>",
+            "to": [request.applicant_email],
+            "subject": "Thank You for Your Application - Thrifty Curator",
+            "html": email_html
+        })
+        
+        # Log the rejection in the database
+        await db.rejection_letters.insert_one({
+            "id": str(uuid.uuid4()),
+            "applicant_name": request.applicant_name,
+            "applicant_email": request.applicant_email,
+            "ask_future_consideration": request.ask_future_consideration,
+            "sent_by": admin.get("email"),
+            "sent_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {"success": True, "message": f"Rejection letter sent to {request.applicant_email}"}
+    except Exception as e:
+        print(f"Failed to send rejection email: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")

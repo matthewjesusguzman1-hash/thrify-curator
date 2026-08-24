@@ -1858,6 +1858,13 @@ function SubmissionDetailModal({ submission, onClose, getAuthHeader }) {
                   {savingNotes ? "Saving..." : "Save Notes"}
                 </Button>
               </div>
+
+              {/* Quick Rejection Letter */}
+              <RejectionLetterSection 
+                applicantName={submission.applicant_name}
+                applicantEmail={submission.applicant_email}
+                getAuthHeader={getAuthHeader}
+              />
             </div>
           ) : null}
         </div>
@@ -4262,5 +4269,86 @@ function SendMeetingLinkModal({ request, onClose, onSent, getAuthHeader }) {
       </motion.div>
     </motion.div>,
     document.body
+  );
+}
+
+
+// Quick Rejection Letter Component
+function RejectionLetterSection({ applicantName, applicantEmail, getAuthHeader }) {
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [askFutureConsideration, setAskFutureConsideration] = useState(true);
+
+  const handleSendRejection = async () => {
+    if (!window.confirm(`Send rejection letter to ${applicantName} (${applicantEmail})?`)) return;
+    
+    setSending(true);
+    try {
+      await axios.post(`${API}/api/applicant-tests/send-rejection`, {
+        applicant_name: applicantName,
+        applicant_email: applicantEmail,
+        ask_future_consideration: askFutureConsideration
+      }, getAuthHeader());
+      
+      setSent(true);
+      toast.success("Rejection letter sent", {
+        description: `Email sent to ${applicantEmail}`
+      });
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to send rejection letter");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (sent) {
+    return (
+      <div className="border border-green-200 bg-green-50 rounded-xl p-4">
+        <div className="flex items-center gap-2 text-green-700">
+          <CheckCircle className="w-5 h-5" />
+          <span className="font-medium">Rejection letter sent to {applicantEmail}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border border-red-200 bg-red-50 rounded-xl p-4">
+      <h4 className="font-medium text-red-800 mb-3 flex items-center gap-2">
+        <Mail className="w-5 h-5" />
+        Quick Rejection Letter
+      </h4>
+      <p className="text-sm text-red-700 mb-3">
+        Send a professional rejection email thanking them for applying and informing them the position has been filled.
+      </p>
+      
+      <label className="flex items-center gap-2 mb-4 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={askFutureConsideration}
+          onChange={e => setAskFutureConsideration(e.target.checked)}
+          className="w-4 h-4 rounded border-red-300 text-red-600 focus:ring-red-500"
+        />
+        <span className="text-sm text-red-700">Ask if they'd like to be considered for future opportunities</span>
+      </label>
+
+      <Button
+        onClick={handleSendRejection}
+        disabled={sending}
+        className="bg-red-600 hover:bg-red-700 text-white"
+      >
+        {sending ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+            Sending...
+          </>
+        ) : (
+          <>
+            <Send className="w-4 h-4 mr-2" />
+            Send Rejection Letter
+          </>
+        )}
+      </Button>
+    </div>
   );
 }
