@@ -456,27 +456,46 @@ export default function AllEmployeesSection({
                         <tr key={emp.id} data-testid={`all-employee-row-${emp.id}`}>
                           <td>
                             <div 
-                              className="flex items-center gap-2 px-2 py-1 -mx-2"
+                              className="flex flex-col gap-1 px-2 py-1 -mx-2"
                               data-testid={`employee-name-${emp.id}`}
                             >
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                emp.role === 'admin' ? 'bg-[#C5A065]/20' : 'bg-[#F8C8DC]/30'
-                              }`}>
-                                {emp.role === 'admin' ? (
-                                  <Shield className="w-4 h-4 text-[#C5A065]" />
-                                ) : (
-                                  <User className="w-4 h-4 text-[#D48C9E]" />
+                              <div className="flex items-center gap-2">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                  emp.role === 'admin' ? 'bg-[#C5A065]/20' : 'bg-[#F8C8DC]/30'
+                                }`}>
+                                  {emp.role === 'admin' ? (
+                                    <Shield className="w-4 h-4 text-[#C5A065]" />
+                                  ) : (
+                                    <User className="w-4 h-4 text-[#D48C9E]" />
+                                  )}
+                                </div>
+                                <span className="text-[#333] font-medium">{emp.name}</span>
+                                {employeeClockStatuses[emp.id] && (
+                                  <span 
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium"
+                                    title="Currently Clocked In"
+                                  >
+                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                                    Clocked In
+                                  </span>
                                 )}
                               </div>
-                              <span className="text-[#333] font-medium">{emp.name}</span>
-                              {employeeClockStatuses[emp.id] && (
-                                <span 
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium"
-                                  title="Currently Clocked In"
+                              {/* AnyDesk Address - visible on mobile in name column */}
+                              {emp.anydesk_address && (
+                                <div 
+                                  className="flex items-center gap-1 ml-10 bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer hover:bg-pink-200 transition-colors w-fit"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(emp.anydesk_address);
+                                    toast.success("AnyDesk address copied!", { description: emp.anydesk_address });
+                                  }}
+                                  title={`AnyDesk: ${emp.anydesk_address} - Click to copy`}
+                                  data-testid={`anydesk-badge-${emp.id}`}
                                 >
-                                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                                  Clocked In
-                                </span>
+                                  <Monitor className="w-3 h-3" />
+                                  <span className="font-mono">{emp.anydesk_address}</span>
+                                  <Copy className="w-2.5 h-2.5" />
+                                </div>
                               )}
                             </div>
                           </td>
@@ -588,22 +607,23 @@ export default function AllEmployeesSection({
                                           No shifts
                                         </span>
                                       ) : null}
-                                      {/* AnyDesk Address */}
-                                      {emp.anydesk_address && (
-                                        <div 
-                                          className="flex items-center gap-1 ml-2 bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer hover:bg-pink-200 transition-colors"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            navigator.clipboard.writeText(emp.anydesk_address);
-                                            toast.success("AnyDesk address copied!", { description: emp.anydesk_address });
-                                          }}
-                                          title={`AnyDesk: ${emp.anydesk_address} - Click to copy`}
-                                        >
-                                          <Briefcase className="w-3 h-3" />
-                                          <span className="font-mono">{emp.anydesk_address}</span>
-                                          <Copy className="w-2.5 h-2.5" />
-                                        </div>
-                                      )}
+                                    </div>
+                                  )}
+                                  {/* AnyDesk Address - shows for any employee who shared their address */}
+                                  {emp.anydesk_address && (
+                                    <div 
+                                      className="flex items-center gap-1 ml-2 bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer hover:bg-pink-200 transition-colors"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(emp.anydesk_address);
+                                        toast.success("AnyDesk address copied!", { description: emp.anydesk_address });
+                                      }}
+                                      title={`AnyDesk: ${emp.anydesk_address} - Click to copy`}
+                                      data-testid={`anydesk-address-${emp.id}`}
+                                    >
+                                      <Briefcase className="w-3 h-3" />
+                                      <span className="font-mono">{emp.anydesk_address}</span>
+                                      <Copy className="w-2.5 h-2.5" />
                                     </div>
                                   )}
                                 </div>

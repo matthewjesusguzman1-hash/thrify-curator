@@ -7,6 +7,9 @@ import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Polling interval for real-time updates (10 seconds)
+const POLLING_INTERVAL = 10000;
+
 /**
  * Messaging component for employees and consignors to chat with admin
  * @param {string} userType - "employee" or "consignor"
@@ -29,6 +32,7 @@ export default function MessagingSection({
   const [expanded, setExpanded] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const pollingRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -69,7 +73,20 @@ export default function MessagingSection({
   useEffect(() => {
     if (userId && expanded) {
       fetchConversation();
+      
+      // Start polling for new messages when expanded
+      pollingRef.current = setInterval(() => {
+        fetchConversation();
+      }, POLLING_INTERVAL);
     }
+    
+    // Cleanup polling when collapsed or unmounted
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
   }, [userId, userType, expanded]);
 
   const handleSendMessage = async (e) => {
@@ -235,31 +252,44 @@ export default function MessagingSection({
               )}
             </div>
 
-            {/* Message input */}
+            {/* Message input - larger textarea for mobile */}
             <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10">
-              <div className="flex gap-2">
-                <input
+              <div className="flex flex-col gap-2">
+                <textarea
                   ref={inputRef}
-                  type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Submit on Enter (without shift), but allow Shift+Enter for new lines
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage(e);
+                    }
+                  }}
                   placeholder="Type a message..."
-                  className="flex-1 bg-white/10 border border-white/10 rounded-xl px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50"
+                  rows={3}
+                  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 resize-none"
                   disabled={sending}
                   data-testid="message-input"
                 />
-                <Button
-                  type="submit"
-                  disabled={!newMessage.trim() || sending}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-white rounded-xl px-4 flex-shrink-0 min-w-[44px]"
-                  data-testid="send-message-btn"
-                >
-                  {sending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Send className="w-5 h-5" />
-                  )}
-                </Button>
+                <div className="flex justify-between items-center">
+                  <span className="text-white/30 text-xs">Press Enter to send, Shift+Enter for new line</span>
+                  <Button
+                    type="submit"
+                    disabled={!newMessage.trim() || sending}
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-white rounded-xl px-4 flex-shrink-0"
+                    data-testid="send-message-btn"
+                  >
+                    {sending ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Send
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </form>
           </motion.div>

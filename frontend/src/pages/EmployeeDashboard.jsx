@@ -2922,12 +2922,12 @@ export default function EmployeeDashboard({
                             
                             <div className="mt-3 pt-3 border-t border-white/10">
                               <a
-                                href="https://www.irs.gov/pub/irs-pdf/iw8ben.pdf#page=3"
+                                href="https://www.irs.gov/pub/irs-pdf/iw8ben.pdf#page=6"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-[#FFE66D] hover:underline text-sm"
                               >
-                                View full IRS instructions (Page 3 - Line-by-Line Instructions) →
+                                View full IRS instructions (Page 6 - Line-by-Line Instructions) →
                               </a>
                             </div>
                           </div>
