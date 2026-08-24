@@ -20,6 +20,7 @@ import {
   FileText,
   Download,
   Bell,
+  BellOff,
   CheckCheck,
   LogIn,
   Edit3,
@@ -93,6 +94,7 @@ import AllApplicationsSection from "@/components/admin/sections/AllApplicationsS
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import WebPushSettings from "@/components/WebPushSettings";
+import AdminFullScreenMessaging from "@/components/AdminFullScreenMessaging";
 import ShiftReportModal from "@/components/admin/modals/ShiftReportModal";
 import PayrollModal from "@/components/admin/modals/PayrollModal";
 import TimeEntryModal from "@/components/admin/modals/TimeEntryModal";
@@ -247,6 +249,13 @@ export default function AdminDashboard() {
   const [emailStatus, setEmailStatus] = useState({ enabled: false, mode: 'mocked', message: '' });
   const [testEmailAddress, setTestEmailAddress] = useState('');
   const [sendingTestEmail, setSendingTestEmail] = useState(false);
+  
+  // Full-screen messaging state
+  const [showFullScreenMessages, setShowFullScreenMessages] = useState(false);
+  const [adminUnreadMessageCount, setAdminUnreadMessageCount] = useState(0);
+  const [messagesMuted, setMessagesMuted] = useState(() => {
+    return localStorage.getItem('thrifty_curator_admin_messages_muted') === 'true';
+  });
   const [showEmailSettings, setShowEmailSettings] = useState(false);
   const [showSubmissionDetails, setShowSubmissionDetails] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
@@ -2968,6 +2977,25 @@ export default function AdminDashboard() {
               My Dashboard
             </Button>
           </Link>
+          {/* Messages Shortcut */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => {
+              lightTap();
+              setShowFullScreenMessages(true);
+            }}
+            className="text-white/70 hover:text-white hover:bg-white/10 relative"
+            data-testid="admin-messages-shortcut-btn"
+          >
+            <MessageSquare className="w-4 h-4 mr-1" />
+            Messages
+            {adminUnreadMessageCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                {adminUnreadMessageCount > 9 ? '9+' : adminUnreadMessageCount}
+              </span>
+            )}
+          </Button>
           <Button 
             variant="ghost" 
             size="sm" 
@@ -4330,6 +4358,58 @@ export default function AdminDashboard() {
         previewingDoc={previewingPortalW9}
         onClosePreview={() => setPreviewingPortalW9(null)}
       />
+      
+      {/* Full-Screen Messages Modal */}
+      <AnimatePresence>
+        {showFullScreenMessages && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-white z-50 flex flex-col"
+            style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-[#1A1A2E] to-[#2D2D44]">
+              <div className="flex items-center gap-3">
+                <MessageSquare className="w-6 h-6 text-[#00D4FF]" />
+                <h2 className="text-xl font-bold text-white">Messages</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Mute toggle */}
+                <button
+                  onClick={() => {
+                    const newMuted = !messagesMuted;
+                    setMessagesMuted(newMuted);
+                    localStorage.setItem('thrifty_curator_admin_messages_muted', newMuted.toString());
+                    toast.success(newMuted ? "Message notifications muted" : "Message notifications unmuted");
+                  }}
+                  className={`p-2 rounded-lg ${messagesMuted ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white/70'} hover:bg-white/20`}
+                  title={messagesMuted ? "Unmute notifications" : "Mute notifications"}
+                >
+                  {messagesMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+                </button>
+                {/* Close button */}
+                <button
+                  onClick={() => setShowFullScreenMessages(false)}
+                  className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            {/* Full-screen messaging content */}
+            <div className="flex-1 overflow-hidden">
+              <AdminFullScreenMessaging
+                muted={messagesMuted}
+                onUnreadChange={setAdminUnreadMessageCount}
+                currentAdminName={user?.name || "Admin"}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -36,9 +36,12 @@ import {
   HelpCircle,
   Smartphone,
   Bell,
+  BellOff,
   Share,
   Plus,
-  Globe
+  Globe,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +54,7 @@ import { useHaptics } from "@/hooks/useHaptics";
 import useBiometricAuth from "@/hooks/useBiometricAuth";
 import LiveActivityService from "@/services/LiveActivityService";
 import MessagingSection from "@/components/MessagingSection";
+import FullScreenMessaging from "@/components/FullScreenMessaging";
 import PullToRefresh from "@/components/PullToRefresh";
 import EmployeeWalkthrough, { useEmployeeWalkthrough } from "@/components/employee/EmployeeWalkthrough";
 
@@ -214,6 +218,13 @@ export default function EmployeeDashboard({
   const [anydeskAddress, setAnydeskAddress] = useState("");
   const [savingAnydesk, setSavingAnydesk] = useState(false);
   const [anydeskShared, setAnydeskShared] = useState(false);
+  
+  // Messaging state for header shortcut and full-screen modal
+  const [showFullScreenMessages, setShowFullScreenMessages] = useState(false);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const [messagesMuted, setMessagesMuted] = useState(() => {
+    return localStorage.getItem('thrifty_curator_messages_muted') === 'true';
+  });
   
   // Check if desktop (for showing company AnyDesk number)
   const [isDesktop, setIsDesktop] = useState(false);
@@ -842,6 +853,18 @@ export default function EmployeeDashboard({
         // Reset the flag when clocked out so next clock-in starts a new activity
         liveActivityStartedRef.current = false;
       }
+      
+      // Fetch unread message count for header badge
+      if (!isAdminView) {
+        try {
+          const msgRes = await axios.get(`${API}/conversations/employee/my-conversation`, getAuthHeader());
+          const messages = msgRes.data?.messages || [];
+          const unread = messages.filter(m => m.sender_type === 'admin' && !m.read).length;
+          setUnreadMessageCount(unread);
+        } catch (err) {
+          // No conversation yet, that's ok
+        }
+      }
     } catch (error) {
       if (error.response?.status === 401 && !isAdminView) {
         localStorage.removeItem("token");
@@ -1433,6 +1456,25 @@ export default function EmployeeDashboard({
             {/* Hide Security and Logout in admin view */}
             {!isAdminView && (
               <>
+                {/* Messages shortcut with unread badge */}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    lightTap();
+                    setShowFullScreenMessages(true);
+                  }}
+                  className="text-white/70 hover:text-white hover:bg-white/10 px-2 relative"
+                  data-testid="messages-shortcut-btn"
+                >
+                  <MessageSquare className="w-4 h-4 mr-1" />
+                  Messages
+                  {unreadMessageCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                      {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                    </span>
+                  )}
+                </Button>
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -3653,6 +3695,66 @@ export default function EmployeeDashboard({
                 </div>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Full-Screen Messages Modal */}
+      <AnimatePresence>
+        {showFullScreenMessages && !isAdminView && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-[#1A1A2E] z-50 flex flex-col"
+            style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <MessageSquare className="w-6 h-6 text-[#00D4FF]" />
+                <h2 className="text-xl font-bold text-white">Messages</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Mute toggle */}
+                <button
+                  onClick={() => {
+                    const newMuted = !messagesMuted;
+                    setMessagesMuted(newMuted);
+                    localStorage.setItem('thrifty_curator_messages_muted', newMuted.toString());
+                    toast.success(newMuted ? "Message notifications muted" : "Message notifications unmuted");
+                  }}
+                  className={`p-2 rounded-lg ${messagesMuted ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white/70'} hover:bg-white/20`}
+                  title={messagesMuted ? "Unmute notifications" : "Mute notifications"}
+                  data-testid="mute-messages-btn"
+                >
+                  {messagesMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+                </button>
+                {/* Close button */}
+                <button
+                  onClick={() => setShowFullScreenMessages(false)}
+                  className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20"
+                  data-testid="close-fullscreen-messages-btn"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            {/* Full-screen messaging content */}
+            <div className="flex-1 overflow-hidden">
+              <FullScreenMessaging
+                userType="employee"
+                userId={user?.id || user?.email}
+                userName={user?.name || user?.email}
+                userEmail={user?.email}
+                getAuthHeader={() => ({
+                  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+                })}
+                muted={messagesMuted}
+                onUnreadChange={setUnreadMessageCount}
+              />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

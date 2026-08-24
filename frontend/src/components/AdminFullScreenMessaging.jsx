@@ -1,0 +1,441 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Send, 
+  Loader2, 
+  User, 
+  Users,
+  Search,
+  ChevronLeft,
+  Briefcase,
+  Package
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import axios from "axios";
+import { triggerVibration } from "./WebPushSettings";
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Polling interval for real-time updates (3 seconds)
+const POLLING_INTERVAL = 3000;
+
+/**
+ * Full-screen messaging component for admin
+ */
+export default function AdminFullScreenMessaging({ 
+  muted = false,
+  onUnreadChange = () => {},
+  currentAdminName = "Admin"
+}) {
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [newMessage, setNewMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const messagesContainerRef = useRef(null);
+  const pollingRef = useRef(null);
+  const isAtBottomRef = useRef(true);
+  const previousUnreadRef = useRef(0);
+
+  const getToken = () => localStorage.getItem("token");
+
+  // Check if user is scrolled to bottom
+  const checkIfAtBottom = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return true;
+    const threshold = 50;
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+  };
+
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  };
+
+  const scrollToBottomIfNeeded = () => {
+    if (isAtBottomRef.current) {
+      scrollToBottom();
+    }
+  };
+
+  const handleScroll = () => {
+    isAtBottomRef.current = checkIfAtBottom();
+  };
+
+  const fetchConversations = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    
+    try {
+      const [convRes, countRes] = await Promise.all([
+        axios.get(`${API}/conversations/admin/list`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get(`${API}/conversations/admin/unread-count`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+      
+      setConversations(convRes.data);
+      
+      const newUnreadCount = countRes.data.unread_count;
+      
+      // Notify if new messages and not muted
+      if (newUnreadCount > previousUnreadRef.current && previousUnreadRef.current >= 0 && !muted) {
+        toast.info("New message received!", {
+          description: "You have a new message"
+        });
+        triggerVibration([200, 100, 200]);
+      }
+      previousUnreadRef.current = newUnreadCount;
+      onUnreadChange(newUnreadCount);
+      
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      setLoading(false);
+    }
+  }, [muted, onUnreadChange]);
+
+  const fetchSelectedConversation = async (convId) => {
+    const token = getToken();
+    if (!token || !convId) return;
+    
+    try {
+      const res = await axios.get(`${API}/conversations/admin/conversation/${convId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSelectedConversation(res.data);
+    } catch (error) {
+      console.error("Error fetching conversation:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchConversations();
+    
+    // Start polling
+    pollingRef.current = setInterval(() => {
+      fetchConversations();
+      if (selectedConversation?.id) {
+        fetchSelectedConversation(selectedConversation.id);
+      }
+    }, POLLING_INTERVAL);
+    
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
+  }, [fetchConversations, muted]);
+
+  // Scroll to bottom when messages change (if at bottom)
+  useEffect(() => {
+    scrollToBottomIfNeeded();
+  }, [selectedConversation?.messages?.length]);
+
+  // Scroll to bottom when selecting a new conversation
+  useEffect(() => {
+    if (selectedConversation) {
+      setTimeout(() => {
+        scrollToBottom();
+        isAtBottomRef.current = true;
+      }, 100);
+    }
+  }, [selectedConversation?.id]);
+
+  const handleSelectConversation = async (conv) => {
+    const token = getToken();
+    try {
+      const res = await axios.get(`${API}/conversations/admin/conversation/${conv.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSelectedConversation(res.data);
+      
+      // Scroll to bottom after a short delay
+      setTimeout(() => {
+        scrollToBottom();
+        isAtBottomRef.current = true;
+      }, 100);
+    } catch (error) {
+      console.error("Error selecting conversation:", error);
+      toast.error("Failed to load conversation");
+    }
+  };
+
+  const handleSendReply = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim() || sending || !selectedConversation) return;
+    
+    setSending(true);
+    const token = getToken();
+    
+    try {
+      await axios.post(
+        `${API}/conversations/admin/reply`,
+        {
+          conversation_id: selectedConversation.id,
+          content: newMessage
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setNewMessage("");
+      await fetchSelectedConversation(selectedConversation.id);
+      
+      // Scroll to bottom after sending
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    } catch (error) {
+      console.error("Error sending reply:", error);
+      toast.error("Failed to send message");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const formatMessageTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    
+    if (isToday) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + 
+           date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatLastMessage = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
+  // Filter conversations
+  const filteredConversations = conversations.filter(conv => {
+    const matchesSearch = conv.participant_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         conv.participant_email?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filterType === "all" || conv.participant_type === filterType;
+    return matchesSearch && matchesFilter;
+  });
+
+  const messages = selectedConversation?.messages || [];
+
+  return (
+    <div className="flex h-full bg-white">
+      {/* Conversation List - Left Panel */}
+      <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-80 lg:w-96 border-r border-gray-200`}>
+        {/* Search and Filter */}
+        <div className="p-4 border-b border-gray-200 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search conversations..."
+              className="pl-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            {["all", "employee", "consignor"].map((type) => (
+              <button
+                key={type}
+                onClick={() => setFilterType(type)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  filterType === type
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {type === "all" ? "All" : type === "employee" ? "Employees" : "Consignors"}
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        {/* Conversation List */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+            </div>
+          ) : filteredConversations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+              <Users className="w-8 h-8 mb-2" />
+              <p className="text-sm">No conversations</p>
+            </div>
+          ) : (
+            filteredConversations.map((conv) => (
+              <div
+                key={conv.id}
+                onClick={() => handleSelectConversation(conv)}
+                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                  selectedConversation?.id === conv.id ? 'bg-blue-50' : ''
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    conv.participant_type === 'employee' ? 'bg-blue-100' : 'bg-purple-100'
+                  }`}>
+                    {conv.participant_type === 'employee' ? (
+                      <Briefcase className="w-5 h-5 text-blue-600" />
+                    ) : (
+                      <Package className="w-5 h-5 text-purple-600" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-gray-900 truncate">{conv.participant_name}</p>
+                      {conv.unread_count > 0 && (
+                        <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                          {conv.unread_count}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 capitalize">{conv.participant_type}</p>
+                    {conv.last_message && (
+                      <p className="text-sm text-gray-600 truncate mt-1">{conv.last_message}</p>
+                    )}
+                    {conv.last_message_at && (
+                      <p className="text-xs text-gray-400 mt-1">{formatLastMessage(conv.last_message_at)}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+      
+      {/* Message View - Right Panel */}
+      <div className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-col flex-1`}>
+        {selectedConversation ? (
+          <>
+            {/* Header */}
+            <div className="p-4 border-b border-gray-200 flex items-center gap-3">
+              <button
+                onClick={() => setSelectedConversation(null)}
+                className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                selectedConversation.participant_type === 'employee' ? 'bg-blue-100' : 'bg-purple-100'
+              }`}>
+                {selectedConversation.participant_type === 'employee' ? (
+                  <Briefcase className="w-5 h-5 text-blue-600" />
+                ) : (
+                  <Package className="w-5 h-5 text-purple-600" />
+                )}
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">{selectedConversation.participant_name}</p>
+                <p className="text-xs text-gray-500 capitalize">{selectedConversation.participant_type}</p>
+              </div>
+            </div>
+            
+            {/* Messages */}
+            <div 
+              ref={messagesContainerRef}
+              onScroll={handleScroll}
+              className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
+            >
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                  <User className="w-12 h-12 mb-2 opacity-30" />
+                  <p>No messages yet</p>
+                </div>
+              ) : (
+                messages.map((msg, index) => (
+                  <div
+                    key={msg.id || index}
+                    className={`flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                        msg.sender_type === 'admin'
+                          ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-tr-sm'
+                          : 'bg-white border border-gray-200 text-gray-900 rounded-tl-sm shadow-sm'
+                      }`}
+                    >
+                      {msg.sender_type === 'admin' && msg.sender_name && (
+                        <p className="text-xs text-white/70 mb-1 flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {msg.sender_name}
+                        </p>
+                      )}
+                      {msg.sender_type !== 'admin' && (
+                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {msg.sender_name}
+                        </p>
+                      )}
+                      <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                      <p className={`text-xs mt-2 ${
+                        msg.sender_type === 'admin' ? 'text-white/70' : 'text-gray-400'
+                      }`}>
+                        {formatMessageTime(msg.sent_at)}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            
+            {/* Reply Input */}
+            <form onSubmit={handleSendReply} className="p-4 border-t border-gray-200 bg-white">
+              <div className="flex flex-col gap-2">
+                <textarea
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Type a message..."
+                  rows={4}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[120px]"
+                  disabled={sending}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    type="submit"
+                    disabled={!newMessage.trim() || sending}
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90"
+                  >
+                    {sending ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Send className="w-4 h-4 mr-2" />
+                    )}
+                    Send
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-400">
+            <div className="text-center">
+              <Users className="w-16 h-16 mx-auto mb-4 opacity-30" />
+              <p className="text-lg">Select a conversation</p>
+              <p className="text-sm">Choose from the list to start messaging</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

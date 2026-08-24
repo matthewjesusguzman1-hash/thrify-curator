@@ -198,6 +198,14 @@ export default function ConversationsSection() {
       setSelectedConversation(res.data);
       selectedConversationRef.current = conv.id; // Track for polling
       
+      // Scroll to bottom when opening a conversation
+      setTimeout(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+          isAtBottomRef.current = true;
+        }
+      }, 100);
+      
       // Update local unread count
       const convUnread = conversations.find(c => c.id === conv.id)?.unread_count || 0;
       if (convUnread > 0) {
