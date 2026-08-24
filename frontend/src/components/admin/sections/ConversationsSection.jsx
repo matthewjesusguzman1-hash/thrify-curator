@@ -13,7 +13,11 @@ import {
   Briefcase,
   Package,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  Check,
+  CheckCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +32,9 @@ const POLLING_INTERVAL = 3000;
 
 // Swipe threshold to trigger delete
 const SWIPE_THRESHOLD = 80;
+
+// Local storage key for read receipts preference
+const READ_RECEIPTS_KEY = "admin_read_receipts_enabled";
 
 // Swipeable Conversation Item Component
 function SwipeableConversationItem({ conv, isSelected, onSelect, onDelete, formatMessageTime }) {
@@ -149,6 +156,10 @@ export default function ConversationsSection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all"); // all, employee, consignor
   const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { conv: conversation } or null
+  const [readReceiptsEnabled, setReadReceiptsEnabled] = useState(() => {
+    const stored = localStorage.getItem(READ_RECEIPTS_KEY);
+    return stored === null ? true : stored === "true";
+  });
   const pollingRef = useRef(null);
   const selectedConversationRef = useRef(null);
   const previousUnreadRef = useRef(0);
@@ -156,6 +167,31 @@ export default function ConversationsSection() {
   const isAtBottomRef = useRef(true);
 
   const getToken = () => localStorage.getItem("token");
+
+  // Toggle read receipts
+  const toggleReadReceipts = () => {
+    const newValue = !readReceiptsEnabled;
+    setReadReceiptsEnabled(newValue);
+    localStorage.setItem(READ_RECEIPTS_KEY, String(newValue));
+    toast.success(newValue ? "Read receipts enabled" : "Read receipts disabled");
+  };
+
+  // Format read receipt time
+  const formatReadTime = (isoString) => {
+    if (!isoString) return null;
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
+  };
 
   // Smart auto-scroll - only scroll if user is already at the bottom
   const checkIfAtBottom = () => {
@@ -651,6 +687,19 @@ export default function ConversationsSection() {
                           }`}>
                             {selectedConversation.participant_type === 'employee' ? 'Employee' : 'Consignor'}
                           </span>
+                          {/* Read Receipts Toggle */}
+                          <button
+                            onClick={toggleReadReceipts}
+                            className={`p-2 rounded-lg transition-colors ${
+                              readReceiptsEnabled 
+                                ? 'text-blue-500 hover:bg-blue-50' 
+                                : 'text-gray-400 hover:bg-gray-100'
+                            }`}
+                            title={readReceiptsEnabled ? "Read receipts on - click to disable" : "Read receipts off - click to enable"}
+                            data-testid="read-receipts-toggle"
+                          >
+                            {readReceiptsEnabled ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+                          </button>
                           <button
                             onClick={() => showDeleteConfirmation(selectedConversation)}
                             className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -712,11 +761,21 @@ export default function ConversationsSection() {
                                           </p>
                                         )}
                                         <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                                        <p className={`text-xs mt-1 ${
+                                        <div className={`flex items-center gap-1 mt-1 ${
                                           msg.sender_type === 'admin' ? 'text-white/70' : 'text-[#888]'
                                         }`}>
-                                          {formatMessageTime(msg.sent_at)}
-                                        </p>
+                                          <span className="text-xs">{formatMessageTime(msg.sent_at)}</span>
+                                          {/* Read receipt indicator for admin messages */}
+                                          {msg.sender_type === 'admin' && readReceiptsEnabled && (
+                                            <span className="flex items-center ml-1" title={msg.read_at ? `Seen ${formatReadTime(msg.read_at)}` : "Delivered"}>
+                                              {msg.read ? (
+                                                <CheckCheck className="w-3.5 h-3.5 text-blue-300" />
+                                              ) : (
+                                                <Check className="w-3.5 h-3.5" />
+                                              )}
+                                            </span>
+                                          )}
+                                        </div>
                                       </div>
                                       {/* Delete button for admin's own messages */}
                                       {msg.sender_type === 'admin' && (

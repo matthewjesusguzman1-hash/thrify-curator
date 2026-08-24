@@ -1,0 +1,65 @@
+{
+  "summary": "Tested read receipts feature: Backend sets read_at timestamp when messages are marked as read. Frontend shows CheckCheck icon (double checkmark) for read messages, Check icon (single checkmark) for delivered. Admin has toggle (eye/eye-off) to enable/disable showing read receipts. Toggle state stored in localStorage.",
+  "mode": "update",
+  "baseline_commit": "f746f1c66128f9a090e3a3f5fb95525add4c782a",
+  "head_commit": "db77138073c92776fbfee43bedac0925ac30c93b",
+  "specs_created": [
+    "/app/tests/e2e/read-receipts.spec.ts",
+    "/app/tests/e2e/employee-read-receipts.spec.ts",
+    "/app/backend/tests/test_read_receipts.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/tests/e2e/read-receipts.spec.ts",
+    "/app/tests/e2e/employee-read-receipts.spec.ts",
+    "/app/tests/e2e/message-deletion.spec.ts",
+    "/app/backend/tests/test_read_receipts.py",
+    "/app/backend/tests/test_message_deletion.py",
+    "/app/test_reports/pytest/read_receipts_results.xml"
+  ],
+  "regression_results": {
+    "total_specs": 25,
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/.emergent/testing_baseline_commit",
+    "/app/tests/e2e/read-receipts.spec.ts",
+    "/app/tests/e2e/employee-read-receipts.spec.ts",
+    "/app/backend/tests/test_read_receipts.py"
+  ],
+  "test_results": {
+    "backend": "100% (17/17 passed)",
+    "frontend": "100% (16/16 passed)"
+  },
+  "seed_data_creation": "None - used existing test data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Read receipts feature fully tested. Backend tests verify: read_at timestamp set when employee reads admin messages, read_at timestamp set when admin reads employee/consignor messages, ISO timestamp format. Frontend tests verify: read receipts toggle visible in conversation header, toggle shows eye/eye-off icon, toggle state persists in localStorage, admin messages show checkmarks (Check for delivered, CheckCheck for read), employee messages show checkmarks when read by admin.",
+  "features_verified": {
+    "read_receipts_toggle": {
+      "status": "PASS",
+      "details": "Eye/eye-off toggle in conversation header, persists state in localStorage"
+    },
+    "read_at_timestamp_backend": {
+      "status": "PASS",
+      "details": "Backend sets read_at timestamp when messages are marked as read via GET endpoints"
+    },
+    "admin_checkmarks": {
+      "status": "PASS",
+      "details": "Admin messages show Check (delivered) or CheckCheck (read) icons when read receipts enabled"
+    },
+    "employee_checkmarks": {
+      "status": "PASS",
+      "details": "Employee messages show Check (delivered) or CheckCheck (read) icons"
+    },
+    "toggle_disable_hides_checkmarks": {
+      "status": "PASS",
+      "details": "When read receipts disabled, checkmarks are hidden from admin view"
+    }
+  }
+}

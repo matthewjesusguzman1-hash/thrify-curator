@@ -274,3 +274,17 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - Delete confirmation dialog with AlertTriangle icon and cancel/confirm buttons
   - "← Swipe right to delete a thread" hint text in conversation list
 
+### Read Receipts Feature (2026-08-24) - NEW
+- **Read Status Tracking**:
+  - Backend sets `read_at` timestamp when messages are marked as read
+  - Single checkmark (✓) = Message delivered
+  - Double checkmark (✓✓) = Message read by recipient
+- **Admin Toggle**:
+  - Eye/eye-off icon in conversation header to enable/disable read receipts
+  - Toggle state persists in localStorage (`admin_read_receipts_enabled`)
+  - When disabled, checkmarks are hidden from admin's sent messages
+- **Visual Indicators**:
+  - Admin messages show read status with timestamp on hover ("Seen 5m ago")
+  - Employee/consignor messages also show when admin has read them
+  - Blue double checkmarks indicate read, gray single checkmark indicates delivered
+

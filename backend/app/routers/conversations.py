@@ -125,13 +125,29 @@ async def get_employee_conversation(user: dict = Depends(get_current_user)):
             if not msg.get("deleted_at")
         ]
     
-    # Mark admin messages as read
+    # Mark admin messages as read with timestamp
     if conversation.get("messages"):
+        now = datetime.now(timezone.utc).isoformat()
         await db.conversations.update_one(
             {"id": conversation["id"]},
-            {"$set": {"messages.$[elem].read": True, "unread_count": 0}},
+            {"$set": {
+                "messages.$[elem].read": True, 
+                "messages.$[elem].read_at": now,
+                "unread_count": 0
+            }},
             array_filters=[{"elem.sender_type": "admin", "elem.read": False}]
         )
+        
+        # Fetch updated conversation to return with read_at timestamps
+        updated_conv = await db.conversations.find_one({
+            "id": conversation["id"]
+        }, {"_id": 0})
+        
+        if updated_conv and "messages" in updated_conv:
+            conversation["messages"] = [
+                msg for msg in updated_conv["messages"] 
+                if not msg.get("deleted_at")
+            ]
     
     return conversation
 
@@ -274,13 +290,29 @@ async def get_consignor_conversation(email: str):
             if not msg.get("deleted_at")
         ]
     
-    # Mark admin messages as read
+    # Mark admin messages as read with timestamp
     if conversation.get("messages"):
+        now = datetime.now(timezone.utc).isoformat()
         await db.conversations.update_one(
             {"id": conversation["id"]},
-            {"$set": {"messages.$[elem].read": True, "unread_count": 0}},
+            {"$set": {
+                "messages.$[elem].read": True, 
+                "messages.$[elem].read_at": now,
+                "unread_count": 0
+            }},
             array_filters=[{"elem.sender_type": "admin", "elem.read": False}]
         )
+        
+        # Fetch updated conversation to return with read_at timestamps
+        updated_conv = await db.conversations.find_one({
+            "id": conversation["id"]
+        }, {"_id": 0})
+        
+        if updated_conv and "messages" in updated_conv:
+            conversation["messages"] = [
+                msg for msg in updated_conv["messages"] 
+                if not msg.get("deleted_at")
+            ]
     
     return conversation
 
@@ -459,12 +491,28 @@ async def get_conversation(conversation_id: str, admin: dict = Depends(get_admin
             if not msg.get("deleted_at")
         ]
     
-    # Mark participant messages as read
+    # Mark participant messages as read with timestamp
+    now = datetime.now(timezone.utc).isoformat()
     await db.conversations.update_one(
         {"id": conversation_id},
-        {"$set": {"messages.$[elem].read": True}},
+        {"$set": {
+            "messages.$[elem].read": True,
+            "messages.$[elem].read_at": now
+        }},
         array_filters=[{"elem.sender_type": {"$ne": "admin"}, "elem.read": False}]
     )
+    
+    # Fetch updated conversation to return with read_at timestamps
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "deleted_at": {"$exists": False}
+    }, {"_id": 0})
+    
+    if "messages" in conversation:
+        conversation["messages"] = [
+            msg for msg in conversation["messages"] 
+            if not msg.get("deleted_at")
+        ]
     
     return conversation
     

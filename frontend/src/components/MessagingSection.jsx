@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Send, X, Loader2, ChevronDown, User, Trash2 } from "lucide-react";
+import { MessageSquare, Send, X, Loader2, ChevronDown, User, Trash2, Check, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import axios from "axios";
@@ -246,6 +246,23 @@ export default function MessagingSection({
     }
   };
 
+  // Format read receipt time
+  const formatReadTime = (isoString) => {
+    if (!isoString) return null;
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
+  };
+
   const messages = conversation?.messages || [];
   const unreadCount = messages.filter(m => m.sender_type === "admin" && !m.read).length;
 
@@ -342,11 +359,21 @@ export default function MessagingSection({
                                 </p>
                               )}
                               <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                              <p className={`text-xs mt-1 ${
+                              <div className={`flex items-center gap-1 mt-1 ${
                                 msg.sender_type === "admin" ? "text-white/40" : "text-white/70"
                               }`}>
-                                {formatMessageTime(msg.sent_at)}
-                              </p>
+                                <span className="text-xs">{formatMessageTime(msg.sent_at)}</span>
+                                {/* Read receipt indicator for user's own messages */}
+                                {msg.sender_type !== "admin" && (
+                                  <span className="flex items-center ml-1" title={msg.read_at ? `Seen ${formatReadTime(msg.read_at)}` : "Delivered"}>
+                                    {msg.read ? (
+                                      <CheckCheck className="w-3.5 h-3.5 text-blue-300" />
+                                    ) : (
+                                      <Check className="w-3.5 h-3.5" />
+                                    )}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             {/* Delete button for user's own messages */}
                             {msg.sender_type !== "admin" && (
