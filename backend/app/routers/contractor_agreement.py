@@ -152,9 +152,13 @@ async def get_agreement_text():
 
 
 @router.get("/status")
-async def get_agreement_status(current_user: dict = Depends(get_current_user)):
-    """Get the current user's contractor agreement status"""
-    employee_id = current_user.get("id") or str(current_user.get("_id", ""))
+async def get_agreement_status(current_user: dict = Depends(get_current_user), user_id: str = None):
+    """Get contractor agreement status. Admins can pass user_id to view any employee's data."""
+    # Allow admins to view another employee's data
+    if user_id and current_user.get("role") == "admin":
+        employee_id = user_id
+    else:
+        employee_id = current_user.get("id") or str(current_user.get("_id", ""))
     
     agreement = await db.contractor_agreements.find_one(
         {"employee_id": employee_id},

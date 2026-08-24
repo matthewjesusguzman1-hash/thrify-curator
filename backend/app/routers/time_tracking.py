@@ -295,27 +295,43 @@ async def auto_clock_out(user: dict = Depends(get_current_user)):
 
 
 @router.get("/status")
-async def get_clock_status(user: dict = Depends(get_current_user)):
+async def get_clock_status(user: dict = Depends(get_current_user), user_id: str = None):
+    """Get clock status. Admins can pass user_id to view any employee's data."""
+    target_user_id = user["id"]
+    if user_id and user.get("role") == "admin":
+        target_user_id = user_id
+    
     active = await db.time_entries.find_one(
-        {"user_id": user["id"], "clock_out": None}, {"_id": 0}
+        {"user_id": target_user_id, "clock_out": None}, {"_id": 0}
     )
     return {"clocked_in": active is not None, "entry": active}
 
 
 @router.get("/entries", response_model=List[TimeEntry])
-async def get_my_entries(user: dict = Depends(get_current_user)):
+async def get_my_entries(user: dict = Depends(get_current_user), user_id: str = None):
+    """Get time entries. Admins can pass user_id to view any employee's data."""
+    target_user_id = user["id"]
+    if user_id and user.get("role") == "admin":
+        target_user_id = user_id
+    
     entries = await db.time_entries.find(
-        {"user_id": user["id"]}, {"_id": 0}
+        {"user_id": target_user_id}, {"_id": 0}
     ).sort("clock_in", -1).to_list(100)
     return entries
 
 
 @router.get("/summary")
-async def get_time_summary(user: dict = Depends(get_current_user)):
+async def get_time_summary(user: dict = Depends(get_current_user), user_id: str = None):
+    """Get time summary. Admins can pass user_id to view any employee's data."""
     from app.services.helpers import get_biweekly_period
     
+    # If admin passes user_id, use that instead (allows View Portal to see same data)
+    target_user_id = user["id"]
+    if user_id and user.get("role") == "admin":
+        target_user_id = user_id
+    
     entries = await db.time_entries.find(
-        {"user_id": user["id"]}, {"_id": 0}
+        {"user_id": target_user_id}, {"_id": 0}
     ).to_list(1000)
     
     total_hours = sum(e.get("total_hours", 0) or 0 for e in entries)
@@ -368,7 +384,7 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
     period_hours = sum(e.get("total_hours", 0) or 0 for e in period_entries)
     period_shifts = len(period_entries)
     
-    user_doc = await db.users.find_one({"id": user["id"]}, {"_id": 0})
+    user_doc = await db.users.find_one({"id": target_user_id}, {"_id": 0})
     user_name = user_doc.get("name", "") if user_doc else ""
     hourly_rate = user_doc.get("hourly_rate") if user_doc else None
     if hourly_rate is None:
@@ -422,10 +438,14 @@ async def get_time_summary(user: dict = Depends(get_current_user)):
 
 # Employee W-9 submission endpoints - Multiple W-9s support
 @router.get("/w9/status")
-async def get_w9_status(user: dict = Depends(get_current_user)):
-    """Get employee's W-9 submission status (all documents)"""
+async def get_w9_status(user: dict = Depends(get_current_user), user_id: str = None):
+    """Get employee's W-9 submission status. Admins can pass user_id to view any employee's data."""
+    target_user_id = user["id"]
+    if user_id and user.get("role") == "admin":
+        target_user_id = user_id
+    
     w9_docs = await db.w9_documents.find(
-        {"employee_id": user["id"]},
+        {"employee_id": target_user_id},
         {"_id": 0, "content": 0}
     ).sort("uploaded_at", -1).to_list(100)
     

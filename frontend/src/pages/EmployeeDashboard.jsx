@@ -732,28 +732,19 @@ export default function EmployeeDashboard({
       // Get user info for API calls - use adminViewEmployee in admin view mode
       const effectiveUserId = getEffectiveUserId();
       
-      // In admin view mode, use admin endpoints to fetch employee-specific data
+      // Use the SAME endpoints for both employee and admin view
+      // Admin just passes user_id parameter to view employee data
+      const userIdParam = isAdminView && adminViewEmployee ? `?user_id=${adminViewEmployee.id}` : '';
+      
       let statusRes, entriesRes, summaryRes, w9Res, w8benRes;
       
-      if (isAdminView && adminViewEmployee) {
-        // Admin viewing employee portal - fetch employee-specific data using admin endpoints
-        [statusRes, entriesRes, summaryRes, w9Res, w8benRes] = await Promise.all([
-          axios.get(`${API}/time/employees/${adminViewEmployee.id}/status`, getAuthHeader()),
-          axios.get(`${API}/time/employees/${adminViewEmployee.id}/entries`, getAuthHeader()),
-          axios.get(`${API}/time/employees/${adminViewEmployee.id}/summary`, getAuthHeader()),
-          axios.get(`${API}/time/w9/admin/employee/${adminViewEmployee.id}/status`, getAuthHeader()).catch(() => ({ data: { has_w9: false, w9_documents: [] } })),
-          axios.get(`${API}/admin/employees/${adminViewEmployee.id}/w8ben/status`, getAuthHeader()).catch(() => ({ data: { status: 'not_applicable' } }))
-        ]);
-      } else {
-        // Normal employee view
-        [statusRes, entriesRes, summaryRes, w9Res, w8benRes] = await Promise.all([
-          axios.get(`${API}/time/status`, getAuthHeader()),
-          axios.get(`${API}/time/entries`, getAuthHeader()),
-          axios.get(`${API}/time/summary`, getAuthHeader()),
-          axios.get(`${API}/time/w9/status`, getAuthHeader()),
-          axios.get(`${API}/time-tracking/w8ben/status`, getAuthHeader()).catch(() => ({ data: { status: 'not_applicable' } }))
-        ]);
-      }
+      [statusRes, entriesRes, summaryRes, w9Res, w8benRes] = await Promise.all([
+        axios.get(`${API}/time/status${userIdParam}`, getAuthHeader()),
+        axios.get(`${API}/time/entries${userIdParam}`, getAuthHeader()),
+        axios.get(`${API}/time/summary${userIdParam}`, getAuthHeader()),
+        axios.get(`${API}/time/w9/status${userIdParam}`, getAuthHeader()).catch(() => ({ data: { has_w9: false, w9_documents: [] } })),
+        axios.get(`${API}/time-tracking/w8ben/status${userIdParam}`, getAuthHeader()).catch(() => ({ data: { status: 'not_applicable' } }))
+      ]);
       
       // Fetch 1099s separately (for current and previous tax years)
       const currentYear = new Date().getFullYear();
@@ -784,11 +775,9 @@ export default function EmployeeDashboard({
       setW9Status(w9Res.data);
       setW8benStatus(w8benRes.data);
       
-      // Fetch contractor agreement status
+      // Fetch contractor agreement status - same endpoint with user_id param
       try {
-        const agreementRes = isAdminView && adminViewEmployee
-          ? await axios.get(`${API}/contractor-agreement/admin/employee/${adminViewEmployee.id}`, getAuthHeader())
-          : await axios.get(`${API}/contractor-agreement/status`, getAuthHeader());
+        const agreementRes = await axios.get(`${API}/contractor-agreement/status${userIdParam}`, getAuthHeader());
         setContractorAgreement(agreementRes.data);
       } catch (err) {
         console.log('Error fetching contractor agreement:', err);

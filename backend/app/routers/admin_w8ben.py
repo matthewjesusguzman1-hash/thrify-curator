@@ -280,10 +280,14 @@ employee_router = APIRouter(prefix="/time-tracking", tags=["Employee - W-8BEN"])
 
 
 @employee_router.get("/w8ben/status")
-async def get_employee_w8ben_status(user: dict = Depends(get_current_user)):
-    """Get employee's W-8BEN submission status."""
+async def get_employee_w8ben_status(user: dict = Depends(get_current_user), user_id: str = None):
+    """Get W-8BEN submission status. Admins can pass user_id to view any employee's data."""
+    target_user_id = user["id"]
+    if user_id and user.get("role") == "admin":
+        target_user_id = user_id
+    
     w8ben_docs = await db.w8ben_documents.find(
-        {"employee_id": user["id"]},
+        {"employee_id": target_user_id},
         {"_id": 0, "content": 0}
     ).sort("uploaded_at", -1).to_list(100)
     
