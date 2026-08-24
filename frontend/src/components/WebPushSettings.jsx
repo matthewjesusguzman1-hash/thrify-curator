@@ -45,6 +45,14 @@ export default function WebPushSettings() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
+  const [isIOS, setIsIOS] = useState(false);
+
+  // Detect iOS device
+  useEffect(() => {
+    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    setIsIOS(iOS);
+  }, []);
 
   // Load vibration preference from localStorage
   useEffect(() => {
@@ -365,8 +373,8 @@ export default function WebPushSettings() {
         </div>
       </div>
       
-      {/* Vibration Toggle - only show if notifications are enabled */}
-      {subscription && navigator.vibrate && (
+      {/* Vibration Toggle - only show if notifications are enabled and NOT on iOS */}
+      {subscription && navigator.vibrate && !isIOS && (
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
