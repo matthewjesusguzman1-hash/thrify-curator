@@ -33,31 +33,17 @@ export default function MessagingSection({
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(autoExpand);
-  const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const pollingRef = useRef(null);
   const sectionRef = useRef(null);
   const previousMessageCountRef = useRef(0);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
   
-  // Auto-scroll to messages section when auto-expanding
-  useEffect(() => {
-    if (autoExpand && sectionRef.current) {
-      setTimeout(() => {
-        sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 300);
-    }
-  }, [autoExpand]);
-
+  // Focus input when expanded (no auto-scroll)
   useEffect(() => {
     if (expanded) {
-      scrollToBottom();
       inputRef.current?.focus();
     }
-  }, [conversation?.messages, expanded]);
+  }, [expanded]);
 
   const fetchConversation = async () => {
     try {
@@ -303,7 +289,6 @@ export default function MessagingSection({
                       </div>
                     );
                   })}
-                  <div ref={messagesEndRef} />
                 </>
               )}
             </div>

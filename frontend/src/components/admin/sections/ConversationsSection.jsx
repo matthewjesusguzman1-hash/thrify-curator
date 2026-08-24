@@ -35,22 +35,13 @@ export default function ConversationsSection() {
   const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all"); // all, employee, consignor
-  const messagesEndRef = useRef(null);
   const pollingRef = useRef(null);
   const selectedConversationRef = useRef(null);
   const previousUnreadRef = useRef(0);
 
   const getToken = () => localStorage.getItem("token");
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    if (selectedConversation) {
-      scrollToBottom();
-    }
-  }, [selectedConversation?.messages]);
+  // Removed auto-scroll - user prefers manual scrolling
 
   const fetchConversations = useCallback(async () => {
     const token = getToken();
@@ -564,7 +555,6 @@ export default function ConversationsSection() {
                                 </div>
                               );
                             })}
-                            <div ref={messagesEndRef} />
                           </>
                         )}
                       </div>
