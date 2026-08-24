@@ -1387,9 +1387,9 @@ export default function EmployeeDashboard({
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="employee-dashboard">
-      {/* Header - Sticky */}
+      {/* Header */}
       <header 
-        className="bg-[#1A1A2E] border-b border-white/20 px-4 pb-3 flex-shrink-0 sticky top-0 z-40" 
+        className="bg-[#1A1A2E] border-b border-white/20 px-4 pb-3 flex-shrink-0" 
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
       >
         <div className="max-w-2xl mx-auto">
