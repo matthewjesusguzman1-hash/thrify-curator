@@ -196,7 +196,7 @@ async def employee_send_message(message: ConversationCreate, user: dict = Depend
     }
     await db.admin_notifications.insert_one(notification_doc)
     
-    # Send push notification to admin
+    # Send APNs push notification to all admin devices
     try:
         await send_admin_push_notification(
             title=f"Message from {user_name}",
@@ -204,7 +204,20 @@ async def employee_send_message(message: ConversationCreate, user: dict = Depend
             notification_type="employee_message"
         )
     except Exception as e:
-        print(f"Failed to send employee message push: {e}")
+        print(f"Failed to send employee message APNs push: {e}")
+    
+    # Send web push to all admins
+    try:
+        web_push = get_web_push_service()
+        await web_push.send_to_admins(
+            db=db,
+            title=f"Message from {user_name}",
+            body=message.content[:100] + "..." if len(message.content) > 100 else message.content,
+            url="/admin?section=conversations",
+            notification_type="employee_message"
+        )
+    except Exception as e:
+        print(f"Failed to send employee message web push: {e}")
     
     return {"success": True, "message_id": new_message["id"]}
 
@@ -329,7 +342,7 @@ async def consignor_send_message(email: str, message: ConversationCreate):
     }
     await db.admin_notifications.insert_one(notification_doc)
     
-    # Send push notification to admin
+    # Send APNs push notification to all admin devices
     try:
         await send_admin_push_notification(
             title=f"Message from {user_name}",
@@ -337,7 +350,20 @@ async def consignor_send_message(email: str, message: ConversationCreate):
             notification_type="consignor_message"
         )
     except Exception as e:
-        print(f"Failed to send consignor message push: {e}")
+        print(f"Failed to send consignor message APNs push: {e}")
+    
+    # Send web push to all admins
+    try:
+        web_push = get_web_push_service()
+        await web_push.send_to_admins(
+            db=db,
+            title=f"Message from {user_name}",
+            body=message.content[:100] + "..." if len(message.content) > 100 else message.content,
+            url="/admin?section=conversations",
+            notification_type="consignor_message"
+        )
+    except Exception as e:
+        print(f"Failed to send consignor message web push: {e}")
     
     return {"success": True, "message_id": new_message["id"]}
 

@@ -21,6 +21,9 @@ import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Polling interval for real-time updates (10 seconds)
+const POLLING_INTERVAL = 10000;
+
 export default function ConversationsSection() {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -32,6 +35,9 @@ export default function ConversationsSection() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all"); // all, employee, consignor
   const messagesEndRef = useRef(null);
+  const pollingRef = useRef(null);
+  const selectedConversationRef = useRef(null);
+  const previousUnreadRef = useRef(0);
 
   const getToken = () => localStorage.getItem("token");
 
@@ -73,7 +79,7 @@ export default function ConversationsSection() {
     }
   }, []);
 
-  // Fetch conversations on component mount and when expanded
+  // Fetch conversations on component mount and start continuous polling
   useEffect(() => {
     const token = getToken();
     if (!token) {
@@ -81,19 +87,67 @@ export default function ConversationsSection() {
       return;
     }
     
-    console.log("ConversationsSection: Component mounted, fetching data...");
+    console.log("ConversationsSection: Component mounted, starting continuous polling...");
     
     // Fetch immediately on mount
     fetchConversations();
     
-    // Poll for updates
-    const pollInterval = setInterval(() => {
-      if (showSection) {
-        fetchConversations();
+    // Start continuous polling for real-time messaging feel
+    pollingRef.current = setInterval(async () => {
+      const currentToken = getToken();
+      if (!currentToken) return;
+      
+      try {
+        // Fetch conversation list
+        const [convRes, countRes] = await Promise.all([
+          axios.get(`${API}/conversations/admin/list`, {
+            headers: { Authorization: `Bearer ${currentToken}` }
+          }),
+          axios.get(`${API}/conversations/admin/unread-count`, {
+            headers: { Authorization: `Bearer ${currentToken}` }
+          })
+        ]);
+        
+        setConversations(convRes.data);
+        
+        // Check if there are new unread messages and show notification
+        const newUnreadCount = countRes.data.unread_count;
+        if (newUnreadCount > previousUnreadRef.current && previousUnreadRef.current >= 0) {
+          toast.info("New message received!", {
+            description: "You have a new message from an employee or consignor"
+          });
+          // Play notification sound if available
+          try {
+            const audio = new Audio('/notification.mp3');
+            audio.volume = 0.3;
+            audio.play().catch(() => {});
+          } catch (e) {
+            // Audio playback not supported, ignore
+          }
+        }
+        previousUnreadRef.current = newUnreadCount;
+        setUnreadCount(newUnreadCount);
+        
+        // Also refresh the selected conversation if one is open
+        if (selectedConversationRef.current) {
+          const convRes = await axios.get(
+            `${API}/conversations/admin/conversation/${selectedConversationRef.current}`,
+            { headers: { Authorization: `Bearer ${currentToken}` } }
+          );
+          setSelectedConversation(convRes.data);
+        }
+      } catch (error) {
+        console.error("Polling error:", error);
       }
-    }, 30000);
+    }, POLLING_INTERVAL);
     
-    return () => clearInterval(pollInterval);
+    return () => {
+      // Clean up polling on unmount
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
   }, []); // Run only once on mount
 
   // Also fetch when section is expanded
@@ -111,6 +165,7 @@ export default function ConversationsSection() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSelectedConversation(res.data);
+      selectedConversationRef.current = conv.id; // Track for polling
       
       // Update local unread count
       const convUnread = conversations.find(c => c.id === conv.id)?.unread_count || 0;
@@ -178,6 +233,7 @@ export default function ConversationsSection() {
       // Clear selection if this was the selected conversation
       if (selectedConversation?.id === conversationId) {
         setSelectedConversation(null);
+        selectedConversationRef.current = null;
       }
       
       // Refresh conversation list
@@ -409,7 +465,10 @@ export default function ConversationsSection() {
                       <div className="p-4 bg-white border-b border-gray-200 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <button
-                            onClick={() => setSelectedConversation(null)}
+                            onClick={() => {
+                              setSelectedConversation(null);
+                              selectedConversationRef.current = null;
+                            }}
                             className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
                           >
                             <ChevronDown className="w-5 h-5 rotate-90" />
@@ -518,8 +577,8 @@ export default function ConversationsSection() {
                               }
                             }}
                             placeholder="Type a message..."
-                            rows={4}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[100px]"
+                            rows={6}
+                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[150px]"
                             disabled={sending}
                             data-testid="admin-message-input"
                           />

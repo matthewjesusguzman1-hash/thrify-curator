@@ -36,6 +36,7 @@ export default function MessagingSection({
   const inputRef = useRef(null);
   const pollingRef = useRef(null);
   const sectionRef = useRef(null);
+  const previousMessageCountRef = useRef(0);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -87,8 +88,46 @@ export default function MessagingSection({
       fetchConversation();
       
       // Start polling for new messages when expanded
-      pollingRef.current = setInterval(() => {
-        fetchConversation();
+      pollingRef.current = setInterval(async () => {
+        try {
+          let response;
+          
+          if (userType === "employee") {
+            response = await axios.get(
+              `${API}/conversations/employee/my-conversation`,
+              getAuthHeader()
+            );
+          } else {
+            response = await axios.get(
+              `${API}/conversations/consignor/my-conversation?email=${encodeURIComponent(userEmail)}`
+            );
+          }
+          
+          const newConversation = response.data;
+          const newMessages = newConversation?.messages || [];
+          const adminMessages = newMessages.filter(m => m.sender_type === "admin");
+          
+          // Check if there's a new admin message
+          if (adminMessages.length > previousMessageCountRef.current) {
+            const latestAdmin = adminMessages[adminMessages.length - 1];
+            toast.info(`New message from ${latestAdmin.sender_name || "Admin"}`, {
+              description: latestAdmin.content.substring(0, 50) + (latestAdmin.content.length > 50 ? "..." : "")
+            });
+            // Play notification sound
+            try {
+              const audio = new Audio('/notification.mp3');
+              audio.volume = 0.3;
+              audio.play().catch(() => {});
+            } catch (e) {
+              // Audio playback not supported, ignore
+            }
+          }
+          previousMessageCountRef.current = adminMessages.length;
+          
+          setConversation(newConversation);
+        } catch (error) {
+          console.error("Polling error:", error);
+        }
       }, POLLING_INTERVAL);
     }
     
@@ -279,8 +318,8 @@ export default function MessagingSection({
                     }
                   }}
                   placeholder="Type a message..."
-                  rows={4}
-                  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 resize-none min-h-[100px]"
+                  rows={6}
+                  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 resize-none min-h-[150px]"
                   disabled={sending}
                   data-testid="message-input"
                 />
