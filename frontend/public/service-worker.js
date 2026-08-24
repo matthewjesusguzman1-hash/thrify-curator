@@ -45,7 +45,9 @@ self.addEventListener('push', (event) => {
     tag: data.tag,
     data: { url: data.url },
     requireInteraction: false,
-    silent: false
+    silent: false,
+    // Vibration pattern: vibrate 200ms, pause 100ms, vibrate 200ms, pause 100ms, vibrate 200ms
+    vibrate: [200, 100, 200, 100, 200]
   };
 
   event.waitUntil(

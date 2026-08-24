@@ -116,6 +116,12 @@ export default function ConversationsSection() {
           toast.info("New message received!", {
             description: "You have a new message from an employee or consignor"
           });
+          
+          // Vibrate device if supported (pattern: 200ms on, 100ms off, 200ms on)
+          if (navigator.vibrate) {
+            navigator.vibrate([200, 100, 200]);
+          }
+          
           // Play notification sound if available
           try {
             const audio = new Audio('/notification.mp3');

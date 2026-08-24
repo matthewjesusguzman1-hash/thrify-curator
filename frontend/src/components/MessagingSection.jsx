@@ -113,6 +113,12 @@ export default function MessagingSection({
             toast.info(`New message from ${latestAdmin.sender_name || "Admin"}`, {
               description: latestAdmin.content.substring(0, 50) + (latestAdmin.content.length > 50 ? "..." : "")
             });
+            
+            // Vibrate device if supported (pattern: 200ms on, 100ms off, 200ms on)
+            if (navigator.vibrate) {
+              navigator.vibrate([200, 100, 200]);
+            }
+            
             // Play notification sound
             try {
               const audio = new Audio('/notification.mp3');
