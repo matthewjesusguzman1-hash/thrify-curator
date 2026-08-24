@@ -51,7 +51,6 @@ import { useHaptics } from "@/hooks/useHaptics";
 import useBiometricAuth from "@/hooks/useBiometricAuth";
 import LiveActivityService from "@/services/LiveActivityService";
 import MessagingSection from "@/components/MessagingSection";
-import OnboardingModal from "@/components/OnboardingModal";
 import PullToRefresh from "@/components/PullToRefresh";
 import EmployeeWalkthrough, { useEmployeeWalkthrough } from "@/components/employee/EmployeeWalkthrough";
 
@@ -3720,9 +3719,6 @@ export default function EmployeeDashboard({
           </motion.div>
         )}
       </AnimatePresence>
-      
-      {/* Onboarding Modal for first-time employees - NOT shown in admin view */}
-      {!isAdminView && <OnboardingModal userType="employee" />}
     </div>
   );
 }
