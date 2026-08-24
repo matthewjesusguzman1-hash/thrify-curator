@@ -526,6 +526,16 @@ export default function AdminDashboard() {
     }
   }, [getAuthHeader]);
 
+  // Fetch unread message count for the Messages icon badge
+  const fetchMessageUnreadCount = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/conversations/admin/unread-count`, getAuthHeader());
+      setAdminUnreadMessageCount(response.data.unread_count || 0);
+    } catch (error) {
+      console.error("Failed to fetch message unread count:", error);
+    }
+  }, [getAuthHeader]);
+
   const fetchPayrollSettings = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/admin/payroll/settings`, getAuthHeader());
@@ -812,6 +822,7 @@ export default function AdminDashboard() {
     setUser(parsedUser);
     fetchData();
     fetchNotifications();
+    fetchMessageUnreadCount(); // Fetch message unread count for header badge
     fetchPayrollSettings();
     fetchPayrollSummary();
     fetchFormSubmissions(); // Auto-fetch form submissions on page load
@@ -830,10 +841,11 @@ export default function AdminDashboard() {
     // Poll for new notifications and data every 30 seconds
     const pollInterval = setInterval(() => {
       fetchNotifications();
+      fetchMessageUnreadCount(); // Also poll for new messages
       fetchData(); // Also refresh main data to keep all sections in sync
     }, 30000);
     return () => clearInterval(pollInterval);
-  }, [navigate, fetchNotifications, fetchPayrollSettings, fetchPayrollSummary, fetchFormSubmissions]);
+  }, [navigate, fetchNotifications, fetchMessageUnreadCount, fetchPayrollSettings, fetchPayrollSummary, fetchFormSubmissions]);
 
   const fetchData = async () => {
     try {
@@ -864,6 +876,7 @@ export default function AdminDashboard() {
       await Promise.all([
         fetchData(),
         fetchNotifications(),
+        fetchMessageUnreadCount(),
         fetchPayrollSummary(),
         fetchPendingW9s()
       ]);
