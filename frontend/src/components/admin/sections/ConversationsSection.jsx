@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import axios from "axios";
+import { triggerVibration } from "@/components/WebPushSettings";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -117,10 +118,8 @@ export default function ConversationsSection() {
             description: "You have a new message from an employee or consignor"
           });
           
-          // Vibrate device if supported (pattern: 200ms on, 100ms off, 200ms on)
-          if (navigator.vibrate) {
-            navigator.vibrate([200, 100, 200]);
-          }
+          // Vibrate device if enabled
+          triggerVibration([200, 100, 200]);
           
           // Play notification sound if available
           try {

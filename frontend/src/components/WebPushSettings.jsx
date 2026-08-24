@@ -1,7 +1,24 @@
 import { useState, useEffect } from "react";
-import { Bell, BellOff, Loader2, CheckCircle, AlertCircle, Smartphone } from "lucide-react";
+import { Bell, BellOff, Loader2, CheckCircle, AlertCircle, Smartphone, Vibrate } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL;
+
+// Vibration preference key for localStorage
+const VIBRATION_ENABLED_KEY = 'thrifty_curator_vibration_enabled';
+
+// Helper to check if vibration is enabled
+export function isVibrationEnabled() {
+  const stored = localStorage.getItem(VIBRATION_ENABLED_KEY);
+  // Default to true if not set
+  return stored === null ? true : stored === 'true';
+}
+
+// Helper to trigger vibration if enabled
+export function triggerVibration(pattern = [200, 100, 200]) {
+  if (isVibrationEnabled() && navigator.vibrate) {
+    navigator.vibrate(pattern);
+  }
+}
 
 // Convert base64 URL-safe string to Uint8Array for VAPID key
 function urlBase64ToUint8Array(base64String) {
@@ -27,6 +44,24 @@ export default function WebPushSettings() {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [vibrationEnabled, setVibrationEnabled] = useState(true);
+
+  // Load vibration preference from localStorage
+  useEffect(() => {
+    setVibrationEnabled(isVibrationEnabled());
+  }, []);
+
+  // Toggle vibration preference
+  const toggleVibration = () => {
+    const newValue = !vibrationEnabled;
+    setVibrationEnabled(newValue);
+    localStorage.setItem(VIBRATION_ENABLED_KEY, newValue.toString());
+    
+    // Give haptic feedback when turning on
+    if (newValue && navigator.vibrate) {
+      navigator.vibrate(100);
+    }
+  };
 
   // Check if running as installed PWA and if push is supported
   useEffect(() => {
@@ -329,6 +364,42 @@ export default function WebPushSettings() {
           )}
         </div>
       </div>
+      
+      {/* Vibration Toggle - only show if notifications are enabled */}
+      {subscription && navigator.vibrate && (
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          marginTop: '8px',
+          paddingTop: '8px',
+          borderTop: '1px solid rgba(0,0,0,0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Vibrate style={{ width: '16px', height: '16px', color: vibrationEnabled ? '#8B5CF6' : '#9ca3af', flexShrink: 0 }} />
+            <span style={{ color: '#1f2937', fontWeight: 600, fontSize: '12px' }}>
+              Vibration
+            </span>
+          </div>
+          <button
+            onClick={toggleVibration}
+            style={{ 
+              height: '24px', 
+              padding: '0 12px', 
+              fontSize: '12px', 
+              borderRadius: '4px',
+              background: vibrationEnabled ? 'linear-gradient(to right, #8B5CF6, #a855f7)' : '#f3f4f6',
+              border: 'none',
+              cursor: 'pointer',
+              color: vibrationEnabled ? '#ffffff' : '#374151',
+              WebkitTextFillColor: vibrationEnabled ? '#ffffff' : '#374151',
+              transition: 'all 0.2s'
+            }}
+          >
+            {vibrationEnabled ? "On" : "Off"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

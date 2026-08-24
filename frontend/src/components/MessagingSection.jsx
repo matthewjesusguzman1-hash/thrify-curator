@@ -4,6 +4,7 @@ import { MessageSquare, Send, X, Loader2, ChevronDown, User } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import axios from "axios";
+import { triggerVibration } from "./WebPushSettings";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -114,10 +115,8 @@ export default function MessagingSection({
               description: latestAdmin.content.substring(0, 50) + (latestAdmin.content.length > 50 ? "..." : "")
             });
             
-            // Vibrate device if supported (pattern: 200ms on, 100ms off, 200ms on)
-            if (navigator.vibrate) {
-              navigator.vibrate([200, 100, 200]);
-            }
+            // Vibrate device if enabled
+            triggerVibration([200, 100, 200]);
             
             // Play notification sound
             try {
