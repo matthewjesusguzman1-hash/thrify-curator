@@ -161,10 +161,11 @@ async def employee_send_message(message: ConversationCreate, user: dict = Depend
     user_email = user.get("email")
     user_name = message.sender_name or user.get("name") or user.get("email")
     
-    # Find or create conversation
+    # Find or create conversation (exclude soft-deleted)
     conversation = await db.conversations.find_one({
         "participant_type": "employee",
-        "participant_id": user_id
+        "participant_id": user_id,
+        "deleted_at": {"$exists": False}
     })
     
     now = datetime.now(timezone.utc).isoformat()
@@ -331,10 +332,11 @@ async def consignor_send_message(email: str, message: ConversationCreate):
     
     user_name = message.sender_name or agreement.get("full_name", email)
     
-    # Find or create conversation
+    # Find or create conversation (exclude soft-deleted)
     conversation = await db.conversations.find_one({
         "participant_type": "consignor",
-        "participant_id": email
+        "participant_id": email,
+        "deleted_at": {"$exists": False}
     })
     
     now = datetime.now(timezone.utc).isoformat()
@@ -513,8 +515,6 @@ async def get_conversation(conversation_id: str, admin: dict = Depends(get_admin
             msg for msg in conversation["messages"] 
             if not msg.get("deleted_at")
         ]
-    
-    return conversation
     
     return conversation
 
