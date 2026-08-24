@@ -1,7 +1,7 @@
 // Thrifty Curator Service Worker
-// Version 6 - Added Web Push support for Safari PWA
+// Version 7 - Force cache refresh on deploy
 
-const CACHE_VERSION = 'v6-' + Date.now(); // Unique version on each build
+const CACHE_VERSION = 'v7-20260824-2'; // Update this version on each deploy
 const CACHE_NAME = 'thrifty-curator-' + CACHE_VERSION;
 const OFFLINE_URL = '/offline.html';
 
