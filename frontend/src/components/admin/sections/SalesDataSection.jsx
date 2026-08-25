@@ -620,14 +620,38 @@ const SalesDataSection = ({ getAuthHeader }) => {
 // ==================== IMPORT MODAL ====================
 const ImportModal = ({ getAuthHeader, hasExistingData, onClose, onSuccess }) => {
   const [file, setFile] = useState(null);
+  const [fileType, setFileType] = useState(null); // 'csv' or 'image'
   const [uploading, setUploading] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [aiExtractedData, setAiExtractedData] = useState(null);
 
-  const handleClearAndUpload = async () => {
+  const handleFileSelect = (e) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+    
+    setFile(selectedFile);
+    setError(null);
+    setAiExtractedData(null);
+    
+    // Determine file type
+    const isImage = selectedFile.type.startsWith('image/');
+    const isCSV = selectedFile.name.toLowerCase().endsWith('.csv') || selectedFile.type === 'text/csv';
+    
+    if (isImage) {
+      setFileType('image');
+    } else if (isCSV) {
+      setFileType('csv');
+    } else {
+      setFileType(null);
+      setError('Please upload a CSV file or an image (screenshot)');
+    }
+  };
+
+  const handleUpload = async () => {
     if (!file) {
-      setError('Please select a CSV file first');
+      setError('Please select a file first');
       return;
     }
 
@@ -635,31 +659,56 @@ const ImportModal = ({ getAuthHeader, hasExistingData, onClose, onSuccess }) => 
     setError(null);
 
     try {
-      if (hasExistingData) {
-        setClearing(true);
-        await fetch(`${API_URL}/api/inventory/clear-all`, {
-          method: 'DELETE',
-          headers: { ...getAuthHeader() }
+      if (fileType === 'image') {
+        // Use AI to analyze screenshot
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`${API_URL}/api/financials/screenshot/analyze`, {
+          method: 'POST',
+          headers: { ...getAuthHeader() },
+          body: formData
         });
-        setClearing(false);
-      }
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('source', 'vendoo');
+        const data = await response.json();
 
-      const response = await fetch(`${API_URL}/api/inventory/import`, {
-        method: 'POST',
-        headers: { ...getAuthHeader() },
-        body: formData
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setResult(data);
+        if (response.ok) {
+          setAiExtractedData(data);
+          setResult({ 
+            message: 'Screenshot analyzed successfully!',
+            extracted: data 
+          });
+        } else {
+          setError(data.detail || 'Failed to analyze screenshot');
+        }
       } else {
-        setError(data.detail || 'Import failed');
+        // CSV upload - existing logic
+        if (hasExistingData) {
+          setClearing(true);
+          await fetch(`${API_URL}/api/inventory/clear-all`, {
+            method: 'DELETE',
+            headers: { ...getAuthHeader() }
+          });
+          setClearing(false);
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('source', 'vendoo');
+
+        const response = await fetch(`${API_URL}/api/inventory/import`, {
+          method: 'POST',
+          headers: { ...getAuthHeader() },
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setResult(data);
+        } else {
+          setError(data.detail || 'Import failed');
+        }
       }
     } catch (err) {
       console.error('Upload error:', err);
@@ -680,7 +729,7 @@ const ImportModal = ({ getAuthHeader, hasExistingData, onClose, onSuccess }) => 
           </button>
         </div>
 
-        {hasExistingData && !result && (
+        {hasExistingData && !result && fileType === 'csv' && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
             <p className="text-amber-800 text-sm">
               <strong>Warning:</strong> This will delete all existing inventory data and replace it with the new CSV file.
@@ -696,15 +745,23 @@ const ImportModal = ({ getAuthHeader, hasExistingData, onClose, onSuccess }) => 
                   <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-colors">
                     <input
                       type="file"
-                      accept=".csv"
-                      onChange={(e) => setFile(e.target.files?.[0] || null)}
+                      accept=".csv,image/*"
+                      onChange={handleFileSelect}
                       className="hidden"
                     />
                     <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                     {file ? (
-                      <p className="font-medium text-purple-600">{file.name}</p>
+                      <div>
+                        <p className="font-medium text-purple-600">{file.name}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {fileType === 'image' ? '📸 Screenshot (AI will extract data)' : '📄 CSV file'}
+                        </p>
+                      </div>
                     ) : (
-                      <p className="text-gray-500">Click to select CSV file</p>
+                      <div>
+                        <p className="text-gray-500">Click to select file</p>
+                        <p className="text-xs text-gray-400 mt-1">CSV or Screenshot (PNG, JPG)</p>
+                      </div>
                     )}
                   </div>
                 </label>
@@ -722,19 +779,19 @@ const ImportModal = ({ getAuthHeader, hasExistingData, onClose, onSuccess }) => 
               )}
 
               <Button
-                onClick={handleClearAndUpload}
-                disabled={!file || uploading}
+                onClick={handleUpload}
+                disabled={!file || !fileType || uploading}
                 className="w-full bg-purple-600 hover:bg-purple-700"
               >
                 {uploading ? (
                   <>
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    {clearing ? 'Clearing old data...' : 'Importing...'}
+                    {fileType === 'image' ? 'Analyzing screenshot...' : (clearing ? 'Clearing old data...' : 'Importing...')}
                   </>
                 ) : (
                   <>
                     <Upload className="w-4 h-4 mr-2" />
-                    {hasExistingData ? 'Replace Data' : 'Import Data'}
+                    {fileType === 'image' ? 'Analyze Screenshot' : (hasExistingData ? 'Replace Data' : 'Import Data')}
                   </>
                 )}
               </Button>
@@ -746,10 +803,41 @@ const ImportModal = ({ getAuthHeader, hasExistingData, onClose, onSuccess }) => 
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <TrendingUp className="w-8 h-8 text-green-600" />
               </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Import Successful!</h4>
-              <p className="text-gray-600 mb-4">
-                {result.details?.rows_processed?.toLocaleString()} items imported
-              </p>
+              <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                {result.extracted ? 'Screenshot Analyzed!' : 'Import Successful!'}
+              </h4>
+              {result.extracted ? (
+                <div className="text-left bg-gray-50 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-gray-600 mb-2">AI extracted the following data:</p>
+                  <div className="space-y-1 text-sm">
+                    {result.extracted.gross_revenue && (
+                      <p><span className="font-medium">Gross Revenue:</span> ${result.extracted.gross_revenue.toLocaleString()}</p>
+                    )}
+                    {result.extracted.items_sold && (
+                      <p><span className="font-medium">Items Sold:</span> {result.extracted.items_sold}</p>
+                    )}
+                    {result.extracted.platform && (
+                      <p><span className="font-medium">Platform:</span> {result.extracted.platform}</p>
+                    )}
+                    {result.extracted.period && (
+                      <p><span className="font-medium">Period:</span> {result.extracted.period}</p>
+                    )}
+                    {result.extracted.raw_text && (
+                      <details className="mt-2">
+                        <summary className="text-xs text-gray-500 cursor-pointer">View extracted text</summary>
+                        <pre className="text-xs mt-1 whitespace-pre-wrap bg-white p-2 rounded border">{result.extracted.raw_text}</pre>
+                      </details>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3">
+                    This data has been saved to your financials.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-gray-600 mb-4">
+                  {result.details?.rows_processed?.toLocaleString()} items imported
+                </p>
+              )}
               <Button onClick={onSuccess} className="bg-green-600 hover:bg-green-700">
                 Done
               </Button>
