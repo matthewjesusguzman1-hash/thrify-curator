@@ -9,7 +9,7 @@ import { triggerVibration } from "./WebPushSettings";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Polling interval for real-time updates (3 seconds for instant messaging feel)
-const POLLING_INTERVAL = 3000;
+const POLLING_INTERVAL = 2000; // 2 seconds for instant messenger feel
 
 /**
  * Messaging component for employees and consignors to chat with admin

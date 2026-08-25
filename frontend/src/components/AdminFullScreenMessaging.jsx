@@ -138,7 +138,7 @@ export default function AdminFullScreenMessaging({
     }
   }, [muted, onUnreadChange]);
 
-  const fetchSelectedConversation = async (convId) => {
+  const fetchSelectedConversation = useCallback(async (convId) => {
     const token = getToken();
     if (!token || !convId) return;
     
@@ -150,25 +150,33 @@ export default function AdminFullScreenMessaging({
     } catch (error) {
       console.error("Error fetching conversation:", error);
     }
-  };
+  }, [API]);
+
+  const selectedConversationIdRef = useRef(null);
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    selectedConversationIdRef.current = selectedConversation?.id;
+  }, [selectedConversation?.id]);
 
   useEffect(() => {
     fetchConversations();
     
-    // Start polling
+    // Start polling every 2 seconds for instant messenger feel
     pollingRef.current = setInterval(() => {
       fetchConversations();
-      if (selectedConversation?.id) {
-        fetchSelectedConversation(selectedConversation.id);
+      // Use ref to get current selected conversation id
+      if (selectedConversationIdRef.current) {
+        fetchSelectedConversation(selectedConversationIdRef.current);
       }
-    }, POLLING_INTERVAL);
+    }, 2000); // 2 second polling for real-time feel
     
     return () => {
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
       }
     };
-  }, [fetchConversations, muted]);
+  }, [fetchConversations, fetchSelectedConversation, muted]);
 
   // Scroll to bottom when messages change (if at bottom)
   useEffect(() => {
