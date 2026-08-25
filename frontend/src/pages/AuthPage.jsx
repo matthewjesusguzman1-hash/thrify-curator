@@ -41,7 +41,11 @@ export default function AuthPage() {
   const [loginMode, setLoginMode] = useState("normal"); // "normal", "password"
   
   // Store redirect intent from URL params
-  const redirectAfterLogin = searchParams.get('openMessages') === 'true' ? '/admin?openMessages=true' : null;
+  const openMessages = searchParams.get('openMessages') === 'true';
+  const conversationId = searchParams.get('conversationId');
+  const redirectAfterLogin = openMessages 
+    ? `/admin?openMessages=true${conversationId ? `&conversationId=${conversationId}` : ''}`
+    : null;
   
   // Ref to prevent duplicate login attempts
   const loginInProgressRef = useRef(false);

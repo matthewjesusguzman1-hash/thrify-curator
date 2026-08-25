@@ -829,10 +829,18 @@ export default function AdminDashboard() {
     fetchFormSubmissions(); // Auto-fetch form submissions on page load
     
     // Check if we should open messages from URL param (e.g., from push notification)
-    if (searchParams.get('openMessages') === 'true') {
+    const openMessages = searchParams.get('openMessages') === 'true';
+    const conversationIdFromUrl = searchParams.get('conversationId');
+    
+    if (openMessages) {
       setShowFullScreenMessages(true);
-      // Clear the param from URL
+      // Store conversation ID to auto-select after messages load
+      if (conversationIdFromUrl) {
+        localStorage.setItem('pendingConversationId', conversationIdFromUrl);
+      }
+      // Clear the params from URL
       searchParams.delete('openMessages');
+      searchParams.delete('conversationId');
       setSearchParams(searchParams, { replace: true });
     }
     

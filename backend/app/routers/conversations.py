@@ -243,13 +243,14 @@ async def employee_send_message(message: ConversationCreate, user: dict = Depend
         print(f"Failed to send employee message APNs push: {e}")
     
     # Send web push to all admins
+    conv_id = conversation.get("id") or conversation["id"]
     try:
         web_push = get_web_push_service()
         await web_push.send_to_admins(
             db=db,
             title=f"Message from {user_name}",
             body=message.content[:100] + "..." if len(message.content) > 100 else message.content,
-            url="/admin?openMessages=true",
+            url=f"/admin?openMessages=true&conversationId={conv_id}",
             notification_type="employee_message"
         )
     except Exception as e:
@@ -425,13 +426,14 @@ async def consignor_send_message(email: str, message: ConversationCreate):
         print(f"Failed to send consignor message APNs push: {e}")
     
     # Send web push to all admins
+    conv_id = conversation.get("id") or conversation["id"]
     try:
         web_push = get_web_push_service()
         await web_push.send_to_admins(
             db=db,
             title=f"Message from {user_name}",
             body=message.content[:100] + "..." if len(message.content) > 100 else message.content,
-            url="/admin?openMessages=true",
+            url=f"/admin?openMessages=true&conversationId={conv_id}",
             notification_type="consignor_message"
         )
     except Exception as e:

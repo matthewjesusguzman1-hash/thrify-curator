@@ -187,6 +187,22 @@ export default function AdminFullScreenMessaging({
     };
   }, [fetchConversations, fetchSelectedConversation, muted]);
 
+  // Check for pending conversation ID from push notification deep link
+  useEffect(() => {
+    const checkPendingConversation = async () => {
+      const pendingId = localStorage.getItem('pendingConversationId');
+      if (pendingId && conversations.length > 0) {
+        localStorage.removeItem('pendingConversationId');
+        // Find and select the conversation
+        const conv = conversations.find(c => c.id === pendingId);
+        if (conv) {
+          handleSelectConversation(conv);
+        }
+      }
+    };
+    checkPendingConversation();
+  }, [conversations]);
+
   // Scroll to bottom when messages change (if at bottom)
   useEffect(() => {
     scrollToBottomIfNeeded();
