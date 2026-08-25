@@ -1,0 +1,57 @@
+{
+  "summary": "Verified Vendoo CSV import fix. The bug was that MongoDB regex queries using {'$regex': 'sold', '$options': 'i'} weren't working with Motor 3.3.1/PyMongo 4.5.0. Fixed by adding iregex() helper function that uses Python's re.compile(pattern, re.IGNORECASE). All inventory endpoints now correctly return sold items count and financial data.",
+  "mode": "update",
+  "baseline_commit": "db77138073c92776fbfee43bedac0925ac30c93b",
+  "head_commit": "7ced4775f8d6fac3d9c2cf7a75e3614e747b2343",
+  "specs_created": [
+    "/app/backend/tests/test_vendoo_csv_import.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_vendoo_csv_import.py",
+    "/app/test_reports/pytest/vendoo_csv_import_results.xml"
+  ],
+  "regression_results": {
+    "total_specs": 15,
+    "passed": 15,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/.emergent/testing_baseline_commit",
+    "/app/backend/tests/test_vendoo_csv_import.py"
+  ],
+  "test_results": {
+    "backend": "100% (14/14 passed)",
+    "frontend": "100% (1/1 passed)"
+  },
+  "seed_data_creation": "None - used existing imported Vendoo CSV data (13,224 items)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Vendoo CSV import fix verified. The iregex() helper function in /app/backend/app/routers/inventory.py now correctly handles case-insensitive regex queries for MongoDB. Backend tests verify: summary endpoint returns 11,328 sold items with correct financial totals, analytics endpoint returns correct items_sold/gross_sales/profit, YoY analytics works, items filter by status/platform works, years endpoint returns data. Frontend test verifies Sales Data section shows '13,224 items imported'.",
+  "features_verified": {
+    "inventory_summary_sold_count": {
+      "status": "PASS",
+      "details": "/api/inventory/summary returns 11,328 sold items with total_revenue=$359,772.88"
+    },
+    "inventory_analytics_financial_metrics": {
+      "status": "PASS",
+      "details": "/api/inventory/analytics returns gross_sales=$359,772.88, profit=$276,023.03, profit_margin=76.7%"
+    },
+    "inventory_items_status_filter": {
+      "status": "PASS",
+      "details": "/api/inventory/items?status=sold correctly filters items with 'Sold' status"
+    },
+    "inventory_yoy_analytics": {
+      "status": "PASS",
+      "details": "/api/inventory/analytics/yoy returns monthly comparison data for 2026 vs 2025"
+    },
+    "frontend_sales_data_display": {
+      "status": "PASS",
+      "details": "Admin dashboard Sales Data section shows '13,224 items imported'"
+    }
+  }
+}

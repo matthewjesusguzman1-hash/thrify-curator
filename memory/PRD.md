@@ -108,6 +108,13 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - Onboarding application "received" emails now use simplified content
   - Removed "what happens next" content as applicants already know the process
   - Email now shows simple "Application Received" confirmation with note about next email coming for login setup
+- **Vendoo CSV Import Fix (2026-08-25)**:
+  - Fixed critical bug where sold items were not being detected in analytics/summary
+  - Issue: MongoDB regex queries `{"$regex": pattern, "$options": "i"}` weren't working with Motor 3.3.1/PyMongo 4.5.0
+  - Solution: Created `iregex()` helper function using Python's `re.compile(pattern, re.IGNORECASE)`
+  - Updated all 14 regex queries in `/app/backend/app/routers/inventory.py`
+  - Now correctly shows 11,328 sold items with $359,772.88 gross revenue
+  - Vendoo CSV headers with spaces (Cost of Goods, Marketplace Fees, etc.) parse correctly
 
 ### Recently Removed
 - AI Reports Assistant (removed 2026-05-12 per user request)

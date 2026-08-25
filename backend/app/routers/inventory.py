@@ -7,8 +7,14 @@ import uuid
 import csv
 import io
 import json
+import re
 
 from app.database import db
+
+
+def iregex(pattern: str):
+    """Create a case-insensitive regex pattern for MongoDB queries."""
+    return re.compile(pattern, re.IGNORECASE)
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
@@ -97,26 +103,34 @@ def find_column_value(row: dict, possible_names: List[str], header_map: dict) ->
                 return str(value).strip()
     return None
 
-# Column mappings for Vendoo exports
+# Column mappings for Vendoo exports (includes variations with spaces and underscores)
 VENDOO_COLUMN_MAPPINGS = {
-    "title": ["title", "item_name", "name", "description", "item_title", "listing_title"],
+    "title": ["title", "item_name", "name", "item_title", "listing_title"],
     "sku": ["sku", "item_sku", "listing_sku", "id", "item_id"],
-    "platform": ["platform", "sold_platform", "platform_sold", "marketplace", "sold_on", "listed_on"],
+    "platform": ["platform", "sold_platform", "sold platform", "platform_sold", "marketplace", "sold_on", "listed_on", "listing_platforms", "listing platforms"],
     "status": ["status", "listing_status", "item_status", "state"],
-    "sold_date": ["sold_date", "date_sold", "sale_date", "sold_on_date", "sold"],
-    "listed_date": ["listed_date", "date_listed", "list_date", "listed_on", "listing_date"],
+    "sold_date": ["sold_date", "sold date", "date_sold", "sale_date", "sold_on_date", "sold"],
+    "listed_date": ["listed_date", "listed date", "date_listed", "list_date", "listed_on", "listing_date"],
     "created_date": ["created_date", "date_created", "created", "created_at", "date_added"],
-    "price_listed": ["listed_price", "price_listed", "list_price", "asking_price", "price"],
-    "price_sold": ["price_sold", "sold_price", "sale_price", "sold_for", "revenue", "total_sale"],
-    "cogs": ["cogs", "cost_of_goods", "cog", "cost", "purchase_price", "cost_price", "item_cost"],
-    "fees": ["fees", "marketplace_fees", "platform_fees", "selling_fees", "total_fees"],
-    "shipping_cost": ["shipping_cost", "shipping_fees", "shipping", "ship_cost"],
+    "price_listed": ["listed_price", "price_listed", "price", "list_price", "asking_price"],
+    "price_sold": ["price_sold", "price sold", "sold_price", "sale_price", "sold_for", "revenue", "total_sale"],
+    "cogs": ["cogs", "cost_of_goods", "cost of goods", "cog", "cost", "purchase_price", "cost_price", "item_cost"],
+    "fees": ["fees", "marketplace_fees", "marketplace fees", "platform_fees", "platform fees", "selling_fees", "total_fees"],
+    "shipping_cost": ["shipping_cost", "shipping_expenses", "shipping expenses", "shipping_fees", "shipping fees", "shipping", "ship_cost"],
     "profit": ["profit", "net_profit", "earnings", "net"],
     "category": ["category", "item_category", "type", "item_type"],
     "brand": ["brand", "item_brand", "designer", "manufacturer"],
     "size": ["size", "item_size"],
-    "color": ["color", "item_color", "colour"],
-    "notes": ["notes", "description", "item_notes", "comments"],
+    "color": ["color", "primary_color", "primary color", "item_color", "colour"],
+    "notes": ["notes", "internal_notes", "internal notes", "item_notes", "comments"],
+    "quantity_sold": ["quantity_sold", "quantity sold", "qty_sold", "qty sold"],
+    "quantity_left": ["quantity_left", "quantity left", "qty_left", "qty left", "quantity"],
+    "description": ["description", "item_description"],
+    "condition": ["condition", "item_condition"],
+    "tags": ["tags", "item_tags"],
+    "labels": ["labels", "item_labels"],
+    "secondary_color": ["secondary_color", "secondary color"],
+    "shipped_date": ["shipped_date", "shipped date", "ship_date"],
 }
 
 # ============== ENDPOINTS ==============
@@ -274,25 +288,25 @@ async def get_inventory_items(
     query = {}
     
     if status:
-        query["status"] = {"$regex": status, "$options": "i"}
+        query["status"] = iregex(status)
     
     if platform:
-        query["platform"] = {"$regex": platform, "$options": "i"}
+        query["platform"] = iregex(platform)
     
     if search:
         query["$or"] = [
-            {"title": {"$regex": search, "$options": "i"}},
-            {"sku": {"$regex": search, "$options": "i"}},
-            {"brand": {"$regex": search, "$options": "i"}},
+            {"title": iregex(search)},
+            {"sku": iregex(search)},
+            {"brand": iregex(search)},
         ]
     
     if year:
         # Search in sold_date, listed_date, or created_date
         year_str = str(year)
         query["$or"] = query.get("$or", []) + [
-            {"sold_date": {"$regex": f"^{year_str}"}},
-            {"listed_date": {"$regex": f"^{year_str}"}},
-            {"created_date": {"$regex": f"^{year_str}"}},
+            {"sold_date": re.compile(f"^{year_str}")},
+            {"listed_date": re.compile(f"^{year_str}")},
+            {"created_date": re.compile(f"^{year_str}")},
         ]
     
     # Count total
@@ -343,7 +357,7 @@ async def get_inventory_summary():
     
     # Financial totals for sold items
     sold_pipeline = [
-        {"$match": {"status": {"$regex": "sold", "$options": "i"}}},
+        {"$match": {"status": iregex("sold")}},
         {"$group": {
             "_id": None,
             "total_revenue": {"$sum": {"$ifNull": ["$price_sold", 0]}},
@@ -449,14 +463,14 @@ async def export_inventory_csv(
     # Build query
     query = {}
     if status:
-        query["status"] = {"$regex": status, "$options": "i"}
+        query["status"] = iregex(status)
     if platform:
-        query["platform"] = {"$regex": platform, "$options": "i"}
+        query["platform"] = iregex(platform)
     if year:
         year_str = str(year)
         query["$or"] = [
-            {"sold_date": {"$regex": f"^{year_str}"}},
-            {"listed_date": {"$regex": f"^{year_str}"}},
+            {"sold_date": re.compile(f"^{year_str}")},
+            {"listed_date": re.compile(f"^{year_str}")},
         ]
     
     items = await db.inventory_items.find(query, {"_id": 0}).to_list(length=None)
@@ -546,14 +560,14 @@ async def get_inventory_analytics(
             # Build regex to match Jan through month before current
             month_patterns = [f"^{year_str}-{m:02d}" for m in range(1, current_month)]
             if month_patterns:
-                sold_date_filter = {"$or": [{"sold_date": {"$regex": p}} for p in month_patterns]}
+                sold_date_filter = {"$or": [{"sold_date": re.compile(p)} for p in month_patterns]}
             else:
-                sold_date_filter = {"sold_date": {"$regex": "^$"}}  # Match nothing
+                sold_date_filter = {"sold_date": re.compile("^$")}  # Match nothing
         else:
-            sold_date_filter = {"sold_date": {"$regex": f"^{year_str}"}}
+            sold_date_filter = {"sold_date": re.compile(f"^{year_str}")}
     
     # Get sold items (for revenue calculations)
-    sold_query = {"status": {"$regex": "sold", "$options": "i"}}
+    sold_query = {"status": iregex("sold")}
     if sold_date_filter:
         sold_query.update(sold_date_filter)
     
@@ -562,7 +576,7 @@ async def get_inventory_analytics(
     # Get unsold items (no date filter - we want all unsold)
     unsold_query = {
         "$or": [
-            {"status": {"$regex": "listed|active|available", "$options": "i"}},
+            {"status": iregex("listed|active|available")},
             {"status": {"$exists": False}},
             {"sold_date": None}
         ]
@@ -590,11 +604,11 @@ async def get_inventory_analytics(
         # For year filter: get items LISTED in that year that have sold
         year_str = str(year)
         listed_in_year_query = {
-            "status": {"$regex": "sold", "$options": "i"},
+            "status": iregex("sold"),
             "sold_date": {"$ne": None},
             "$or": [
-                {"listed_date": {"$regex": f"^{year_str}"}},
-                {"created_date": {"$regex": f"^{year_str}"}}
+                {"listed_date": re.compile(f"^{year_str}")},
+                {"created_date": re.compile(f"^{year_str}")}
             ]
         }
         items_listed_in_year = await db.inventory_items.find(listed_in_year_query, {"_id": 0}).to_list(length=None)
@@ -726,8 +740,8 @@ async def get_year_over_year_comparison(
         
         # Previous year - always include all 12 months
         prev_query = {
-            "sold_date": {"$regex": f"^{previous_year}-{month_str}"},
-            "status": {"$regex": "sold", "$options": "i"}
+            "sold_date": re.compile(f"^{previous_year}-{month_str}"),
+            "status": iregex("sold")
         }
         prev_items = await db.inventory_items.find(prev_query, {"price_sold": 1, "cogs": 1, "fees": 1, "shipping_cost": 1, "profit": 1}).to_list(length=None)
         prev_sales = sum(item.get("price_sold", 0) or 0 for item in prev_items)
@@ -745,8 +759,8 @@ async def get_year_over_year_comparison(
         current_profit = None
         if not is_current_year_view or month < current_month_num:
             current_query = {
-                "sold_date": {"$regex": f"^{current_year}-{month_str}"},
-                "status": {"$regex": "sold", "$options": "i"}
+                "sold_date": re.compile(f"^{current_year}-{month_str}"),
+                "status": iregex("sold")
             }
             current_items = await db.inventory_items.find(current_query, {"price_sold": 1, "cogs": 1, "fees": 1, "shipping_cost": 1, "profit": 1}).to_list(length=None)
             current_sales = round(sum(item.get("price_sold", 0) or 0 for item in current_items), 2)
@@ -799,7 +813,7 @@ async def get_stale_inventory(
         "$and": [
             {"listed_date": {"$lte": cutoff_date, "$ne": None}},
             {"$or": [
-                {"status": {"$regex": "listed|active|available", "$options": "i"}},
+                {"status": iregex("listed|active|available")},
                 {"sold_date": None}
             ]}
         ]
