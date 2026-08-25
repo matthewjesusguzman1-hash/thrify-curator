@@ -95,6 +95,10 @@ async def get_employee_conversation(user: dict = Depends(get_current_user)):
     user_email = user.get("email")
     user_name = user.get("name") or user.get("email")
     
+    # Check if admin has read receipts enabled
+    read_receipts_setting = await db.admin_settings.find_one({"setting_key": "read_receipts_enabled"})
+    show_read_receipts = read_receipts_setting.get("value", True) if read_receipts_setting else True
+    
     # Find existing conversation (exclude soft-deleted)
     conversation = await db.conversations.find_one({
         "participant_type": "employee",
@@ -148,6 +152,13 @@ async def get_employee_conversation(user: dict = Depends(get_current_user)):
                 msg for msg in updated_conv["messages"] 
                 if not msg.get("deleted_at")
             ]
+    
+    # If read receipts are disabled, hide read status from employee's messages
+    if not show_read_receipts and "messages" in conversation:
+        for msg in conversation["messages"]:
+            if msg.get("sender_type") == "employee":
+                msg["read"] = False
+                msg.pop("read_at", None)
     
     return conversation
 
@@ -259,6 +270,10 @@ async def get_consignor_conversation(email: str):
     if not agreement:
         raise HTTPException(status_code=404, detail="No consignment agreement found")
     
+    # Check if admin has read receipts enabled
+    read_receipts_setting = await db.admin_settings.find_one({"setting_key": "read_receipts_enabled"})
+    show_read_receipts = read_receipts_setting.get("value", True) if read_receipts_setting else True
+    
     user_name = agreement.get("full_name", email)
     
     # Find existing conversation (exclude soft-deleted)
@@ -314,6 +329,13 @@ async def get_consignor_conversation(email: str):
                 msg for msg in updated_conv["messages"] 
                 if not msg.get("deleted_at")
             ]
+    
+    # If read receipts are disabled, hide read status from consignor's messages
+    if not show_read_receipts and "messages" in conversation:
+        for msg in conversation["messages"]:
+            if msg.get("sender_type") == "consignor":
+                msg["read"] = False
+                msg.pop("read_at", None)
     
     return conversation
 
@@ -772,3 +794,24 @@ async def consignor_delete_message(message_id: str, email: str):
     )
     
     return {"success": True, "message": "Message deleted successfully"}
+
+
+
+# ============ READ RECEIPTS SETTINGS ============
+
+@router.post("/admin/read-receipts-setting")
+async def set_read_receipts_setting(enabled: bool, admin: dict = Depends(get_admin_user)):
+    """Admin: Set whether to show read receipts to message recipients"""
+    await db.admin_settings.update_one(
+        {"setting_key": "read_receipts_enabled"},
+        {"$set": {"setting_key": "read_receipts_enabled", "value": enabled}},
+        upsert=True
+    )
+    return {"success": True, "read_receipts_enabled": enabled}
+
+
+@router.get("/admin/read-receipts-setting")
+async def get_read_receipts_setting(admin: dict = Depends(get_admin_user)):
+    """Admin: Get current read receipts setting"""
+    setting = await db.admin_settings.find_one({"setting_key": "read_receipts_enabled"}, {"_id": 0})
+    return {"read_receipts_enabled": setting.get("value", True) if setting else True}

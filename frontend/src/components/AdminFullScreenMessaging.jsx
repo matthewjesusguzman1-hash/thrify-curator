@@ -43,22 +43,43 @@ export default function AdminFullScreenMessaging({
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
-  const [readReceiptsEnabled, setReadReceiptsEnabled] = useState(() => {
-    const saved = localStorage.getItem("admin_read_receipts_enabled");
-    return saved !== null ? JSON.parse(saved) : true;
-  });
+  const [readReceiptsEnabled, setReadReceiptsEnabled] = useState(true);
   const messagesContainerRef = useRef(null);
   const pollingRef = useRef(null);
   const isAtBottomRef = useRef(true);
   const previousUnreadRef = useRef(0);
 
   const getToken = () => localStorage.getItem("token");
+  const API = process.env.REACT_APP_BACKEND_URL;
 
-  // Toggle read receipts
-  const toggleReadReceipts = () => {
+  // Fetch read receipts setting from backend on mount
+  useEffect(() => {
+    const fetchReadReceiptsSetting = async () => {
+      try {
+        const response = await axios.get(`${API}/conversations/admin/read-receipts-setting`, {
+          headers: { Authorization: `Bearer ${getToken()}` }
+        });
+        setReadReceiptsEnabled(response.data.read_receipts_enabled);
+      } catch (error) {
+        console.error("Failed to fetch read receipts setting:", error);
+      }
+    };
+    fetchReadReceiptsSetting();
+  }, [API]);
+
+  // Toggle read receipts - saves to backend
+  const toggleReadReceipts = async () => {
     const newValue = !readReceiptsEnabled;
     setReadReceiptsEnabled(newValue);
-    localStorage.setItem("admin_read_receipts_enabled", JSON.stringify(newValue));
+    try {
+      await axios.post(`${API}/conversations/admin/read-receipts-setting?enabled=${newValue}`, {}, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+      });
+    } catch (error) {
+      console.error("Failed to save read receipts setting:", error);
+      // Revert on error
+      setReadReceiptsEnabled(!newValue);
+    }
   };
 
   // Check if user is scrolled to bottom
