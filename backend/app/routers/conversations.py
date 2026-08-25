@@ -249,7 +249,7 @@ async def employee_send_message(message: ConversationCreate, user: dict = Depend
             db=db,
             title=f"Message from {user_name}",
             body=message.content[:100] + "..." if len(message.content) > 100 else message.content,
-            url="/admin?section=conversations",
+            url="/admin?openMessages=true",
             notification_type="employee_message"
         )
     except Exception as e:
@@ -431,7 +431,7 @@ async def consignor_send_message(email: str, message: ConversationCreate):
             db=db,
             title=f"Message from {user_name}",
             body=message.content[:100] + "..." if len(message.content) > 100 else message.content,
-            url="/admin?section=conversations",
+            url="/admin?openMessages=true",
             notification_type="consignor_message"
         )
     except Exception as e:

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, LogIn, Fingerprint, Eye, EyeOff, Lock, HelpCircle, Mail, X, AlertCircle, Loader2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ const OWNER_CODES = {
 
 export default function AuthPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -38,6 +39,9 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [loginMode, setLoginMode] = useState("normal"); // "normal", "password"
+  
+  // Store redirect intent from URL params
+  const redirectAfterLogin = searchParams.get('openMessages') === 'true' ? '/admin?openMessages=true' : null;
   
   // Ref to prevent duplicate login attempts
   const loginInProgressRef = useRef(false);
@@ -83,7 +87,7 @@ export default function AuthPage() {
           
           const user = JSON.parse(userData);
           if (user.role === "admin") {
-            navigate("/admin");
+            navigate(redirectAfterLogin || "/admin");
           } else {
             navigate("/dashboard");
           }
@@ -243,7 +247,7 @@ export default function AuthPage() {
       toast.success(`Welcome back, ${user.name}!`);
       
       if (user.role === "admin") {
-        navigate("/admin");
+        navigate(redirectAfterLogin || "/admin");
       } else {
         navigate("/dashboard");
       }
@@ -583,7 +587,7 @@ export default function AuthPage() {
                       toast.success(`Welcome back, ${user.name}!`);
                       
                       if (user.role === "admin") {
-                        navigate("/admin");
+                        navigate(redirectAfterLogin || "/admin");
                       } else {
                         navigate("/dashboard");
                       }

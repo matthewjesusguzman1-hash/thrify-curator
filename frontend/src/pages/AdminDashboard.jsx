@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Users, 
@@ -112,6 +112,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // Haptic feedback
   const { buttonPress, heavyPress, lightTap, successFeedback, errorFeedback, warningFeedback } = useHaptics();
@@ -826,6 +827,14 @@ export default function AdminDashboard() {
     fetchPayrollSettings();
     fetchPayrollSummary();
     fetchFormSubmissions(); // Auto-fetch form submissions on page load
+    
+    // Check if we should open messages from URL param (e.g., from push notification)
+    if (searchParams.get('openMessages') === 'true') {
+      setShowFullScreenMessages(true);
+      // Clear the param from URL
+      searchParams.delete('openMessages');
+      setSearchParams(searchParams, { replace: true });
+    }
     
     // Register for push notifications (for clock-in/out alerts)
     const registerPush = async () => {
