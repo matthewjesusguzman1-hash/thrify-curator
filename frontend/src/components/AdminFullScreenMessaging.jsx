@@ -55,17 +55,23 @@ export default function AdminFullScreenMessaging({
   // Fetch read receipts setting from backend on mount
   useEffect(() => {
     const fetchReadReceiptsSetting = async () => {
+      if (!API) return;
+      const token = getToken();
+      if (!token) return;
+      
       try {
         const response = await axios.get(`${API}/conversations/admin/read-receipts-setting`, {
-          headers: { Authorization: `Bearer ${getToken()}` }
+          headers: { Authorization: `Bearer ${token}` }
         });
         setReadReceiptsEnabled(response.data.read_receipts_enabled);
       } catch (error) {
         console.error("Failed to fetch read receipts setting:", error);
+        // Default to true if fetch fails
+        setReadReceiptsEnabled(true);
       }
     };
     fetchReadReceiptsSetting();
-  }, [API]);
+  }, []);
 
   // Toggle read receipts - saves to backend
   const toggleReadReceipts = async () => {
@@ -140,17 +146,18 @@ export default function AdminFullScreenMessaging({
 
   const fetchSelectedConversation = useCallback(async (convId) => {
     const token = getToken();
-    if (!token || !convId) return;
+    const apiUrl = process.env.REACT_APP_BACKEND_URL;
+    if (!token || !convId || !apiUrl) return;
     
     try {
-      const res = await axios.get(`${API}/conversations/admin/conversation/${convId}`, {
+      const res = await axios.get(`${apiUrl}/conversations/admin/conversation/${convId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSelectedConversation(res.data);
     } catch (error) {
       console.error("Error fetching conversation:", error);
     }
-  }, [API]);
+  }, []);
 
   const selectedConversationIdRef = useRef(null);
   
