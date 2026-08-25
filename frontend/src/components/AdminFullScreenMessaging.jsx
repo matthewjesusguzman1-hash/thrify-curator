@@ -506,7 +506,7 @@ export default function AdminFullScreenMessaging({
                 <p className="font-medium text-gray-900">{selectedConversation.participant_name}</p>
                 <p className="text-xs text-gray-500 capitalize">{selectedConversation.participant_type}</p>
               </div>
-              {/* Read receipts toggle */}
+              {/* Read receipts toggle - controls if THEY see you read their messages */}
               <button
                 onClick={toggleReadReceipts}
                 className={`p-2 rounded-lg transition-colors ${
@@ -514,7 +514,7 @@ export default function AdminFullScreenMessaging({
                     ? 'text-blue-500 hover:bg-blue-50' 
                     : 'text-gray-400 hover:bg-gray-100'
                 }`}
-                title={readReceiptsEnabled ? "Read receipts on - click to hide" : "Read receipts off - click to show"}
+                title={readReceiptsEnabled ? "They CAN see when you read their messages" : "They CANNOT see when you read their messages"}
               >
                 {readReceiptsEnabled ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
               </button>
@@ -569,8 +569,8 @@ export default function AdminFullScreenMessaging({
                         msg.sender_type === 'admin' ? 'text-white/70' : 'text-gray-400'
                       }`}>
                         <span className="text-xs">{formatMessageTime(msg.sent_at)}</span>
-                        {/* Read receipt indicator for admin messages - only if enabled */}
-                        {msg.sender_type === 'admin' && readReceiptsEnabled && (
+                        {/* Read receipt indicator for admin messages - ALWAYS show to admin */}
+                        {msg.sender_type === 'admin' && (
                           <span className="flex items-center ml-2" title={msg.read_at ? `Seen ${formatReadTime(msg.read_at)}` : "Delivered"}>
                             {msg.read ? (
                               <>
