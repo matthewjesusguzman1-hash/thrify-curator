@@ -50,17 +50,17 @@ export default function AdminFullScreenMessaging({
   const previousUnreadRef = useRef(0);
 
   const getToken = () => localStorage.getItem("token");
-  const API = process.env.REACT_APP_BACKEND_URL;
 
   // Fetch read receipts setting from backend on mount
   useEffect(() => {
     const fetchReadReceiptsSetting = async () => {
-      if (!API) return;
+      const apiUrl = process.env.REACT_APP_BACKEND_URL;
+      if (!apiUrl) return;
       const token = getToken();
       if (!token) return;
       
       try {
-        const response = await axios.get(`${API}/conversations/admin/read-receipts-setting`, {
+        const response = await axios.get(`${apiUrl}/conversations/admin/read-receipts-setting`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setReadReceiptsEnabled(response.data.read_receipts_enabled);
@@ -77,8 +77,9 @@ export default function AdminFullScreenMessaging({
   const toggleReadReceipts = async () => {
     const newValue = !readReceiptsEnabled;
     setReadReceiptsEnabled(newValue);
+    const apiUrl = process.env.REACT_APP_BACKEND_URL;
     try {
-      await axios.post(`${API}/conversations/admin/read-receipts-setting?enabled=${newValue}`, {}, {
+      await axios.post(`${apiUrl}/conversations/admin/read-receipts-setting?enabled=${newValue}`, {}, {
         headers: { Authorization: `Bearer ${getToken()}` }
       });
     } catch (error) {
@@ -114,14 +115,15 @@ export default function AdminFullScreenMessaging({
 
   const fetchConversations = useCallback(async () => {
     const token = getToken();
-    if (!token) return;
+    const apiUrl = process.env.REACT_APP_BACKEND_URL;
+    if (!token || !apiUrl) return;
     
     try {
       const [convRes, countRes] = await Promise.all([
-        axios.get(`${API}/conversations/admin/list`, {
+        axios.get(`${apiUrl}/conversations/admin/list`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        axios.get(`${API}/conversations/admin/unread-count`, {
+        axios.get(`${apiUrl}/conversations/admin/unread-count`, {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
@@ -202,8 +204,9 @@ export default function AdminFullScreenMessaging({
 
   const handleSelectConversation = async (conv) => {
     const token = getToken();
+    const apiUrl = process.env.REACT_APP_BACKEND_URL;
     try {
-      const res = await axios.get(`${API}/conversations/admin/conversation/${conv.id}`, {
+      const res = await axios.get(`${apiUrl}/conversations/admin/conversation/${conv.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSelectedConversation(res.data);
@@ -225,10 +228,11 @@ export default function AdminFullScreenMessaging({
     
     setSending(true);
     const token = getToken();
+    const apiUrl = process.env.REACT_APP_BACKEND_URL;
     
     try {
       await axios.post(
-        `${API}/conversations/admin/reply`,
+        `${apiUrl}/conversations/admin/reply`,
         {
           conversation_id: selectedConversation.id,
           content: newMessage
@@ -298,8 +302,9 @@ export default function AdminFullScreenMessaging({
   // Delete conversation (soft delete)
   const handleDeleteConversation = async (conversationId, participantName) => {
     const token = getToken();
+    const apiUrl = process.env.REACT_APP_BACKEND_URL;
     try {
-      await axios.delete(`${API}/conversations/admin/conversation/${conversationId}`, {
+      await axios.delete(`${apiUrl}/conversations/admin/conversation/${conversationId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
