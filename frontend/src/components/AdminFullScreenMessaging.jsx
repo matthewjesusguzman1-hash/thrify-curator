@@ -12,7 +12,9 @@ import {
   Trash2,
   AlertTriangle,
   Check,
-  CheckCheck
+  CheckCheck,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,12 +43,23 @@ export default function AdminFullScreenMessaging({
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+  const [readReceiptsEnabled, setReadReceiptsEnabled] = useState(() => {
+    const saved = localStorage.getItem("admin_read_receipts_enabled");
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const messagesContainerRef = useRef(null);
   const pollingRef = useRef(null);
   const isAtBottomRef = useRef(true);
   const previousUnreadRef = useRef(0);
 
   const getToken = () => localStorage.getItem("token");
+
+  // Toggle read receipts
+  const toggleReadReceipts = () => {
+    const newValue = !readReceiptsEnabled;
+    setReadReceiptsEnabled(newValue);
+    localStorage.setItem("admin_read_receipts_enabled", JSON.stringify(newValue));
+  };
 
   // Check if user is scrolled to bottom
   const checkIfAtBottom = () => {
@@ -436,6 +449,18 @@ export default function AdminFullScreenMessaging({
                 <p className="font-medium text-gray-900">{selectedConversation.participant_name}</p>
                 <p className="text-xs text-gray-500 capitalize">{selectedConversation.participant_type}</p>
               </div>
+              {/* Read receipts toggle */}
+              <button
+                onClick={toggleReadReceipts}
+                className={`p-2 rounded-lg transition-colors ${
+                  readReceiptsEnabled 
+                    ? 'text-blue-500 hover:bg-blue-50' 
+                    : 'text-gray-400 hover:bg-gray-100'
+                }`}
+                title={readReceiptsEnabled ? "Read receipts on - click to hide" : "Read receipts off - click to show"}
+              >
+                {readReceiptsEnabled ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+              </button>
               {/* Delete button in header */}
               <button
                 onClick={() => showDeleteConfirmation(selectedConversation)}
@@ -487,8 +512,8 @@ export default function AdminFullScreenMessaging({
                         msg.sender_type === 'admin' ? 'text-white/70' : 'text-gray-400'
                       }`}>
                         <span className="text-xs">{formatMessageTime(msg.sent_at)}</span>
-                        {/* Read receipt indicator for admin messages */}
-                        {msg.sender_type === 'admin' && (
+                        {/* Read receipt indicator for admin messages - only if enabled */}
+                        {msg.sender_type === 'admin' && readReceiptsEnabled && (
                           <span className="flex items-center ml-2" title={msg.read_at ? `Seen ${formatReadTime(msg.read_at)}` : "Delivered"}>
                             {msg.read ? (
                               <>
