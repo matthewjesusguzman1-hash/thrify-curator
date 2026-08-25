@@ -54,7 +54,7 @@ export default function AdminFullScreenMessaging({
   // Fetch read receipts setting from backend on mount
   useEffect(() => {
     const fetchReadReceiptsSetting = async () => {
-      const apiUrl = process.env.REACT_APP_BACKEND_URL;
+      const apiUrl = `${process.env.REACT_APP_BACKEND_URL}/api`;
       if (!apiUrl) return;
       const token = getToken();
       if (!token) return;
@@ -77,7 +77,7 @@ export default function AdminFullScreenMessaging({
   const toggleReadReceipts = async () => {
     const newValue = !readReceiptsEnabled;
     setReadReceiptsEnabled(newValue);
-    const apiUrl = process.env.REACT_APP_BACKEND_URL;
+    const apiUrl = `${process.env.REACT_APP_BACKEND_URL}/api`;
     try {
       await axios.post(`${apiUrl}/conversations/admin/read-receipts-setting?enabled=${newValue}`, {}, {
         headers: { Authorization: `Bearer ${getToken()}` }
@@ -115,7 +115,7 @@ export default function AdminFullScreenMessaging({
 
   const fetchConversations = useCallback(async () => {
     const token = getToken();
-    const apiUrl = process.env.REACT_APP_BACKEND_URL;
+    const apiUrl = `${process.env.REACT_APP_BACKEND_URL}/api`;
     if (!token || !apiUrl) return;
     
     try {
@@ -148,7 +148,7 @@ export default function AdminFullScreenMessaging({
 
   const fetchSelectedConversation = useCallback(async (convId) => {
     const token = getToken();
-    const apiUrl = process.env.REACT_APP_BACKEND_URL;
+    const apiUrl = `${process.env.REACT_APP_BACKEND_URL}/api`;
     if (!token || !convId || !apiUrl) return;
     
     try {
@@ -204,7 +204,7 @@ export default function AdminFullScreenMessaging({
 
   const handleSelectConversation = async (conv) => {
     const token = getToken();
-    const apiUrl = process.env.REACT_APP_BACKEND_URL;
+    const apiUrl = `${process.env.REACT_APP_BACKEND_URL}/api`;
     try {
       const res = await axios.get(`${apiUrl}/conversations/admin/conversation/${conv.id}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -228,7 +228,7 @@ export default function AdminFullScreenMessaging({
     
     setSending(true);
     const token = getToken();
-    const apiUrl = process.env.REACT_APP_BACKEND_URL;
+    const apiUrl = `${process.env.REACT_APP_BACKEND_URL}/api`;
     
     try {
       await axios.post(
@@ -302,7 +302,7 @@ export default function AdminFullScreenMessaging({
   // Delete conversation (soft delete)
   const handleDeleteConversation = async (conversationId, participantName) => {
     const token = getToken();
-    const apiUrl = process.env.REACT_APP_BACKEND_URL;
+    const apiUrl = `${process.env.REACT_APP_BACKEND_URL}/api`;
     try {
       await axios.delete(`${apiUrl}/conversations/admin/conversation/${conversationId}`, {
         headers: { Authorization: `Bearer ${token}` }
