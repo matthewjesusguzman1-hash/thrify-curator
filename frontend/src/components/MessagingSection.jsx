@@ -128,13 +128,8 @@ export default function MessagingSection({
           const newMessages = newConversation?.messages || [];
           const adminMessages = newMessages.filter(m => m.sender_type === "admin");
           
-          // Check if there's a new admin message
+          // Check if there's a new admin message - just vibrate, no toast
           if (adminMessages.length > previousMessageCountRef.current) {
-            const latestAdmin = adminMessages[adminMessages.length - 1];
-            toast.info(`New message from ${latestAdmin.sender_name || "Admin"}`, {
-              description: latestAdmin.content.substring(0, 50) + (latestAdmin.content.length > 50 ? "..." : "")
-            });
-            
             // Vibrate device if enabled
             triggerVibration([200, 100, 200]);
             
@@ -187,7 +182,7 @@ export default function MessagingSection({
       
       setNewMessage("");
       await fetchConversation();
-      toast.success("Message sent!");
+      // No toast - user can see the message appeared
     } catch (error) {
       console.error("Failed to send message:", error);
       toast.error("Failed to send message");
