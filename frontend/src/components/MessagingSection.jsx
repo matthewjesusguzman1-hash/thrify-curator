@@ -396,16 +396,22 @@ export default function MessagingSection({
               )}
             </div>
 
-            {/* Message input - textarea for mobile */}
+            {/* Message input - auto-expanding textarea */}
             <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10">
               <div className="flex flex-col gap-2">
                 <textarea
                   ref={inputRef}
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value);
+                    // Auto-expand textarea
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+                  }}
                   placeholder="Type a message..."
-                  rows={2}
-                  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 resize-none"
+                  rows={1}
+                  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 resize-none overflow-hidden"
+                  style={{ minHeight: '44px', maxHeight: '200px' }}
                   disabled={sending}
                   data-testid="message-input"
                 />

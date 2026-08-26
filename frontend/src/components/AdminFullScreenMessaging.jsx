@@ -597,10 +597,16 @@ export default function AdminFullScreenMessaging({
               <div className="flex flex-col gap-2">
                 <textarea
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value);
+                    // Auto-expand textarea
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+                  }}
                   placeholder="Type a message..."
-                  rows={2}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  rows={1}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-hidden"
+                  style={{ minHeight: '44px', maxHeight: '200px' }}
                   disabled={sending}
                 />
                 <div className="flex justify-end">
