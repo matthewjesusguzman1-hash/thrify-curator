@@ -2407,17 +2407,13 @@ export default function EmployeeDashboard({
                             <span className="w-6 h-6 bg-[#EC4899]/20 rounded-full flex items-center justify-center text-xs text-[#EC4899] font-bold">2</span>
                             Share Your RustDesk ID (Optional)
                           </h4>
-                          <ol className="text-white/70 text-sm space-y-2 list-decimal list-inside mb-4">
-                            <li>Install RustDesk on your computer</li>
-                            <li>Open RustDesk and find your ID (9-digit number)</li>
-                            <li>Enter it below and click Share to send it to your manager</li>
-                          </ol>
+                          <p className="text-white/50 text-xs mb-3">Find your ID in RustDesk after installing, then share it with your manager</p>
                           
                           {/* RustDesk ID Input with Share Button */}
                           <div className="flex gap-2">
                             <Input
                               type="text"
-                              placeholder="Enter your RustDesk ID (e.g., 123 456 789)"
+                              placeholder="Your RustDesk ID (e.g., 123 456 789)"
                               value={rustdeskId}
                               onChange={(e) => setRustdeskId(e.target.value)}
                               className="flex-1 bg-white/10 border-white/20 text-white placeholder-white/40"
@@ -2458,69 +2454,57 @@ export default function EmployeeDashboard({
                             Connect to Work Computer
                           </h4>
                           
-                          {/* Company RustDesk ID and Password */}
-                          <div className="bg-black/20 rounded-lg p-4 mb-4 space-y-3">
-                            <div>
-                              <p className="text-white/70 text-xs mb-1">Company RustDesk ID:</p>
-                              <div className="flex items-center gap-3 flex-wrap">
-                                <code className="text-[#8B5CF6] font-mono text-2xl font-bold tracking-wider">
-                                  70 579 183
-                                </code>
-                                <Button
-                                  onClick={copyCompanyRustdesk}
-                                  size="sm"
-                                  variant="outline"
-                                  className="border-[#8B5CF6]/50 text-[#8B5CF6] hover:bg-[#8B5CF6]/20"
-                                >
-                                  <FileText className="w-3 h-3 mr-1" />
-                                  Copy
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="pt-2 border-t border-white/10">
-                              <p className="text-white/70 text-xs mb-1">Password:</p>
-                              <div className="flex items-center gap-3 flex-wrap">
-                                <code className="text-[#EC4899] font-mono text-lg font-bold">
-                                  {COMPANY_RUSTDESK_PASSWORD}
-                                </code>
-                                <Button
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(COMPANY_RUSTDESK_PASSWORD);
-                                    toast.success("Password copied!");
-                                  }}
-                                  size="sm"
-                                  variant="outline"
-                                  className="border-[#EC4899]/50 text-[#EC4899] hover:bg-[#EC4899]/20"
-                                >
-                                  <FileText className="w-3 h-3 mr-1" />
-                                  Copy
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                          
                           {/* One-Click Connect Button */}
                           <Button
                             onClick={launchRustdeskConnect}
-                            className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#7C3AED] hover:to-[#DB2777] text-white py-6 text-lg font-semibold"
+                            className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#7C3AED] hover:to-[#DB2777] text-white py-6 text-lg font-semibold mb-3"
                           >
                             <Briefcase className="w-5 h-5 mr-2" />
                             Connect to Work Computer
                           </Button>
-                          <p className="text-white/50 text-xs mt-2 text-center">
-                            Opens RustDesk with the company ID pre-filled
-                          </p>
-                        </div>
-                        
-                        {/* Quick Instructions */}
-                        <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                          <h4 className="text-white font-medium mb-2">Quick Connect Steps:</h4>
-                          <ol className="text-white/70 text-sm space-y-1 list-decimal list-inside">
-                            <li>Click "Connect to Work Computer" above</li>
-                            <li>RustDesk will open automatically</li>
-                            <li>Enter the password: <code className="text-[#EC4899]">Thrifty Curator1</code></li>
-                            <li>You are connected! Start your work tasks</li>
-                          </ol>
+                          
+                          {/* Collapsible Manual Connection Info */}
+                          <Collapsible>
+                            <CollapsibleTrigger className="flex items-center gap-2 text-white/50 text-xs hover:text-white/70 transition-colors w-full justify-center">
+                              <span>Manual connection info (if needed)</span>
+                              <ChevronDown className="w-3 h-3" />
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="bg-black/20 rounded-lg p-3 mt-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-white/50 text-xs">ID:</span>
+                                  <div className="flex items-center gap-2">
+                                    <code className="text-[#8B5CF6] font-mono text-sm font-bold">70 579 183</code>
+                                    <Button
+                                      onClick={copyCompanyRustdesk}
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 px-2 text-[#8B5CF6] hover:bg-[#8B5CF6]/20"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-white/50 text-xs">Password:</span>
+                                  <div className="flex items-center gap-2">
+                                    <code className="text-[#EC4899] font-mono text-sm font-bold">{COMPANY_RUSTDESK_PASSWORD}</code>
+                                    <Button
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(COMPANY_RUSTDESK_PASSWORD);
+                                        toast.success("Password copied!");
+                                      }}
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 px-2 text-[#EC4899] hover:bg-[#EC4899]/20"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
                         </div>
                         
                         {/* Important Tips */}
