@@ -221,6 +221,7 @@ export default function EmployeeDashboard({
   
   // Company RustDesk ID for remote workers to connect to
   const COMPANY_RUSTDESK_ID = "705791873";
+  const COMPANY_RUSTDESK_PASSWORD = "Thrifty Curator1";
   
   // Messaging state for header shortcut and full-screen modal
   const [showFullScreenMessages, setShowFullScreenMessages] = useState(false);
@@ -2524,22 +2525,44 @@ export default function EmployeeDashboard({
                             Connect to Work Computer
                           </h4>
                           
-                          {/* Company RustDesk ID */}
-                          <div className="bg-black/20 rounded-lg p-4 mb-4">
-                            <p className="text-white/70 text-xs mb-2">Company RustDesk ID:</p>
-                            <div className="flex items-center gap-3 flex-wrap">
-                              <code className="text-[#8B5CF6] font-mono text-2xl font-bold tracking-wider">
-                                705 791 873
-                              </code>
-                              <Button
-                                onClick={copyCompanyRustdesk}
-                                size="sm"
-                                variant="outline"
-                                className="border-[#8B5CF6]/50 text-[#8B5CF6] hover:bg-[#8B5CF6]/20"
-                              >
-                                <FileText className="w-3 h-3 mr-1" />
-                                Copy
-                              </Button>
+                          {/* Company RustDesk ID and Password */}
+                          <div className="bg-black/20 rounded-lg p-4 mb-4 space-y-3">
+                            <div>
+                              <p className="text-white/70 text-xs mb-1">Company RustDesk ID:</p>
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <code className="text-[#8B5CF6] font-mono text-2xl font-bold tracking-wider">
+                                  705 791 873
+                                </code>
+                                <Button
+                                  onClick={copyCompanyRustdesk}
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-[#8B5CF6]/50 text-[#8B5CF6] hover:bg-[#8B5CF6]/20"
+                                >
+                                  <FileText className="w-3 h-3 mr-1" />
+                                  Copy
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="pt-2 border-t border-white/10">
+                              <p className="text-white/70 text-xs mb-1">Password:</p>
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <code className="text-[#EC4899] font-mono text-lg font-bold">
+                                  {COMPANY_RUSTDESK_PASSWORD}
+                                </code>
+                                <Button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(COMPANY_RUSTDESK_PASSWORD);
+                                    toast.success("Password copied!");
+                                  }}
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-[#EC4899]/50 text-[#EC4899] hover:bg-[#EC4899]/20"
+                                >
+                                  <FileText className="w-3 h-3 mr-1" />
+                                  Copy
+                                </Button>
+                              </div>
                             </div>
                           </div>
                           
@@ -2562,8 +2585,8 @@ export default function EmployeeDashboard({
                           <ol className="text-white/70 text-sm space-y-1 list-decimal list-inside">
                             <li>Click "Connect to Work Computer" above</li>
                             <li>RustDesk will open automatically</li>
-                            <li>Wait for connection approval (or enter password if provided)</li>
-                            <li>You're connected! Start your work tasks</li>
+                            <li>Enter the password: <code className="text-[#EC4899]">Thrifty Curator1</code></li>
+                            <li>You are connected! Start your work tasks</li>
                           </ol>
                         </div>
                         
