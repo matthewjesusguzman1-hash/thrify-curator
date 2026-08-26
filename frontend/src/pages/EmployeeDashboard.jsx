@@ -220,7 +220,7 @@ export default function EmployeeDashboard({
   const [rustdeskShared, setRustdeskShared] = useState(false);
   
   // Company RustDesk ID for remote workers to connect to
-  const COMPANY_RUSTDESK_ID = "705791873";
+  const COMPANY_RUSTDESK_ID = "70579183";
   const COMPANY_RUSTDESK_PASSWORD = "Thrifty Curator1";
   
   // Messaging state for header shortcut and full-screen modal
@@ -1118,7 +1118,7 @@ export default function EmployeeDashboard({
   const copyCompanyRustdesk = () => {
     navigator.clipboard.writeText(COMPANY_RUSTDESK_ID);
     toast.success("Company RustDesk ID copied!", {
-      description: "705 791 873"
+      description: "70 579 183"
     });
   };
 
@@ -2531,7 +2531,7 @@ export default function EmployeeDashboard({
                               <p className="text-white/70 text-xs mb-1">Company RustDesk ID:</p>
                               <div className="flex items-center gap-3 flex-wrap">
                                 <code className="text-[#8B5CF6] font-mono text-2xl font-bold tracking-wider">
-                                  705 791 873
+                                  70 579 183
                                 </code>
                                 <Button
                                   onClick={copyCompanyRustdesk}

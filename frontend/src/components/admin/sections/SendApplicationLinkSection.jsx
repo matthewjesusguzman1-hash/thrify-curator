@@ -781,7 +781,7 @@ function SendFollowupModal({ application, onClose, onSent, getAuthHeader }) {
                 Include RustDesk Instructions
               </Label>
               <p className="text-xs text-amber-700 mt-1">
-                Adds remote access code (705 791 873) to the email
+                Adds remote access code (70 579 183) to the email
               </p>
             </div>
           </div>
@@ -950,7 +950,7 @@ function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
             </p>
             <ul className="text-xs text-green-600 mt-2 ml-5 space-y-1 list-disc">
               <li>Login instructions for the Employee Portal (email-based login)</li>
-              {isRemote && <li>RustDesk remote access code (705 791 873)</li>}
+              {isRemote && <li>RustDesk remote access code (70 579 183)</li>}
               <li>Reminders to complete required forms (Contractor Agreement, {isRemote ? 'W-8BEN' : 'W-9'})</li>
               <li>Option to set up a password for added security</li>
             </ul>
