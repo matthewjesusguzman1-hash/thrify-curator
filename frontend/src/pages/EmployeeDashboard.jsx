@@ -1174,8 +1174,9 @@ export default function EmployeeDashboard({
     }
     
     // Only check location for clock IN - allow clock out from anywhere
-    // Admins and remote workers bypass location check entirely
-    if (action === "in" && user?.role !== 'admin' && !user?.is_remote_worker && !isRemoteWorker()) {
+    // Admins bypass location check entirely
+    // Remote workers still need location check on clock-in (to verify remote computer is at work)
+    if (action === "in" && user?.role !== 'admin') {
       setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
       
       try {

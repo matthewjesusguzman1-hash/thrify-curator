@@ -106,8 +106,9 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
     
     if action.action == "in":
         # Check geofencing - must be within business location to clock in
-        # Skip geofence check for admin users and remote workers
-        if user.get("role") != "admin" and not user.get("is_remote_worker"):
+        # Skip geofence check for admin users only
+        # Remote workers still need to verify they're remoting into a computer at the work location
+        if user.get("role") != "admin":
             if action.latitude is None or action.longitude is None:
                 raise HTTPException(
                     status_code=400, 
