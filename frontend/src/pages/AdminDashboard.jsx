@@ -1437,12 +1437,22 @@ export default function AdminDashboard() {
     }
   }, [employees, getAuthHeader]);
 
-  // Fetch clock statuses when employees section is expanded
+  // Fetch clock statuses when employees section is expanded OR on initial load
   useEffect(() => {
-    if (showAllEmployees && employees.length > 0) {
+    if (employees.length > 0) {
       fetchEmployeeClockStatuses();
     }
-  }, [showAllEmployees, employees.length, fetchEmployeeClockStatuses]);
+  }, [employees.length, fetchEmployeeClockStatuses]);
+
+  // Poll clock statuses every 30 seconds to keep the count updated
+  useEffect(() => {
+    if (employees.length > 0) {
+      const interval = setInterval(() => {
+        fetchEmployeeClockStatuses();
+      }, 30000); // 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [employees.length, fetchEmployeeClockStatuses]);
 
   // Refresh time entries when section is opened
   useEffect(() => {

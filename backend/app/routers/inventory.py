@@ -900,5 +900,198 @@ async def clear_all_inventory_data():
     }
 
 
-# Need to import timedelta at the top
-from datetime import timedelta
+# ============== TAX REPORT ==============
+
+@router.get("/tax-report/{year}")
+async def generate_tax_report(year: int, platforms: Optional[str] = None):
+    """
+    Generate a PDF tax report for a calendar year.
+    Optionally filter by platforms (comma-separated).
+    """
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    
+    # Build query for sold items in the year
+    query = {
+        "status": iregex("sold"),
+        "sold_date": re.compile(f"^{year}")
+    }
+    
+    # Filter by platforms if specified
+    platform_list = None
+    if platforms:
+        platform_list = [p.strip() for p in platforms.split(",")]
+        query["platform"] = {"$in": platform_list}
+    
+    # Fetch all sold items for the year
+    items = await db.inventory_items.find(
+        query,
+        {"_id": 0, "title": 1, "sku": 1, "platform": 1, "price_sold": 1, 
+         "cogs": 1, "fees": 1, "shipping_cost": 1, "sold_date": 1}
+    ).to_list(length=None)
+    
+    # Calculate totals
+    total_revenue = sum(item.get("price_sold", 0) or 0 for item in items)
+    total_cogs = sum(item.get("cogs", 0) or 0 for item in items)
+    total_fees = sum(item.get("fees", 0) or 0 for item in items)
+    total_shipping = sum(item.get("shipping_cost", 0) or 0 for item in items)
+    total_profit = total_revenue - total_cogs - total_fees - total_shipping
+    
+    # Group by platform
+    by_platform = {}
+    for item in items:
+        platform = item.get("platform") or "Unknown"
+        if platform not in by_platform:
+            by_platform[platform] = {"count": 0, "revenue": 0, "cogs": 0, "fees": 0, "shipping": 0}
+        by_platform[platform]["count"] += 1
+        by_platform[platform]["revenue"] += (item.get("price_sold", 0) or 0)
+        by_platform[platform]["cogs"] += (item.get("cogs", 0) or 0)
+        by_platform[platform]["fees"] += (item.get("fees", 0) or 0)
+        by_platform[platform]["shipping"] += (item.get("shipping_cost", 0) or 0)
+    
+    # Group by month
+    by_month = {}
+    for item in items:
+        sold_date = item.get("sold_date", "")
+        if sold_date and len(sold_date) >= 7:
+            month = sold_date[:7]  # YYYY-MM
+            if month not in by_month:
+                by_month[month] = {"count": 0, "revenue": 0, "cogs": 0, "fees": 0, "shipping": 0}
+            by_month[month]["count"] += 1
+            by_month[month]["revenue"] += (item.get("price_sold", 0) or 0)
+            by_month[month]["cogs"] += (item.get("cogs", 0) or 0)
+            by_month[month]["fees"] += (item.get("fees", 0) or 0)
+            by_month[month]["shipping"] += (item.get("shipping_cost", 0) or 0)
+    
+    # Generate PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    styles = getSampleStyleSheet()
+    elements = []
+    
+    # Title
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=18, spaceAfter=20, alignment=1)
+    elements.append(Paragraph(f"Tax Report - {year}", title_style))
+    elements.append(Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y')}", 
+                              ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=10, alignment=1, spaceAfter=20)))
+    
+    # Summary Section
+    elements.append(Paragraph("Annual Summary", styles['Heading2']))
+    summary_data = [
+        ["Metric", "Amount"],
+        ["Total Items Sold", f"{len(items):,}"],
+        ["Gross Revenue", f"${total_revenue:,.2f}"],
+        ["Cost of Goods Sold (COGS)", f"${total_cogs:,.2f}"],
+        ["Marketplace Fees", f"${total_fees:,.2f}"],
+        ["Shipping Expenses", f"${total_shipping:,.2f}"],
+        ["Net Profit", f"${total_profit:,.2f}"],
+    ]
+    summary_table = Table(summary_data, colWidths=[3*inch, 2*inch])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a1a2e')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e8f5e9')),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.HexColor('#f5f5f5')]),
+    ]))
+    elements.append(summary_table)
+    elements.append(Spacer(1, 20))
+    
+    # Platform Breakdown
+    elements.append(Paragraph("Breakdown by Platform", styles['Heading2']))
+    platform_data = [["Platform", "Items", "Revenue", "COGS", "Fees", "Shipping", "Profit"]]
+    for platform in sorted(by_platform.keys()):
+        data = by_platform[platform]
+        profit = data["revenue"] - data["cogs"] - data["fees"] - data["shipping"]
+        platform_data.append([
+            platform,
+            f"{data['count']:,}",
+            f"${data['revenue']:,.2f}",
+            f"${data['cogs']:,.2f}",
+            f"${data['fees']:,.2f}",
+            f"${data['shipping']:,.2f}",
+            f"${profit:,.2f}"
+        ])
+    
+    platform_table = Table(platform_data, colWidths=[1.2*inch, 0.6*inch, 1*inch, 0.9*inch, 0.8*inch, 0.9*inch, 1*inch])
+    platform_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a1a2e')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f5f5')]),
+    ]))
+    elements.append(platform_table)
+    elements.append(Spacer(1, 20))
+    
+    # Monthly Breakdown
+    elements.append(Paragraph("Breakdown by Month", styles['Heading2']))
+    month_names = {
+        "01": "January", "02": "February", "03": "March", "04": "April",
+        "05": "May", "06": "June", "07": "July", "08": "August",
+        "09": "September", "10": "October", "11": "November", "12": "December"
+    }
+    monthly_data = [["Month", "Items", "Revenue", "COGS", "Fees", "Shipping", "Profit"]]
+    for month in sorted(by_month.keys()):
+        data = by_month[month]
+        profit = data["revenue"] - data["cogs"] - data["fees"] - data["shipping"]
+        month_num = month.split("-")[1]
+        month_name = month_names.get(month_num, month)
+        monthly_data.append([
+            month_name,
+            f"{data['count']:,}",
+            f"${data['revenue']:,.2f}",
+            f"${data['cogs']:,.2f}",
+            f"${data['fees']:,.2f}",
+            f"${data['shipping']:,.2f}",
+            f"${profit:,.2f}"
+        ])
+    
+    monthly_table = Table(monthly_data, colWidths=[1.2*inch, 0.6*inch, 1*inch, 0.9*inch, 0.8*inch, 0.9*inch, 1*inch])
+    monthly_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a1a2e')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f5f5')]),
+    ]))
+    elements.append(monthly_table)
+    elements.append(Spacer(1, 20))
+    
+    # Disclaimer
+    disclaimer_style = ParagraphStyle('Disclaimer', parent=styles['Normal'], fontSize=8, textColor=colors.grey)
+    elements.append(Paragraph(
+        "This report is generated from imported sales data for informational purposes. "
+        "Please verify all figures with your actual sales records and consult a tax professional for tax filing.",
+        disclaimer_style
+    ))
+    
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    
+    # Return as downloadable PDF
+    filename = f"tax_report_{year}.pdf"
+    if platform_list:
+        filename = f"tax_report_{year}_{'_'.join(platform_list)}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

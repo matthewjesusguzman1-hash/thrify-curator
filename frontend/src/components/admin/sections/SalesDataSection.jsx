@@ -210,6 +210,18 @@ const SalesDataSection = ({ getAuthHeader }) => {
                 <>
                   <Button
                     variant="outline"
+                    onClick={() => {
+                      const url = `${API_URL}/api/inventory/tax-report/${selectedYear}`;
+                      window.open(url, '_blank');
+                    }}
+                    className="border-green-500/50 text-green-400 hover:bg-green-500/20"
+                    data-testid="tax-report-btn"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Tax Report
+                  </Button>
+                  <Button
+                    variant="outline"
                     onClick={() => fetchData()}
                     className="border-white/20 text-white hover:bg-white/10"
                   >
