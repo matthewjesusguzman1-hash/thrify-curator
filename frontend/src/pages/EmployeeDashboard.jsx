@@ -619,8 +619,8 @@ export default function EmployeeDashboard({
     let locationInterval;
     
     const verifyLocationAndAutoClockOut = async () => {
-      // Skip if not clocked in or user is admin
-      if (!clockedIn || user?.role === 'admin') return;
+      // Skip if not clocked in, user is admin, or user is a remote worker
+      if (!clockedIn || user?.role === 'admin' || user?.is_remote_worker) return;
       
       try {
         const position = await getLocation({ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
@@ -657,7 +657,7 @@ export default function EmployeeDashboard({
       }
     };
     
-    if (clockedIn && user?.role !== 'admin') {
+    if (clockedIn && user?.role !== 'admin' && !user?.is_remote_worker) {
       // Check immediately on mount/clock-in
       verifyLocationAndAutoClockOut();
       
@@ -673,8 +673,8 @@ export default function EmployeeDashboard({
   // Check location on page load/focus - auto clock out if outside work area
   useEffect(() => {
     const checkLocationOnLoad = async () => {
-      // Skip if not clocked in or user is admin
-      if (!clockedIn || user?.role === 'admin') return;
+      // Skip if not clocked in, user is admin, or user is a remote worker
+      if (!clockedIn || user?.role === 'admin' || user?.is_remote_worker) return;
       
       try {
         const position = await getLocation({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
@@ -1174,8 +1174,8 @@ export default function EmployeeDashboard({
     }
     
     // Only check location for clock IN - allow clock out from anywhere
-    // Admins bypass location check entirely
-    if (action === "in" && user?.role !== 'admin') {
+    // Admins and remote workers bypass location check entirely
+    if (action === "in" && user?.role !== 'admin' && !user?.is_remote_worker && !isRemoteWorker()) {
       setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
       
       try {
