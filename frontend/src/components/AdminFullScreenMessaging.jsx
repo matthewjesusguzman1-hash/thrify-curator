@@ -594,35 +594,32 @@ export default function AdminFullScreenMessaging({
             
             {/* Reply Input */}
             <form onSubmit={handleSendReply} className="p-4 border-t border-gray-200 bg-white">
-              <div className="flex flex-col gap-2">
+              <div className="flex items-end gap-2">
                 <textarea
                   value={newMessage}
                   onChange={(e) => {
                     setNewMessage(e.target.value);
                     // Auto-expand textarea
                     e.target.style.height = 'auto';
-                    e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
                   }}
                   placeholder="Type a message..."
                   rows={1}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-hidden"
-                  style={{ minHeight: '44px', maxHeight: '200px' }}
+                  className="flex-1 border border-gray-300 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-base"
+                  style={{ minHeight: '40px', maxHeight: '150px', lineHeight: '1.4' }}
                   disabled={sending}
                 />
-                <div className="flex justify-end">
-                  <Button
-                    type="submit"
-                    disabled={!newMessage.trim() || sending}
-                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90"
-                  >
-                    {sending ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : (
-                      <Send className="w-4 h-4 mr-2" />
-                    )}
-                    Send
-                  </Button>
-                </div>
+                <Button
+                  type="submit"
+                  disabled={!newMessage.trim() || sending}
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 rounded-full w-10 h-10 p-0 flex-shrink-0"
+                >
+                  {sending ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Send className="w-5 h-5" />
+                  )}
+                </Button>
               </div>
             </form>
           </>

@@ -398,7 +398,7 @@ export default function MessagingSection({
 
             {/* Message input - auto-expanding textarea */}
             <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10">
-              <div className="flex flex-col gap-2">
+              <div className="flex items-end gap-2">
                 <textarea
                   ref={inputRef}
                   value={newMessage}
@@ -406,32 +406,27 @@ export default function MessagingSection({
                     setNewMessage(e.target.value);
                     // Auto-expand textarea
                     e.target.style.height = 'auto';
-                    e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
                   }}
                   placeholder="Type a message..."
                   rows={1}
-                  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 resize-none overflow-hidden"
-                  style={{ minHeight: '44px', maxHeight: '200px' }}
+                  className="flex-1 bg-white/10 border border-white/20 rounded-2xl px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 resize-none text-base"
+                  style={{ minHeight: '40px', maxHeight: '150px', lineHeight: '1.4' }}
                   disabled={sending}
                   data-testid="message-input"
                 />
-                <div className="flex justify-end items-center">
-                  <Button
-                    type="submit"
-                    disabled={!newMessage.trim() || sending}
-                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-white rounded-xl px-4 flex-shrink-0"
-                    data-testid="send-message-btn"
-                  >
-                    {sending ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4 mr-2" />
-                        Send
-                      </>
-                    )}
-                  </Button>
-                </div>
+                <Button
+                  type="submit"
+                  disabled={!newMessage.trim() || sending}
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-white rounded-full w-10 h-10 p-0 flex-shrink-0"
+                  data-testid="send-message-btn"
+                >
+                  {sending ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Send className="w-5 h-5" />
+                  )}
+                </Button>
               </div>
             </form>
           </motion.div>
