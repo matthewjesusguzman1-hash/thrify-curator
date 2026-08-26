@@ -396,7 +396,7 @@ export default function MessagingSection({
               )}
             </div>
 
-            {/* Message input - larger textarea for mobile */}
+            {/* Message input - textarea for mobile */}
             <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10">
               <div className="flex flex-col gap-2">
                 <textarea
@@ -404,8 +404,8 @@ export default function MessagingSection({
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Type a message..."
-                  rows={6}
-                  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 resize-none min-h-[150px]"
+                  rows={2}
+                  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-blue-500/50 resize-none"
                   disabled={sending}
                   data-testid="message-input"
                 />
