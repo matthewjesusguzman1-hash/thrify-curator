@@ -810,24 +810,24 @@ async def download_own_w8ben(doc_id: str, user: dict = Depends(get_current_user)
     )
 
 
-# Employee endpoint to save their AnyDesk address
-class AnydeskAddressUpdate(BaseModel):
-    anydesk_address: str
+# Employee endpoint to save their RustDesk ID
+class RustdeskIdUpdate(BaseModel):
+    rustdesk_id: str
 
-@router.post("/employees/me/anydesk")
-async def update_my_anydesk_address(data: AnydeskAddressUpdate, current_user: dict = Depends(get_current_user)):
-    """Employee updates their AnyDesk address - this will be visible to admin in Team Management"""
+@router.post("/employees/me/rustdesk")
+async def update_my_rustdesk_id(data: RustdeskIdUpdate, current_user: dict = Depends(get_current_user)):
+    """Employee updates their RustDesk ID - this will be visible to admin in Team Management"""
     
     user_id = current_user.get("id") or current_user.get("_id")
     if not user_id:
         raise HTTPException(status_code=401, detail="User not found")
     
-    # Update user's anydesk address
+    # Update user's RustDesk ID
     result = await db.users.update_one(
         {"id": user_id},
         {"$set": {
-            "anydesk_address": data.anydesk_address.strip(),
-            "anydesk_shared_at": datetime.now(timezone.utc).isoformat()
+            "rustdesk_id": data.rustdesk_id.strip(),
+            "rustdesk_shared_at": datetime.now(timezone.utc).isoformat()
         }}
     )
     
@@ -840,22 +840,22 @@ async def update_my_anydesk_address(data: AnydeskAddressUpdate, current_user: di
     
     # Create notification for admin
     notification = AdminNotification(
-        type="anydesk_shared",
+        type="rustdesk_shared",
         employee_id=user_id,
         employee_name=display_name,
-        message=f"{display_name} shared their AnyDesk address",
-        details={"anydesk_address": data.anydesk_address.strip()}
+        message=f"{display_name} shared their RustDesk ID",
+        details={"rustdesk_id": data.rustdesk_id.strip()}
     )
     await db.admin_notifications.insert_one(notification.model_dump())
     
     # Send push notification to admin
     try:
         await send_admin_push_notification(
-            title="AnyDesk Address Received",
-            body=f"{display_name} shared their AnyDesk address: {data.anydesk_address.strip()}",
-            notification_type="anydesk_shared"
+            title="RustDesk ID Received",
+            body=f"{display_name} shared their RustDesk ID: {data.rustdesk_id.strip()}",
+            notification_type="rustdesk_shared"
         )
     except Exception as e:
-        print(f"Failed to send AnyDesk push notification: {e}")
+        print(f"Failed to send RustDesk push notification: {e}")
     
-    return {"success": True, "message": "AnyDesk address saved successfully"}
+    return {"success": True, "message": "RustDesk ID saved successfully"}

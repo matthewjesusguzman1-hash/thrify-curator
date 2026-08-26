@@ -214,10 +214,13 @@ export default function EmployeeDashboard({
   const [paymentPhone, setPaymentPhone] = useState("");
   const [paymentCountry, setPaymentCountry] = useState("");
   
-  // AnyDesk state for remote workers
-  const [anydeskAddress, setAnydeskAddress] = useState("");
-  const [savingAnydesk, setSavingAnydesk] = useState(false);
-  const [anydeskShared, setAnydeskShared] = useState(false);
+  // RustDesk state for remote workers
+  const [rustdeskId, setRustdeskId] = useState("");
+  const [savingRustdesk, setSavingRustdesk] = useState(false);
+  const [rustdeskShared, setRustdeskShared] = useState(false);
+  
+  // Company RustDesk ID for remote workers to connect to
+  const COMPANY_RUSTDESK_ID = "705791873";
   
   // Messaging state for header shortcut and full-screen modal
   const [showFullScreenMessages, setShowFullScreenMessages] = useState(false);
@@ -226,7 +229,7 @@ export default function EmployeeDashboard({
     return localStorage.getItem('thrifty_curator_messages_muted') === 'true';
   });
   
-  // Check if desktop (for showing company AnyDesk number)
+  // Check if desktop (for showing company RustDesk number)
   const [isDesktop, setIsDesktop] = useState(false);
   
   useEffect(() => {
@@ -1020,35 +1023,101 @@ export default function EmployeeDashboard({
     }
   };
 
-  // Share AnyDesk address with employer
-  const handleShareAnydeskAddress = async () => {
-    if (!anydeskAddress.trim()) {
-      toast.error("Please enter your AnyDesk address first");
+  // Share RustDesk ID with employer
+  const handleShareRustdeskId = async () => {
+    if (!rustdeskId.trim()) {
+      toast.error("Please enter your RustDesk ID first");
       return;
     }
     
-    setSavingAnydesk(true);
+    setSavingRustdesk(true);
     try {
-      await axios.post(`${API}/time/employees/me/anydesk`, {
-        anydesk_address: anydeskAddress.trim()
+      await axios.post(`${API}/time/employees/me/rustdesk`, {
+        rustdesk_id: rustdeskId.trim()
       }, getAuthHeader());
       
-      setAnydeskShared(true);
-      toast.success("AnyDesk address shared with your employer!", {
-        description: "Your manager can now see your AnyDesk address in the admin dashboard"
+      setRustdeskShared(true);
+      toast.success("RustDesk ID shared with your employer!", {
+        description: "Your manager can now see your RustDesk ID in the admin dashboard"
       });
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to share AnyDesk address");
+      toast.error(error.response?.data?.detail || "Failed to share RustDesk ID");
     } finally {
-      setSavingAnydesk(false);
+      setSavingRustdesk(false);
     }
   };
 
-  // Copy company AnyDesk address to clipboard
-  const copyCompanyAnydesk = () => {
-    navigator.clipboard.writeText("1 396 262 135");
-    toast.success("Company AnyDesk address copied!", {
-      description: "1 396 262 135"
+  // Get RustDesk download URL based on user's device
+  const getRustdeskDownloadUrl = () => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const platform = navigator.platform?.toLowerCase() || '';
+    
+    // Detect Mac
+    if (userAgent.includes('mac') || platform.includes('mac')) {
+      // Check for Apple Silicon (M1/M2/M3/M4)
+      // Modern Macs with Apple Silicon will have certain indicators
+      const isAppleSilicon = userAgent.includes('arm') || 
+                            (window.navigator?.userAgentData?.platform === 'macOS' && 
+                             window.navigator?.userAgentData?.architecture === 'arm');
+      
+      if (isAppleSilicon) {
+        return {
+          url: "https://github.com/rustdesk/rustdesk/releases/download/1.3.9/rustdesk-1.3.9-aarch64.dmg",
+          label: "Download for Mac (Apple Silicon)",
+          icon: "🍎"
+        };
+      } else {
+        // Default to x86_64 for Intel Macs, but also provide ARM option
+        return {
+          url: "https://github.com/rustdesk/rustdesk/releases/download/1.3.9/rustdesk-1.3.9-x86_64.dmg",
+          label: "Download for Mac (Intel)",
+          altUrl: "https://github.com/rustdesk/rustdesk/releases/download/1.3.9/rustdesk-1.3.9-aarch64.dmg",
+          altLabel: "For M1/M2/M3 Mac, click here",
+          icon: "🍎"
+        };
+      }
+    }
+    
+    // Detect Windows
+    if (userAgent.includes('win') || platform.includes('win')) {
+      return {
+        url: "https://github.com/rustdesk/rustdesk/releases/download/1.3.9/rustdesk-1.3.9-x86_64.exe",
+        label: "Download for Windows",
+        icon: "🪟"
+      };
+    }
+    
+    // Detect Linux
+    if (userAgent.includes('linux')) {
+      return {
+        url: "https://github.com/rustdesk/rustdesk/releases/download/1.3.9/rustdesk-1.3.9-x86_64.deb",
+        label: "Download for Linux",
+        icon: "🐧"
+      };
+    }
+    
+    // Default - link to releases page
+    return {
+      url: "https://github.com/rustdesk/rustdesk/releases/latest",
+      label: "Download RustDesk",
+      icon: "📥"
+    };
+  };
+
+  // Launch RustDesk with company ID
+  const launchRustdeskConnect = () => {
+    // RustDesk URL scheme to connect directly
+    window.location.href = `rustdesk://connection/new/${COMPANY_RUSTDESK_ID}`;
+    toast.info("Opening RustDesk...", {
+      description: "If RustDesk doesn't open, make sure it's installed"
+    });
+  };
+
+  // Copy company RustDesk ID to clipboard
+  const copyCompanyRustdesk = () => {
+    navigator.clipboard.writeText(COMPANY_RUSTDESK_ID);
+    toast.success("Company RustDesk ID copied!", {
+      description: "705 791 873"
     });
   };
 
@@ -2317,15 +2386,15 @@ export default function EmployeeDashboard({
           </Collapsible>
           )}
 
-          {/* AnyDesk Setup Section - Only for Remote Workers - Placed BEFORE Agreement and W-8BEN */}
+          {/* RustDesk Setup Section - Only for Remote Workers - Placed BEFORE Agreement and W-8BEN */}
           {isRemoteWorker() && (
             <Collapsible defaultOpen={true}>
-              <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl shadow-2xl overflow-hidden border border-white/10" data-testid="anydesk-section">
+              <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl shadow-2xl overflow-hidden border border-white/10" data-testid="rustdesk-section">
                 <div className="h-1.5 bg-gradient-to-r from-[#EC4899] via-[#8B5CF6] to-[#00D4FF]" />
                 <CollapsibleTrigger asChild>
                   <button 
                     className="w-full p-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
-                    data-testid="anydesk-collapse-trigger"
+                    data-testid="rustdesk-collapse-trigger"
                   >
                     <div className="flex items-center gap-2">
                       <Briefcase className="w-5 h-5 text-[#EC4899]" />
@@ -2342,73 +2411,92 @@ export default function EmployeeDashboard({
                 
                 <CollapsibleContent>
                   <div className="px-6 pb-6 pt-2 space-y-6">
-                    {/* AnyDesk Setup */}
+                    {/* RustDesk Setup */}
                     <div className="bg-white/5 rounded-xl p-4 border border-[#EC4899]/30">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 bg-[#EC4899]/20 rounded-lg flex items-center justify-center">
                           <Briefcase className="w-5 h-5 text-[#EC4899]" />
                         </div>
                         <div>
-                          <h3 className="text-white font-semibold">AnyDesk Remote Desktop</h3>
+                          <h3 className="text-white font-semibold">RustDesk Remote Desktop</h3>
                           <p className="text-white/60 text-sm">Required for remote work tasks</p>
                         </div>
                       </div>
                       
                       <div className="space-y-4">
                         <p className="text-white/70 text-sm">
-                          AnyDesk allows you to securely access the company computer remotely to perform your work tasks.
+                          RustDesk allows you to securely access the company computer remotely to perform your work tasks.
                         </p>
                         
                         {/* Step 1: Download */}
                         <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                           <h4 className="text-white font-medium mb-3 flex items-center gap-2">
                             <span className="w-6 h-6 bg-[#EC4899]/20 rounded-full flex items-center justify-center text-xs text-[#EC4899] font-bold">1</span>
-                            Download AnyDesk
+                            Download RustDesk
                           </h4>
-                          <a
-                            href="https://anydesk.com/en/downloads"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-[#EC4899]/20 hover:bg-[#EC4899]/30 text-[#EC4899] rounded-lg text-sm font-medium transition-colors"
-                          >
-                            <Download className="w-4 h-4" />
-                            Download AnyDesk
-                          </a>
-                          <p className="text-white/50 text-xs mt-2">
-                            Available for Windows, Mac, Linux, iOS, and Android
-                          </p>
+                          {(() => {
+                            const downloadInfo = getRustdeskDownloadUrl();
+                            return (
+                              <div className="space-y-2">
+                                <a
+                                  href={downloadInfo.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#EC4899]/20 hover:bg-[#EC4899]/30 text-[#EC4899] rounded-lg text-sm font-medium transition-colors"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  {downloadInfo.icon} {downloadInfo.label}
+                                </a>
+                                {downloadInfo.altUrl && (
+                                  <div className="mt-2">
+                                    <a
+                                      href={downloadInfo.altUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-white/50 hover:text-white/70 text-xs underline"
+                                    >
+                                      {downloadInfo.altLabel}
+                                    </a>
+                                  </div>
+                                )}
+                                <p className="text-white/50 text-xs mt-2">
+                                  Free, open-source remote desktop software
+                                </p>
+                              </div>
+                            );
+                          })()}
                         </div>
                         
-                        {/* Step 2: Share Your Address */}
+                        {/* Step 2: Share Your RustDesk ID (Optional) */}
                         <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                           <h4 className="text-white font-medium mb-3 flex items-center gap-2">
                             <span className="w-6 h-6 bg-[#EC4899]/20 rounded-full flex items-center justify-center text-xs text-[#EC4899] font-bold">2</span>
-                            Share Your AnyDesk Address
+                            Share Your RustDesk ID (Optional)
                           </h4>
                           <ol className="text-white/70 text-sm space-y-2 list-decimal list-inside mb-4">
-                            <li>Install AnyDesk on your computer or device</li>
-                            <li>Open AnyDesk and find your AnyDesk Address (9-digit number)</li>
+                            <li>Install RustDesk on your computer</li>
+                            <li>Open RustDesk and find your ID (9-digit number)</li>
                             <li>Enter it below and click Share to send it to your manager</li>
                           </ol>
                           
-                          {/* AnyDesk Address Input with Share Button */}
+                          {/* RustDesk ID Input with Share Button */}
                           <div className="flex gap-2">
                             <Input
                               type="text"
-                              placeholder="Enter your AnyDesk Address (e.g., 123 456 789)"
-                              value={anydeskAddress}
-                              onChange={(e) => setAnydeskAddress(e.target.value)}
+                              placeholder="Enter your RustDesk ID (e.g., 123 456 789)"
+                              value={rustdeskId}
+                              onChange={(e) => setRustdeskId(e.target.value)}
                               className="flex-1 bg-white/10 border-white/20 text-white placeholder-white/40"
-                              disabled={anydeskShared}
+                              disabled={rustdeskShared}
                             />
                             <Button
-                              onClick={handleShareAnydeskAddress}
-                              disabled={savingAnydesk || !anydeskAddress.trim() || anydeskShared}
-                              className={`${anydeskShared ? 'bg-green-500' : 'bg-[#EC4899] hover:bg-[#EC4899]/80'} text-white`}
+                              onClick={handleShareRustdeskId}
+                              disabled={savingRustdesk || !rustdeskId.trim() || rustdeskShared}
+                              className={`${rustdeskShared ? 'bg-green-500' : 'bg-[#EC4899] hover:bg-[#EC4899]/80'} text-white`}
                             >
-                              {savingAnydesk ? (
+                              {savingRustdesk ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : anydeskShared ? (
+                              ) : rustdeskShared ? (
                                 <>
                                   <CheckCircle className="w-4 h-4 mr-1" />
                                   Shared
@@ -2421,47 +2509,63 @@ export default function EmployeeDashboard({
                               )}
                             </Button>
                           </div>
-                          {anydeskShared && (
+                          {rustdeskShared && (
                             <p className="text-green-400 text-xs mt-2 flex items-center gap-1">
                               <CheckCircle className="w-3 h-3" />
-                              Your AnyDesk address has been shared with your manager
+                              Your RustDesk ID has been shared with your manager
                             </p>
                           )}
                         </div>
                         
-                        {/* Step 3: Connect - Only show on Desktop */}
-                        {isDesktop && (
-                          <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                            <h4 className="text-white font-medium mb-3 flex items-center gap-2">
-                              <span className="w-6 h-6 bg-[#EC4899]/20 rounded-full flex items-center justify-center text-xs text-[#EC4899] font-bold">3</span>
-                              Connect to Work
-                            </h4>
-                            <ol className="text-white/70 text-sm space-y-2 list-decimal list-inside mb-4">
-                              <li>Open AnyDesk on your computer</li>
-                              <li>Enter the company computer address below</li>
-                              <li>Click Connect and wait for acceptance</li>
-                            </ol>
-                            
-                            {/* Company AnyDesk Address - Desktop Only */}
-                            <div className="bg-[#8B5CF6]/20 border border-[#8B5CF6]/40 rounded-lg p-4">
-                              <p className="text-white/70 text-xs mb-2">Company AnyDesk Address:</p>
-                              <div className="flex items-center gap-3">
-                                <code className="text-[#8B5CF6] font-mono text-lg font-bold tracking-wider">
-                                  1 396 262 135
-                                </code>
-                                <Button
-                                  onClick={copyCompanyAnydesk}
-                                  size="sm"
-                                  variant="outline"
-                                  className="border-[#8B5CF6]/50 text-[#8B5CF6] hover:bg-[#8B5CF6]/20"
-                                >
-                                  <FileText className="w-3 h-3 mr-1" />
-                                  Copy
-                                </Button>
-                              </div>
+                        {/* Step 3: Connect to Work - Primary Action */}
+                        <div className="bg-gradient-to-r from-[#8B5CF6]/20 to-[#EC4899]/20 rounded-lg p-4 border border-[#8B5CF6]/40">
+                          <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+                            <span className="w-6 h-6 bg-[#8B5CF6]/30 rounded-full flex items-center justify-center text-xs text-[#8B5CF6] font-bold">3</span>
+                            Connect to Work Computer
+                          </h4>
+                          
+                          {/* Company RustDesk ID */}
+                          <div className="bg-black/20 rounded-lg p-4 mb-4">
+                            <p className="text-white/70 text-xs mb-2">Company RustDesk ID:</p>
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <code className="text-[#8B5CF6] font-mono text-2xl font-bold tracking-wider">
+                                705 791 873
+                              </code>
+                              <Button
+                                onClick={copyCompanyRustdesk}
+                                size="sm"
+                                variant="outline"
+                                className="border-[#8B5CF6]/50 text-[#8B5CF6] hover:bg-[#8B5CF6]/20"
+                              >
+                                <FileText className="w-3 h-3 mr-1" />
+                                Copy
+                              </Button>
                             </div>
                           </div>
-                        )}
+                          
+                          {/* One-Click Connect Button */}
+                          <Button
+                            onClick={launchRustdeskConnect}
+                            className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#7C3AED] hover:to-[#DB2777] text-white py-6 text-lg font-semibold"
+                          >
+                            <Briefcase className="w-5 h-5 mr-2" />
+                            Connect to Work Computer
+                          </Button>
+                          <p className="text-white/50 text-xs mt-2 text-center">
+                            Opens RustDesk with the company ID pre-filled
+                          </p>
+                        </div>
+                        
+                        {/* Quick Instructions */}
+                        <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                          <h4 className="text-white font-medium mb-2">Quick Connect Steps:</h4>
+                          <ol className="text-white/70 text-sm space-y-1 list-decimal list-inside">
+                            <li>Click "Connect to Work Computer" above</li>
+                            <li>RustDesk will open automatically</li>
+                            <li>Wait for connection approval (or enter password if provided)</li>
+                            <li>You're connected! Start your work tasks</li>
+                          </ol>
+                        </div>
                         
                         {/* Important Tips */}
                         <div className="bg-[#FFE66D]/10 border border-[#FFE66D]/30 rounded-lg p-4">
@@ -2473,7 +2577,7 @@ export default function EmployeeDashboard({
                                 <li>• Ensure you have a stable internet connection</li>
                                 <li>• Always log out when done with your shift</li>
                                 <li>• Contact your manager if you have connection issues</li>
-                                <li>• Do not share the company computer address with others</li>
+                                <li>• Do not share the company RustDesk ID with others</li>
                               </ul>
                             </div>
                           </div>

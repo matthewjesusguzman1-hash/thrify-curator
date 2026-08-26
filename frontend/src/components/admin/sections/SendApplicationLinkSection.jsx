@@ -706,7 +706,7 @@ function SendFollowupModal({ application, onClose, onSent, getAuthHeader }) {
       await axios.post(`${API}/api/admin/send-onboarding-followup`, {
         email,
         employee_name: name,
-        include_anydesk: includeAnydesk
+        include_rustdesk: includeAnydesk
       }, getAuthHeader());
       
       onSent();
@@ -768,20 +768,20 @@ function SendFollowupModal({ application, onClose, onSent, getAuthHeader }) {
             />
           </div>
 
-          {/* AnyDesk Option */}
+          {/* RustDesk Option */}
           <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
             <Checkbox
-              id="include-anydesk"
+              id="include-rustdesk"
               checked={includeAnydesk}
               onCheckedChange={setIncludeAnydesk}
               className="mt-0.5"
             />
             <div>
-              <Label htmlFor="include-anydesk" className="font-medium text-amber-800 cursor-pointer">
-                Include AnyDesk Instructions
+              <Label htmlFor="include-rustdesk" className="font-medium text-amber-800 cursor-pointer">
+                Include RustDesk Instructions
               </Label>
               <p className="text-xs text-amber-700 mt-1">
-                Adds remote access code (1 396 262 135) to the email
+                Adds remote access code (705 791 873) to the email
               </p>
             </div>
           </div>
@@ -794,7 +794,7 @@ function SendFollowupModal({ application, onClose, onSent, getAuthHeader }) {
               <li>✓ Reminder to sign Contractor Agreement</li>
               <li>✓ Instructions for W-8BEN tax form</li>
               <li>✓ Payment method setup reminder</li>
-              {includeAnydesk && <li>✓ AnyDesk remote access code</li>}
+              {includeAnydesk && <li>✓ RustDesk remote access code</li>}
             </ul>
           </div>
         </div>
@@ -950,7 +950,7 @@ function SetupLoginModal({ application, onClose, onCreated, getAuthHeader }) {
             </p>
             <ul className="text-xs text-green-600 mt-2 ml-5 space-y-1 list-disc">
               <li>Login instructions for the Employee Portal (email-based login)</li>
-              {isRemote && <li>AnyDesk remote access code (1 396 262 135)</li>}
+              {isRemote && <li>RustDesk remote access code (705 791 873)</li>}
               <li>Reminders to complete required forms (Contractor Agreement, {isRemote ? 'W-8BEN' : 'W-9'})</li>
               <li>Option to set up a password for added security</li>
             </ul>
