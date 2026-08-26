@@ -1048,58 +1048,10 @@ export default function EmployeeDashboard({
     }
   };
 
-  // Get RustDesk download URL based on user's device
-  const getRustdeskDownloadUrl = () => {
-    const userAgent = navigator.userAgent.toLowerCase();
-    const platform = navigator.platform?.toLowerCase() || '';
-    
-    // Detect Mac
-    if (userAgent.includes('mac') || platform.includes('mac')) {
-      // Check for Apple Silicon (M1/M2/M3/M4)
-      // Modern Macs with Apple Silicon will have certain indicators
-      const isAppleSilicon = userAgent.includes('arm') || 
-                            (window.navigator?.userAgentData?.platform === 'macOS' && 
-                             window.navigator?.userAgentData?.architecture === 'arm');
-      
-      if (isAppleSilicon) {
-        return {
-          url: "https://github.com/rustdesk/rustdesk/releases/download/1.3.9/rustdesk-1.3.9-aarch64.dmg",
-          label: "Download for Mac (Apple Silicon)",
-          icon: "🍎"
-        };
-      } else {
-        // Default to x86_64 for Intel Macs, but also provide ARM option
-        return {
-          url: "https://github.com/rustdesk/rustdesk/releases/download/1.3.9/rustdesk-1.3.9-x86_64.dmg",
-          label: "Download for Mac (Intel)",
-          altUrl: "https://github.com/rustdesk/rustdesk/releases/download/1.3.9/rustdesk-1.3.9-aarch64.dmg",
-          altLabel: "For M1/M2/M3 Mac, click here",
-          icon: "🍎"
-        };
-      }
-    }
-    
-    // Detect Windows
-    if (userAgent.includes('win') || platform.includes('win')) {
-      return {
-        url: "https://github.com/rustdesk/rustdesk/releases/download/1.3.9/rustdesk-1.3.9-x86_64.exe",
-        label: "Download for Windows",
-        icon: "🪟"
-      };
-    }
-    
-    // Detect Linux
-    if (userAgent.includes('linux')) {
-      return {
-        url: "https://github.com/rustdesk/rustdesk/releases/download/1.3.9/rustdesk-1.3.9-x86_64.deb",
-        label: "Download for Linux",
-        icon: "🐧"
-      };
-    }
-    
-    // Default - link to releases page
+  // Get RustDesk download URL - just link to their download page which auto-detects
+  const getRustdeskDownloadInfo = () => {
     return {
-      url: "https://github.com/rustdesk/rustdesk/releases/latest",
+      url: "https://rustdesk.com/download",
       label: "Download RustDesk",
       icon: "📥"
     };
@@ -2435,37 +2387,18 @@ export default function EmployeeDashboard({
                             <span className="w-6 h-6 bg-[#EC4899]/20 rounded-full flex items-center justify-center text-xs text-[#EC4899] font-bold">1</span>
                             Download RustDesk
                           </h4>
-                          {(() => {
-                            const downloadInfo = getRustdeskDownloadUrl();
-                            return (
-                              <div className="space-y-2">
-                                <a
-                                  href={downloadInfo.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#EC4899]/20 hover:bg-[#EC4899]/30 text-[#EC4899] rounded-lg text-sm font-medium transition-colors"
-                                >
-                                  <Download className="w-4 h-4" />
-                                  {downloadInfo.icon} {downloadInfo.label}
-                                </a>
-                                {downloadInfo.altUrl && (
-                                  <div className="mt-2">
-                                    <a
-                                      href={downloadInfo.altUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-white/50 hover:text-white/70 text-xs underline"
-                                    >
-                                      {downloadInfo.altLabel}
-                                    </a>
-                                  </div>
-                                )}
-                                <p className="text-white/50 text-xs mt-2">
-                                  Free, open-source remote desktop software
-                                </p>
-                              </div>
-                            );
-                          })()}
+                          <a
+                            href="https://rustdesk.com/download"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-[#EC4899]/20 hover:bg-[#EC4899]/30 text-[#EC4899] rounded-lg text-sm font-medium transition-colors"
+                          >
+                            <Download className="w-4 h-4" />
+                            Download RustDesk
+                          </a>
+                          <p className="text-white/50 text-xs mt-2">
+                            Free, open-source remote desktop software - the website will detect your device automatically
+                          </p>
                         </div>
                         
                         {/* Step 2: Share Your RustDesk ID (Optional) */}
