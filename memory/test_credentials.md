@@ -5,6 +5,12 @@
 - Name: Test Employee
 - Password: Not required (no password set)
 
+## Remote Worker Test Account
+- Email: `remote_worker@test.com`
+- Name: Remote Test Worker
+- Password: Not required
+- Note: Used for testing AnyDesk remote worker UI section
+
 ## Other Test Employees
 - Email: `matthewjguzman1@gmail.com` (Matthew Guzman - owner)
 - Email: `test@test.com` (Test)
@@ -21,3 +27,4 @@
 - Admin login flow: Enter admin email -> Find My Account -> Enter 4-digit code -> Sign In
 - Employees without passwords can log in directly; those with passwords must enter them
 - Admin users were removed from the system except for business owners
+- Remote workers see the AnyDesk Remote Work Setup section in their dashboard

@@ -53,7 +53,7 @@ The Company hereby engages the Contractor, and the Contractor agrees to perform 
 
 • E-Commerce Data Entry & Cross-Listing: Preparing, editing, listing, and cross-posting inventory items across e-commerce marketplaces using the Vendoo platform.
 
-• Remote System Access: Accessing company workspace systems remotely via RustDesk remote desktop software.
+• Remote System Access: Accessing company workspace systems remotely via AnyDesk remote desktop software.
 
 • Training & SOP Compliance: Completing mandatory onboarding and daily training provided by company staff to ensure strict adherence to standardized listing workflows and image/data quality guidelines.
 
@@ -101,9 +101,9 @@ Mandatory Time Tracking: The Contractor MUST log all billable hours accurately i
 
 Security & Access Requirements:
 
-• Remote connections must be established exclusively through authorized RustDesk access channels provided during onboarding.
+• Remote connections must be established exclusively through authorized AnyDesk access channels provided during onboarding.
 
-• Contractor shall NOT share RustDesk IDs, passwords, Vendoo login credentials, or Thrifty Curator account access with any third party under any circumstances.
+• Contractor shall NOT share AnyDesk addresses, passwords, Vendoo login credentials, or Thrifty Curator account access with any third party under any circumstances.
 
 • Contractor agrees not to extract, export, copy, or distribute company databases, item lists, customer records, or listing workflows.
 
@@ -119,7 +119,7 @@ All proprietary information, including inventory sourcing data, pricing rules, l
 
 This Agreement is effective upon execution and shall continue until terminated by either party. Either party may terminate this Agreement at any time, with or without cause, by providing written notice (via email or messaging portal).
 
-Upon notice of termination, the Contractor's right to access RustDesk, Vendoo, and the Thrifty Curator web app shall be immediately revoked, and final payment for all verified, logged hours worked up to the timestamp of termination will be processed on the next standard payout date.
+Upon notice of termination, the Contractor's right to access AnyDesk, Vendoo, and the Thrifty Curator web app shall be immediately revoked, and final payment for all verified, logged hours worked up to the timestamp of termination will be processed on the next standard payout date.
 
 ═══════════════════════════════════════════════════════════════════════════════
 

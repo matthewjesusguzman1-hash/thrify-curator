@@ -480,20 +480,20 @@ export default function AllEmployeesSection({
                                   </span>
                                 )}
                               </div>
-                              {/* RustDesk ID - visible on mobile in name column */}
-                              {emp.rustdesk_id && (
+                              {/* AnyDesk Address - visible on mobile in name column */}
+                              {emp.anydesk_address && (
                                 <div 
                                   className="flex items-center gap-1 ml-10 bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer hover:bg-pink-200 transition-colors w-fit"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    navigator.clipboard.writeText(emp.rustdesk_id);
-                                    toast.success("RustDesk ID copied!", { description: emp.rustdesk_id });
+                                    navigator.clipboard.writeText(emp.anydesk_address);
+                                    toast.success("AnyDesk Address copied!", { description: emp.anydesk_address });
                                   }}
-                                  title={`RustDesk: ${emp.rustdesk_id} - Click to copy`}
-                                  data-testid={`rustdesk-badge-${emp.id}`}
+                                  title={`AnyDesk: ${emp.anydesk_address} - Click to copy`}
+                                  data-testid={`anydesk-badge-${emp.id}`}
                                 >
                                   <Monitor className="w-3 h-3" />
-                                  <span className="font-mono">{emp.rustdesk_id}</span>
+                                  <span className="font-mono">{emp.anydesk_address}</span>
                                   <Copy className="w-2.5 h-2.5" />
                                 </div>
                               )}

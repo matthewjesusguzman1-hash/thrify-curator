@@ -214,14 +214,14 @@ export default function EmployeeDashboard({
   const [paymentPhone, setPaymentPhone] = useState("");
   const [paymentCountry, setPaymentCountry] = useState("");
   
-  // RustDesk state for remote workers
-  const [rustdeskId, setRustdeskId] = useState("");
-  const [savingRustdesk, setSavingRustdesk] = useState(false);
-  const [rustdeskShared, setRustdeskShared] = useState(false);
+  // AnyDesk state for remote workers
+  const [anydeskAddress, setAnydeskAddress] = useState("");
+  const [savingAnydesk, setSavingAnydesk] = useState(false);
+  const [anydeskShared, setAnydeskShared] = useState(false);
   
-  // Company RustDesk ID for remote workers to connect to
-  const COMPANY_RUSTDESK_ID = "70579183";
-  const COMPANY_RUSTDESK_PASSWORD = "Thrifty Curator1";
+  // Company AnyDesk info for remote workers to connect to
+  const COMPANY_ANYDESK_ID = "1 396 262 135";
+  const COMPANY_ANYDESK_PASSWORD = "Thrifty Curator";
   
   // Messaging state for header shortcut and full-screen modal
   const [showFullScreenMessages, setShowFullScreenMessages] = useState(false);
@@ -230,7 +230,7 @@ export default function EmployeeDashboard({
     return localStorage.getItem('thrifty_curator_messages_muted') === 'true';
   });
   
-  // Check if desktop (for showing company RustDesk number)
+  // Check if desktop (for showing company AnyDesk number)
   const [isDesktop, setIsDesktop] = useState(false);
   
   useEffect(() => {
@@ -1024,53 +1024,35 @@ export default function EmployeeDashboard({
     }
   };
 
-  // Share RustDesk ID with employer
-  const handleShareRustdeskId = async () => {
-    if (!rustdeskId.trim()) {
-      toast.error("Please enter your RustDesk ID first");
+  // Share AnyDesk address with employer
+  const handleShareAnydeskAddress = async () => {
+    if (!anydeskAddress.trim()) {
+      toast.error("Please enter your AnyDesk address first");
       return;
     }
     
-    setSavingRustdesk(true);
+    setSavingAnydesk(true);
     try {
-      await axios.post(`${API}/time/employees/me/rustdesk`, {
-        rustdesk_id: rustdeskId.trim()
+      await axios.post(`${API}/time/employees/me/anydesk`, {
+        anydesk_address: anydeskAddress.trim()
       }, getAuthHeader());
       
-      setRustdeskShared(true);
-      toast.success("RustDesk ID shared with your employer!", {
-        description: "Your manager can now see your RustDesk ID in the admin dashboard"
+      setAnydeskShared(true);
+      toast.success("AnyDesk address shared with your employer!", {
+        description: "Your manager can now see your AnyDesk address in the admin dashboard"
       });
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to share RustDesk ID");
+      toast.error(error.response?.data?.detail || "Failed to share AnyDesk address");
     } finally {
-      setSavingRustdesk(false);
+      setSavingAnydesk(false);
     }
   };
 
-  // Get RustDesk download URL - just link to their download page which auto-detects
-  const getRustdeskDownloadInfo = () => {
-    return {
-      url: "https://rustdesk.com/download",
-      label: "Download RustDesk",
-      icon: "📥"
-    };
-  };
-
-  // Launch RustDesk with company ID
-  const launchRustdeskConnect = () => {
-    // RustDesk URL scheme to connect directly
-    window.location.href = `rustdesk://connection/new/${COMPANY_RUSTDESK_ID}`;
-    toast.info("Opening RustDesk...", {
-      description: "If RustDesk doesn't open, make sure it's installed"
-    });
-  };
-
-  // Copy company RustDesk ID to clipboard
-  const copyCompanyRustdesk = () => {
-    navigator.clipboard.writeText(COMPANY_RUSTDESK_ID);
-    toast.success("Company RustDesk ID copied!", {
-      description: "70 579 183"
+  // Copy company AnyDesk ID to clipboard
+  const copyCompanyAnydesk = () => {
+    navigator.clipboard.writeText("1396262135");
+    toast.success("Company AnyDesk ID copied!", {
+      description: "1 396 262 135"
     });
   };
 
@@ -2339,15 +2321,15 @@ export default function EmployeeDashboard({
           </Collapsible>
           )}
 
-          {/* RustDesk Setup Section - Only for Remote Workers - Placed BEFORE Agreement and W-8BEN */}
+          {/* AnyDesk Setup Section - Only for Remote Workers - Placed BEFORE Agreement and W-8BEN */}
           {isRemoteWorker() && (
             <Collapsible defaultOpen={true}>
-              <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl shadow-2xl overflow-hidden border border-white/10" data-testid="rustdesk-section">
+              <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl shadow-2xl overflow-hidden border border-white/10" data-testid="anydesk-section">
                 <div className="h-1.5 bg-gradient-to-r from-[#EC4899] via-[#8B5CF6] to-[#00D4FF]" />
                 <CollapsibleTrigger asChild>
                   <button 
                     className="w-full p-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
-                    data-testid="rustdesk-collapse-trigger"
+                    data-testid="anydesk-collapse-trigger"
                   >
                     <div className="flex items-center gap-2">
                       <Briefcase className="w-5 h-5 text-[#EC4899]" />
@@ -2364,69 +2346,69 @@ export default function EmployeeDashboard({
                 
                 <CollapsibleContent>
                   <div className="px-6 pb-6 pt-2 space-y-6">
-                    {/* RustDesk Setup */}
+                    {/* AnyDesk Setup */}
                     <div className="bg-white/5 rounded-xl p-4 border border-[#EC4899]/30">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 bg-[#EC4899]/20 rounded-lg flex items-center justify-center">
                           <Briefcase className="w-5 h-5 text-[#EC4899]" />
                         </div>
                         <div>
-                          <h3 className="text-white font-semibold">RustDesk Remote Desktop</h3>
+                          <h3 className="text-white font-semibold">AnyDesk Remote Desktop</h3>
                           <p className="text-white/60 text-sm">Required for remote work tasks</p>
                         </div>
                       </div>
                       
                       <div className="space-y-4">
                         <p className="text-white/70 text-sm">
-                          RustDesk allows you to securely access the company computer remotely to perform your work tasks.
+                          AnyDesk allows you to securely access the company computer remotely to perform your work tasks.
                         </p>
                         
                         {/* Step 1: Download */}
                         <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                           <h4 className="text-white font-medium mb-3 flex items-center gap-2">
                             <span className="w-6 h-6 bg-[#EC4899]/20 rounded-full flex items-center justify-center text-xs text-[#EC4899] font-bold">1</span>
-                            Download RustDesk
+                            Download AnyDesk
                           </h4>
                           <a
-                            href="https://rustdesk.com/download"
+                            href="https://anydesk.com/en/downloads"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 px-4 py-2 bg-[#EC4899]/20 hover:bg-[#EC4899]/30 text-[#EC4899] rounded-lg text-sm font-medium transition-colors"
                           >
                             <Download className="w-4 h-4" />
-                            Download RustDesk
+                            Download AnyDesk
                           </a>
                           <p className="text-white/50 text-xs mt-2">
-                            Free, open-source remote desktop software - the website will detect your device automatically
+                            Available for Windows, Mac, Linux, iOS, and Android
                           </p>
                         </div>
                         
-                        {/* Step 2: Share Your RustDesk ID (Optional) */}
+                        {/* Step 2: Share Your Address (Optional) */}
                         <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                           <h4 className="text-white font-medium mb-3 flex items-center gap-2">
                             <span className="w-6 h-6 bg-[#EC4899]/20 rounded-full flex items-center justify-center text-xs text-[#EC4899] font-bold">2</span>
-                            Share Your RustDesk ID (Optional)
+                            Share Your AnyDesk Address (Optional)
                           </h4>
-                          <p className="text-white/50 text-xs mb-3">Find your ID in RustDesk after installing, then share it with your manager</p>
+                          <p className="text-white/50 text-xs mb-3">Find your address in AnyDesk after installing, then share it with your manager</p>
                           
-                          {/* RustDesk ID Input with Share Button */}
+                          {/* AnyDesk Address Input with Share Button */}
                           <div className="flex gap-2">
                             <Input
                               type="text"
-                              placeholder="Your RustDesk ID (e.g., 123 456 789)"
-                              value={rustdeskId}
-                              onChange={(e) => setRustdeskId(e.target.value)}
+                              placeholder="Your AnyDesk Address (e.g., 123 456 789)"
+                              value={anydeskAddress}
+                              onChange={(e) => setAnydeskAddress(e.target.value)}
                               className="flex-1 bg-white/10 border-white/20 text-white placeholder-white/40"
-                              disabled={rustdeskShared}
+                              disabled={anydeskShared}
                             />
                             <Button
-                              onClick={handleShareRustdeskId}
-                              disabled={savingRustdesk || !rustdeskId.trim() || rustdeskShared}
-                              className={`${rustdeskShared ? 'bg-green-500' : 'bg-[#EC4899] hover:bg-[#EC4899]/80'} text-white`}
+                              onClick={handleShareAnydeskAddress}
+                              disabled={savingAnydesk || !anydeskAddress.trim() || anydeskShared}
+                              className={`${anydeskShared ? 'bg-green-500' : 'bg-[#EC4899] hover:bg-[#EC4899]/80'} text-white`}
                             >
-                              {savingRustdesk ? (
+                              {savingAnydesk ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : rustdeskShared ? (
+                              ) : anydeskShared ? (
                                 <>
                                   <CheckCircle className="w-4 h-4 mr-1" />
                                   Shared
@@ -2439,10 +2421,10 @@ export default function EmployeeDashboard({
                               )}
                             </Button>
                           </div>
-                          {rustdeskShared && (
+                          {anydeskShared && (
                             <p className="text-green-400 text-xs mt-2 flex items-center gap-1">
                               <CheckCircle className="w-3 h-3" />
-                              Your RustDesk ID has been shared with your manager
+                              Your AnyDesk address has been shared with your manager
                             </p>
                           )}
                         </div>
@@ -2454,54 +2436,58 @@ export default function EmployeeDashboard({
                             Connect to Work Computer
                           </h4>
                           
-                          {/* One-Click Connect Button */}
-                          <Button
-                            onClick={launchRustdeskConnect}
-                            className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#7C3AED] hover:to-[#DB2777] text-white py-6 text-lg font-semibold mb-3"
+                          {/* Quick Connect Button - Primary */}
+                          <a
+                            href={`anydesk:${COMPANY_ANYDESK_ID.replace(/\s/g, '')}`}
+                            className="w-full mb-4 inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#7C3AED] hover:to-[#DB2777] text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 text-lg"
+                            data-testid="anydesk-quick-connect"
                           >
-                            <Briefcase className="w-5 h-5 mr-2" />
+                            <Globe className="w-5 h-5" />
                             Connect to Work Computer
-                          </Button>
+                          </a>
                           
-                          {/* Collapsible Manual Connection Info */}
-                          <Collapsible>
-                            <CollapsibleTrigger className="flex items-center gap-2 text-white/50 text-xs hover:text-white/70 transition-colors w-full justify-center">
-                              <span>Manual connection info (if needed)</span>
-                              <ChevronDown className="w-3 h-3" />
+                          {/* Collapsible Connection Info */}
+                          <Collapsible defaultOpen={false}>
+                            <CollapsibleTrigger className="flex items-center gap-2 text-white/70 text-sm hover:text-white transition-colors w-full justify-between mb-3">
+                              <span>Manual Connection Details</span>
+                              <ChevronDown className="w-4 h-4" />
                             </CollapsibleTrigger>
                             <CollapsibleContent>
-                              <div className="bg-black/20 rounded-lg p-3 mt-3 space-y-2">
+                              <div className="bg-black/20 rounded-lg p-4 mb-4 space-y-3">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-white/50 text-xs">ID:</span>
+                                  <span className="text-white/50 text-sm">AnyDesk Address:</span>
                                   <div className="flex items-center gap-2">
-                                    <code className="text-[#8B5CF6] font-mono text-sm font-bold">70 579 183</code>
+                                    <code className="text-[#8B5CF6] font-mono text-lg font-bold">{COMPANY_ANYDESK_ID}</code>
                                     <Button
-                                      onClick={copyCompanyRustdesk}
+                                      onClick={copyCompanyAnydesk}
                                       size="sm"
                                       variant="ghost"
-                                      className="h-6 px-2 text-[#8B5CF6] hover:bg-[#8B5CF6]/20"
+                                      className="h-7 px-2 text-[#8B5CF6] hover:bg-[#8B5CF6]/20"
                                     >
                                       <FileText className="w-3 h-3" />
                                     </Button>
                                   </div>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                  <span className="text-white/50 text-xs">Password:</span>
+                                  <span className="text-white/50 text-sm">Password:</span>
                                   <div className="flex items-center gap-2">
-                                    <code className="text-[#EC4899] font-mono text-sm font-bold">{COMPANY_RUSTDESK_PASSWORD}</code>
+                                    <code className="text-[#EC4899] font-mono text-lg font-bold">{COMPANY_ANYDESK_PASSWORD}</code>
                                     <Button
                                       onClick={() => {
-                                        navigator.clipboard.writeText(COMPANY_RUSTDESK_PASSWORD);
+                                        navigator.clipboard.writeText(COMPANY_ANYDESK_PASSWORD);
                                         toast.success("Password copied!");
                                       }}
                                       size="sm"
                                       variant="ghost"
-                                      className="h-6 px-2 text-[#EC4899] hover:bg-[#EC4899]/20"
+                                      className="h-7 px-2 text-[#EC4899] hover:bg-[#EC4899]/20"
                                     >
                                       <FileText className="w-3 h-3" />
                                     </Button>
                                   </div>
                                 </div>
+                                <p className="text-white/50 text-xs">
+                                  Enter the address and password above. Check &quot;Log in automatically from now on&quot; to connect without entering the password next time.
+                                </p>
                               </div>
                             </CollapsibleContent>
                           </Collapsible>
@@ -2517,7 +2503,7 @@ export default function EmployeeDashboard({
                                 <li>• Ensure you have a stable internet connection</li>
                                 <li>• Always log out when done with your shift</li>
                                 <li>• Contact your manager if you have connection issues</li>
-                                <li>• Do not share the company RustDesk ID with others</li>
+                                <li>• Do not share the company AnyDesk address with others</li>
                               </ul>
                             </div>
                           </div>
