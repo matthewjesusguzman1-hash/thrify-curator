@@ -2802,7 +2802,8 @@ export default function AdminDashboard() {
                   initial={{ opacity: 0, y: -10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  className="fixed md:absolute left-1 right-1 md:left-auto md:right-0 top-[120px] md:top-full md:mt-2 w-auto md:w-80 bg-white rounded-2xl shadow-2xl border border-[#eee] z-50 overflow-hidden"
+                  className="fixed md:absolute left-1 right-1 md:left-auto md:right-0 top-[120px] md:top-full md:mt-2 w-auto md:w-80 rounded-2xl shadow-2xl border border-[#eee] z-50 overflow-hidden"
+                  style={{ backgroundColor: '#ffffff', color: '#000000' }}
                   data-testid="payroll-quick-view-dropdown"
                 >
                   {/* Header */}
@@ -2837,7 +2838,7 @@ export default function AdminDashboard() {
                   </div>
                   
                   {/* Employee Breakdown */}
-                  <div className="p-4 max-h-[300px] overflow-y-auto bg-white">
+                  <div className="p-4 max-h-[300px] overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
                     <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#374151' }}>By Employee</h4>
                     {(!payrollSummary.current_period?.by_employee || payrollSummary.current_period.by_employee.length === 0) ? (
                       <p className="text-sm text-center py-4" style={{ color: '#6B7280' }}>
@@ -2849,8 +2850,8 @@ export default function AdminDashboard() {
                         {payrollSummary.current_period.by_employee.map(emp => (
                           <div 
                             key={emp.user_id} 
-                            className="flex items-center justify-between p-3 rounded-lg transition-colors"
-                            style={{ backgroundColor: '#F3F4F6' }}
+                            className="flex items-center justify-between p-3 rounded-lg"
+                            style={{ backgroundColor: '#F3F4F6', color: '#000000' }}
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
