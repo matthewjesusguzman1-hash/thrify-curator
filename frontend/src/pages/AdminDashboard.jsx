@@ -165,6 +165,10 @@ export default function AdminDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
   
+  // Payroll quick view state
+  const [showPayrollQuickView, setShowPayrollQuickView] = useState(false);
+  const payrollQuickViewRef = useRef(null);
+  
   // Track data updates for real-time sync
   const [lastDataUpdate, setLastDataUpdate] = useState(Date.now());
   
@@ -613,6 +617,9 @@ export default function AdminDashboard() {
     const handleClickOutside = (event) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setShowNotifications(false);
+      }
+      if (payrollQuickViewRef.current && !payrollQuickViewRef.current.contains(event.target)) {
+        setShowPayrollQuickView(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -2769,6 +2776,140 @@ export default function AdminDashboard() {
           >
             <RefreshCw className={`w-6 h-6 sm:w-5 sm:h-5 ${masterRefreshing ? 'animate-spin' : ''}`} />
           </Button>
+
+          {/* Payroll Quick View */}
+          <div className="relative" ref={payrollQuickViewRef}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="relative p-3 sm:px-3 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+              onClick={() => {
+                lightTap();
+                setShowPayrollQuickView(!showPayrollQuickView);
+              }}
+              data-testid="payroll-quick-view-btn"
+            >
+              <DollarSign className="w-6 h-6 sm:w-5 sm:h-5 text-[#10B981]" />
+              <span className="ml-1 text-sm font-bold text-[#10B981] hidden sm:inline">
+                ${payrollSummary.current_period?.amount?.toFixed(0) || '0'}
+              </span>
+            </Button>
+            
+            {/* Payroll Dropdown */}
+            <AnimatePresence>
+              {showPayrollQuickView && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  className="fixed md:absolute left-1 right-1 md:left-auto md:right-0 top-[120px] md:top-full md:mt-2 w-auto md:w-80 bg-white rounded-2xl shadow-2xl border border-[#eee] z-50 overflow-hidden"
+                  data-testid="payroll-quick-view-dropdown"
+                >
+                  {/* Header */}
+                  <div className="p-4 bg-gradient-to-r from-[#10B981] to-[#059669]">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-5 h-5 text-white" />
+                        <h3 className="font-semibold text-white">Pay Period</h3>
+                      </div>
+                      <button
+                        onClick={() => setShowPayrollQuickView(false)}
+                        className="p-1 text-white/60 hover:text-white rounded"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="mt-2 text-white/80 text-xs">
+                      {payrollSummary.current_period?.start && payrollSummary.current_period?.end ? (
+                        <>
+                          {new Date(payrollSummary.current_period.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {' - '}
+                          {new Date(payrollSummary.current_period.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </>
+                      ) : 'Current Period'}
+                    </div>
+                    <div className="mt-3 text-3xl font-bold text-white">
+                      ${payrollSummary.current_period?.amount?.toFixed(2) || '0.00'}
+                    </div>
+                    <div className="text-white/70 text-sm">
+                      {payrollSummary.current_period?.hours?.toFixed(1) || '0'} hours total
+                    </div>
+                  </div>
+                  
+                  {/* Employee Breakdown */}
+                  <div className="p-4 max-h-[300px] overflow-y-auto">
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">By Employee</h4>
+                    {employees.filter(e => e.role !== 'admin').length === 0 ? (
+                      <p className="text-gray-400 text-sm text-center py-4">No employees</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {employees
+                          .filter(e => e.role !== 'admin')
+                          .map(emp => {
+                            const empStats = timeEntries
+                              .filter(t => t.employee_id === emp.id && t.clock_out)
+                              .reduce((acc, entry) => {
+                                const clockIn = new Date(entry.clock_in);
+                                const clockOut = new Date(entry.clock_out);
+                                const periodStart = payrollSummary.current_period?.start ? new Date(payrollSummary.current_period.start) : null;
+                                const periodEnd = payrollSummary.current_period?.end ? new Date(payrollSummary.current_period.end) : null;
+                                
+                                if (periodStart && periodEnd && clockIn >= periodStart && clockIn <= periodEnd) {
+                                  const hours = (clockOut - clockIn) / (1000 * 60 * 60);
+                                  acc.hours += hours;
+                                }
+                                return acc;
+                              }, { hours: 0 });
+                            
+                            const hourlyRate = emp.hourly_rate || payrollSettings.default_hourly_rate || 20;
+                            const estimatedPay = empStats.hours * hourlyRate;
+                            
+                            if (empStats.hours === 0) return null;
+                            
+                            return (
+                              <div 
+                                key={emp.id} 
+                                className="flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                                    {emp.name?.charAt(0) || '?'}
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-900">{emp.name}</p>
+                                    <p className="text-xs text-gray-500">{empStats.hours.toFixed(1)}h × ${hourlyRate}/hr</p>
+                                  </div>
+                                </div>
+                                <span className="text-sm font-bold text-[#10B981]">${estimatedPay.toFixed(2)}</span>
+                              </div>
+                            );
+                          })
+                          .filter(Boolean)}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Footer */}
+                  <div className="p-3 border-t border-gray-100 bg-gray-50">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-[#10B981] hover:bg-[#10B981]/10"
+                      onClick={() => {
+                        setShowPayrollQuickView(false);
+                        setActiveSection("hours-by-employee");
+                        setTimeout(() => {
+                          document.querySelector('[data-testid="hours-by-employee-toggle"]')?.scrollIntoView({ behavior: 'smooth' });
+                        }, 100);
+                      }}
+                    >
+                      View Full Payroll Details →
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Notification Bell */}
           <div className="relative" ref={notificationRef}>
