@@ -2839,93 +2839,30 @@ export default function AdminDashboard() {
                   {/* Employee Breakdown */}
                   <div className="p-4 max-h-[300px] overflow-y-auto">
                     <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">By Employee</h4>
-                    {employees.filter(e => e.role !== 'admin').length === 0 ? (
-                      <p className="text-gray-400 text-sm text-center py-4">No employees</p>
+                    {(!payrollSummary.current_period?.by_employee || payrollSummary.current_period.by_employee.length === 0) ? (
+                      <p className="text-gray-400 text-sm text-center py-4">
+                        No hours logged this period.<br/>
+                        <span className="text-xs">Tap "View Full Payroll Details" for more info.</span>
+                      </p>
                     ) : (
                       <div className="space-y-2">
-                        {employees
-                          .filter(e => e.role !== 'admin')
-                          .map(emp => {
-                            // Get all completed time entries for this employee (use user_id, not employee_id)
-                            const empEntries = timeEntries.filter(t => 
-                              t.user_id === emp.id && 
-                              t.clock_out && 
-                              t.total_hours > 0
-                            );
-                            
-                            // Sum up hours from entries in the current period
-                            const totalHours = empEntries.reduce((sum, entry) => {
-                              const clockIn = new Date(entry.clock_in);
-                              const periodStart = payrollSummary.current_period?.start ? new Date(payrollSummary.current_period.start) : null;
-                              const periodEnd = payrollSummary.current_period?.end ? new Date(payrollSummary.current_period.end) : null;
-                              
-                              if (periodStart && periodEnd) {
-                                // Set period end to end of day
-                                const periodEndEOD = new Date(periodEnd);
-                                periodEndEOD.setHours(23, 59, 59, 999);
-                                if (clockIn >= periodStart && clockIn <= periodEndEOD) {
-                                  return sum + (entry.total_hours || 0);
-                                }
-                                return sum;
-                              }
-                              return sum + (entry.total_hours || 0);
-                            }, 0);
-                            
-                            const hourlyRate = emp.hourly_rate || payrollSettings.default_hourly_rate || 20;
-                            const estimatedPay = totalHours * hourlyRate;
-                            
-                            // Skip employees with 0 hours
-                            if (totalHours < 0.01) return null;
-                            
-                            return (
-                              <div 
-                                key={emp.id} 
-                                className="flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
-                                    {emp.name?.charAt(0) || '?'}
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-900">{emp.name}</p>
-                                    <p className="text-xs text-gray-500">{totalHours.toFixed(1)}h × ${hourlyRate}/hr</p>
-                                  </div>
-                                </div>
-                                <span className="text-sm font-bold text-[#10B981]">${estimatedPay.toFixed(2)}</span>
+                        {payrollSummary.current_period.by_employee.map(emp => (
+                          <div 
+                            key={emp.user_id} 
+                            className="flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                                {emp.name?.charAt(0) || '?'}
                               </div>
-                            );
-                          })
-                          .filter(Boolean)}
-                        {/* Show message if no employees have hours */}
-                        {employees
-                          .filter(e => e.role !== 'admin')
-                          .every(emp => {
-                            const empEntries = timeEntries.filter(t => 
-                              t.user_id === emp.id && 
-                              t.clock_out && 
-                              t.total_hours > 0
-                            );
-                            const totalHours = empEntries.reduce((sum, entry) => {
-                              const clockIn = new Date(entry.clock_in);
-                              const periodStart = payrollSummary.current_period?.start ? new Date(payrollSummary.current_period.start) : null;
-                              const periodEnd = payrollSummary.current_period?.end ? new Date(payrollSummary.current_period.end) : null;
-                              if (periodStart && periodEnd) {
-                                const periodEndEOD = new Date(periodEnd);
-                                periodEndEOD.setHours(23, 59, 59, 999);
-                                if (clockIn >= periodStart && clockIn <= periodEndEOD) {
-                                  return sum + (entry.total_hours || 0);
-                                }
-                                return sum;
-                              }
-                              return sum + (entry.total_hours || 0);
-                            }, 0);
-                            return totalHours < 0.01;
-                          }) && (
-                          <p className="text-gray-400 text-sm text-center py-4">
-                            No hours logged this period.<br/>
-                            <span className="text-xs">Tap "View Full Payroll Details" for more info.</span>
-                          </p>
-                        )}
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{emp.name}</p>
+                                <p className="text-xs text-gray-500">{emp.hours?.toFixed(1)}h × ${emp.hourly_rate}/hr</p>
+                              </div>
+                            </div>
+                            <span className="text-sm font-bold text-[#10B981]">${emp.amount?.toFixed(2)}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>

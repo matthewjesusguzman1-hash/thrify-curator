@@ -228,12 +228,28 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     
     outstanding_amount = max(0, prev_period_amount - prev_period_paid)
     
+    # Build employee breakdown for the current period
+    employee_breakdown = []
+    for emp in employees:
+        emp_id = emp.get("id")
+        if emp_id and emp_id in current_period_hours_by_emp:
+            hours, rate = current_period_hours_by_emp[emp_id]
+            rounded_hours = round_hours_up_to_minute(hours)
+            employee_breakdown.append({
+                "user_id": emp_id,
+                "name": emp.get("name", "Unknown"),
+                "hours": round(rounded_hours, 2),
+                "hourly_rate": rate,
+                "amount": round(rounded_hours * rate, 2)
+            })
+    
     return {
         "current_period": {
             "amount": round(current_period_amount, 2),
             "hours": round(current_period_hours, 2),
             "start": period_start.isoformat(),
-            "end": period_end.isoformat()
+            "end": period_end.isoformat(),
+            "by_employee": employee_breakdown
         },
         "outstanding_amount": round(outstanding_amount, 2),
         "month_total": round(month_total, 2),
