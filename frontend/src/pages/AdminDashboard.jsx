@@ -695,7 +695,8 @@ export default function AdminDashboard() {
         break;
         
       case 'clock_out':
-        // Clock OUT - show Hours by Employee section
+        // Clock OUT - show Hours by Employee section and refresh payroll data
+        fetchPayrollSummary(); // Refresh payroll data
         await expandGroupIfNeeded('group-team');
         await expandSectionIfNeeded('[data-testid="hours-section"]', '[data-testid="hours-by-employee-toggle"]');
         break;
@@ -2791,6 +2792,9 @@ export default function AdminDashboard() {
               className="relative p-3 sm:px-3 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
               onClick={() => {
                 lightTap();
+                if (!showPayrollQuickView) {
+                  fetchPayrollSummary(); // Refresh data when opening
+                }
                 setShowPayrollQuickView(!showPayrollQuickView);
               }}
               data-testid="payroll-quick-view-btn"
