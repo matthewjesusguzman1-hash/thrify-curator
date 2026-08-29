@@ -2833,7 +2833,7 @@ export default function AdminDashboard() {
                       ${payrollSummary.current_period?.amount?.toFixed(2) || '0.00'}
                     </div>
                     <div className="text-white/70 text-sm">
-                      {payrollSummary.current_period?.hours?.toFixed(1) || '0'} hours total
+                      {formatHoursToHMS(payrollSummary.current_period?.hours || 0)} total
                     </div>
                   </div>
                   
@@ -2859,7 +2859,7 @@ export default function AdminDashboard() {
                               </div>
                               <div>
                                 <p className="text-sm font-semibold" style={{ color: '#111827' }}>{emp.name}</p>
-                                <p className="text-xs" style={{ color: '#4B5563' }}>{emp.hours?.toFixed(1)}h × ${emp.hourly_rate}/hr</p>
+                                <p className="text-xs" style={{ color: '#4B5563' }}>{formatHoursToHMS(emp.hours || 0)} × ${emp.hourly_rate}/hr</p>
                               </div>
                             </div>
                             <span className="text-base font-bold" style={{ color: '#059669' }}>${emp.amount?.toFixed(2)}</span>
@@ -2878,10 +2878,10 @@ export default function AdminDashboard() {
                       style={{ color: '#059669' }}
                       onClick={() => {
                         setShowPayrollQuickView(false);
-                        setActiveSection("hours-by-employee");
+                        setShowHoursByEmployee(true);
                         setTimeout(() => {
                           document.querySelector('[data-testid="hours-by-employee-toggle"]')?.scrollIntoView({ behavior: 'smooth' });
-                        }, 100);
+                        }, 300);
                       }}
                     >
                       View Full Payroll Details →
