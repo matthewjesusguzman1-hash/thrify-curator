@@ -2878,9 +2878,9 @@ export default function AdminDashboard() {
                       style={{ color: '#059669' }}
                       onClick={() => {
                         setShowPayrollQuickView(false);
-                        setShowHoursByEmployee(true);
+                        setShowPayroll(true);
                         setTimeout(() => {
-                          document.querySelector('[data-testid="hours-by-employee-toggle"]')?.scrollIntoView({ behavior: 'smooth' });
+                          document.querySelector('[data-testid="payroll-section"]')?.scrollIntoView({ behavior: 'smooth' });
                         }, 300);
                       }}
                     >
