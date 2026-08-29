@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock,
@@ -312,14 +313,14 @@ export default function HoursByEmployeeSection({
         </AnimatePresence>
       </div>
 
-      {/* Employee Shifts Modal */}
-      <AnimatePresence>
-        {selectedEmployee && (
+      {/* Employee Shifts Modal - Using Portal to escape parent overflow constraints */}
+      {selectedEmployee && createPortal(
+        <AnimatePresence>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
             onClick={() => { setSelectedEmployee(null); setExpandedNoteId(null); }}
           >
             <motion.div
@@ -522,8 +523,9 @@ export default function HoursByEmployeeSection({
               </div>
             </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   );
 }

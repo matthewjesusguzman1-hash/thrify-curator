@@ -334,3 +334,10 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - **Excludes Sender**: The admin who sends the message does NOT receive their own notification
 - **Deep Linking**: Notification includes conversation_id for opening the specific conversation
 - **File Updated**: `backend/app/routers/conversations.py` - Added `send_other_admins_notification()` helper function
+
+### UI Display Fixes (2026-08-29) - NEW
+- **Employee Shifts Modal Fix**: Fixed modal overlay issues where content was showing through from behind. Used React Portal to render modal at document.body level, escaping parent overflow constraints
+- **Mobile Messaging Layout**: Fixed the conversation section so that when viewing a conversation on mobile, the conversation list is hidden to prevent overlapping/empty space issues
+- **Files Updated**:
+  - `frontend/src/components/admin/sections/HoursByEmployeeSection.jsx` - Portal-based modal rendering
+  - `frontend/src/components/admin/sections/ConversationsSection.jsx` - Hide list on mobile when conversation selected

@@ -555,8 +555,8 @@ export default function ConversationsSection() {
                 </div>
               </div>
 
-              {/* Full-width Conversation List */}
-              <div className="space-y-2 mb-4">
+              {/* Full-width Conversation List - Hide on mobile when conversation is selected */}
+              <div className={`space-y-2 mb-4 ${selectedConversation ? 'hidden sm:block' : ''}`}>
                 {loading && conversations.length === 0 ? (
                   <div className="text-center py-6">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
