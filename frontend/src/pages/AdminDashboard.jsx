@@ -689,8 +689,13 @@ export default function AdminDashboard() {
     // Determine which section to scroll to and what to open
     switch (notification.type) {
       case 'clock_in':
+        // Clock IN - show All Employees section (has green "clocked in" indicator)
+        await expandGroupIfNeeded('group-team');
+        await expandSectionIfNeeded('[data-testid="employees-section"]', '[data-testid="employees-section-toggle"]');
+        break;
+        
       case 'clock_out':
-        // Team Management group contains Hours by Employee
+        // Clock OUT - show Hours by Employee section
         await expandGroupIfNeeded('group-team');
         await expandSectionIfNeeded('[data-testid="hours-section"]', '[data-testid="hours-by-employee-toggle"]');
         break;
