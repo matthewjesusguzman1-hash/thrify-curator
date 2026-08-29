@@ -2878,10 +2878,18 @@ export default function AdminDashboard() {
                       style={{ color: '#059669' }}
                       onClick={() => {
                         setShowPayrollQuickView(false);
-                        setShowPayroll(true);
-                        setTimeout(() => {
-                          document.querySelector('[data-testid="payroll-section"]')?.scrollIntoView({ behavior: 'smooth' });
-                        }, 300);
+                        // Find and expand the Payroll & Payments group, then scroll to it
+                        const payrollGroup = document.querySelector('[data-testid="group-payroll"]');
+                        if (payrollGroup) {
+                          // Click to expand if collapsed
+                          const trigger = payrollGroup.querySelector('[data-state="closed"]');
+                          if (trigger) {
+                            trigger.click();
+                          }
+                          setTimeout(() => {
+                            payrollGroup.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }, 100);
+                        }
                       }}
                     >
                       View Full Payroll Details →
