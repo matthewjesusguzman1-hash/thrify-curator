@@ -490,15 +490,6 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => { e.stopPropagation(); handleCleanupPayrollData(); }}
-              disabled={cleaningUp}
-              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-              title="Cleanup orphaned records"
-              data-testid="cleanup-payroll-btn"
-            >
-              <Sparkles className={`w-4 h-4 ${cleaningUp ? 'animate-spin' : ''}`} />
-            </button>
             {isExpanded ? (
               <ChevronUp className="w-5 h-5 text-[#888]" />
             ) : (
