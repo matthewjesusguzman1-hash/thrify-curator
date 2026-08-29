@@ -690,11 +690,8 @@ export default function AdminDashboard() {
     // Determine which section to scroll to and what to open
     switch (notification.type) {
       case 'clock_in':
-        // Clock IN - expand the green Clocked In tracker and scroll to it
+        // Clock IN - expand the green Clocked In tracker (no scroll needed, it's at the top)
         setForceOpenClockedInTracker(true);
-        setTimeout(() => {
-          document.querySelector('[data-testid="compact-employee-tracker"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 300);
         break;
         
       case 'clock_out':
