@@ -551,7 +551,7 @@ export default function AdminFullScreenMessaging({
                           ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-tr-sm'
                           : 'bg-white border border-gray-200 text-gray-900 rounded-tl-sm shadow-sm'
                       }`}
-                      style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                      style={{ overflowWrap: 'break-word', wordWrap: 'break-word' }}
                     >
                       {msg.sender_type === 'admin' && msg.sender_name && (
                         <p className="text-xs text-white/70 mb-1 flex items-center gap-1">
@@ -565,7 +565,7 @@ export default function AdminFullScreenMessaging({
                           <span className="truncate">{msg.sender_name}</span>
                         </p>
                       )}
-                      <p className="text-sm whitespace-pre-wrap break-all">{msg.content}</p>
+                      <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                       <div className={`flex items-center gap-1 mt-2 flex-wrap ${
                         msg.sender_type === 'admin' ? 'text-white/70' : 'text-gray-400'
                       }`}>
