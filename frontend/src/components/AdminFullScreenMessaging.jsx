@@ -363,9 +363,9 @@ export default function AdminFullScreenMessaging({
   const messages = selectedConversation?.messages || [];
 
   return (
-    <div className="flex h-full w-full bg-white overflow-hidden" style={{ backgroundColor: '#ffffff' }}>
+    <div className="flex h-full w-full max-w-full bg-white overflow-hidden" style={{ backgroundColor: '#ffffff' }}>
       {/* Conversation List - Left Panel */}
-      <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 lg:w-[420px] xl:w-[480px] border-r border-gray-200`}>
+      <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 lg:w-[420px] xl:w-[480px] border-r border-gray-200 flex-shrink-0`}>
         {/* Search and Filter */}
         <div className="p-4 border-b border-gray-200 space-y-3">
           <div className="relative">
@@ -482,7 +482,7 @@ export default function AdminFullScreenMessaging({
       </div>
       
       {/* Message View - Right Panel */}
-      <div className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-col flex-1 bg-white`}>
+      <div className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-col flex-1 min-w-0 max-w-full bg-white overflow-hidden`}>
         {selectedConversation ? (
           <>
             {/* Header */}
@@ -594,8 +594,8 @@ export default function AdminFullScreenMessaging({
             </div>
             
             {/* Reply Input */}
-            <form onSubmit={handleSendReply} className="p-4 border-t border-gray-200 bg-white">
-              <div className="flex items-end gap-2">
+            <form onSubmit={handleSendReply} className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
+              <div className="flex items-end gap-2 max-w-full">
                 <textarea
                   value={newMessage}
                   onChange={(e) => {
@@ -606,7 +606,7 @@ export default function AdminFullScreenMessaging({
                   }}
                   placeholder="Type a message..."
                   rows={1}
-                  className="flex-1 border border-gray-300 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-base"
+                  className="flex-1 min-w-0 border border-gray-300 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-base"
                   style={{ minHeight: '40px', maxHeight: '150px', lineHeight: '1.4' }}
                   disabled={sending}
                 />
