@@ -2837,10 +2837,10 @@ export default function AdminDashboard() {
                   </div>
                   
                   {/* Employee Breakdown */}
-                  <div className="p-4 max-h-[300px] overflow-y-auto">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">By Employee</h4>
+                  <div className="p-4 max-h-[300px] overflow-y-auto bg-white">
+                    <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">By Employee</h4>
                     {(!payrollSummary.current_period?.by_employee || payrollSummary.current_period.by_employee.length === 0) ? (
-                      <p className="text-gray-400 text-sm text-center py-4">
+                      <p className="text-gray-500 text-sm text-center py-4">
                         No hours logged this period.<br/>
                         <span className="text-xs">Tap "View Full Payroll Details" for more info.</span>
                       </p>
@@ -2849,18 +2849,18 @@ export default function AdminDashboard() {
                         {payrollSummary.current_period.by_employee.map(emp => (
                           <div 
                             key={emp.user_id} 
-                            className="flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                            className="flex items-center justify-between p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
                           >
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
                                 {emp.name?.charAt(0) || '?'}
                               </div>
                               <div>
-                                <p className="text-sm font-medium text-gray-900">{emp.name}</p>
-                                <p className="text-xs text-gray-500">{emp.hours?.toFixed(1)}h × ${emp.hourly_rate}/hr</p>
+                                <p className="text-sm font-semibold text-gray-900">{emp.name}</p>
+                                <p className="text-xs text-gray-600">{emp.hours?.toFixed(1)}h × ${emp.hourly_rate}/hr</p>
                               </div>
                             </div>
-                            <span className="text-sm font-bold text-[#10B981]">${emp.amount?.toFixed(2)}</span>
+                            <span className="text-base font-bold text-emerald-600">${emp.amount?.toFixed(2)}</span>
                           </div>
                         ))}
                       </div>
