@@ -363,7 +363,7 @@ export default function AdminFullScreenMessaging({
   const messages = selectedConversation?.messages || [];
 
   return (
-    <div className="flex h-full bg-white" style={{ backgroundColor: '#ffffff', minHeight: '100%' }}>
+    <div className="flex h-full w-full bg-white overflow-hidden" style={{ backgroundColor: '#ffffff' }}>
       {/* Conversation List - Left Panel */}
       <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 lg:w-[420px] xl:w-[480px] border-r border-gray-200`}>
         {/* Search and Filter */}
@@ -532,8 +532,7 @@ export default function AdminFullScreenMessaging({
             <div 
               ref={messagesContainerRef}
               onScroll={handleScroll}
-              className="flex-1 overflow-y-auto py-4 pl-3 pr-8 space-y-4 bg-gray-50"
-              style={{ paddingRight: 'max(2rem, env(safe-area-inset-right, 2rem))' }}
+              className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-gray-50"
             >
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -544,12 +543,12 @@ export default function AdminFullScreenMessaging({
                 messages.map((msg, index) => (
                   <div
                     key={msg.id || index}
-                    className={`flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex w-full ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[70%] rounded-2xl px-4 py-3 ${
+                      className={`max-w-[75%] rounded-2xl px-4 py-3 ${
                         msg.sender_type === 'admin'
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-tr-sm mr-1'
+                          ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-tr-sm'
                           : 'bg-white border border-gray-200 text-gray-900 rounded-tl-sm shadow-sm'
                       }`}
                     >

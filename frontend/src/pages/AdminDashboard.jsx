@@ -4407,11 +4407,9 @@ export default function AdminDashboard() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex flex-col"
+            className="fixed inset-0 z-[9999] flex flex-col overflow-hidden"
             style={{ 
               paddingTop: 'env(safe-area-inset-top, 0px)',
-              paddingRight: 'env(safe-area-inset-right, 0px)',
-              paddingLeft: 'env(safe-area-inset-left, 0px)',
               backgroundColor: '#ffffff'
             }}
           >
