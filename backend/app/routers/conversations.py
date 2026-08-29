@@ -86,6 +86,106 @@ async def send_user_push_notification(user_type: str, user_id: str, title: str, 
         print(f"Failed to send push notification: {e}")
 
 
+async def send_other_admins_notification(sending_admin_id: str, sending_admin_name: str, title: str, body: str, notification_type: str, conversation_id: str = None):
+    """Send push notification to all OTHER admins (excluding the one who sent the message)
+    
+    Args:
+        sending_admin_id: The ID/email of the admin who sent the message (to exclude)
+        sending_admin_name: Name of the sending admin for logging
+        title: Notification title
+        body: Notification body text
+        notification_type: Type for handling tap actions
+        conversation_id: Optional conversation ID for deep linking
+    """
+    from app.services.apns_service import generate_apns_token, APNS_URL, APNS_BUNDLE_ID
+    import httpx
+    
+    # Get all admin device tokens EXCEPT the sending admin
+    admin_tokens = await db.device_push_tokens.find({
+        "active": True,
+        "user_type": "admin",
+        "user_id": {"$ne": sending_admin_id}  # Exclude the sending admin
+    }).to_list(100)
+    
+    if not admin_tokens:
+        print(f"[PUSH] No other admin devices to notify (sender: {sending_admin_name})")
+        return
+    
+    print(f"[PUSH] Sending '{notification_type}' to {len(admin_tokens)} other admin device(s), excluding {sending_admin_name}")
+    
+    try:
+        token = generate_apns_token()
+        
+        for token_doc in admin_tokens:
+            device_token = token_doc.get("device_token")
+            if not device_token:
+                continue
+            
+            recipient_id = token_doc.get("user_id", "unknown")
+            print(f"[PUSH] Sending admin message notification to {recipient_id}")
+            
+            payload = {
+                "aps": {
+                    "alert": {
+                        "title": title,
+                        "body": body
+                    },
+                    "sound": "default",
+                    "badge": 1
+                },
+                "type": notification_type
+            }
+            
+            # Add conversation_id for deep linking
+            if conversation_id:
+                payload["data"] = {"conversation_id": conversation_id}
+            
+            headers = {
+                "authorization": f"bearer {token}",
+                "apns-topic": APNS_BUNDLE_ID,
+                "apns-push-type": "alert",
+                "apns-priority": "10"
+            }
+            
+            async with httpx.AsyncClient(http2=True) as client:
+                response = await client.post(
+                    f"{APNS_URL}/3/device/{device_token}",
+                    json=payload,
+                    headers=headers
+                )
+                
+                if response.status_code == 200:
+                    print(f"[PUSH] ✓ Sent to admin {recipient_id}")
+                else:
+                    print(f"[PUSH] ✗ Failed for admin {recipient_id}: {response.status_code}")
+                    
+    except Exception as e:
+        print(f"[PUSH] Error sending to other admins: {e}")
+    
+    # Also send web push to other admins
+    try:
+        other_admin_subscriptions = await db.web_push_subscriptions.find({
+            "user_type": "admin",
+            "user_id": {"$ne": sending_admin_id}
+        }).to_list(100)
+        
+        if other_admin_subscriptions:
+            web_push = get_web_push_service()
+            for subscription in other_admin_subscriptions:
+                try:
+                    await web_push.send_notification(
+                        subscription_info=subscription,
+                        title=title,
+                        body=body,
+                        url=f"/admin?section=messages&conversation={conversation_id}" if conversation_id else "/admin?section=messages",
+                        tag=notification_type
+                    )
+                except Exception as e:
+                    print(f"[WebPush] Failed for admin subscription: {e}")
+    except Exception as e:
+        print(f"[WebPush] Error sending to other admins: {e}")
+
+
 # ============ EMPLOYEE MESSAGING ============
 
 @router.get("/employee/my-conversation")
@@ -621,6 +721,20 @@ async def admin_reply(reply: AdminReplyCreate, admin: dict = Depends(get_admin_u
             )
     except Exception as e:
         print(f"Failed to send admin reply web push: {e}")
+    
+    # NEW: Notify OTHER admins about this message so they stay in the loop
+    try:
+        participant_name = conversation.get("participant_name", "Unknown")
+        await send_other_admins_notification(
+            sending_admin_id=admin_id,
+            sending_admin_name=admin_name,
+            title=f"{admin_name} messaged {participant_name}",
+            body=reply.content[:100] + "..." if len(reply.content) > 100 else reply.content,
+            notification_type="admin_conversation_update",
+            conversation_id=reply.conversation_id
+        )
+    except Exception as e:
+        print(f"Failed to send other admins notification: {e}")
     
     return {"success": True, "message_id": new_message["id"]}
 

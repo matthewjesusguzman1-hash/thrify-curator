@@ -313,11 +313,12 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 ### AnyDesk Remote Worker Setup (2026-08-27) - NEW
 - **Remote Access Reversal**: Switched all RustDesk references back to AnyDesk per user request
 - **Quick-Connect Button**: Added "Connect to Work Computer" button that opens AnyDesk app directly using `anydesk:` URI scheme
-- **Password Security**: AnyDesk password is NOT displayed in the app - users enter the password provided during onboarding
+- **Password Security**: AnyDesk password is displayed in the app ("Thrifty Curator") for easy contractor access
 - **Remote Work Setup Section** (visible only to `is_remote_worker: true` employees):
   - Step 1: Download AnyDesk button linking to anydesk.com/en/downloads
   - Step 2: Share Your AnyDesk Address (optional) - employee can share their ID with admin
-  - Step 3: Quick-connect button + collapsible Manual Connection Details showing company AnyDesk ID with copy button
+  - Step 3: Quick-connect button + collapsible Manual Connection Details showing company AnyDesk ID and password with copy buttons
+  - Instructions updated to reference "Log in automatically from now on" checkbox (correct AnyDesk wording)
   - Important Tips section with connection guidelines
 - **Files Updated**:
   - `frontend/src/pages/EmployeeDashboard.jsx` - AnyDesk section with quick-connect
@@ -325,3 +326,11 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - `frontend/src/components/admin/sections/SendApplicationLinkSection.jsx` - "Include AnyDesk Instructions" option
   - `backend/app/routers/contractor_agreement.py` - Updated all agreement text from RustDesk to AnyDesk
 - **Backend Endpoint**: `POST /api/time/employees/me/anydesk` - Employee shares their AnyDesk address
+
+### Admin-to-Admin Message Notifications (2026-08-29) - NEW
+- **Cross-Admin Notifications**: When one admin (e.g., Eunice) sends a message in a conversation, the other admin (e.g., Matthew) now receives a push notification
+- **Notification Content**: Shows "{Admin Name} messaged {Participant Name}" with message preview
+- **Both Push Types**: Sends both APNs (native app) and Web Push (Safari PWA) to other admins
+- **Excludes Sender**: The admin who sends the message does NOT receive their own notification
+- **Deep Linking**: Notification includes conversation_id for opening the specific conversation
+- **File Updated**: `backend/app/routers/conversations.py` - Added `send_other_admins_notification()` helper function

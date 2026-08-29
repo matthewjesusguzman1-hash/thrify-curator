@@ -1,5 +1,7 @@
 // Thrifty Curator Service Worker
 // Version 8 - Force cache refresh
+/* eslint-disable no-undef */
+/* global clients, self */
 
 const CACHE_VERSION = 'v8-' + Date.now(); // Unique version each time
 const CACHE_NAME = 'thrifty-curator-' + CACHE_VERSION;
