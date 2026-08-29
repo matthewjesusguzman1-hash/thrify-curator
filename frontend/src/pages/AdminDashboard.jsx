@@ -2838,9 +2838,9 @@ export default function AdminDashboard() {
                   
                   {/* Employee Breakdown */}
                   <div className="p-4 max-h-[300px] overflow-y-auto bg-white">
-                    <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">By Employee</h4>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#374151' }}>By Employee</h4>
                     {(!payrollSummary.current_period?.by_employee || payrollSummary.current_period.by_employee.length === 0) ? (
-                      <p className="text-gray-500 text-sm text-center py-4">
+                      <p className="text-sm text-center py-4" style={{ color: '#6B7280' }}>
                         No hours logged this period.<br/>
                         <span className="text-xs">Tap "View Full Payroll Details" for more info.</span>
                       </p>
@@ -2849,18 +2849,19 @@ export default function AdminDashboard() {
                         {payrollSummary.current_period.by_employee.map(emp => (
                           <div 
                             key={emp.user_id} 
-                            className="flex items-center justify-between p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                            className="flex items-center justify-between p-3 rounded-lg transition-colors"
+                            style={{ backgroundColor: '#F3F4F6' }}
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
                                 {emp.name?.charAt(0) || '?'}
                               </div>
                               <div>
-                                <p className="text-sm font-semibold text-gray-900">{emp.name}</p>
-                                <p className="text-xs text-gray-600">{emp.hours?.toFixed(1)}h × ${emp.hourly_rate}/hr</p>
+                                <p className="text-sm font-semibold" style={{ color: '#111827' }}>{emp.name}</p>
+                                <p className="text-xs" style={{ color: '#4B5563' }}>{emp.hours?.toFixed(1)}h × ${emp.hourly_rate}/hr</p>
                               </div>
                             </div>
-                            <span className="text-base font-bold text-emerald-600">${emp.amount?.toFixed(2)}</span>
+                            <span className="text-base font-bold" style={{ color: '#059669' }}>${emp.amount?.toFixed(2)}</span>
                           </div>
                         ))}
                       </div>
@@ -2868,11 +2869,12 @@ export default function AdminDashboard() {
                   </div>
                   
                   {/* Footer */}
-                  <div className="p-3 border-t border-gray-100 bg-gray-50">
+                  <div className="p-3 border-t" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full text-[#10B981] hover:bg-[#10B981]/10"
+                      className="w-full hover:bg-emerald-50"
+                      style={{ color: '#059669' }}
                       onClick={() => {
                         setShowPayrollQuickView(false);
                         setActiveSection("hours-by-employee");
