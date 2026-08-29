@@ -2846,25 +2846,36 @@ export default function AdminDashboard() {
                         {employees
                           .filter(e => e.role !== 'admin')
                           .map(emp => {
-                            const empStats = timeEntries
-                              .filter(t => t.employee_id === emp.id && t.clock_out)
-                              .reduce((acc, entry) => {
-                                const clockIn = new Date(entry.clock_in);
-                                const clockOut = new Date(entry.clock_out);
-                                const periodStart = payrollSummary.current_period?.start ? new Date(payrollSummary.current_period.start) : null;
-                                const periodEnd = payrollSummary.current_period?.end ? new Date(payrollSummary.current_period.end) : null;
-                                
-                                if (periodStart && periodEnd && clockIn >= periodStart && clockIn <= periodEnd) {
-                                  const hours = (clockOut - clockIn) / (1000 * 60 * 60);
-                                  acc.hours += hours;
+                            // Get all completed time entries for this employee (use user_id, not employee_id)
+                            const empEntries = timeEntries.filter(t => 
+                              t.user_id === emp.id && 
+                              t.clock_out && 
+                              t.total_hours > 0
+                            );
+                            
+                            // Sum up hours from entries in the current period
+                            const totalHours = empEntries.reduce((sum, entry) => {
+                              const clockIn = new Date(entry.clock_in);
+                              const periodStart = payrollSummary.current_period?.start ? new Date(payrollSummary.current_period.start) : null;
+                              const periodEnd = payrollSummary.current_period?.end ? new Date(payrollSummary.current_period.end) : null;
+                              
+                              if (periodStart && periodEnd) {
+                                // Set period end to end of day
+                                const periodEndEOD = new Date(periodEnd);
+                                periodEndEOD.setHours(23, 59, 59, 999);
+                                if (clockIn >= periodStart && clockIn <= periodEndEOD) {
+                                  return sum + (entry.total_hours || 0);
                                 }
-                                return acc;
-                              }, { hours: 0 });
+                                return sum;
+                              }
+                              return sum + (entry.total_hours || 0);
+                            }, 0);
                             
                             const hourlyRate = emp.hourly_rate || payrollSettings.default_hourly_rate || 20;
-                            const estimatedPay = empStats.hours * hourlyRate;
+                            const estimatedPay = totalHours * hourlyRate;
                             
-                            if (empStats.hours === 0) return null;
+                            // Skip employees with 0 hours
+                            if (totalHours < 0.01) return null;
                             
                             return (
                               <div 
@@ -2877,7 +2888,7 @@ export default function AdminDashboard() {
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium text-gray-900">{emp.name}</p>
-                                    <p className="text-xs text-gray-500">{empStats.hours.toFixed(1)}h × ${hourlyRate}/hr</p>
+                                    <p className="text-xs text-gray-500">{totalHours.toFixed(1)}h × ${hourlyRate}/hr</p>
                                   </div>
                                 </div>
                                 <span className="text-sm font-bold text-[#10B981]">${estimatedPay.toFixed(2)}</span>
@@ -2885,6 +2896,36 @@ export default function AdminDashboard() {
                             );
                           })
                           .filter(Boolean)}
+                        {/* Show message if no employees have hours */}
+                        {employees
+                          .filter(e => e.role !== 'admin')
+                          .every(emp => {
+                            const empEntries = timeEntries.filter(t => 
+                              t.user_id === emp.id && 
+                              t.clock_out && 
+                              t.total_hours > 0
+                            );
+                            const totalHours = empEntries.reduce((sum, entry) => {
+                              const clockIn = new Date(entry.clock_in);
+                              const periodStart = payrollSummary.current_period?.start ? new Date(payrollSummary.current_period.start) : null;
+                              const periodEnd = payrollSummary.current_period?.end ? new Date(payrollSummary.current_period.end) : null;
+                              if (periodStart && periodEnd) {
+                                const periodEndEOD = new Date(periodEnd);
+                                periodEndEOD.setHours(23, 59, 59, 999);
+                                if (clockIn >= periodStart && clockIn <= periodEndEOD) {
+                                  return sum + (entry.total_hours || 0);
+                                }
+                                return sum;
+                              }
+                              return sum + (entry.total_hours || 0);
+                            }, 0);
+                            return totalHours < 0.01;
+                          }) && (
+                          <p className="text-gray-400 text-sm text-center py-4">
+                            No hours logged this period.<br/>
+                            <span className="text-xs">Tap "View Full Payroll Details" for more info.</span>
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
