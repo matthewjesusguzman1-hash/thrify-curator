@@ -569,17 +569,21 @@ table tbody tr:hover {
 }
 
 /* Payroll quick view dropdown - Override inherited header styles */
-[data-testid="payroll-quick-view-dropdown"],
-[data-testid="payroll-quick-view-dropdown"] * {
-    color: #1A1A2E;
+[data-testid="payroll-quick-view-dropdown"] {
+    color: #000000 !important;
 }
 
-[data-testid="payroll-quick-view-dropdown"] p {
-    color: #111827 !important;
+[data-testid="payroll-quick-view-dropdown"] p,
+[data-testid="payroll-quick-view-dropdown"] span,
+[data-testid="payroll-quick-view-dropdown"] div {
+    color: #000000 !important;
 }
 
 [data-testid="payroll-quick-view-dropdown"] .bg-gradient-to-r,
-[data-testid="payroll-quick-view-dropdown"] .bg-gradient-to-r * {
+[data-testid="payroll-quick-view-dropdown"] .bg-gradient-to-r *,
+[data-testid="payroll-quick-view-dropdown"] .bg-gradient-to-r p,
+[data-testid="payroll-quick-view-dropdown"] .bg-gradient-to-r span,
+[data-testid="payroll-quick-view-dropdown"] .bg-gradient-to-r div {
     color: white !important;
 }
 
