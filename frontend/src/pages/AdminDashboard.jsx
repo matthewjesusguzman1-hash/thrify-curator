@@ -168,6 +168,7 @@ export default function AdminDashboard() {
   // Payroll quick view state
   const [showPayrollQuickView, setShowPayrollQuickView] = useState(false);
   const payrollQuickViewRef = useRef(null);
+  const [forceOpenPayrollGroup, setForceOpenPayrollGroup] = useState(false);
   
   // Track data updates for real-time sync
   const [lastDataUpdate, setLastDataUpdate] = useState(Date.now());
@@ -2878,18 +2879,10 @@ export default function AdminDashboard() {
                       style={{ color: '#059669' }}
                       onClick={() => {
                         setShowPayrollQuickView(false);
-                        // Find and expand the Payroll & Payments group, then scroll to it
-                        const payrollGroup = document.querySelector('[data-testid="group-payroll"]');
-                        if (payrollGroup) {
-                          // Click to expand if collapsed
-                          const trigger = payrollGroup.querySelector('[data-state="closed"]');
-                          if (trigger) {
-                            trigger.click();
-                          }
-                          setTimeout(() => {
-                            payrollGroup.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                          }, 100);
-                        }
+                        setForceOpenPayrollGroup(true);
+                        setTimeout(() => {
+                          document.querySelector('[data-testid="group-payroll"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 400);
                       }}
                     >
                       View Full Payroll Details →
@@ -3789,6 +3782,7 @@ export default function AdminDashboard() {
               icon={DollarSign}
               gradient="from-[#8B5CF6] to-[#6D28D9]"
               defaultOpen={false}
+              forceOpen={forceOpenPayrollGroup}
               badge="Track earnings & payments"
               testId="group-payroll"
             >
