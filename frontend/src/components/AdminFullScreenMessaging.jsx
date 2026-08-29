@@ -363,9 +363,9 @@ export default function AdminFullScreenMessaging({
   const messages = selectedConversation?.messages || [];
 
   return (
-    <div className="flex h-full w-full max-w-full bg-white overflow-hidden" style={{ backgroundColor: '#ffffff' }}>
+    <div className="flex h-full bg-white" style={{ width: '100%', maxWidth: '100vw', overflow: 'hidden' }}>
       {/* Conversation List - Left Panel */}
-      <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 lg:w-[420px] xl:w-[480px] border-r border-gray-200 flex-shrink-0`}>
+      <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 lg:w-[420px] xl:w-[480px] border-r border-gray-200`}>
         {/* Search and Filter */}
         <div className="p-4 border-b border-gray-200 space-y-3">
           <div className="relative">
@@ -482,7 +482,10 @@ export default function AdminFullScreenMessaging({
       </div>
       
       {/* Message View - Right Panel */}
-      <div className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-col flex-1 min-w-0 max-w-full bg-white overflow-hidden`}>
+      <div 
+        className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-col bg-white`}
+        style={{ flex: 1, width: '100%', maxWidth: '100%', overflow: 'hidden' }}
+      >
         {selectedConversation ? (
           <>
             {/* Header */}
@@ -533,6 +536,7 @@ export default function AdminFullScreenMessaging({
               ref={messagesContainerRef}
               onScroll={handleScroll}
               className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-gray-50"
+              style={{ width: '100%' }}
             >
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -594,26 +598,26 @@ export default function AdminFullScreenMessaging({
             </div>
             
             {/* Reply Input */}
-            <form onSubmit={handleSendReply} className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
-              <div className="flex items-end gap-2 max-w-full">
+            <form onSubmit={handleSendReply} className="p-4 border-t border-gray-200 bg-white">
+              <div className="flex items-end gap-2" style={{ width: '100%' }}>
                 <textarea
                   value={newMessage}
                   onChange={(e) => {
                     setNewMessage(e.target.value);
-                    // Auto-expand textarea
                     e.target.style.height = 'auto';
                     e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
                   }}
                   placeholder="Type a message..."
                   rows={1}
-                  className="flex-1 min-w-0 border border-gray-300 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-base"
-                  style={{ minHeight: '40px', maxHeight: '150px', lineHeight: '1.4' }}
+                  className="border border-gray-300 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-base"
+                  style={{ flex: 1, minWidth: 0, minHeight: '40px', maxHeight: '150px', lineHeight: '1.4' }}
                   disabled={sending}
                 />
                 <Button
                   type="submit"
                   disabled={!newMessage.trim() || sending}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 rounded-full w-10 h-10 p-0 flex-shrink-0"
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 rounded-full w-10 h-10 p-0"
+                  style={{ flexShrink: 0 }}
                 >
                   {sending ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
