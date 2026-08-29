@@ -546,32 +546,33 @@ export default function AdminFullScreenMessaging({
                     className={`flex w-full ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[75%] rounded-2xl px-4 py-3 ${
+                      className={`max-w-[75%] rounded-2xl px-4 py-3 overflow-hidden ${
                         msg.sender_type === 'admin'
                           ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-tr-sm'
                           : 'bg-white border border-gray-200 text-gray-900 rounded-tl-sm shadow-sm'
                       }`}
+                      style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
                     >
                       {msg.sender_type === 'admin' && msg.sender_name && (
                         <p className="text-xs text-white/70 mb-1 flex items-center gap-1">
-                          <User className="w-3 h-3" />
-                          {msg.sender_name}
+                          <User className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{msg.sender_name}</span>
                         </p>
                       )}
                       {msg.sender_type !== 'admin' && (
                         <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-                          <User className="w-3 h-3" />
-                          {msg.sender_name}
+                          <User className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{msg.sender_name}</span>
                         </p>
                       )}
-                      <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                      <div className={`flex items-center gap-1 mt-2 ${
+                      <p className="text-sm whitespace-pre-wrap break-all">{msg.content}</p>
+                      <div className={`flex items-center gap-1 mt-2 flex-wrap ${
                         msg.sender_type === 'admin' ? 'text-white/70' : 'text-gray-400'
                       }`}>
                         <span className="text-xs">{formatMessageTime(msg.sent_at)}</span>
                         {/* Read receipt indicator for admin messages - ALWAYS show to admin */}
                         {msg.sender_type === 'admin' && (
-                          <span className="flex items-center ml-2" title={msg.read_at ? `Seen ${formatReadTime(msg.read_at)}` : "Delivered"}>
+                          <span className="flex items-center ml-2 flex-shrink-0" title={msg.read_at ? `Seen ${formatReadTime(msg.read_at)}` : "Delivered"}>
                             {msg.read ? (
                               <>
                                 <CheckCheck className="w-4 h-4 text-blue-300" />
