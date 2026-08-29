@@ -363,7 +363,7 @@ export default function AdminFullScreenMessaging({
   const messages = selectedConversation?.messages || [];
 
   return (
-    <div className="flex h-full bg-white">
+    <div className="flex h-full bg-white" style={{ backgroundColor: '#ffffff', minHeight: '100%' }}>
       {/* Conversation List - Left Panel */}
       <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 lg:w-[420px] xl:w-[480px] border-r border-gray-200`}>
         {/* Search and Filter */}
@@ -482,7 +482,7 @@ export default function AdminFullScreenMessaging({
       </div>
       
       {/* Message View - Right Panel */}
-      <div className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-col flex-1`}>
+      <div className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-col flex-1 bg-white`}>
         {selectedConversation ? (
           <>
             {/* Header */}

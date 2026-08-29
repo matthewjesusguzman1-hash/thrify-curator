@@ -4407,8 +4407,11 @@ export default function AdminDashboard() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-white z-50 flex flex-col"
-            style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+            className="fixed inset-0 z-[9999] flex flex-col"
+            style={{ 
+              paddingTop: 'env(safe-area-inset-top, 0px)',
+              backgroundColor: '#ffffff'
+            }}
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-[#1A1A2E] to-[#2D2D44]">
