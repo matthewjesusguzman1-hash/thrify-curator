@@ -568,6 +568,17 @@ table tbody tr:hover {
     color: #1A1A2E;
 }
 
+/* Payroll quick view dropdown - Override inherited header styles */
+[data-testid="payroll-quick-view-dropdown"],
+[data-testid="payroll-quick-view-dropdown"] * {
+    color: #1A1A2E;
+}
+
+[data-testid="payroll-quick-view-dropdown"] .bg-gradient-to-r,
+[data-testid="payroll-quick-view-dropdown"] .bg-gradient-to-r * {
+    color: white;
+}
+
 /* Reset header white text for notification dropdown content */
 .dashboard-header [data-testid="notification-dropdown"] p,
 .dashboard-header [data-testid="notification-dropdown"] span,
