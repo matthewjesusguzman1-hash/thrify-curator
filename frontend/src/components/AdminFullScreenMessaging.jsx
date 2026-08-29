@@ -532,7 +532,7 @@ export default function AdminFullScreenMessaging({
             <div 
               ref={messagesContainerRef}
               onScroll={handleScroll}
-              className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-gray-50"
+              className="flex-1 overflow-y-auto py-4 pl-4 pr-6 space-y-4 bg-gray-50"
             >
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -543,10 +543,10 @@ export default function AdminFullScreenMessaging({
                 messages.map((msg, index) => (
                   <div
                     key={msg.id || index}
-                    className={`flex ${msg.sender_type === 'admin' ? 'justify-end pr-1' : 'justify-start pl-1'}`}
+                    className={`flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[75%] rounded-2xl px-4 py-3 ${
+                      className={`max-w-[70%] rounded-2xl px-4 py-3 ${
                         msg.sender_type === 'admin'
                           ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-tr-sm'
                           : 'bg-white border border-gray-200 text-gray-900 rounded-tl-sm shadow-sm'
