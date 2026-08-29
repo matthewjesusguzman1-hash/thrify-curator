@@ -28,11 +28,18 @@ const calculatePay = (clockInTime, hourlyRate = 20) => {
   return (hoursWorked * hourlyRate).toFixed(2);
 };
 
-export default function CompactEmployeeTracker({ employees, employeeClockStatuses, getAuthHeader }) {
+export default function CompactEmployeeTracker({ employees, employeeClockStatuses, getAuthHeader, forceOpen }) {
   const [clockedInEmployees, setClockedInEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const [tick, setTick] = useState(0);
+  
+  // Handle forceOpen prop
+  useEffect(() => {
+    if (forceOpen) {
+      setExpanded(true);
+    }
+  }, [forceOpen]);
   
   // Fetch clocked-in employees
   const fetchClockedInEmployees = useCallback(async () => {

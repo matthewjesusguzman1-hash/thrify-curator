@@ -169,6 +169,7 @@ export default function AdminDashboard() {
   const [showPayrollQuickView, setShowPayrollQuickView] = useState(false);
   const payrollQuickViewRef = useRef(null);
   const [forceOpenPayrollGroup, setForceOpenPayrollGroup] = useState(false);
+  const [forceOpenClockedInTracker, setForceOpenClockedInTracker] = useState(false);
   
   // Track data updates for real-time sync
   const [lastDataUpdate, setLastDataUpdate] = useState(Date.now());
@@ -689,9 +690,11 @@ export default function AdminDashboard() {
     // Determine which section to scroll to and what to open
     switch (notification.type) {
       case 'clock_in':
-        // Clock IN - show All Employees section (has green "clocked in" indicator)
-        await expandGroupIfNeeded('group-team');
-        await expandSectionIfNeeded('[data-testid="employees-section"]', '[data-testid="employees-section-toggle"]');
+        // Clock IN - expand the green Clocked In tracker and scroll to it
+        setForceOpenClockedInTracker(true);
+        setTimeout(() => {
+          document.querySelector('[data-testid="compact-employee-tracker"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
         break;
         
       case 'clock_out':
@@ -3195,6 +3198,7 @@ export default function AdminDashboard() {
           employees={employees}
           employeeClockStatuses={employeeClockStatuses}
           getAuthHeader={getAuthHeader}
+          forceOpen={forceOpenClockedInTracker}
         />
         
         <div className="space-y-6">
