@@ -4410,6 +4410,8 @@ export default function AdminDashboard() {
             className="fixed inset-0 z-[9999] flex flex-col"
             style={{ 
               paddingTop: 'env(safe-area-inset-top, 0px)',
+              paddingRight: 'env(safe-area-inset-right, 0px)',
+              paddingLeft: 'env(safe-area-inset-left, 0px)',
               backgroundColor: '#ffffff'
             }}
           >
