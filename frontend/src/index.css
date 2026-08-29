@@ -574,9 +574,13 @@ table tbody tr:hover {
     color: #1A1A2E;
 }
 
+[data-testid="payroll-quick-view-dropdown"] p {
+    color: #111827 !important;
+}
+
 [data-testid="payroll-quick-view-dropdown"] .bg-gradient-to-r,
 [data-testid="payroll-quick-view-dropdown"] .bg-gradient-to-r * {
-    color: white;
+    color: white !important;
 }
 
 /* Reset header white text for notification dropdown content */
