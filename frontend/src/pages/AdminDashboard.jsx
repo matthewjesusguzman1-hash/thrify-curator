@@ -239,12 +239,10 @@ export default function AdminDashboard() {
   // Form submissions state
   const [formSubmissions, setFormSubmissions] = useState({
     jobApplications: [],
-    consignmentInquiries: [],
     consignmentAgreements: []
   });
   const [formsSummary, setFormsSummary] = useState({
     job_applications: { total: 0, new: 0 },
-    consignment_inquiries: { total: 0, new: 0 },
     consignment_agreements: { total: 0, new: 0 }
   });
   const [paymentMethodChanges, setPaymentMethodChanges] = useState([]);
@@ -313,7 +311,6 @@ export default function AdminDashboard() {
     allEmployees: { key: 'created_at', direction: 'desc' },
     timeEntries: { key: 'clock_in', direction: 'desc' },
     jobApplications: { key: 'submitted_at', direction: 'desc' },
-    consignmentInquiries: { key: 'submitted_at', direction: 'desc' },
     consignmentAgreements: { key: 'submitted_at', direction: 'desc' }
   });
 
@@ -576,16 +573,14 @@ export default function AdminDashboard() {
   const fetchFormSubmissions = useCallback(async () => {
     setLoadingForms(true);
     try {
-      const [jobAppsRes, inquiriesRes, agreementsRes, summaryRes] = await Promise.all([
+      const [jobAppsRes, agreementsRes, summaryRes] = await Promise.all([
         axios.get(`${API}/admin/forms/job-applications`, getAuthHeader()),
-        axios.get(`${API}/admin/forms/consignment-inquiries`, getAuthHeader()),
         axios.get(`${API}/admin/forms/consignment-agreements`, getAuthHeader()),
         axios.get(`${API}/admin/forms/summary`, getAuthHeader())
       ]);
 
       setFormSubmissions({
         jobApplications: jobAppsRes.data,
-        consignmentInquiries: inquiriesRes.data,
         consignmentAgreements: agreementsRes.data
       });
       setFormsSummary(summaryRes.data);
@@ -768,10 +763,8 @@ export default function AdminDashboard() {
           if (notification.type === 'job_application') {
             const jobTab = document.querySelector('[data-testid="tab-job-applications"]');
             if (jobTab) jobTab.click();
-          } else if (notification.type === 'consignment_inquiry') {
-            const inquiryTab = document.querySelector('[data-testid="tab-consignment-inquiries"]');
-            if (inquiryTab) inquiryTab.click();
-          } else if (notification.type === 'consignment_agreement') {
+          } else {
+            // Both consignment_inquiry and consignment_agreement go to agreements tab
             const agreementTab = document.querySelector('[data-testid="tab-consignment-agreements"]');
             if (agreementTab) agreementTab.click();
           }

@@ -119,7 +119,7 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
                     emp_current_hours += hours
                 elif prev_period_start <= clock_in_dt <= prev_period_end:
                     emp_prev_hours += hours
-            except:
+            except (ValueError, TypeError, KeyError):
                 continue
         
         if emp_current_hours > 0:
@@ -212,7 +212,7 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
                                     prev_period_paid += amount
                                     period_matched = True
                                     break
-                            except:
+                            except (ValueError, TypeError):
                                 continue
                     if period_matched:
                         break
@@ -223,7 +223,7 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
                 # likely covers the previous period
                 prev_period_paid += amount
                 
-        except:
+        except (ValueError, TypeError, KeyError):
             continue
     
     outstanding_amount = max(0, prev_period_amount - prev_period_paid)

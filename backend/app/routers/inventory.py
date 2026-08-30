@@ -623,7 +623,7 @@ async def get_inventory_analytics(
                     days = (sold - listed).days
                     if days >= 0:
                         days_to_sale.append(days)
-                except:
+                except (ValueError, TypeError):
                     pass
     else:
         # No year filter - use all sold items
@@ -637,7 +637,7 @@ async def get_inventory_analytics(
                     days = (sold - listed).days
                     if days >= 0:
                         days_to_sale.append(days)
-                except:
+                except (ValueError, TypeError):
                     pass
     
     avg_days_to_sale = round(sum(days_to_sale) / len(days_to_sale), 1) if days_to_sale else None
@@ -828,7 +828,7 @@ async def get_stale_inventory(
             try:
                 listed = datetime.strptime(item["listed_date"][:10], "%Y-%m-%d")
                 item["days_in_inventory"] = (today - listed).days
-            except:
+            except (ValueError, TypeError, KeyError):
                 item["days_in_inventory"] = None
     
     # Get total count

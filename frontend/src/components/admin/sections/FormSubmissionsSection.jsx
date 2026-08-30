@@ -67,10 +67,9 @@ export default function FormSubmissionsSection({
   onViewConsignorPortal
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeFormTab, setActiveFormTab] = useState("consignment_inquiries");
+  const [activeFormTab, setActiveFormTab] = useState("consignment_agreements");
   const [formSearchQuery, setFormSearchQuery] = useState("");
   const [sortConfig, setSortConfig] = useState({
-    consignmentInquiries: { key: "submitted_at", direction: "desc" },
     consignmentAgreements: { key: "submitted_at", direction: "desc" },
     updates: { key: "submitted_at", direction: "desc" }
   });
@@ -497,11 +496,9 @@ Thrifty Curator Team`;
   };
 
   const totalSubmissions = 
-    (formsSummary?.consignment_inquiries?.total || 0) + 
     (formsSummary?.consignment_agreements?.total || 0);
   
   const totalNew = 
-    (formsSummary?.consignment_inquiries?.new || 0) + 
     (formsSummary?.consignment_agreements?.new || 0);
 
   return (
@@ -546,25 +543,8 @@ Thrifty Curator Team`;
             className="overflow-hidden"
           >
             <div className="mt-6 pt-6 border-t border-[#eee]">
-              {/* Form Type Tabs - Job Applications moved to Hiring section */}
+              {/* Form Type Tabs */}
               <div className="flex flex-wrap gap-2 mb-6">
-                <button
-                  onClick={() => setActiveFormTab("consignment_inquiries")}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeFormTab === "consignment_inquiries"
-                      ? "bg-gradient-to-r from-[#00D4FF] to-[#00A8CC] text-white shadow-md"
-                      : "bg-[#F9F6F7] text-[#666] hover:bg-[#F0EAEB]"
-                  }`}
-                  data-testid="tab-consignment-inquiries"
-                >
-                  <Package className="w-4 h-4" />
-                  Consignment Inquiries
-                  {formsSummary?.consignment_inquiries?.new > 0 && (
-                    <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                      {formsSummary.consignment_inquiries.new}
-                    </span>
-                  )}
-                </button>
                 <button
                   onClick={() => setActiveFormTab("consignment_agreements")}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
@@ -629,71 +609,6 @@ Thrifty Curator Team`;
                 )}
               </div>
 
-
-              {/* Consignment Inquiries Tab */}
-              {activeFormTab === "consignment_inquiries" && (
-                <div data-testid="consignment-inquiries-list">
-                  {loadingForms ? (
-                    <p className="text-center text-[#888] py-8">Loading...</p>
-                  ) : !formSubmissions?.consignmentInquiries?.length ? (
-                    <p className="text-center text-[#888] py-8">No consignment inquiries yet</p>
-                  ) : getFilteredFormSubmissions(formSubmissions.consignmentInquiries).length === 0 ? (
-                    <p className="text-center text-[#888] py-8">No matching results found</p>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <p className="text-xs text-[#888] mb-2">
-                        Showing {getFilteredFormSubmissions(formSubmissions.consignmentInquiries).length} of {formSubmissions.consignmentInquiries.length} inquiries
-                      </p>
-                      <table className="data-table">
-                        <thead>
-                          <tr>
-                            <SortableHeader table="consignmentInquiries" sortKey="full_name">Name</SortableHeader>
-                            <SortableHeader table="consignmentInquiries" sortKey="email">Email</SortableHeader>
-                            <th>Item Types</th>
-                            <SortableHeader table="consignmentInquiries" sortKey="submitted_at">Submitted</SortableHeader>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {getSortedData(getFilteredFormSubmissions(formSubmissions.consignmentInquiries), 'consignmentInquiries').map((inquiry) => (
-                            <tr key={inquiry.id} data-testid={`inquiry-row-${inquiry.id}`}>
-                              <td className="font-medium">{inquiry.full_name}</td>
-                              <td>{inquiry.email}</td>
-                              <td className="text-sm">
-                                {inquiry.item_types?.slice(0, 2).join(", ")}
-                                {inquiry.item_types?.length > 2 && "..."}
-                              </td>
-                              <td className="text-sm text-[#888]">{formatSubmissionDate(inquiry.submitted_at)}</td>
-                              <td>
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => onViewSubmission({ ...inquiry, formType: "consignment_inquiries" })}
-                                    className="text-[#00D4FF] hover:text-[#00A8CC]"
-                                    data-testid={`view-inquiry-${inquiry.id}`}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => onDeleteSubmission("consignment_inquiries", inquiry.id)}
-                                    className="text-red-500 hover:text-red-700"
-                                    data-testid={`delete-inquiry-${inquiry.id}`}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Consignment Agreements Tab */}
               {activeFormTab === "consignment_agreements" && (

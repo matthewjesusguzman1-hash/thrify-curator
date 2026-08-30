@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check, Clock, XCircle, Eye, Gift, RotateCcw, AlertTriangle, Lock, Fingerprint, EyeOff, HelpCircle, MessageSquare, AlertCircle, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -250,6 +250,9 @@ function ConsignorMessagingSection({ email, userName }) {
 }
 
 export default function ConsignmentAgreementForm() {
+  const [searchParams] = useSearchParams();
+  const isNewConsignor = searchParams.get('new') === 'true';
+  
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -273,7 +276,8 @@ export default function ConsignmentAgreementForm() {
   const fileInputRef = useRef(null);
   
   // State for change payment method flow
-  const [showInitialChoice, setShowInitialChoice] = useState(true);
+  // If ?new=true, skip initial choice and go directly to new agreement form
+  const [showInitialChoice, setShowInitialChoice] = useState(!isNewConsignor);
   const [showChangePayment, setShowChangePayment] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [existingAgreement, setExistingAgreement] = useState(null);

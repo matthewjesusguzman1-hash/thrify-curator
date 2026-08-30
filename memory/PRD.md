@@ -13,10 +13,11 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - Password-based authentication
 
 ### Consignor Portal
-- Consignment agreement submissions
+- Direct consignment agreement submissions via "Sell With Us"
 - Payment history with date filtering
 - My Account overview
 - Custom commission splits for item additions
+- ~~Consignment Inquiry~~ (removed - streamlined flow)
 
 ### Admin Dashboard
 - Team Management (employees)

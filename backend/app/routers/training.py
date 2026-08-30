@@ -541,7 +541,7 @@ async def cancel_video_generation(
                 started = datetime.fromisoformat(status_doc["started_at"].replace("Z", "+00:00"))
                 if (datetime.now(timezone.utc) - started).total_seconds() > 1200:  # 20 minutes
                     can_cancel = True
-            except:
+            except (ValueError, TypeError, KeyError):
                 pass
     
     if not can_cancel:

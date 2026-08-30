@@ -10,7 +10,6 @@ import PageTransition from "@/components/PageTransition";
 import ShortcutBiometricHandler from "@/components/ShortcutBiometricHandler";
 import LandingPage from "@/pages/LandingPage";
 import JobApplicationForm from "@/pages/JobApplicationForm";
-import ConsignmentInquiryForm from "@/pages/ConsignmentInquiryForm";
 import ConsignmentAgreementForm from "@/pages/ConsignmentAgreementForm";
 import AuthPage from "@/pages/AuthPage";
 import EmployeeDashboard from "@/pages/EmployeeDashboard";
@@ -191,11 +190,6 @@ function AnimatedRoutes() {
         <Route path="/apply" element={
           <PageTransition>
             <JobApplicationForm />
-          </PageTransition>
-        } />
-        <Route path="/consignment-inquiry" element={
-          <PageTransition>
-            <ConsignmentInquiryForm />
           </PageTransition>
         } />
         <Route path="/consignment-agreement" element={
