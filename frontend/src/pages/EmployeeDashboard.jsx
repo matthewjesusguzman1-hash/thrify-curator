@@ -199,6 +199,13 @@ export default function EmployeeDashboard({
   const [nec1099Expanded, setNec1099Expanded] = useState(false);
   const [contractorAgreementExpanded, setContractorAgreementExpanded] = useState(false);
   
+  // Auto-expand contractor agreement in admin view when it's signed
+  useEffect(() => {
+    if (isAdminView && contractorAgreement?.status === 'approved') {
+      setContractorAgreementExpanded(true);
+    }
+  }, [isAdminView, contractorAgreement?.status]);
+  
   // Contractor Agreement state
   const [contractorAgreement, setContractorAgreement] = useState(null);
   const [signingAgreement, setSigningAgreement] = useState(false);
