@@ -3156,6 +3156,28 @@ export default function ConsignmentAgreementForm() {
                   </div>
                 )}
 
+                {/* Photos */}
+                {selectedSubmission.photos && selectedSubmission.photos.length > 0 && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-500 mb-2">Photos Submitted ({selectedSubmission.photos.length})</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {selectedSubmission.photos.map((photo, index) => (
+                        <div 
+                          key={index} 
+                          className="aspect-square rounded-lg overflow-hidden bg-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => window.open(photo, '_blank')}
+                        >
+                          <img 
+                            src={photo} 
+                            alt={`Item photo ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Payment Method */}
                 {selectedSubmission.payment_method && (
                   <div className="p-3 bg-gray-50 rounded-lg">

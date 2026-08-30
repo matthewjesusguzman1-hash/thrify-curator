@@ -584,6 +584,7 @@ async def get_user_submissions(email: str):
         "full_name": agreement.get("full_name"),
         "email": agreement.get("email"),
         "submitted_at": agreement.get("submitted_at"),
+        "items_to_add": agreement.get("items_to_add", 0),
         "items_description": agreement.get("items_description"),
         "agreed_percentage": agreement.get("agreed_percentage"),
         "approval_status": agreement.get("approval_status", "pending"),
@@ -591,7 +592,8 @@ async def get_user_submissions(email: str):
         "rejected_items_action": agreement.get("rejected_items_action"),
         "admin_notes": agreement.get("admin_notes"),
         "reviewed_at": agreement.get("reviewed_at"),
-        "reviewed_by": agreement.get("reviewed_by")
+        "reviewed_by": agreement.get("reviewed_by"),
+        "photos": agreement.get("photos", [])
     })
     
     # Get all item additions for this user (by agreement_id or email)
@@ -623,7 +625,8 @@ async def get_user_submissions(email: str):
             "update_email": addition.get("update_email"),
             "update_phone": addition.get("update_phone"),
             "update_address": addition.get("update_address"),
-            "update_payment_method": addition.get("update_payment_method")
+            "update_payment_method": addition.get("update_payment_method"),
+            "photos": addition.get("photos", [])
         })
     
     # Sort all submissions by date (newest first)
