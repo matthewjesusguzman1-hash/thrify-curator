@@ -327,13 +327,19 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - `backend/app/routers/contractor_agreement.py` - Updated all agreement text from RustDesk to AnyDesk
 - **Backend Endpoint**: `POST /api/time/employees/me/anydesk` - Employee shares their AnyDesk address
 
-### Admin-to-Admin Message Notifications (2026-08-29) - NEW
+### Admin-to-Admin Message Notifications (2026-08-29) - UPDATED 2026-08-30
 - **Cross-Admin Notifications**: When one admin (e.g., Eunice) sends a message in a conversation, the other admin (e.g., Matthew) now receives a push notification
 - **Notification Content**: Shows "{Admin Name} messaged {Participant Name}" with message preview
 - **Both Push Types**: Sends both APNs (native app) and Web Push (Safari PWA) to other admins
 - **Excludes Sender**: The admin who sends the message does NOT receive their own notification
 - **Deep Linking**: Notification includes conversation_id for opening the specific conversation
-- **File Updated**: `backend/app/routers/conversations.py` - Added `send_other_admins_notification()` helper function
+- **Per-Admin Unread Count (2026-08-30 Fix)**: 
+  - Fixed the unread count logic to track reads per-admin using `read_by_admins` array on each admin message
+  - When Admin A sends a message, their ID is added to `read_by_admins` (they've "read" their own message)
+  - When Admin B opens the conversation, their ID is added to `read_by_admins` for messages from other admins
+  - The `/api/conversations/admin/unread-count` endpoint now returns per-admin unread counts
+  - Admin A's messages don't count as unread for Admin A, only for Admin B
+- **File Updated**: `backend/app/routers/conversations.py` - Fixed `get_admin_unread_count`, `get_all_conversations`, and `get_conversation` endpoints
 
 ### UI Display Fixes (2026-08-29) - NEW
 - **Employee Shifts Modal Fix**: Fixed modal overlay issues where content was showing through from behind. Used React Portal to render modal at document.body level, escaping parent overflow constraints

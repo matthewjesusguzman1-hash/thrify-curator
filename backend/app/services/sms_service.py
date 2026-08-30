@@ -114,7 +114,7 @@ async def send_interview_confirmation_sms(
         from datetime import datetime
         dt = datetime.strptime(interview_date, "%Y-%m-%d")
         formatted_date = dt.strftime("%A, %B %d")
-    except:
+    except (ValueError, TypeError):
         formatted_date = interview_date
     
     # Format time to 12h
@@ -126,7 +126,7 @@ async def send_interview_confirmation_sms(
             if h == 0: h = 12
             elif h > 12: h -= 12
             return f"{h}:{m} {suffix}"
-        except:
+        except (ValueError, TypeError, AttributeError):
             return t
     
     # Parse time range
@@ -164,7 +164,7 @@ async def send_interview_cancelled_sms(
         from datetime import datetime
         dt = datetime.strptime(interview_date, "%Y-%m-%d")
         formatted_date = dt.strftime("%A, %B %d")
-    except:
+    except (ValueError, TypeError):
         formatted_date = interview_date
     
     if cancelled_by == "applicant":
@@ -203,7 +203,7 @@ async def send_interview_rescheduled_sms(
         from datetime import datetime
         dt = datetime.strptime(new_date, "%Y-%m-%d")
         formatted_date = dt.strftime("%A, %B %d")
-    except:
+    except (ValueError, TypeError):
         formatted_date = new_date
     
     # Format time
@@ -215,7 +215,7 @@ async def send_interview_rescheduled_sms(
             if h == 0: h = 12
             elif h > 12: h -= 12
             return f"{h}:{m} {suffix}"
-        except:
+        except (ValueError, TypeError, AttributeError):
             return t
     
     time_parts = new_time.split(" - ")
@@ -253,7 +253,7 @@ async def send_interview_reminder_sms(
             if h == 0: h = 12
             elif h > 12: h -= 12
             return f"{h}:{m} {suffix}"
-        except:
+        except (ValueError, TypeError, AttributeError):
             return t
     
     time_parts = interview_time.split(" - ")

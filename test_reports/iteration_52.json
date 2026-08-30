@@ -1,0 +1,66 @@
+{
+  "summary": "Verified admin-to-admin messaging notification fix. All 9 backend API tests pass. The fix correctly implements per-admin unread count tracking using read_by_admins array on admin messages. When Admin A sends a message, Admin B's unread count increases. When Admin B opens the conversation, their unread count decreases. Sender's own messages don't count as unread for them.",
+  "mode": "update",
+  "baseline_commit": "b47a804ce81e78251b8ce32cc205815835c5a402",
+  "head_commit": "a1c7ff0cc8de86976d1d224ee89d4a1cefbb9857",
+  "specs_created": [
+    "/app/backend/tests/test_admin_messaging_notifications.py"
+  ],
+  "specs_updated": [],
+  "quarantined_tests": [],
+  "test_report_links": [
+    "/app/backend/tests/test_admin_messaging_notifications.py",
+    "/app/test_reports/pytest/admin_messaging_notifications.xml"
+  ],
+  "regression_results": {
+    "total_specs": 9,
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0
+  },
+  "issues": [],
+  "action_items": [],
+  "updated_files": [
+    "/app/.emergent/testing_baseline_commit",
+    "/app/backend/tests/test_admin_messaging_notifications.py"
+  ],
+  "test_results": {
+    "backend": "100% (9/9 tests passed)",
+    "frontend": "N/A - No frontend changes to test"
+  },
+  "seed_data_creation": "None - used existing admin accounts and conversations",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Admin-to-admin messaging notification fix verified. Key verifications: 1) /api/conversations/admin/unread-count returns per-admin unread counts, 2) When Admin A sends message, Admin B's unread count increases by 1, 3) When Admin B opens conversation, their unread count decreases, 4) Admin messages include read_by_admins array with sender's ID, 5) Sender's own messages don't count as unread for them. Push notifications to other admins are triggered via send_other_admins_notification function (no active device tokens in preview environment to verify actual push delivery).",
+  "features_verified": {
+    "unread_count_endpoint": {
+      "status": "PASS",
+      "details": "GET /api/conversations/admin/unread-count returns per-admin unread counts"
+    },
+    "admin_message_read_by_admins": {
+      "status": "PASS",
+      "details": "Admin messages include read_by_admins array with sender's ID"
+    },
+    "admin_message_increases_other_unread": {
+      "status": "PASS",
+      "details": "When Admin A sends message, Admin B's unread count increases by 1"
+    },
+    "opening_conversation_marks_read": {
+      "status": "PASS",
+      "details": "When admin opens conversation, messages from other admins are marked as read"
+    },
+    "conversation_list_unread_count": {
+      "status": "PASS",
+      "details": "Conversation list includes per-admin unread_count for each conversation"
+    },
+    "sender_not_counted_unread": {
+      "status": "PASS",
+      "details": "Sender's own messages don't increase their unread count"
+    },
+    "admin_reply_notification": {
+      "status": "PASS",
+      "details": "Admin reply endpoint calls send_other_admins_notification (no device tokens to verify actual push)"
+    }
+  },
+  "note_on_push_notifications": "The send_other_admins_notification function is called correctly when an admin sends a message. However, actual push notification delivery cannot be verified in the preview environment as there are no active device tokens registered. The function logs '[PUSH] No active admin devices found' when no tokens exist."
+}

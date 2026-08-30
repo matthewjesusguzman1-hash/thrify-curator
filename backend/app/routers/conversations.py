@@ -551,6 +551,8 @@ async def consignor_send_message(email: str, message: ConversationCreate):
 @router.get("/admin/list", response_model=List[ConversationListItem])
 async def get_all_conversations(admin: dict = Depends(get_admin_user)):
     """Admin: Get all active (non-deleted) conversations"""
+    admin_id = admin.get("id") or admin.get("email")
+    
     # Exclude soft-deleted conversations
     conversations = await db.conversations.find(
         {"deleted_at": {"$exists": False}}, 
@@ -564,8 +566,23 @@ async def get_all_conversations(admin: dict = Depends(get_admin_user)):
         active_messages = [m for m in messages if not m.get("deleted_at")]
         last_message = active_messages[-1] if active_messages else None
         
-        # Count unread messages FROM the participant (not from admin), excluding deleted
-        unread = sum(1 for m in active_messages if m.get("sender_type") != "admin" and not m.get("read", False))
+        # Count unread messages for THIS admin:
+        # 1. Messages from employee/consignor that aren't read
+        # 2. Messages from OTHER admins that THIS admin hasn't read
+        unread = 0
+        for m in active_messages:
+            sender_type = m.get("sender_type")
+            if sender_type != "admin":
+                # Participant message - count if not read
+                if not m.get("read", False):
+                    unread += 1
+            else:
+                # Admin message - count if from a different admin AND this admin hasn't read it
+                msg_sender_id = m.get("sender_id")
+                if msg_sender_id and msg_sender_id != admin_id:
+                    read_by_admins = m.get("read_by_admins", [])
+                    if admin_id not in read_by_admins:
+                        unread += 1
         
         result.append(ConversationListItem(
             id=conv["id"],
@@ -584,7 +601,14 @@ async def get_all_conversations(admin: dict = Depends(get_admin_user)):
 
 @router.get("/admin/unread-count")
 async def get_admin_unread_count(admin: dict = Depends(get_admin_user)):
-    """Admin: Get total unread message count across all active conversations"""
+    """Admin: Get total unread message count across all active conversations
+    
+    Counts:
+    - Messages from employees/consignors that haven't been read
+    - Messages from OTHER admins that THIS admin hasn't read
+    """
+    admin_id = admin.get("id") or admin.get("email")
+    
     # Exclude soft-deleted conversations
     conversations = await db.conversations.find(
         {"deleted_at": {"$exists": False}}, 
@@ -597,8 +621,22 @@ async def get_admin_unread_count(admin: dict = Depends(get_admin_user)):
             # Skip deleted messages
             if msg.get("deleted_at"):
                 continue
-            if msg.get("sender_type") != "admin" and not msg.get("read", False):
-                total_unread += 1
+            
+            sender_type = msg.get("sender_type")
+            
+            if sender_type != "admin":
+                # Message from employee/consignor - count if not read by any admin
+                if not msg.get("read", False):
+                    total_unread += 1
+            else:
+                # Message from an admin - count as unread for OTHER admins
+                # Check if this admin sent it (don't count your own messages)
+                msg_sender_id = msg.get("sender_id")
+                if msg_sender_id and msg_sender_id != admin_id:
+                    # Check if this specific admin has read it
+                    read_by_admins = msg.get("read_by_admins", [])
+                    if admin_id not in read_by_admins:
+                        total_unread += 1
     
     return {"unread_count": total_unread}
 
@@ -606,6 +644,8 @@ async def get_admin_unread_count(admin: dict = Depends(get_admin_user)):
 @router.get("/admin/conversation/{conversation_id}")
 async def get_conversation(conversation_id: str, admin: dict = Depends(get_admin_user)):
     """Admin: Get a specific conversation (excluding soft-deleted)"""
+    admin_id = admin.get("id") or admin.get("email")
+    
     conversation = await db.conversations.find_one({
         "id": conversation_id,
         "deleted_at": {"$exists": False}
@@ -621,8 +661,9 @@ async def get_conversation(conversation_id: str, admin: dict = Depends(get_admin
             if not msg.get("deleted_at")
         ]
     
-    # Mark participant messages as read with timestamp
     now = datetime.now(timezone.utc).isoformat()
+    
+    # Mark participant messages (employee/consignor) as read with timestamp
     await db.conversations.update_one(
         {"id": conversation_id},
         {"$set": {
@@ -630,6 +671,20 @@ async def get_conversation(conversation_id: str, admin: dict = Depends(get_admin
             "messages.$[elem].read_at": now
         }},
         array_filters=[{"elem.sender_type": {"$ne": "admin"}, "elem.read": False}]
+    )
+    
+    # Mark admin messages from OTHER admins as read by THIS admin
+    # This adds the current admin's ID to the read_by_admins array for messages
+    # they haven't read yet (where sender is a different admin)
+    await db.conversations.update_one(
+        {"id": conversation_id},
+        {"$addToSet": {
+            "messages.$[adminMsg].read_by_admins": admin_id
+        }},
+        array_filters=[{
+            "adminMsg.sender_type": "admin",
+            "adminMsg.sender_id": {"$ne": admin_id}  # Not sent by this admin
+        }]
     )
     
     # Fetch updated conversation to return with read_at timestamps
@@ -662,11 +717,12 @@ async def admin_reply(reply: AdminReplyCreate, admin: dict = Depends(get_admin_u
     new_message = {
         "id": str(uuid.uuid4()),
         "sender_type": "admin",
-        "sender_id": "admin",
+        "sender_id": admin_id,  # Use actual admin ID so other admins can see it as unread
         "sender_name": admin_name,
         "content": reply.content,
         "sent_at": now,
-        "read": False
+        "read": False,
+        "read_by_admins": [admin_id]  # The sender has "read" their own message
     }
     
     # Add message to conversation

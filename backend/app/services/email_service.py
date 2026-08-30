@@ -254,7 +254,7 @@ async def send_consignment_agreement_confirmation(
     
     html = build_email_template("Your Consignment Agreement is Confirmed!", content)
     return await send_email(to_email, "Welcome to Thrifty Curator - Agreement Confirmed", html, 
-                           email_type="consignment_agreement", recipient_name=client_name)
+                           email_type="consignment_agreement", recipient_name=full_name)
 
 
 async def send_item_addition_confirmation(
@@ -295,7 +295,7 @@ async def send_item_addition_confirmation(
     
     html = build_email_template("Items Added to Your Consignment", content)
     return await send_email(to_email, f"Thrifty Curator - {items_to_add} Item{'s' if items_to_add > 1 else ''} Added", html,
-                           email_type="item_addition", recipient_name=client_name)
+                           email_type="item_addition", recipient_name=full_name)
 
 
 async def send_info_update_confirmation(
@@ -428,7 +428,7 @@ async def send_approval_notification(
     
     subject = f"Thrifty Curator - Your Submission has been {status_text}"
     html = build_email_template(f"Submission {status_text}", content)
-    return await send_email(to_email, subject, html, email_type="submission_status", recipient_name=client_name,
+    return await send_email(to_email, subject, html, email_type="submission_status", recipient_name=full_name,
                            context={"status": status_text})
 
 
@@ -517,7 +517,7 @@ async def send_password_reset_notification(
     """
     
     html = build_email_template("Your Password Has Been Reset", content)
-    return await send_email(to_email, f"Thrifty Curator - Password Reset for {portal_name}", html, email_type="password_reset_admin", recipient_name=user_name)
+    return await send_email(to_email, f"Thrifty Curator - Password Reset for {portal_name}", html, email_type="password_reset_admin", recipient_name=full_name)
 
 
 
@@ -623,7 +623,7 @@ async def send_consignment_inquiry_confirmation(to_email: str, full_name: str) -
     """
     
     html = build_email_template("Thank You for Your Consignment Inquiry", content)
-    return await send_email(to_email, "Thrifty Curator - We've Received Your Inquiry!", html, email_type="consignment_inquiry", recipient_name=client_name)
+    return await send_email(to_email, "Thrifty Curator - We've Received Your Inquiry!", html, email_type="consignment_inquiry", recipient_name=full_name)
 
 
 def get_email_status() -> dict:
@@ -750,7 +750,7 @@ async def send_interview_invite_email(to_email: str, applicant_name: str, availa
                 elif hour > 12:
                     hour -= 12
                 return f"{hour}:{minute} {suffix}"
-            except:
+            except ValueError:
                 return time_str
         
         def format_date(date_str):
@@ -759,7 +759,7 @@ async def send_interview_invite_email(to_email: str, applicant_name: str, availa
                 from datetime import datetime
                 dt = datetime.strptime(date_str, "%Y-%m-%d")
                 return dt.strftime("%A, %B %d, %Y")
-            except:
+            except ValueError:
                 return date_str
         
         slots_list = ""
@@ -931,7 +931,7 @@ async def send_interview_confirmation_email(
         from datetime import datetime
         dt = datetime.strptime(interview_date, "%Y-%m-%d")
         formatted_date = dt.strftime("%A, %B %d, %Y")
-    except:
+    except (ValueError, TypeError):
         formatted_date = interview_date
     
     # Format time to 12h
@@ -947,7 +947,7 @@ async def send_interview_confirmation_email(
                 elif h > 12: h -= 12
                 formatted.append(f"{h}:{m} {suffix}")
             return " - ".join(formatted)
-        except:
+        except (ValueError, TypeError, AttributeError):
             return time_range
     
     formatted_time = format_time_range(interview_time)
@@ -1027,7 +1027,7 @@ async def send_interview_cancelled_email(
         from datetime import datetime
         dt = datetime.strptime(interview_date, "%Y-%m-%d")
         formatted_date = dt.strftime("%A, %B %d, %Y")
-    except:
+    except (ValueError, TypeError):
         formatted_date = interview_date
     
     if cancelled_by == "applicant":
@@ -1098,7 +1098,7 @@ async def send_interview_rescheduled_email(
             from datetime import datetime
             dt = datetime.strptime(d, "%Y-%m-%d")
             return dt.strftime("%A, %B %d, %Y")
-        except:
+        except (ValueError, TypeError):
             return d
     
     def format_time_range(time_range):
@@ -1113,7 +1113,7 @@ async def send_interview_rescheduled_email(
                 elif h > 12: h -= 12
                 formatted.append(f"{h}:{m} {suffix}")
             return " - ".join(formatted)
-        except:
+        except (ValueError, TypeError, AttributeError):
             return time_range
     
     content = f"""
@@ -1191,7 +1191,7 @@ async def send_admin_interview_cancelled_notification(
         from datetime import datetime
         dt = datetime.strptime(interview_date, "%Y-%m-%d")
         formatted_date = dt.strftime("%A, %B %d, %Y")
-    except:
+    except (ValueError, TypeError):
         formatted_date = interview_date
     
     content = f"""
@@ -1230,7 +1230,7 @@ async def send_admin_interview_cancelled_notification(
     return {"status": "success", "message": f"Notified {len(admin_emails)} admin(s)"}
 
 
-async def send_direct_admin_email(to_email: str, subject: str, message: str, from_name: str = "Thrifty Curator") -> dict:
+async def send_direct_admin_email(to_email: str, subject: str, message: str, from_name: str = "Thrifty Curator", recipient_name: str = None) -> dict:
     """Send a direct email from admin with custom message"""
     
     content = f"""
@@ -1245,7 +1245,7 @@ async def send_direct_admin_email(to_email: str, subject: str, message: str, fro
     """
     
     html = build_email_template(subject, content)
-    return await send_email(to_email, subject, html, email_type="admin_custom_message", recipient_name=to_name,
+    return await send_email(to_email, subject, html, email_type="admin_custom_message", recipient_name=recipient_name,
                            context={"from_name": from_name})
 
 
@@ -1502,7 +1502,7 @@ async def send_availability_request_email(
             from datetime import datetime
             d = datetime.strptime(date_str, "%Y-%m-%d")
             return d.strftime("%B %d, %Y")
-        except:
+        except (ValueError, TypeError):
             return date_str
     
     def format_time(time_str):
@@ -1513,7 +1513,7 @@ async def send_availability_request_email(
             period = 'AM' if hours < 12 else 'PM'
             hours12 = hours % 12 or 12
             return f"{hours12}:{str(minutes).zfill(2)} {period}"
-        except:
+        except (ValueError, TypeError, AttributeError):
             return time_str
     
     # Build date/time constraint section
