@@ -89,40 +89,36 @@ async def send_user_push_notification(user_type: str, user_id: str, title: str, 
 async def send_other_admins_notification(sending_admin_id: str, sending_admin_name: str, title: str, body: str, notification_type: str, conversation_id: str = None):
     """Send push notification to all OTHER admins (excluding the one who sent the message)
     
-    Args:
-        sending_admin_id: The ID/email of the admin who sent the message (to exclude)
-        sending_admin_name: Name of the sending admin for logging
-        title: Notification title
-        body: Notification body text
-        notification_type: Type for handling tap actions
-        conversation_id: Optional conversation ID for deep linking
+    Uses the same approach as send_admin_push_notification but excludes the sending admin's device.
     """
     from app.services.apns_service import generate_apns_token, APNS_URL, APNS_BUNDLE_ID
     import httpx
     
-    # Get all admin device tokens EXCEPT the sending admin
+    # Get ALL active admin device tokens
     admin_tokens = await db.device_push_tokens.find({
         "active": True,
-        "user_type": "admin",
-        "user_id": {"$ne": sending_admin_id}  # Exclude the sending admin
+        "user_type": "admin"
     }).to_list(100)
     
-    # Debug: also check what tokens exist for admins
-    all_admin_tokens = await db.device_push_tokens.find({"user_type": "admin"}).to_list(100)
-    print(f"[PUSH DEBUG] Total admin tokens in DB: {len(all_admin_tokens)}")
-    for t in all_admin_tokens:
-        print(f"[PUSH DEBUG]   - user_id: {t.get('user_id')}, active: {t.get('active')}")
-    
     if not admin_tokens:
-        print(f"[PUSH] No other admin devices to notify (sender: {sending_admin_name}, sender_id: {sending_admin_id})")
+        print(f"[PUSH] No active admin devices found")
         return
     
-    print(f"[PUSH] Sending '{notification_type}' to {len(admin_tokens)} other admin device(s), excluding {sending_admin_name}")
+    # Filter out the sending admin's tokens
+    other_admin_tokens = [t for t in admin_tokens if t.get("user_id") != sending_admin_id]
+    
+    print(f"[PUSH] Admin message notification: {len(admin_tokens)} total admin tokens, {len(other_admin_tokens)} after excluding sender ({sending_admin_id})")
+    
+    if not other_admin_tokens:
+        print(f"[PUSH] No other admin devices to notify (sender: {sending_admin_name})")
+        return
+    
+    print(f"[PUSH] Sending '{notification_type}' to {len(other_admin_tokens)} other admin device(s)")
     
     try:
         token = generate_apns_token()
         
-        for token_doc in admin_tokens:
+        for token_doc in other_admin_tokens:
             device_token = token_doc.get("device_token")
             if not device_token:
                 continue
@@ -171,9 +167,11 @@ async def send_other_admins_notification(sending_admin_id: str, sending_admin_na
     # Also send web push to other admins
     try:
         other_admin_subscriptions = await db.web_push_subscriptions.find({
-            "user_type": "admin",
-            "user_id": {"$ne": sending_admin_id}
+            "user_type": "admin"
         }).to_list(100)
+        
+        # Filter out the sending admin
+        other_admin_subscriptions = [s for s in other_admin_subscriptions if s.get("user_id") != sending_admin_id]
         
         if other_admin_subscriptions:
             web_push = get_web_push_service()
