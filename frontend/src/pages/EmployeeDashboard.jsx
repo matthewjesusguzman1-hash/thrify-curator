@@ -199,9 +199,9 @@ export default function EmployeeDashboard({
   const [nec1099Expanded, setNec1099Expanded] = useState(false);
   const [contractorAgreementExpanded, setContractorAgreementExpanded] = useState(false);
   
-  // Auto-expand contractor agreement in admin view when it's signed
+  // Auto-expand contractor agreement in admin view when it's signed (approved or pending_review)
   useEffect(() => {
-    if (isAdminView && contractorAgreement?.status === 'approved') {
+    if (isAdminView && (contractorAgreement?.status === 'approved' || contractorAgreement?.status === 'pending_review')) {
       setContractorAgreementExpanded(true);
     }
   }, [isAdminView, contractorAgreement?.status]);
@@ -2652,23 +2652,74 @@ export default function EmployeeDashboard({
                           <span className="font-semibold text-blue-400">Pending Admin Review</span>
                         </div>
                         <p className="text-sm text-white/70">
-                          Your agreement was signed on{' '}
+                          Signed by <span className="text-white font-medium">{contractorAgreement.signed_name}</span> on{' '}
                           {new Date(contractorAgreement.signed_at).toLocaleDateString('en-US', {
                             month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
                           })}
                         </p>
-                        <p className="text-sm text-white/50 mt-2">
-                          An administrator will review and approve your agreement shortly.
-                        </p>
+                        {!isAdminView && (
+                          <p className="text-sm text-white/50 mt-2">
+                            An administrator will review and approve your agreement shortly.
+                          </p>
+                        )}
+                      </div>
+                      
+                      {/* Agreement Text (Read Only) */}
+                      <div className="bg-white/5 rounded-lg border border-white/10">
+                        <div className="p-3 border-b border-white/10 bg-white/5">
+                          <h3 className="font-semibold text-white text-sm">Agreement Terms</h3>
+                        </div>
+                        <div className="p-4 max-h-[300px] overflow-y-auto">
+                          <pre className="text-xs text-white/70 whitespace-pre-wrap font-sans leading-relaxed">
+                            {contractorAgreement.agreement_text}
+                          </pre>
+                        </div>
                       </div>
                       
                       {/* Signature Display */}
                       <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                        <p className="text-xs text-white/50 mb-2">Your Signature</p>
+                        <p className="text-xs text-white/50 mb-2">Digital Signature</p>
                         <p className="text-lg font-script italic text-[#EC4899]">
                           {contractorAgreement.signature_text}
                         </p>
                       </div>
+                      
+                      {/* Payment Information */}
+                      {(contractorAgreement.payment_first_name || contractorAgreement.payment_email || contractorAgreement.payment_phone) && (
+                        <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                          <h4 className="text-xs text-white/50 mb-3 uppercase tracking-wider">Payment Information (Remitly)</h4>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <p className="text-white/50">Contact Email</p>
+                              <p className="text-white font-medium">{contractorAgreement.contact_email || '-'}</p>
+                            </div>
+                            {contractorAgreement.payment_first_name && (
+                              <div>
+                                <p className="text-white/50">Name (on ID)</p>
+                                <p className="text-white font-medium">{contractorAgreement.payment_first_name} {contractorAgreement.payment_last_name}</p>
+                              </div>
+                            )}
+                            {contractorAgreement.payment_email && (
+                              <div>
+                                <p className="text-white/50">Payment Email</p>
+                                <p className="text-white font-medium">{contractorAgreement.payment_email}</p>
+                              </div>
+                            )}
+                            {contractorAgreement.payment_phone && (
+                              <div>
+                                <p className="text-white/50">Phone</p>
+                                <p className="text-white font-medium">{contractorAgreement.payment_phone}</p>
+                              </div>
+                            )}
+                            {contractorAgreement.payment_country && (
+                              <div>
+                                <p className="text-white/50">Country</p>
+                                <p className="text-white font-medium">{contractorAgreement.payment_country}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     /* Not submitted or Needs Correction - Sign Form */

@@ -157,13 +157,28 @@ async def get_agreement_status(current_user: dict = Depends(get_current_user), u
     # Allow admins to view another employee's data
     if user_id and current_user.get("role") == "admin":
         employee_id = user_id
+        # Also get the employee's email for fallback search
+        employee = await db.users.find_one({"id": user_id}, {"_id": 0, "email": 1})
+        employee_email = employee.get("email") if employee else None
     else:
         employee_id = current_user.get("id") or str(current_user.get("_id", ""))
+        employee_email = current_user.get("email")
     
+    # Try to find agreement by employee_id first, then by email as fallback
     agreement = await db.contractor_agreements.find_one(
         {"employee_id": employee_id},
         {"_id": 0}
     )
+    
+    # Fallback: try finding by email if not found by ID
+    if not agreement and employee_email:
+        agreement = await db.contractor_agreements.find_one(
+            {"$or": [
+                {"employee_email": employee_email},
+                {"contact_email": employee_email}
+            ]},
+            {"_id": 0}
+        )
     
     if not agreement:
         return {
