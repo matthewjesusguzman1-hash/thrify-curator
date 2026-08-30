@@ -240,6 +240,16 @@ async def update_employee(employee_id: str, update_data: UpdateEmployeeDetails, 
         else:
             update_fields["start_date"] = update_data.start_date
     
+    # Remote worker payment info (Remitly)
+    if update_data.remitly_recipient_name is not None:
+        update_fields["remitly_recipient_name"] = update_data.remitly_recipient_name or None
+    if update_data.remitly_phone is not None:
+        update_fields["remitly_phone"] = update_data.remitly_phone or None
+    if update_data.remitly_email is not None:
+        update_fields["remitly_email"] = update_data.remitly_email or None
+    if update_data.remitly_country is not None:
+        update_fields["remitly_country"] = update_data.remitly_country or None
+    
     if not update_fields:
         raise HTTPException(status_code=400, detail="No valid fields to update")
     

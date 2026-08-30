@@ -108,7 +108,12 @@ export default function EditEmployeeModal({
         email: editEmployeeData.email,
         phone: editEmployeeData.phone || null,
         hourly_rate: editEmployeeData.hourly_rate ? parseFloat(editEmployeeData.hourly_rate) : null,
-        start_date: editEmployeeData.start_date || null
+        start_date: editEmployeeData.start_date || null,
+        // Remote worker payment info (Remitly)
+        remitly_recipient_name: editEmployeeData.remitly_recipient_name || null,
+        remitly_phone: editEmployeeData.remitly_phone || null,
+        remitly_email: editEmployeeData.remitly_email || null,
+        remitly_country: editEmployeeData.remitly_country || null
       };
 
       // Only include role changes if the user is an owner
@@ -396,6 +401,76 @@ export default function EditEmployeeModal({
 
               {/* W-9 Documents Section - Button to open modal */}
               <div className="form-group">
+
+              {/* Remitly Payment Info - Only for Remote Workers */}
+              {editingEmployee?.is_remote_worker && (
+                <div className="form-group mb-4">
+                  <div className="bg-gradient-to-br from-[#065F46] via-[#047857] to-[#059669] rounded-xl overflow-hidden border border-emerald-500/30">
+                    <div className="h-1.5 bg-gradient-to-r from-[#10B981] via-[#34D399] to-[#6EE7B7]" />
+                    <div className="p-4 space-y-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 bg-gradient-to-r from-[#10B981] to-[#34D399] rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <span className="text-white font-medium">Remitly Payment Info</span>
+                          <p className="text-xs text-white/60">Payment details for remote worker</p>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-white/80 text-xs">Recipient Name</Label>
+                          <Input
+                            type="text"
+                            value={editEmployeeData.remitly_recipient_name || ''}
+                            onChange={(e) => setEditEmployeeData({ ...editEmployeeData, remitly_recipient_name: e.target.value })}
+                            placeholder="Full name on Remitly"
+                            className="bg-white/10 border-white/20 text-white placeholder:text-white/40 text-sm"
+                            data-testid="edit-remitly-recipient-name"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-white/80 text-xs">Country</Label>
+                          <Input
+                            type="text"
+                            value={editEmployeeData.remitly_country || ''}
+                            onChange={(e) => setEditEmployeeData({ ...editEmployeeData, remitly_country: e.target.value })}
+                            placeholder="e.g., Philippines"
+                            className="bg-white/10 border-white/20 text-white placeholder:text-white/40 text-sm"
+                            data-testid="edit-remitly-country"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-white/80 text-xs">Phone Number</Label>
+                          <Input
+                            type="text"
+                            value={editEmployeeData.remitly_phone || ''}
+                            onChange={(e) => setEditEmployeeData({ ...editEmployeeData, remitly_phone: e.target.value })}
+                            placeholder="+63 XXX XXX XXXX"
+                            className="bg-white/10 border-white/20 text-white placeholder:text-white/40 text-sm"
+                            data-testid="edit-remitly-phone"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-white/80 text-xs">Email</Label>
+                          <Input
+                            type="email"
+                            value={editEmployeeData.remitly_email || ''}
+                            onChange={(e) => setEditEmployeeData({ ...editEmployeeData, remitly_email: e.target.value })}
+                            placeholder="worker@email.com"
+                            className="bg-white/10 border-white/20 text-white placeholder:text-white/40 text-sm"
+                            data-testid="edit-remitly-email"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
                 <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl overflow-hidden border border-white/10">
                   <div className="h-1.5 bg-gradient-to-r from-[#00D4FF] via-[#8B5CF6] to-[#FF1493]" />
                   <div className="p-4">

@@ -586,27 +586,36 @@ export default function AllEmployeesSection({
                                   </div>
                                   {/* Remote worker indicator and raise button */}
                                   {emp.is_remote_worker && (
-                                    <div className="flex items-center gap-1 ml-2">
-                                      <Globe className="w-3 h-3 text-purple-500" title="Remote Worker" />
-                                      {isEligibleForRaise(emp) ? (
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); handleApprovePayRaise(emp); }}
-                                          className="flex items-center gap-1 bg-green-100 hover:bg-green-200 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium transition-colors"
-                                          title="Approve pay raise to $5/hr"
-                                          data-testid={`approve-raise-${emp.id}`}
-                                        >
-                                          <TrendingUp className="w-3 h-3" />
-                                          Raise
-                                        </button>
-                                      ) : emp.hourly_rate < 5 && emp.first_shift_date ? (
-                                        <span className="text-xs text-gray-400" title="Days until eligible for pay raise">
-                                          {getDaysUntilEligible(emp)}d left
-                                        </span>
-                                      ) : emp.hourly_rate < 5 && !emp.first_shift_date ? (
-                                        <span className="text-xs text-orange-400" title="No shifts yet">
-                                          No shifts
-                                        </span>
-                                      ) : null}
+                                    <div className="flex flex-col gap-1 ml-2">
+                                      <div className="flex items-center gap-1">
+                                        <Globe className="w-3 h-3 text-purple-500" title="Remote Worker" />
+                                        {isEligibleForRaise(emp) ? (
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handleApprovePayRaise(emp); }}
+                                            className="flex items-center gap-1 bg-green-100 hover:bg-green-200 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium transition-colors"
+                                            title="Approve pay raise to $5/hr"
+                                            data-testid={`approve-raise-${emp.id}`}
+                                          >
+                                            <TrendingUp className="w-3 h-3" />
+                                            Raise
+                                          </button>
+                                        ) : emp.hourly_rate < 5 && emp.first_shift_date ? (
+                                          <span className="text-xs text-gray-400" title="Days until eligible for pay raise">
+                                            {getDaysUntilEligible(emp)}d left
+                                          </span>
+                                        ) : emp.hourly_rate < 5 && !emp.first_shift_date ? (
+                                          <span className="text-xs text-orange-400" title="No shifts yet">
+                                            No shifts
+                                          </span>
+                                        ) : null}
+                                      </div>
+                                      {/* Remitly payment info */}
+                                      {emp.remitly_recipient_name && (
+                                        <div className="text-xs text-emerald-600 flex items-center gap-1" title={`Remitly: ${emp.remitly_recipient_name}${emp.remitly_country ? ` (${emp.remitly_country})` : ''}`}>
+                                          <span className="font-medium">Remitly:</span>
+                                          <span className="truncate max-w-[100px]">{emp.remitly_recipient_name}</span>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>

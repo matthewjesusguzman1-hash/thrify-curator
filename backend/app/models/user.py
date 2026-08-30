@@ -39,6 +39,11 @@ class UserResponse(BaseModel):
     first_shift_date: Optional[str] = None  # Date of first clock-in
     anydesk_address: Optional[str] = None  # AnyDesk remote desktop address
     anydesk_shared_at: Optional[str] = None  # When AnyDesk address was shared
+    # Remote worker payment info (Remitly)
+    remitly_recipient_name: Optional[str] = None
+    remitly_phone: Optional[str] = None
+    remitly_email: Optional[str] = None
+    remitly_country: Optional[str] = None
 
 
 class TokenResponse(BaseModel):
@@ -70,6 +75,11 @@ class UpdateEmployeeDetails(BaseModel):
     start_date: Optional[str] = None  # Employee's start/hire date
     admin_code: Optional[str] = None  # Admin access code (required when role is admin)
     password: Optional[str] = None  # Update employee password
+    # Remote worker payment info (Remitly)
+    remitly_recipient_name: Optional[str] = None
+    remitly_phone: Optional[str] = None
+    remitly_email: Optional[str] = None
+    remitly_country: Optional[str] = None
 
 
 class SetEmployeePassword(BaseModel):
