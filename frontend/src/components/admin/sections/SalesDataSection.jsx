@@ -1292,7 +1292,7 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
   const fetchStaleItems = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/inventory/stale?days_threshold=${days}&limit=500`, {
+      const res = await fetch(`${API_URL}/api/inventory/stale?days_threshold=${days}&limit=1000`, {
         headers: { ...getAuthHeader() }
       });
       if (res.ok) {
@@ -1312,13 +1312,14 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
     if (!data?.items) return;
 
     const csv = [
-      ['Title', 'SKU', 'Platform', 'Listed Date', 'Days in Inventory', 'Listed Price'],
+      ['Title', 'SKU', 'Platform', 'Listed Date', 'Days in Inventory', 'Cost', 'Listed Price'],
       ...data.items.map(item => [
         `"${(item.title || '').replace(/"/g, '""')}"`,
         item.sku || '',
         item.platform || '',
         item.listed_date || '',
         item.days_in_inventory || '',
+        item.cogs || '',
         item.price_listed || ''
       ])
     ].map(row => row.join(',')).join('\n');

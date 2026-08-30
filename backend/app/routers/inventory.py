@@ -802,7 +802,7 @@ async def get_year_over_year_comparison(
 @router.get("/stale")
 async def get_stale_inventory(
     days_threshold: int = Query(365, description="Items listed more than X days ago"),
-    limit: int = Query(100, le=500)
+    limit: int = Query(500, le=2000)
 ):
     """Get items that haven't sold and have been listed for longer than threshold"""
     
