@@ -1337,6 +1337,7 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow || !data?.items) return;
 
+    const itemCount = data.items.length;
     const html = `
       <!DOCTYPE html>
       <html>
@@ -1351,6 +1352,7 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
           th { background: #f3f4f6; font-weight: bold; }
           tr:nth-child(even) { background: #f9fafb; }
           .days { color: #f59e0b; font-weight: bold; }
+          .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 11px; color: #666; }
           @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
         </style>
       </head>
@@ -1358,6 +1360,7 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
         <h1>Stale Inventory Report</h1>
         <div class="summary">
           <strong>${data.total_stale_items?.toLocaleString()}</strong> items have been in inventory for more than <strong>${days} days</strong>
+          <br/><small>(Showing ${itemCount} items in this report)</small>
         </div>
         <table>
           <thead>
@@ -1385,6 +1388,9 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
             `).join('')}
           </tbody>
         </table>
+        <div class="footer">
+          Total items listed: ${itemCount} | Generated: ${new Date().toLocaleString()}
+        </div>
         <script>window.onload = function() { window.print(); }</script>
       </body>
       </html>
