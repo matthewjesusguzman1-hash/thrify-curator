@@ -107,8 +107,14 @@ async def send_other_admins_notification(sending_admin_id: str, sending_admin_na
         "user_id": {"$ne": sending_admin_id}  # Exclude the sending admin
     }).to_list(100)
     
+    # Debug: also check what tokens exist for admins
+    all_admin_tokens = await db.device_push_tokens.find({"user_type": "admin"}).to_list(100)
+    print(f"[PUSH DEBUG] Total admin tokens in DB: {len(all_admin_tokens)}")
+    for t in all_admin_tokens:
+        print(f"[PUSH DEBUG]   - user_id: {t.get('user_id')}, active: {t.get('active')}")
+    
     if not admin_tokens:
-        print(f"[PUSH] No other admin devices to notify (sender: {sending_admin_name})")
+        print(f"[PUSH] No other admin devices to notify (sender: {sending_admin_name}, sender_id: {sending_admin_id})")
         return
     
     print(f"[PUSH] Sending '{notification_type}' to {len(admin_tokens)} other admin device(s), excluding {sending_admin_name}")
@@ -725,6 +731,10 @@ async def admin_reply(reply: AdminReplyCreate, admin: dict = Depends(get_admin_u
     # NEW: Notify OTHER admins about this message so they stay in the loop
     try:
         participant_name = conversation.get("participant_name", "Unknown")
+        # Log for debugging
+        print(f"[ADMIN MSG] Admin {admin_name} (id: {admin_id}) sent message to {participant_name}")
+        print(f"[ADMIN MSG] Looking for other admin tokens excluding user_id: {admin_id}")
+        
         await send_other_admins_notification(
             sending_admin_id=admin_id,
             sending_admin_name=admin_name,
