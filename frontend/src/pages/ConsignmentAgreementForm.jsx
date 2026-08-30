@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check, Clock, XCircle, Eye, Gift, RotateCcw, AlertTriangle, Lock, Fingerprint, EyeOff, HelpCircle, MessageSquare, AlertCircle, Key } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle, Mail, CreditCard, RefreshCw, Plus, Package, ChevronDown, ChevronUp, Upload, X, Image, DollarSign, User, Phone, MapPin, Percent, FileText, Check, Clock, XCircle, Eye, Gift, RotateCcw, AlertTriangle, Lock, Fingerprint, EyeOff, HelpCircle, MessageSquare, AlertCircle, Key, Info, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -353,6 +353,9 @@ export default function ConsignmentAgreementForm() {
   const [passwordResetSent, setPasswordResetSent] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  
+  // What We Look For info section
+  const [showWhatWeLookFor, setShowWhatWeLookFor] = useState(false);
   
   // Biometric auth hook
   const { isNative, isAvailable: biometricAvailable, isLoading: biometricLoading, biometryType, biometricLogin, setCredentials, deleteCredentials } = useBiometricAuth();
@@ -1111,7 +1114,7 @@ export default function ConsignmentAgreementForm() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-8"
           >
-            <h1 className="font-poppins text-3xl font-bold text-white mb-2">Consignment Agreement</h1>
+            <h1 className="font-poppins text-3xl font-bold text-white mb-2">Consignment</h1>
             <p className="text-white/60">What would you like to do?</p>
           </motion.div>
 
@@ -1131,8 +1134,8 @@ export default function ConsignmentAgreementForm() {
                   <Send className="w-6 h-6 text-white" />
                 </div>
                 <div className="text-left">
-                  <h3 className="font-poppins text-lg font-bold text-[#1A1A2E]">Sign New Agreement</h3>
-                  <p className="text-[#666] text-sm">First time consigning? Sign your agreement here.</p>
+                  <h3 className="font-poppins text-lg font-bold text-[#1A1A2E]">Sell With Us</h3>
+                  <p className="text-[#666] text-sm">New to consigning? Start here to submit your items.</p>
                 </div>
               </div>
             </button>
@@ -1148,7 +1151,7 @@ export default function ConsignmentAgreementForm() {
                 </div>
                 <div className="text-left">
                   <h3 className="font-poppins text-lg font-bold text-[#1A1A2E]">Manage My Account</h3>
-                  <p className="text-[#666] text-sm">View submissions, payment history, update info, or add items.</p>
+                  <p className="text-[#666] text-sm">Returning consignor? View submissions, payments, or add items.</p>
                 </div>
               </div>
             </button>
@@ -2949,13 +2952,20 @@ export default function ConsignmentAgreementForm() {
                             {/* Terms and Conditions */}
                             <div className="bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/10 rounded-xl p-4 text-sm text-gray-600 border border-[#8B5CF6]/20">
                               <h4 className="font-semibold text-[#1A1A2E] mb-3">Terms & Conditions</h4>
+                              
+                              {/* Definitions */}
+                              <div className="bg-white/60 rounded-lg p-2.5 mb-3 border border-[#8B5CF6]/10 text-xs">
+                                <p className="mb-1"><strong className="text-[#8B5CF6]">Consignee:</strong> Thrifty Curator</p>
+                                <p><strong className="text-[#8B5CF6]">Consignor:</strong> You</p>
+                              </div>
+                              
                               <ul className="space-y-2 max-h-36 overflow-y-auto pr-2">
                                 <li>• The profit split will be agreed upon prior to acceptance of any items. Unless otherwise specified, the profit split will be considered 50/50.</li>
                                 <li>• There is no guarantee that your item will be sold.</li>
-                                <li>• The consignee has full discretion over how the item is advertised and the price at which it is listed.</li>
-                                <li>• The consignee has the right to refuse any item for sale at any time and will return the item to the consignor.</li>
-                                <li>• When items are submitted for sale, the consigned item's ownership is relinquished and will be considered the property of the consignee until sold or released back.</li>
-                                <li>• The consignor accepts the condition of the item upon return and waives any claim of damage that occurred in the possession of the consignee.</li>
+                                <li>• The consignee (Thrifty Curator) has full discretion over how the item is advertised and the price at which it is listed.</li>
+                                <li>• The consignee (Thrifty Curator) has the right to refuse any item for sale at any time and will return the item to the consignor (you).</li>
+                                <li>• When items are submitted for sale, the consigned item's ownership is relinquished and will be considered the property of the consignee (Thrifty Curator) until sold or released back.</li>
+                                <li>• The consignor (you) accepts the condition of the item upon return and waives any claim of damage that occurred in the possession of the consignee (Thrifty Curator).</li>
                               </ul>
                             </div>
 
@@ -3298,10 +3308,98 @@ export default function ConsignmentAgreementForm() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="text-center mb-6"
         >
-          <h1 className="font-poppins text-3xl font-bold text-white mb-2">Consignment Agreement</h1>
-          <p className="text-white/60">Sign your consignment agreement</p>
+          <h1 className="font-poppins text-3xl font-bold text-white mb-2">Sell With Us</h1>
+          <p className="text-white/60">Submit your items for consignment</p>
+        </motion.div>
+
+        {/* What We Look For - Collapsible Info Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="mb-6"
+        >
+          <button
+            type="button"
+            onClick={() => setShowWhatWeLookFor(!showWhatWeLookFor)}
+            className="w-full bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/10 border border-[#8B5CF6]/30 rounded-xl p-4 flex items-center justify-between hover:from-[#8B5CF6]/20 hover:to-[#6D28D9]/20 transition-all"
+            data-testid="toggle-what-we-look-for"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] rounded-full flex items-center justify-center">
+                <Info className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-left">
+                <h3 className="font-semibold text-white">What We Look For</h3>
+                <p className="text-white/60 text-sm">See the types of items and brands we accept</p>
+              </div>
+            </div>
+            {showWhatWeLookFor ? (
+              <ChevronUp className="w-5 h-5 text-white/60" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-white/60" />
+            )}
+          </button>
+          
+          <AnimatePresence>
+            {showWhatWeLookFor && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="bg-white rounded-b-xl border-x border-b border-[#8B5CF6]/20 p-5 space-y-5">
+                  {/* Item Types */}
+                  <div>
+                    <h4 className="font-semibold text-[#1A1A2E] mb-3 flex items-center gap-2">
+                      <Package className="w-4 h-4 text-[#8B5CF6]" />
+                      Item Types We Accept
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {["Dresses", "Tops", "Jeans", "Outerwear", "Shoes", "Accessories"].map((item) => (
+                        <span key={item} className="px-3 py-1.5 bg-[#8B5CF6]/10 text-[#8B5CF6] rounded-full text-sm font-medium">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Clothing Brands */}
+                  <div>
+                    <h4 className="font-semibold text-[#1A1A2E] mb-3 flex items-center gap-2">
+                      <Tag className="w-4 h-4 text-[#10B981]" />
+                      Clothing Brands We Love
+                    </h4>
+                    <p className="text-sm text-[#666] leading-relaxed">
+                      Spanx, Lululemon, Athleta, Beyond Yoga, Miss Me, Torrid, Tory Burch, Gymshark, Honeylove, Rock Revival, Eileen Fisher, Flax, Free People, Diane Von Furstenberg, Patagonia, The North Face, Harley Davidson, St. John, Everlane, Rag & Bone, Alice + Olivia, Nike, Coach, Michael Kors, Barefoot Dreams, Madewell, Lilly Pulitzer, Kate Spade, Anthropologie, Johnny Was, Farm Rio, Maeve, CVG, No Bull, ZYIA, Figs, Vuori, Alphalete, Buff Bunny, SheFit, Vineyard Vines, Kuhl, Carhartt, Skims, Boden, Levi, Mother Jeans, Agolde, 7 for all mankind, AYR jeans, Frank & Eileen, Veronica Beard, Birddogs, Kerrits, and more!
+                    </p>
+                  </div>
+
+                  {/* Shoe Brands */}
+                  <div>
+                    <h4 className="font-semibold text-[#1A1A2E] mb-3 flex items-center gap-2">
+                      <Tag className="w-4 h-4 text-[#F59E0B]" />
+                      Shoe Brands We Love
+                    </h4>
+                    <p className="text-sm text-[#666] leading-relaxed">
+                      Red Wings, Dr Marten, Rothys, Nike, Frye, Ugg, Cole Haan, Merrell, Keen, Chaco, Hey Dudes, Sorel, Hoka, On Running, Dansko, No Bull, Teva, Birkenstock, Ariat, Crocs, Betsy Johnson, Ecco, Brooks, New Balance, Vans, and more!
+                    </p>
+                  </div>
+
+                  {/* Note */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-sm text-amber-800">
+                      <strong>Note:</strong> This is not an exhaustive list! If you have quality items from brands not listed, we'd still love to hear from you.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* Form Card */}
@@ -3599,13 +3697,23 @@ export default function ConsignmentAgreementForm() {
             <div>
               <div className="bg-gradient-to-r from-[#8B5CF6]/10 to-[#6D28D9]/10 rounded-xl p-4 mb-4 text-sm text-gray-600 border border-[#8B5CF6]/20">
                 <h4 className="font-semibold text-[#1A1A2E] mb-3">Terms & Conditions</h4>
+                
+                {/* Definitions */}
+                <div className="bg-white/60 rounded-lg p-3 mb-4 border border-[#8B5CF6]/10">
+                  <h5 className="font-semibold text-[#1A1A2E] mb-2 text-xs uppercase tracking-wide">Definitions</h5>
+                  <div className="space-y-2">
+                    <p><strong className="text-[#8B5CF6]">Consignee:</strong> Thrifty Curator - the business accepting your items to sell on your behalf.</p>
+                    <p><strong className="text-[#8B5CF6]">Consignor:</strong> You - the person submitting items to be sold through Thrifty Curator.</p>
+                  </div>
+                </div>
+                
                 <ul className="space-y-3">
                   <li>• The profit split will be agreed upon prior to acceptance of any items. Unless otherwise specified on this form, the profit split will be considered 50/50.</li>
                   <li>• There is no guarantee that your item will be sold.</li>
-                  <li>• The consignee has full discretion over how the item is advertised and the price at which it is listed.</li>
-                  <li>• The consignee has the right to refuse any item for sale at any time and will return the item to the consignor.</li>
-                  <li>• When items are submitted for sale, the consigned item's ownership is relinquished and will be considered the property of the consignee for the purposes of sale until sold or released back to the consignor.</li>
-                  <li>• The consignor accepts the condition of the item upon return and waives any claim of damage that occurred in the possession of the consignee. All items are inspected prior to listing and its condition/defects are listed at the time the item is posted for sale.</li>
+                  <li>• The consignee (Thrifty Curator) has full discretion over how the item is advertised and the price at which it is listed.</li>
+                  <li>• The consignee (Thrifty Curator) has the right to refuse any item for sale at any time and will return the item to the consignor (you).</li>
+                  <li>• When items are submitted for sale, the consigned item's ownership is relinquished and will be considered the property of the consignee (Thrifty Curator) for the purposes of sale until sold or released back to the consignor (you).</li>
+                  <li>• The consignor (you) accepts the condition of the item upon return and waives any claim of damage that occurred in the possession of the consignee (Thrifty Curator). All items are inspected prior to listing and its condition/defects are listed at the time the item is posted for sale.</li>
                 </ul>
               </div>
             </div>

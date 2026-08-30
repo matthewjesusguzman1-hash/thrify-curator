@@ -27,7 +27,7 @@ class TestFinancialsIncomeAPI:
         for entry_id in self.created_ids:
             try:
                 requests.delete(f"{BASE_URL}/api/financials/income/{entry_id}")
-            except:
+            except Exception:
                 pass
         self.created_ids.clear()
     
@@ -171,7 +171,7 @@ class TestFinancialsCOGSAPI:
         for entry_id in self.created_ids:
             try:
                 requests.delete(f"{BASE_URL}/api/financials/cogs/{entry_id}")
-            except:
+            except Exception:
                 pass
         self.created_ids.clear()
     
@@ -272,7 +272,7 @@ class TestFinancialsExpensesAPI:
         for entry_id in self.created_ids:
             try:
                 requests.delete(f"{BASE_URL}/api/financials/expenses/{entry_id}")
-            except:
+            except Exception:
                 pass
         self.created_ids.clear()
     
@@ -401,7 +401,7 @@ class TestFinancialsMileageAPI:
         for entry_id in self.created_ids:
             try:
                 requests.delete(f"{BASE_URL}/api/financials/mileage/{entry_id}")
-            except:
+            except Exception:
                 pass
         self.created_ids.clear()
     
@@ -544,22 +544,22 @@ class TestFinancialSummaryAPI:
         for entry_id in self.created_income_ids:
             try:
                 requests.delete(f"{BASE_URL}/api/financials/income/{entry_id}")
-            except:
+            except Exception:
                 pass
         for entry_id in self.created_cogs_ids:
             try:
                 requests.delete(f"{BASE_URL}/api/financials/cogs/{entry_id}")
-            except:
+            except Exception:
                 pass
         for entry_id in self.created_expense_ids:
             try:
                 requests.delete(f"{BASE_URL}/api/financials/expenses/{entry_id}")
-            except:
+            except Exception:
                 pass
         for entry_id in self.created_mileage_ids:
             try:
                 requests.delete(f"{BASE_URL}/api/financials/mileage/{entry_id}")
-            except:
+            except Exception:
                 pass
         self.created_income_ids.clear()
         self.created_cogs_ids.clear()
@@ -670,17 +670,17 @@ class TestVendooImportAPI:
         for entry_id in self.created_income_ids:
             try:
                 requests.delete(f"{BASE_URL}/api/financials/income/{entry_id}")
-            except:
+            except Exception:
                 pass
         for entry_id in self.created_cogs_ids:
             try:
                 requests.delete(f"{BASE_URL}/api/financials/cogs/{entry_id}")
-            except:
+            except Exception:
                 pass
         for entry_id in self.created_expense_ids:
             try:
                 requests.delete(f"{BASE_URL}/api/financials/expenses/{entry_id}")
-            except:
+            except Exception:
                 pass
         self.created_income_ids.clear()
         self.created_cogs_ids.clear()
@@ -1194,7 +1194,7 @@ class TestTaxReturnsArchiveAPI:
         for doc_id in self.created_doc_ids:
             try:
                 requests.delete(f"{BASE_URL}/api/financials/tax-returns/{self.TEST_YEAR}/{doc_id}")
-            except:
+            except Exception:
                 pass
         self.created_doc_ids.clear()
     

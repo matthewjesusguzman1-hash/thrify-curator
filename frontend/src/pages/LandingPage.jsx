@@ -96,8 +96,7 @@ const platforms = [
 // Form links
 const formLinks = [
   { name: "Job Application", icon: Briefcase, path: "/job-application", accent: "cyan" },
-  { name: "Sell With Us", icon: FileText, path: "/consignment-agreement?new=true", accent: "pink" },
-  { name: "Consignment Portal", icon: ClipboardCheck, path: "/consignment-agreement", accent: "purple" },
+  { name: "Consignment", icon: ClipboardCheck, path: "/consignment-agreement", accent: "purple" },
 ];
 
 // Connect links
