@@ -1366,6 +1366,7 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
               <th>Platform</th>
               <th>Listed Date</th>
               <th>Days</th>
+              <th>Cost</th>
               <th>Price</th>
             </tr>
           </thead>
@@ -1377,7 +1378,8 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
                 <td>${item.platform || '-'}</td>
                 <td>${item.listed_date || '-'}</td>
                 <td class="days">${item.days_in_inventory?.toLocaleString() || '-'}</td>
-                <td>${item.price_listed ? `$${item.price_listed.toFixed(2)}` : '-'}</td>
+                <td>${item.cogs ? `$${parseFloat(item.cogs).toFixed(2)}` : '-'}</td>
+                <td>${item.price_listed ? `$${parseFloat(item.price_listed).toFixed(2)}` : '-'}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -1460,6 +1462,7 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Platform</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Listed</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Days</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Cost</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Price</th>
                   </tr>
                 </thead>
@@ -1473,8 +1476,11 @@ const StaleInventoryModal = ({ getAuthHeader, onClose }) => {
                       <td className="px-4 py-3 text-sm text-right font-medium text-amber-600 whitespace-nowrap">
                         {item.days_in_inventory?.toLocaleString()}
                       </td>
+                      <td className="px-4 py-3 text-sm text-right text-gray-500 whitespace-nowrap">
+                        {item.cogs ? `$${parseFloat(item.cogs).toFixed(2)}` : '-'}
+                      </td>
                       <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
-                        {item.price_listed ? `$${item.price_listed.toFixed(2)}` : '-'}
+                        {item.price_listed ? `$${parseFloat(item.price_listed).toFixed(2)}` : '-'}
                       </td>
                     </tr>
                   ))}
