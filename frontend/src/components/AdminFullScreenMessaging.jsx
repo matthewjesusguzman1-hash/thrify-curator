@@ -51,6 +51,7 @@ export default function AdminFullScreenMessaging({
   const [readReceiptsEnabled, setReadReceiptsEnabled] = useState(true);
   const [attachments, setAttachments] = useState([]);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState(null); // For image lightbox
   const messagesContainerRef = useRef(null);
   const pollingRef = useRef(null);
   const isAtBottomRef = useRef(true);
@@ -640,30 +641,38 @@ export default function AdminFullScreenMessaging({
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div className="mt-2 space-y-2">
                           {msg.attachments.map((att, idx) => (
-                            <a
-                              key={att.id || idx}
-                              href={att.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`flex items-center gap-2 p-2 rounded-lg ${
-                                msg.sender_type === 'admin'
-                                  ? 'bg-white/20 hover:bg-white/30'
-                                  : isLight ? 'bg-gray-100 hover:bg-gray-200' : 'bg-white/10 hover:bg-white/20'
-                              }`}
-                            >
-                              {att.file_type === 'image' ? (
+                            att.file_type === 'image' ? (
+                              <button
+                                key={att.id || idx}
+                                onClick={() => setLightboxImage(att.url)}
+                                className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer ${
+                                  msg.sender_type === 'admin'
+                                    ? 'bg-white/20 hover:bg-white/30'
+                                    : isLight ? 'bg-gray-100 hover:bg-gray-200' : 'bg-white/10 hover:bg-white/20'
+                                }`}
+                              >
                                 <img 
                                   src={att.url} 
                                   alt={att.filename}
                                   className="w-20 h-20 object-cover rounded"
                                 />
-                              ) : (
-                                <>
-                                  <FileText className="w-5 h-5 flex-shrink-0" />
-                                  <span className="text-xs truncate">{att.filename}</span>
-                                </>
-                              )}
-                            </a>
+                              </button>
+                            ) : (
+                              <a
+                                key={att.id || idx}
+                                href={att.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`flex items-center gap-2 p-2 rounded-lg ${
+                                  msg.sender_type === 'admin'
+                                    ? 'bg-white/20 hover:bg-white/30'
+                                    : isLight ? 'bg-gray-100 hover:bg-gray-200' : 'bg-white/10 hover:bg-white/20'
+                                }`}
+                              >
+                                <FileText className="w-5 h-5 flex-shrink-0" />
+                                <span className="text-xs truncate">{att.filename}</span>
+                              </a>
+                            )
                           ))}
                         </div>
                       )}
@@ -850,6 +859,39 @@ export default function AdminFullScreenMessaging({
                 </Button>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Image Lightbox Modal */}
+      <AnimatePresence>
+        {lightboxImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center"
+            onClick={() => setLightboxImage(null)}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute top-4 right-4 z-[10000] p-3 bg-white/20 hover:bg-white/30 rounded-full text-white"
+              style={{ paddingTop: 'env(safe-area-inset-top, 16px)' }}
+            >
+              <X className="w-8 h-8" />
+            </button>
+            
+            {/* Image */}
+            <motion.img
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              src={lightboxImage}
+              alt="Attachment"
+              className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
           </motion.div>
         )}
       </AnimatePresence>
