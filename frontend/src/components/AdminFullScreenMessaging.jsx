@@ -14,7 +14,11 @@ import {
   Check,
   CheckCheck,
   Eye,
-  EyeOff
+  EyeOff,
+  Paperclip,
+  X,
+  Image as ImageIcon,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,10 +49,13 @@ export default function AdminFullScreenMessaging({
   const [filterType, setFilterType] = useState("all");
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   const [readReceiptsEnabled, setReadReceiptsEnabled] = useState(true);
+  const [attachments, setAttachments] = useState([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const messagesContainerRef = useRef(null);
   const pollingRef = useRef(null);
   const isAtBottomRef = useRef(true);
   const previousUnreadRef = useRef(0);
+  const fileInputRef = useRef(null);
 
   const getToken = () => localStorage.getItem("token");
 
@@ -239,9 +246,55 @@ export default function AdminFullScreenMessaging({
     }
   };
 
+  // Handle file upload for admin
+  const handleFileSelect = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    setUploadingAttachment(true);
+    const token = getToken();
+    
+    for (const file of files) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} is too large. Max size is 10MB`);
+        continue;
+      }
+      
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        
+        const response = await axios.post(
+          `${API}/conversations/upload-attachment`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data"
+            }
+          }
+        );
+        
+        setAttachments(prev => [...prev, response.data]);
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        toast.error(`Failed to upload ${file.name}`);
+      }
+    }
+    
+    setUploadingAttachment(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const removeAttachment = (id) => {
+    setAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
   const handleSendReply = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || sending || !selectedConversation) return;
+    if ((!newMessage.trim() && attachments.length === 0) || sending || !selectedConversation) return;
     
     setSending(true);
     const token = getToken();
@@ -252,12 +305,14 @@ export default function AdminFullScreenMessaging({
         `${apiUrl}/conversations/admin/reply`,
         {
           conversation_id: selectedConversation.id,
-          content: newMessage
+          content: newMessage || (attachments.length > 0 ? "📎 Attachment" : ""),
+          attachments: attachments.length > 0 ? attachments : undefined
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
       setNewMessage("");
+      setAttachments([]);
       await fetchSelectedConversation(selectedConversation.id);
       
       // Scroll to bottom after sending
@@ -580,6 +635,39 @@ export default function AdminFullScreenMessaging({
                         </p>
                       )}
                       <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                      
+                      {/* Display attachments */}
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <div className="mt-2 space-y-2">
+                          {msg.attachments.map((att, idx) => (
+                            <a
+                              key={att.id || idx}
+                              href={att.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`flex items-center gap-2 p-2 rounded-lg ${
+                                msg.sender_type === 'admin'
+                                  ? 'bg-white/20 hover:bg-white/30'
+                                  : isLight ? 'bg-gray-100 hover:bg-gray-200' : 'bg-white/10 hover:bg-white/20'
+                              }`}
+                            >
+                              {att.file_type === 'image' ? (
+                                <img 
+                                  src={att.url} 
+                                  alt={att.filename}
+                                  className="w-20 h-20 object-cover rounded"
+                                />
+                              ) : (
+                                <>
+                                  <FileText className="w-5 h-5 flex-shrink-0" />
+                                  <span className="text-xs truncate">{att.filename}</span>
+                                </>
+                              )}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                      
                       <div className={`flex items-center gap-1 mt-2 flex-wrap ${
                         msg.sender_type === 'admin' ? 'text-white/70' : isLight ? 'text-gray-400' : 'text-white/40'
                       }`}>
@@ -609,7 +697,66 @@ export default function AdminFullScreenMessaging({
             
             {/* Reply Input */}
             <form onSubmit={handleSendReply} className={`p-4 border-t ${isLight ? 'border-gray-200 bg-white' : 'border-white/10 bg-[#1A1A2E]'}`}>
+              {/* Attachment previews */}
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {attachments.map((att) => (
+                    <div 
+                      key={att.id} 
+                      className={`relative flex items-center gap-2 px-3 py-2 rounded-lg ${
+                        isLight ? 'bg-gray-100' : 'bg-white/10'
+                      }`}
+                    >
+                      {att.file_type === 'image' ? (
+                        <ImageIcon className={`w-4 h-4 ${isLight ? 'text-blue-500' : 'text-blue-400'}`} />
+                      ) : (
+                        <FileText className={`w-4 h-4 ${isLight ? 'text-purple-500' : 'text-purple-400'}`} />
+                      )}
+                      <span className={`text-sm truncate max-w-[150px] ${isLight ? 'text-gray-700' : 'text-white'}`}>
+                        {att.filename}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(att.id)}
+                        className={`ml-1 p-0.5 rounded-full hover:bg-red-100 ${isLight ? 'text-gray-400 hover:text-red-500' : 'text-white/50 hover:text-red-400'}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
               <div className="flex items-end gap-2" style={{ width: '100%' }}>
+                {/* Hidden file input */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  accept="image/*,.pdf,.doc,.docx"
+                  multiple
+                  className="hidden"
+                />
+                
+                {/* Attachment button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAttachment}
+                  className={`p-2 rounded-full transition-colors flex-shrink-0 ${
+                    isLight 
+                      ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' 
+                      : 'bg-white/10 text-white/70 hover:bg-white/20'
+                  }`}
+                  title="Attach file"
+                >
+                  {uploadingAttachment ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Paperclip className="w-5 h-5" />
+                  )}
+                </button>
+                
                 <textarea
                   value={newMessage}
                   onChange={(e) => {
@@ -629,7 +776,7 @@ export default function AdminFullScreenMessaging({
                 />
                 <Button
                   type="submit"
-                  disabled={!newMessage.trim() || sending}
+                  disabled={(!newMessage.trim() && attachments.length === 0) || sending}
                   className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 rounded-full w-10 h-10 p-0"
                   style={{ flexShrink: 0 }}
                 >

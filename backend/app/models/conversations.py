@@ -3,6 +3,16 @@ from typing import Optional, List, Literal
 from datetime import datetime
 
 
+class MessageAttachment(BaseModel):
+    """An attachment in a message"""
+    id: str
+    filename: str
+    file_type: str  # image, document, etc.
+    mime_type: str
+    url: str
+    size: int  # in bytes
+
+
 class ConversationMessage(BaseModel):
     """A single message in a conversation"""
     id: str
@@ -12,12 +22,14 @@ class ConversationMessage(BaseModel):
     content: str
     sent_at: str
     read: bool = False
+    attachments: Optional[List[MessageAttachment]] = None
 
 
 class ConversationCreate(BaseModel):
     """Create a new message in a conversation"""
     content: str
     sender_name: Optional[str] = None  # Optional, will use stored name if not provided
+    attachments: Optional[List[dict]] = None  # List of attachment objects
 
 
 class ConversationResponse(BaseModel):
@@ -52,3 +64,4 @@ class AdminReplyCreate(BaseModel):
     """Admin reply to a conversation"""
     conversation_id: str
     content: str
+    attachments: Optional[List[dict]] = None  # List of attachment objects

@@ -375,3 +375,16 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - `frontend/src/components/admin/PayrollSummaryCard.jsx` - UTC date formatting
   - `frontend/src/pages/AdminDashboard.jsx` - UTC date formatting for pay period displays
   - `frontend/src/pages/EmployeeDashboard.jsx` - Added timezone toggle and updated formatDateTime function
+
+### Message Attachment Display Fix (2026-08-31) - NEW
+- **Bug Fixed**: Image attachments in messages were showing only a paperclip icon instead of the actual photo thumbnail
+- **Root Cause**: The Emergent platform injects a CSS rule that hides any `<a>` elements with `href` containing "emergent":
+  ```css
+  [class*="emergent"], a[href*="emergent"], ... { display: none; visibility: hidden; }
+  ```
+  The attachment URLs used the full backend URL (`https://curator-app-3.preview.emergentagent.com/api/conversations/attachment/...`) which matched this rule.
+- **Solution**: Changed attachment `href` and `img src` to use relative URLs (`/api/conversations/attachment/...`) instead of absolute URLs, avoiding the CSS rule.
+- **Files Updated**:
+  - `frontend/src/components/FullScreenMessaging.jsx` - Relative URLs for attachment display
+  - `frontend/src/components/AdminFullScreenMessaging.jsx` - Relative URLs for attachment display
+- **Note**: Uploaded attachments use local pod storage which may not persist across deployments. Low-volume usage is acceptable.

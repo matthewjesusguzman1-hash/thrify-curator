@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from typing import List, Optional
 from datetime import datetime, timezone
 import uuid
+import os
+import base64
 
 from app.database import db
 from app.dependencies import get_admin_user, get_current_user
@@ -10,11 +12,75 @@ from app.models.conversations import (
     ConversationCreate,
     ConversationResponse,
     ConversationListItem,
-    AdminReplyCreate
+    AdminReplyCreate,
+    MessageAttachment
 )
 from app.services.web_push_service import get_web_push_service
 
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
+
+# Ensure upload directory exists
+UPLOAD_DIR = "uploads/message_attachments"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Allowed file types
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+ALLOWED_DOC_TYPES = {"application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+ALLOWED_TYPES = ALLOWED_IMAGE_TYPES | ALLOWED_DOC_TYPES
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+
+@router.post("/upload-attachment")
+async def upload_message_attachment(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload a file attachment for a message"""
+    # Validate file type
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail=f"File type {file.content_type} not allowed")
+    
+    # Read file content
+    content = await file.read()
+    
+    # Validate file size
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB")
+    
+    # Generate unique filename
+    file_ext = os.path.splitext(file.filename)[1] if file.filename else ""
+    unique_id = str(uuid.uuid4())
+    safe_filename = f"{unique_id}{file_ext}"
+    file_path = os.path.join(UPLOAD_DIR, safe_filename)
+    
+    # Save file
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    # Determine file type category
+    file_type = "image" if file.content_type in ALLOWED_IMAGE_TYPES else "document"
+    
+    # Return attachment info
+    return {
+        "id": unique_id,
+        "filename": file.filename,
+        "file_type": file_type,
+        "mime_type": file.content_type,
+        "url": f"/api/conversations/attachment/{safe_filename}",
+        "size": len(content)
+    }
+
+
+@router.get("/attachment/{filename}")
+async def get_message_attachment(filename: str):
+    """Serve a message attachment"""
+    from fastapi.responses import FileResponse
+    
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    
+    return FileResponse(file_path)
 
 
 async def send_user_push_notification(user_type: str, user_id: str, title: str, body: str, notification_type: str, exclude_device_token: str = None):
@@ -294,6 +360,10 @@ async def employee_send_message(message: ConversationCreate, user: dict = Depend
         "sent_at": now,
         "read": False
     }
+    
+    # Add attachments if provided
+    if message.attachments:
+        new_message["attachments"] = message.attachments
     
     if not conversation:
         # Create new conversation with the message
@@ -724,6 +794,10 @@ async def admin_reply(reply: AdminReplyCreate, admin: dict = Depends(get_admin_u
         "read": False,
         "read_by_admins": [admin_id]  # The sender has "read" their own message
     }
+    
+    # Add attachments if provided
+    if reply.attachments:
+        new_message["attachments"] = reply.attachments
     
     # Add message to conversation
     await db.conversations.update_one(
