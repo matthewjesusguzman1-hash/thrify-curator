@@ -2524,7 +2524,8 @@ export default function EmployeeDashboard({
             </Collapsible>
           )}
 
-          {/* Contractor Agreement Section - Collapsible */}
+          {/* Contractor Agreement Section - Only for Remote Workers */}
+          {isRemoteWorker() && (
           <Collapsible open={contractorAgreementExpanded} onOpenChange={setContractorAgreementExpanded}>
             <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl shadow-2xl overflow-hidden border border-white/10" data-testid="contractor-agreement-section">
               <div className="h-1.5 bg-gradient-to-r from-[#8B5CF6] via-[#EC4899] to-[#F59E0B]" />
@@ -2920,6 +2921,7 @@ export default function EmployeeDashboard({
               </CollapsibleContent>
             </div>
           </Collapsible>
+          )}
 
           {/* W-8BEN Tax Form Section - Only show for remote workers */}
           {isRemoteWorker() && (
