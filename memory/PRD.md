@@ -348,3 +348,14 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - **Files Updated**:
   - `frontend/src/components/admin/sections/HoursByEmployeeSection.jsx` - Portal-based modal rendering
   - `frontend/src/components/admin/sections/ConversationsSection.jsx` - Hide list on mobile when conversation selected
+
+### Payment Records Auto-fill (2026-08-31) - NEW
+- **Feature**: When entering payment records in the admin dashboard, selecting an employee now auto-fills the amount field with what they are owed for the current pay period
+- **Implementation Details**:
+  - Added `fetchPayrollSummary()` function to fetch payroll summary with per-employee breakdown
+  - Employee picker modal now shows "Owed: $X.XX" preview with sparkle icon for employees with amounts > 0
+  - On employee selection, amount field auto-populates with their owed amount
+  - Toast notification confirms: "Amount auto-filled: $X.XX owed for current period"
+- **API Used**: `GET /api/admin/payroll/summary` returns `current_period.by_employee` array with `name`, `amount`, `hours`, `hourly_rate`
+- **Files Updated**:
+  - `frontend/src/components/admin/sections/PaymentRecordsSection.jsx` - Added payroll summary fetch and auto-fill logic

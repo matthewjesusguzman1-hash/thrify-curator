@@ -66,6 +66,9 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
   // Employees for dropdown
   const [employees, setEmployees] = useState([]);
   
+  // Payroll data for auto-fill amounts
+  const [payrollByEmployee, setPayrollByEmployee] = useState({});
+  
   // Custom picker modal state (for iOS compatibility)
   const [showEmployeePicker, setShowEmployeePicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
@@ -176,13 +179,33 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
     }
   }, [getAuthHeader]);
 
+  // Fetch payroll summary to get owed amounts per employee
+  const fetchPayrollSummary = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/payroll/summary`, getAuthHeader());
+      // Build a lookup by employee name for easy access
+      const byEmployee = {};
+      const breakdown = response.data?.current_period?.by_employee || [];
+      breakdown.forEach(emp => {
+        if (emp.name) {
+          byEmployee[emp.name.toLowerCase()] = emp;
+        }
+      });
+      setPayrollByEmployee(byEmployee);
+    } catch (error) {
+      console.error("Failed to fetch payroll summary:", error);
+      setPayrollByEmployee({});
+    }
+  }, [getAuthHeader]);
+
   // Auto-fetch on mount
   useEffect(() => {
     fetchCheckRecords();
     fetchConsignmentClients();
     fetchEmployees();
     fetchPayPeriods();
-  }, [fetchCheckRecords, fetchConsignmentClients, fetchEmployees, fetchPayPeriods]);
+    fetchPayrollSummary();
+  }, [fetchCheckRecords, fetchConsignmentClients, fetchEmployees, fetchPayPeriods, fetchPayrollSummary]);
 
   // Auto-refresh when section is expanded
   useEffect(() => {
@@ -191,8 +214,9 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
       fetchConsignmentClients();
       fetchEmployees();
       fetchPayPeriods();
+      fetchPayrollSummary();
     }
-  }, [isExpanded, fetchCheckRecords, fetchConsignmentClients, fetchEmployees, fetchPayPeriods]);
+  }, [isExpanded, fetchCheckRecords, fetchConsignmentClients, fetchEmployees, fetchPayPeriods, fetchPayrollSummary]);
   
   // Fetch data when tab changes
   useEffect(() => {
@@ -1102,18 +1126,36 @@ export default function PaymentRecordsSection({ getAuthHeader }) {
                       <button
                         key={`picker-emp-${index}`}
                         onClick={() => {
+                          // Check if we have payroll data for this employee
+                          const empPayroll = payrollByEmployee[employee.name?.toLowerCase()];
+                          const owedAmount = empPayroll?.amount;
+                          
                           setCheckUploadData({
                             ...checkUploadData,
                             employee_name: employee.name,
-                            employee_email: employee.email
+                            employee_email: employee.email,
+                            // Auto-fill amount if we have owed data
+                            amount: owedAmount ? `$${owedAmount.toFixed(2)}` : checkUploadData.amount
                           });
                           setShowEmployeePicker(false);
+                          
+                          // Show toast if amount was auto-filled
+                          if (owedAmount) {
+                            toast.success(`Amount auto-filled: $${owedAmount.toFixed(2)} owed for current period`);
+                          }
                         }}
                         className="w-full px-4 py-3 text-left hover:bg-purple-50 border-b border-gray-100 last:border-b-0 flex justify-between items-center"
                       >
                         <div>
                           <div className="font-medium text-gray-900">{employee.name}</div>
                           <div className="text-xs text-gray-500">{employee.email}</div>
+                          {/* Show owed amount preview */}
+                          {payrollByEmployee[employee.name?.toLowerCase()]?.amount > 0 && (
+                            <div className="text-xs text-green-600 font-medium mt-0.5 flex items-center gap-1">
+                              <Sparkles className="w-3 h-3" />
+                              Owed: ${payrollByEmployee[employee.name?.toLowerCase()].amount.toFixed(2)}
+                            </div>
+                          )}
                         </div>
                         {employee.role === 'admin' && (
                           <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Admin</span>
