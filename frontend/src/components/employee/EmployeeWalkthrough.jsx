@@ -43,12 +43,12 @@ const WALKTHROUGH_STEPS = [
   {
     id: 'password',
     title: 'Set Your Password',
-    description: 'For added security, we recommend setting up a password. Go to Account Settings to create your password for secure login.',
+    description: 'For added security, we recommend setting up a password. Tap the Security button (padlock icon) in the header to create your password.',
     icon: Lock,
     color: 'from-orange-500 to-amber-500',
     tips: [
-      'Tap "Account Settings" in the menu',
-      'Choose "Set Password"',
+      'Tap the padlock "Security" button in the header',
+      'Choose to set or change your password',
       'Create a secure password',
       'Use your password to log in securely'
     ]
