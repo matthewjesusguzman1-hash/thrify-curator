@@ -501,10 +501,10 @@ export default function AllEmployeesSection({
                           </td>
                           <td>{emp.email}</td>
                           <td>
-                            {emp.phone ? (
+                            {(emp.phone || emp.remitly_phone) ? (
                               <div className="flex items-center gap-1 text-sm">
                                 <Phone className="w-3 h-3 text-[#888]" />
-                                <span>{emp.phone}</span>
+                                <span>{emp.phone || emp.remitly_phone}</span>
                               </div>
                             ) : (
                               <span className="text-[#aaa] text-sm">-</span>
