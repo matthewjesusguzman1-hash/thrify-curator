@@ -1418,10 +1418,13 @@ export default function EmployeeDashboard({
 
   const formatDate = (isoString) => {
     if (!isoString) return '';
-    // Parse as UTC and format without timezone conversion
-    const date = new Date(isoString);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${months[date.getUTCMonth()]} ${date.getUTCDate()}`;
+    // For remote workers, respect the timezone toggle for dates too
+    const timezone = isRemoteWorker() && showPhilippineTime ? 'Asia/Manila' : 'America/Chicago';
+    return new Date(isoString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      timeZone: timezone
+    });
   };
 
   const formatCurrency = (amount) => {
