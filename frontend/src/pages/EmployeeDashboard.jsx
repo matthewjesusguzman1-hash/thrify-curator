@@ -172,7 +172,16 @@ export default function EmployeeDashboard({
   const [locationStatus, setLocationStatus] = useState({ checking: false, withinRange: null, distance: null, denied: false });
   
   // Timezone preference for remote workers (Central Time default, can toggle to Philippine Time)
-  const [showPhilippineTime, setShowPhilippineTime] = useState(false);
+  // Persist preference in localStorage
+  const [showPhilippineTime, setShowPhilippineTime] = useState(() => {
+    const saved = localStorage.getItem('timezone_preference');
+    return saved === 'philippine';
+  });
+  
+  // Save timezone preference when it changes
+  useEffect(() => {
+    localStorage.setItem('timezone_preference', showPhilippineTime ? 'philippine' : 'central');
+  }, [showPhilippineTime]);
   
   // Track if Live Activity has been started this session to avoid restarting
   const liveActivityStartedRef = useRef(false);
