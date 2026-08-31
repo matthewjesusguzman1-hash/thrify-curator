@@ -65,11 +65,16 @@ async def get_payroll_settings(admin: dict = Depends(get_admin_user)):
 
 
 @router.get("/summary")
-async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
+async def get_payroll_summary(
+    admin: dict = Depends(get_admin_user),
+    period_index: int = 0
+):
     """Get payroll summary:
-    - This Period: wages owed for current period (hours × rate)
+    - This Period: wages owed for specified period (hours × rate)
     - Unpaid: amount not yet paid from previous periods
     - Paid This Month/Year: actual payments made
+    
+    period_index: 0 = current period, -1 = previous period, etc.
     """
     from app.services.helpers import get_biweekly_period
     
@@ -79,8 +84,8 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
     default_rate = settings.get("default_hourly_rate", 20.00) if settings else 20.00
     
     now = datetime.now(timezone.utc)
-    period_start, period_end = get_biweekly_period(period_index=0)
-    prev_period_start, prev_period_end = get_biweekly_period(period_index=-1)
+    period_start, period_end = get_biweekly_period(period_index=period_index)
+    prev_period_start, prev_period_end = get_biweekly_period(period_index=period_index - 1)
     
     for dt in [period_start, period_end, prev_period_start, prev_period_end]:
         if dt.tzinfo is None:
@@ -249,7 +254,8 @@ async def get_payroll_summary(admin: dict = Depends(get_admin_user)):
             "hours": round(current_period_hours, 2),
             "start": period_start.isoformat(),
             "end": period_end.isoformat(),
-            "by_employee": employee_breakdown
+            "by_employee": employee_breakdown,
+            "period_index": period_index
         },
         "outstanding_amount": round(outstanding_amount, 2),
         "month_total": round(month_total, 2),

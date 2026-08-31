@@ -61,7 +61,9 @@ import {
   ClipboardCheck,
   Inbox,
   Sun,
-  Moon
+  Moon,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -169,9 +171,14 @@ export default function AdminDashboard() {
   
   // Payroll quick view state
   const [showPayrollQuickView, setShowPayrollQuickView] = useState(false);
+  const [payrollPeriodIndex, setPayrollPeriodIndex] = useState(0); // 0 = current, -1 = previous
   const payrollQuickViewRef = useRef(null);
   const [forceOpenPayrollGroup, setForceOpenPayrollGroup] = useState(false);
   const [forceOpenClockedInTracker, setForceOpenClockedInTracker] = useState(false);
+  
+  // Touch swipe tracking for payroll quick view
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
   
   // Track data updates for real-time sync
   const [lastDataUpdate, setLastDataUpdate] = useState(Date.now());
@@ -559,9 +566,9 @@ export default function AdminDashboard() {
     }
   }, [getAuthHeader]);
 
-  const fetchPayrollSummary = useCallback(async () => {
+  const fetchPayrollSummary = useCallback(async (periodIndex = 0) => {
     try {
-      const response = await axios.get(`${API}/admin/payroll/summary`, getAuthHeader());
+      const response = await axios.get(`${API}/admin/payroll/summary?period_index=${periodIndex}`, getAuthHeader());
       setPayrollSummary(response.data);
     } catch (error) {
       console.error("Failed to fetch payroll summary:", error);
@@ -2792,7 +2799,8 @@ export default function AdminDashboard() {
               onClick={() => {
                 lightTap();
                 if (!showPayrollQuickView) {
-                  fetchPayrollSummary(); // Refresh data when opening
+                  setPayrollPeriodIndex(0); // Reset to current period
+                  fetchPayrollSummary(0); // Refresh data when opening
                 }
                 setShowPayrollQuickView(!showPayrollQuickView);
               }}
@@ -2814,13 +2822,47 @@ export default function AdminDashboard() {
                   className="fixed md:absolute left-1 right-1 md:left-auto md:right-0 top-[120px] md:top-full md:mt-2 w-auto md:w-80 rounded-2xl shadow-2xl border border-[#eee] z-50 overflow-hidden"
                   style={{ backgroundColor: '#ffffff', color: '#000000' }}
                   data-testid="payroll-quick-view-dropdown"
+                  onTouchStart={(e) => {
+                    touchStartX.current = e.touches[0].clientX;
+                    touchStartY.current = e.touches[0].clientY;
+                  }}
+                  onTouchEnd={(e) => {
+                    if (touchStartX.current === null) return;
+                    const touchEndX = e.changedTouches[0].clientX;
+                    const touchEndY = e.changedTouches[0].clientY;
+                    const deltaX = touchEndX - touchStartX.current;
+                    const deltaY = touchEndY - touchStartY.current;
+                    
+                    // Only trigger if horizontal swipe is more significant than vertical
+                    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                      if (deltaX < 0) {
+                        // Swipe left - go to previous period
+                        if (payrollPeriodIndex > -2) {
+                          const newIndex = payrollPeriodIndex - 1;
+                          setPayrollPeriodIndex(newIndex);
+                          fetchPayrollSummary(newIndex);
+                        }
+                      } else {
+                        // Swipe right - go to next (more current) period
+                        if (payrollPeriodIndex < 0) {
+                          const newIndex = payrollPeriodIndex + 1;
+                          setPayrollPeriodIndex(newIndex);
+                          fetchPayrollSummary(newIndex);
+                        }
+                      }
+                    }
+                    touchStartX.current = null;
+                    touchStartY.current = null;
+                  }}
                 >
                   {/* Header */}
-                  <div className="p-4 bg-gradient-to-r from-[#10B981] to-[#059669]">
+                  <div className={`p-4 ${payrollPeriodIndex === 0 ? 'bg-gradient-to-r from-[#10B981] to-[#059669]' : 'bg-gradient-to-r from-[#6366F1] to-[#4F46E5]'}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <DollarSign className="w-5 h-5 text-white" />
-                        <h3 className="font-semibold text-white">Pay Period</h3>
+                        <h3 className="font-semibold text-white">
+                          {payrollPeriodIndex === 0 ? 'Current Period' : payrollPeriodIndex === -1 ? 'Previous Period' : `${Math.abs(payrollPeriodIndex)} Periods Ago`}
+                        </h3>
                       </div>
                       <button
                         onClick={() => setShowPayrollQuickView(false)}
@@ -2829,20 +2871,48 @@ export default function AdminDashboard() {
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="mt-2 text-white/80 text-xs">
-                      {payrollSummary.current_period?.start && payrollSummary.current_period?.end ? (
-                        <>
-                          {new Date(payrollSummary.current_period.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}
-                          {' - '}
-                          {new Date(payrollSummary.current_period.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}
-                        </>
-                      ) : 'Current Period'}
+                    
+                    {/* Period navigation hint */}
+                    <div className="flex items-center justify-between mt-1">
+                      <div className="text-white/80 text-xs">
+                        {payrollSummary.current_period?.start && payrollSummary.current_period?.end ? (
+                          <>
+                            {new Date(payrollSummary.current_period.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}
+                            {' - '}
+                            {new Date(payrollSummary.current_period.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}
+                          </>
+                        ) : 'Loading...'}
+                      </div>
+                      <div className="flex items-center gap-1 text-white/50 text-xs">
+                        <ChevronLeft className="w-3 h-3" />
+                        <span>Swipe</span>
+                        <ChevronRight className="w-3 h-3" />
+                      </div>
                     </div>
+                    
                     <div className="mt-3 text-3xl font-bold text-white">
                       ${payrollSummary.current_period?.amount?.toFixed(2) || '0.00'}
                     </div>
                     <div className="text-white/70 text-sm">
                       {formatHoursToHMS(payrollSummary.current_period?.hours || 0)} total
+                    </div>
+                    
+                    {/* Period dots indicator */}
+                    <div className="flex justify-center gap-1.5 mt-3">
+                      {[-2, -1, 0].map((idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setPayrollPeriodIndex(idx);
+                            fetchPayrollSummary(idx);
+                          }}
+                          className={`w-2 h-2 rounded-full transition-all ${
+                            payrollPeriodIndex === idx 
+                              ? 'bg-white w-4' 
+                              : 'bg-white/40 hover:bg-white/60'
+                          }`}
+                        />
+                      ))}
                     </div>
                   </div>
                   
@@ -2887,6 +2957,7 @@ export default function AdminDashboard() {
                       style={{ color: '#059669' }}
                       onClick={() => {
                         setShowPayrollQuickView(false);
+                        setPayrollPeriodIndex(0); // Reset to current when closing
                         setForceOpenPayrollGroup(true);
                         setTimeout(() => {
                           document.querySelector('[data-testid="group-payroll"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
