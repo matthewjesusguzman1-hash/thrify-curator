@@ -199,6 +199,13 @@ export default function EmployeeDashboard({
   const [nec1099Expanded, setNec1099Expanded] = useState(false);
   const [contractorAgreementExpanded, setContractorAgreementExpanded] = useState(false);
   
+  // Contractor Agreement state
+  const [contractorAgreement, setContractorAgreement] = useState(null);
+  const [signingAgreement, setSigningAgreement] = useState(false);
+  const [agreementSignature, setAgreementSignature] = useState("");
+  const [agreementName, setAgreementName] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  
   // Auto-expand contractor agreement in admin view when it's signed (approved or pending_review)
   useEffect(() => {
     if (isAdminView && (contractorAgreement?.status === 'approved' || contractorAgreement?.status === 'pending_review')) {
@@ -206,12 +213,6 @@ export default function EmployeeDashboard({
     }
   }, [isAdminView, contractorAgreement?.status]);
   
-  // Contractor Agreement state
-  const [contractorAgreement, setContractorAgreement] = useState(null);
-  const [signingAgreement, setSigningAgreement] = useState(false);
-  const [agreementSignature, setAgreementSignature] = useState("");
-  const [agreementName, setAgreementName] = useState("");
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
   // Contractor fillable fields
   const [contractorEmail, setContractorEmail] = useState("");
   // Payment fields for Remitly
