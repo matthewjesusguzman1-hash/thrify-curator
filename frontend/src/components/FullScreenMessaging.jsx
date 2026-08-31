@@ -21,7 +21,8 @@ export default function FullScreenMessaging({
   userEmail,
   getAuthHeader = () => ({}),
   muted = false,
-  onUnreadChange = () => {}
+  onUnreadChange = () => {},
+  theme = "light" // "light" or "dark"
 }) {
   const [conversation, setConversation] = useState(null);
   const [newMessage, setNewMessage] = useState("");
@@ -190,9 +191,12 @@ export default function FullScreenMessaging({
   };
 
   const messages = conversation?.messages || [];
+  
+  // Theme classes
+  const isLight = theme === 'light';
 
   return (
-    <div className="flex flex-col h-full bg-[#1A1A2E]">
+    <div className={`flex flex-col h-full ${isLight ? 'bg-white' : 'bg-[#1A1A2E]'}`}>
       {/* Messages area - takes remaining space */}
       <div 
         ref={messagesContainerRef}
@@ -201,10 +205,10 @@ export default function FullScreenMessaging({
       >
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-8 h-8 text-[#00D4FF] animate-spin" />
+            <Loader2 className={`w-8 h-8 animate-spin ${isLight ? 'text-[#1A1A2E]' : 'text-[#00D4FF]'}`} />
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-white/50">
+          <div className={`flex flex-col items-center justify-center h-full ${isLight ? 'text-gray-400' : 'text-white/50'}`}>
             <User className="w-16 h-16 mb-4 opacity-30" />
             <p className="text-lg">No messages yet</p>
             <p className="text-sm">Send a message to start the conversation</p>
@@ -220,19 +224,23 @@ export default function FullScreenMessaging({
               <div
                 className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                   msg.sender_type === 'admin'
-                    ? 'bg-white/10 text-white rounded-tl-sm'
+                    ? isLight 
+                      ? 'bg-gray-100 text-gray-800 rounded-tl-sm'
+                      : 'bg-white/10 text-white rounded-tl-sm'
                     : 'bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white rounded-tr-sm'
                 }`}
               >
                 {msg.sender_type === "admin" && (
-                  <p className="text-xs text-white/50 mb-1 flex items-center gap-1">
+                  <p className={`text-xs mb-1 flex items-center gap-1 ${isLight ? 'text-gray-500' : 'text-white/50'}`}>
                     <User className="w-3 h-3" />
                     {msg.sender_name || "Admin"}
                   </p>
                 )}
                 <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                 <p className={`text-xs mt-2 ${
-                  msg.sender_type === 'admin' ? 'text-white/40' : 'text-white/70'
+                  msg.sender_type === 'admin' 
+                    ? isLight ? 'text-gray-400' : 'text-white/40'
+                    : 'text-white/70'
                 }`}>
                   {formatMessageTime(msg.sent_at)}
                 </p>
@@ -243,14 +251,18 @@ export default function FullScreenMessaging({
       </div>
       
       {/* Message input - fixed at bottom */}
-      <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10 bg-[#1A1A2E]">
+      <form onSubmit={handleSendMessage} className={`p-4 border-t ${isLight ? 'border-gray-200 bg-white' : 'border-white/10 bg-[#1A1A2E]'}`}>
         <div className="flex flex-col gap-2">
           <textarea
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
             rows={4}
-            className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-[#00D4FF]/50 resize-none min-h-[120px]"
+            className={`w-full rounded-xl px-4 py-3 focus:outline-none resize-none min-h-[120px] ${
+              isLight 
+                ? 'bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 focus:border-[#00D4FF]/50'
+                : 'bg-white/10 border border-white/10 text-white placeholder-white/40 focus:border-[#00D4FF]/50'
+            }`}
             disabled={sending}
             data-testid="fullscreen-message-input"
           />

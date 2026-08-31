@@ -41,7 +41,9 @@ import {
   Plus,
   Globe,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Sun,
+  Moon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -248,6 +250,10 @@ export default function EmployeeDashboard({
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [messagesMuted, setMessagesMuted] = useState(() => {
     return localStorage.getItem('thrifty_curator_messages_muted') === 'true';
+  });
+  // Message theme preference (light or dark)
+  const [messagesTheme, setMessagesTheme] = useState(() => {
+    return localStorage.getItem('thrifty_curator_messages_theme') || 'light';
   });
   
   // Check if desktop (for showing company AnyDesk number)
@@ -3859,16 +3865,29 @@ export default function EmployeeDashboard({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[#1A1A2E] z-50 flex flex-col"
+            className={`fixed inset-0 z-50 flex flex-col ${messagesTheme === 'dark' ? 'bg-[#1A1A2E]' : 'bg-white'}`}
             style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className={`flex items-center justify-between p-4 border-b ${messagesTheme === 'dark' ? 'border-white/10' : 'border-gray-200 bg-gradient-to-r from-[#1A1A2E] to-[#2D2D44]'}`}>
               <div className="flex items-center gap-3">
-                <MessageSquare className="w-6 h-6 text-[#00D4FF]" />
+                <MessageSquare className={`w-6 h-6 ${messagesTheme === 'dark' ? 'text-[#00D4FF]' : 'text-white'}`} />
                 <h2 className="text-xl font-bold text-white">Messages</h2>
               </div>
               <div className="flex items-center gap-2">
+                {/* Theme toggle */}
+                <button
+                  onClick={() => {
+                    const newTheme = messagesTheme === 'dark' ? 'light' : 'dark';
+                    setMessagesTheme(newTheme);
+                    localStorage.setItem('thrifty_curator_messages_theme', newTheme);
+                  }}
+                  className={`p-2 rounded-lg ${messagesTheme === 'dark' ? 'bg-white/10 text-yellow-400' : 'bg-white/20 text-white'} hover:bg-white/30`}
+                  title={messagesTheme === 'dark' ? "Switch to light mode" : "Switch to dark mode"}
+                  data-testid="theme-toggle-btn"
+                >
+                  {messagesTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </button>
                 {/* Mute toggle */}
                 <button
                   onClick={() => {
@@ -3877,7 +3896,7 @@ export default function EmployeeDashboard({
                     localStorage.setItem('thrifty_curator_messages_muted', newMuted.toString());
                     toast.success(newMuted ? "Message notifications muted" : "Message notifications unmuted");
                   }}
-                  className={`p-2 rounded-lg ${messagesMuted ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white/70'} hover:bg-white/20`}
+                  className={`p-2 rounded-lg ${messagesMuted ? 'bg-red-500/20 text-red-400' : messagesTheme === 'dark' ? 'bg-white/10 text-white/70' : 'bg-white/20 text-white'} hover:bg-white/30`}
                   title={messagesMuted ? "Unmute notifications" : "Mute notifications"}
                   data-testid="mute-messages-btn"
                 >
@@ -3886,7 +3905,7 @@ export default function EmployeeDashboard({
                 {/* Close button */}
                 <button
                   onClick={() => setShowFullScreenMessages(false)}
-                  className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20"
+                  className={`p-2 rounded-lg ${messagesTheme === 'dark' ? 'bg-white/10 text-white' : 'bg-white/20 text-white'} hover:bg-white/30`}
                   data-testid="close-fullscreen-messages-btn"
                 >
                   <X className="w-5 h-5" />
@@ -3906,6 +3925,7 @@ export default function EmployeeDashboard({
                 })}
                 muted={messagesMuted}
                 onUnreadChange={setUnreadMessageCount}
+                theme={messagesTheme}
               />
             </div>
           </motion.div>
