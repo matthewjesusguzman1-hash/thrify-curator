@@ -19,8 +19,9 @@ from app.services.web_push_service import get_web_push_service
 
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
 
-# Ensure upload directory exists
-UPLOAD_DIR = "uploads/message_attachments"
+# Ensure upload directory exists - use absolute path relative to backend root
+BACKEND_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+UPLOAD_DIR = os.path.join(BACKEND_ROOT, "uploads", "message_attachments")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Allowed file types
@@ -75,12 +76,42 @@ async def upload_message_attachment(
 async def get_message_attachment(filename: str):
     """Serve a message attachment"""
     from fastapi.responses import FileResponse
+    import logging
     
     file_path = os.path.join(UPLOAD_DIR, filename)
+    logging.info(f"[Attachment] Requested: {filename}, Full path: {file_path}, Exists: {os.path.exists(file_path)}, UPLOAD_DIR: {UPLOAD_DIR}")
+    
     if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Attachment not found")
+        # List what files ARE in the directory for debugging
+        if os.path.exists(UPLOAD_DIR):
+            files_in_dir = os.listdir(UPLOAD_DIR)[:10]  # First 10 files
+            logging.error(f"[Attachment] File not found. Files in {UPLOAD_DIR}: {files_in_dir}")
+        else:
+            logging.error(f"[Attachment] Upload directory doesn't exist: {UPLOAD_DIR}")
+        raise HTTPException(status_code=404, detail=f"Attachment not found: {filename}")
     
     return FileResponse(file_path)
+
+
+@router.get("/attachment-debug")
+async def debug_attachment_storage():
+    """Debug endpoint to check attachment storage status"""
+    
+    result = {
+        "upload_dir": UPLOAD_DIR,
+        "upload_dir_exists": os.path.exists(UPLOAD_DIR),
+        "backend_root": BACKEND_ROOT,
+        "cwd": os.getcwd(),
+        "files_count": 0,
+        "sample_files": []
+    }
+    
+    if os.path.exists(UPLOAD_DIR):
+        files = os.listdir(UPLOAD_DIR)
+        result["files_count"] = len(files)
+        result["sample_files"] = files[:5]  # First 5 files
+    
+    return result
 
 
 async def send_user_push_notification(user_type: str, user_id: str, title: str, body: str, notification_type: str, exclude_device_token: str = None):
