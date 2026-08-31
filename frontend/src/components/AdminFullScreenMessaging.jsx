@@ -437,10 +437,10 @@ export default function AdminFullScreenMessaging({
                   </div>
                   
                   {/* Content */}
-440|                  <div className="flex-1 min-w-0" onClick={() => handleSelectConversation(conv)}>
-441|                    {/* Name and Badge Row */}
-442|                    <div className="flex items-center gap-2 mb-1">
-443|                      <p className={`font-semibold text-base ${isLight ? 'text-gray-900' : 'text-white'}`}>{conv.participant_name}</p>
+                  <div className="flex-1 min-w-0" onClick={() => handleSelectConversation(conv)}>
+                    {/* Name and Badge Row */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className={`font-semibold text-base ${isLight ? 'text-gray-900' : 'text-white'}`}>{conv.participant_name}</p>
                       <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                         conv.participant_type === 'employee' 
                           ? 'bg-blue-100 text-blue-700' 
