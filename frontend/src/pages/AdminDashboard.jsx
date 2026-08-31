@@ -59,7 +59,9 @@ import {
   Square,
   Car,
   ClipboardCheck,
-  Inbox
+  Inbox,
+  Sun,
+  Moon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -260,6 +262,10 @@ export default function AdminDashboard() {
   const [adminUnreadMessageCount, setAdminUnreadMessageCount] = useState(0);
   const [messagesMuted, setMessagesMuted] = useState(() => {
     return localStorage.getItem('thrifty_curator_admin_messages_muted') === 'true';
+  });
+  // Message theme preference (light or dark) - shared with employees
+  const [messagesTheme, setMessagesTheme] = useState(() => {
+    return localStorage.getItem('thrifty_curator_messages_theme') || 'light';
   });
   const [showEmailSettings, setShowEmailSettings] = useState(false);
   const [showSubmissionDetails, setShowSubmissionDetails] = useState(false);
@@ -4530,10 +4536,10 @@ export default function AdminDashboard() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex flex-col overflow-hidden"
+            className={`fixed inset-0 z-[9999] flex flex-col overflow-hidden`}
             style={{ 
               paddingTop: 'env(safe-area-inset-top, 0px)',
-              backgroundColor: '#ffffff'
+              backgroundColor: messagesTheme === 'dark' ? '#1A1A2E' : '#ffffff'
             }}
           >
             {/* Header */}
@@ -4543,6 +4549,19 @@ export default function AdminDashboard() {
                 <h2 className="text-xl font-bold text-white">Messages</h2>
               </div>
               <div className="flex items-center gap-2">
+                {/* Theme toggle */}
+                <button
+                  onClick={() => {
+                    const newTheme = messagesTheme === 'dark' ? 'light' : 'dark';
+                    setMessagesTheme(newTheme);
+                    localStorage.setItem('thrifty_curator_messages_theme', newTheme);
+                  }}
+                  className={`p-2 rounded-lg ${messagesTheme === 'dark' ? 'bg-white/10 text-yellow-400' : 'bg-white/20 text-white'} hover:bg-white/30`}
+                  title={messagesTheme === 'dark' ? "Switch to light mode" : "Switch to dark mode"}
+                  data-testid="admin-theme-toggle-btn"
+                >
+                  {messagesTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </button>
                 {/* Mute toggle */}
                 <button
                   onClick={() => {
@@ -4551,7 +4570,7 @@ export default function AdminDashboard() {
                     localStorage.setItem('thrifty_curator_admin_messages_muted', newMuted.toString());
                     toast.success(newMuted ? "Message notifications muted" : "Message notifications unmuted");
                   }}
-                  className={`p-2 rounded-lg ${messagesMuted ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white/70'} hover:bg-white/20`}
+                  className={`p-2 rounded-lg ${messagesMuted ? 'bg-red-500/20 text-red-400' : 'bg-white/20 text-white'} hover:bg-white/30`}
                   title={messagesMuted ? "Unmute notifications" : "Mute notifications"}
                 >
                   {messagesMuted ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
@@ -4559,7 +4578,7 @@ export default function AdminDashboard() {
                 {/* Close button */}
                 <button
                   onClick={() => setShowFullScreenMessages(false)}
-                  className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20"
+                  className="p-2 rounded-lg bg-white/20 text-white hover:bg-white/30"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -4572,6 +4591,7 @@ export default function AdminDashboard() {
                 muted={messagesMuted}
                 onUnreadChange={setAdminUnreadMessageCount}
                 currentAdminName={user?.name || "Admin"}
+                theme={messagesTheme}
               />
             </div>
           </motion.div>

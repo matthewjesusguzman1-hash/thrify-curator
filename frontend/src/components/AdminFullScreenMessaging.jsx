@@ -33,7 +33,8 @@ const POLLING_INTERVAL = 3000;
 export default function AdminFullScreenMessaging({ 
   muted = false,
   onUnreadChange = () => {},
-  currentAdminName = "Admin"
+  currentAdminName = "Admin",
+  theme = "light"
 }) {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -361,20 +362,23 @@ export default function AdminFullScreenMessaging({
   });
 
   const messages = selectedConversation?.messages || [];
+  
+  // Theme classes
+  const isLight = theme === 'light';
 
   return (
-    <div className="flex h-full bg-white" style={{ width: '100%', maxWidth: '100vw', overflow: 'hidden' }}>
+    <div className={`flex h-full ${isLight ? 'bg-white' : 'bg-[#1A1A2E]'}`} style={{ width: '100%', maxWidth: '100vw', overflow: 'hidden' }}>
       {/* Conversation List - Left Panel */}
-      <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 lg:w-[420px] xl:w-[480px] border-r border-gray-200`}>
+      <div className={`${selectedConversation ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-96 lg:w-[420px] xl:w-[480px] border-r ${isLight ? 'border-gray-200' : 'border-white/10'}`}>
         {/* Search and Filter */}
-        <div className="p-4 border-b border-gray-200 space-y-3">
+        <div className={`p-4 border-b ${isLight ? 'border-gray-200' : 'border-white/10'} space-y-3`}>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isLight ? 'text-gray-400' : 'text-white/40'}`} />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search conversations..."
-              className="pl-10"
+              className={`pl-10 ${!isLight ? 'bg-white/10 border-white/10 text-white placeholder-white/40' : ''}`}
             />
           </div>
           <div className="flex gap-2">
@@ -385,7 +389,9 @@ export default function AdminFullScreenMessaging({
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                   filterType === type
                     ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : isLight 
+                      ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      : 'bg-white/10 text-white/70 hover:bg-white/20'
                 }`}
               >
                 {type === "all" ? "All" : type === "employee" ? "Employees" : "Consignors"}
@@ -398,10 +404,10 @@ export default function AdminFullScreenMessaging({
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center h-32">
-              <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+              <Loader2 className={`w-6 h-6 animate-spin ${isLight ? 'text-blue-500' : 'text-[#00D4FF]'}`} />
             </div>
           ) : filteredConversations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+            <div className={`flex flex-col items-center justify-center h-32 ${isLight ? 'text-gray-400' : 'text-white/50'}`}>
               <Users className="w-8 h-8 mb-2" />
               <p className="text-sm">No conversations</p>
             </div>
@@ -409,8 +415,10 @@ export default function AdminFullScreenMessaging({
             filteredConversations.map((conv) => (
               <div
                 key={conv.id}
-                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                  selectedConversation?.id === conv.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                className={`p-4 border-b cursor-pointer transition-colors ${
+                  isLight 
+                    ? `border-gray-100 hover:bg-gray-50 ${selectedConversation?.id === conv.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`
+                    : `border-white/5 hover:bg-white/5 ${selectedConversation?.id === conv.id ? 'bg-white/10 border-l-4 border-l-[#00D4FF]' : ''}`
                 }`}
               >
                 <div className="flex items-start gap-4">
@@ -429,10 +437,10 @@ export default function AdminFullScreenMessaging({
                   </div>
                   
                   {/* Content */}
-                  <div className="flex-1 min-w-0" onClick={() => handleSelectConversation(conv)}>
-                    {/* Name and Badge Row */}
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="font-semibold text-gray-900 text-base">{conv.participant_name}</p>
+440|                  <div className="flex-1 min-w-0" onClick={() => handleSelectConversation(conv)}>
+441|                    {/* Name and Badge Row */}
+442|                    <div className="flex items-center gap-2 mb-1">
+443|                      <p className={`font-semibold text-base ${isLight ? 'text-gray-900' : 'text-white'}`}>{conv.participant_name}</p>
                       <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                         conv.participant_type === 'employee' 
                           ? 'bg-blue-100 text-blue-700' 
@@ -449,17 +457,17 @@ export default function AdminFullScreenMessaging({
                     
                     {/* Email */}
                     {conv.participant_email && (
-                      <p className="text-sm text-gray-500 mb-1">{conv.participant_email}</p>
+                      <p className={`text-sm mb-1 ${isLight ? 'text-gray-500' : 'text-white/50'}`}>{conv.participant_email}</p>
                     )}
                     
                     {/* Last Message Preview */}
                     {conv.last_message && (
-                      <p className="text-sm text-gray-600 line-clamp-2 mt-2">{conv.last_message}</p>
+                      <p className={`text-sm line-clamp-2 mt-2 ${isLight ? 'text-gray-600' : 'text-white/70'}`}>{conv.last_message}</p>
                     )}
                     
                     {/* Time */}
                     {conv.last_message_at && (
-                      <p className="text-xs text-gray-400 mt-2">{formatLastMessage(conv.last_message_at)}</p>
+                      <p className={`text-xs mt-2 ${isLight ? 'text-gray-400' : 'text-white/40'}`}>{formatLastMessage(conv.last_message_at)}</p>
                     )}
                   </div>
                   
@@ -469,7 +477,7 @@ export default function AdminFullScreenMessaging({
                       e.stopPropagation();
                       showDeleteConfirmation(conv);
                     }}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 self-start"
+                    className={`p-2 hover:text-red-500 rounded-lg transition-colors flex-shrink-0 self-start ${isLight ? 'text-gray-400 hover:bg-red-50' : 'text-white/40 hover:bg-red-500/20'}`}
                     title="Delete thread"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -483,18 +491,18 @@ export default function AdminFullScreenMessaging({
       
       {/* Message View - Right Panel */}
       <div 
-        className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-col bg-white`}
+        className={`${selectedConversation ? 'flex' : 'hidden md:flex'} flex-col ${isLight ? 'bg-white' : 'bg-[#1A1A2E]'}`}
         style={{ flex: 1, width: '100%', maxWidth: '100%', overflow: 'hidden' }}
       >
         {selectedConversation ? (
           <>
             {/* Header */}
-            <div className="p-4 border-b border-gray-200 flex items-center gap-3">
+            <div className={`p-4 border-b flex items-center gap-3 ${isLight ? 'border-gray-200' : 'border-white/10'}`}>
               <button
                 onClick={() => setSelectedConversation(null)}
-                className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
+                className={`md:hidden p-2 rounded-lg ${isLight ? 'hover:bg-gray-100' : 'hover:bg-white/10'}`}
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className={`w-5 h-5 ${isLight ? '' : 'text-white'}`} />
               </button>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                 selectedConversation.participant_type === 'employee' ? 'bg-blue-100' : 'bg-purple-100'
@@ -506,8 +514,8 @@ export default function AdminFullScreenMessaging({
                 )}
               </div>
               <div className="flex-1">
-                <p className="font-medium text-gray-900">{selectedConversation.participant_name}</p>
-                <p className="text-xs text-gray-500 capitalize">{selectedConversation.participant_type}</p>
+                <p className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>{selectedConversation.participant_name}</p>
+                <p className={`text-xs capitalize ${isLight ? 'text-gray-500' : 'text-white/50'}`}>{selectedConversation.participant_type}</p>
               </div>
               {/* Read receipts toggle - controls if THEY see you read their messages */}
               <button
@@ -535,11 +543,11 @@ export default function AdminFullScreenMessaging({
             <div 
               ref={messagesContainerRef}
               onScroll={handleScroll}
-              className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-gray-50"
+              className={`flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 ${isLight ? 'bg-gray-50' : 'bg-[#1A1A2E]'}`}
               style={{ width: '100%' }}
             >
               {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                <div className={`flex flex-col items-center justify-center h-full ${isLight ? 'text-gray-400' : 'text-white/50'}`}>
                   <User className="w-12 h-12 mb-2 opacity-30" />
                   <p>No messages yet</p>
                 </div>
@@ -553,7 +561,9 @@ export default function AdminFullScreenMessaging({
                       className={`max-w-[75%] rounded-2xl px-4 py-3 overflow-hidden ${
                         msg.sender_type === 'admin'
                           ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-tr-sm'
-                          : 'bg-white border border-gray-200 text-gray-900 rounded-tl-sm shadow-sm'
+                          : isLight 
+                            ? 'bg-white border border-gray-200 text-gray-900 rounded-tl-sm shadow-sm'
+                            : 'bg-white/10 text-white rounded-tl-sm'
                       }`}
                       style={{ overflowWrap: 'break-word', wordWrap: 'break-word' }}
                     >
@@ -564,14 +574,14 @@ export default function AdminFullScreenMessaging({
                         </p>
                       )}
                       {msg.sender_type !== 'admin' && (
-                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                        <p className={`text-xs mb-1 flex items-center gap-1 ${isLight ? 'text-gray-500' : 'text-white/50'}`}>
                           <User className="w-3 h-3 flex-shrink-0" />
                           <span className="truncate">{msg.sender_name}</span>
                         </p>
                       )}
                       <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                       <div className={`flex items-center gap-1 mt-2 flex-wrap ${
-                        msg.sender_type === 'admin' ? 'text-white/70' : 'text-gray-400'
+                        msg.sender_type === 'admin' ? 'text-white/70' : isLight ? 'text-gray-400' : 'text-white/40'
                       }`}>
                         <span className="text-xs">{formatMessageTime(msg.sent_at)}</span>
                         {/* Read receipt indicator for admin messages - ALWAYS show to admin */}
@@ -598,7 +608,7 @@ export default function AdminFullScreenMessaging({
             </div>
             
             {/* Reply Input */}
-            <form onSubmit={handleSendReply} className="p-4 border-t border-gray-200 bg-white">
+            <form onSubmit={handleSendReply} className={`p-4 border-t ${isLight ? 'border-gray-200 bg-white' : 'border-white/10 bg-[#1A1A2E]'}`}>
               <div className="flex items-end gap-2" style={{ width: '100%' }}>
                 <textarea
                   value={newMessage}
@@ -609,7 +619,11 @@ export default function AdminFullScreenMessaging({
                   }}
                   placeholder="Type a message..."
                   rows={1}
-                  className="border border-gray-300 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-base"
+                  className={`rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-base ${
+                    isLight 
+                      ? 'border border-gray-300 bg-white text-gray-900'
+                      : 'border border-white/20 bg-white/10 text-white placeholder-white/40'
+                  }`}
                   style={{ flex: 1, minWidth: 0, minHeight: '40px', maxHeight: '150px', lineHeight: '1.4' }}
                   disabled={sending}
                 />
@@ -629,7 +643,7 @@ export default function AdminFullScreenMessaging({
             </form>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-400">
+          <div className={`flex-1 flex items-center justify-center ${isLight ? 'text-gray-400' : 'text-white/50'}`}>
             <div className="text-center">
               <Users className="w-16 h-16 mx-auto mb-4 opacity-30" />
               <p className="text-lg">Select a conversation</p>

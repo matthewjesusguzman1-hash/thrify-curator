@@ -201,64 +201,68 @@ export default function FullScreenMessaging({
       <div 
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className="flex-1 overflow-y-auto p-4"
       >
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className={`w-8 h-8 animate-spin ${isLight ? 'text-[#1A1A2E]' : 'text-[#00D4FF]'}`} />
-          </div>
-        ) : messages.length === 0 ? (
-          <div className={`flex flex-col items-center justify-center h-full ${isLight ? 'text-gray-400' : 'text-white/50'}`}>
-            <User className="w-16 h-16 mb-4 opacity-30" />
-            <p className="text-lg">No messages yet</p>
-            <p className="text-sm">Send a message to start the conversation</p>
-          </div>
-        ) : (
-          messages.map((msg, index) => (
-            <motion.div
-              key={msg.id || index}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`flex ${msg.sender_type === 'admin' ? 'justify-start' : 'justify-end'}`}
-            >
-              <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                  msg.sender_type === 'admin'
-                    ? isLight 
-                      ? 'bg-gray-100 text-gray-800 rounded-tl-sm'
-                      : 'bg-white/10 text-white rounded-tl-sm'
-                    : 'bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white rounded-tr-sm'
-                }`}
+        {/* Constrain messages to max width on desktop for better readability */}
+        <div className="max-w-2xl mx-auto space-y-3">
+          {loading ? (
+            <div className="flex items-center justify-center h-full min-h-[200px]">
+              <Loader2 className={`w-8 h-8 animate-spin ${isLight ? 'text-[#1A1A2E]' : 'text-[#00D4FF]'}`} />
+            </div>
+          ) : messages.length === 0 ? (
+            <div className={`flex flex-col items-center justify-center h-full min-h-[200px] ${isLight ? 'text-gray-400' : 'text-white/50'}`}>
+              <User className="w-16 h-16 mb-4 opacity-30" />
+              <p className="text-lg">No messages yet</p>
+              <p className="text-sm">Send a message to start the conversation</p>
+            </div>
+          ) : (
+            messages.map((msg, index) => (
+              <motion.div
+                key={msg.id || index}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex ${msg.sender_type === 'admin' ? 'justify-start' : 'justify-end'}`}
               >
-                {msg.sender_type === "admin" && (
-                  <p className={`text-xs mb-1 flex items-center gap-1 ${isLight ? 'text-gray-500' : 'text-white/50'}`}>
-                    <User className="w-3 h-3" />
-                    {msg.sender_name || "Admin"}
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                    msg.sender_type === 'admin'
+                      ? isLight 
+                        ? 'bg-gray-100 text-gray-800 rounded-tl-sm'
+                        : 'bg-white/10 text-white rounded-tl-sm'
+                      : 'bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] text-white rounded-tr-sm'
+                  }`}
+                >
+                  {msg.sender_type === "admin" && (
+                    <p className={`text-xs mb-1 flex items-center gap-1 ${isLight ? 'text-gray-500' : 'text-white/50'}`}>
+                      <User className="w-3 h-3" />
+                      {msg.sender_name || "Admin"}
+                    </p>
+                  )}
+                  <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                  <p className={`text-xs mt-2 ${
+                    msg.sender_type === 'admin' 
+                      ? isLight ? 'text-gray-400' : 'text-white/40'
+                      : 'text-white/70'
+                  }`}>
+                    {formatMessageTime(msg.sent_at)}
                   </p>
-                )}
-                <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                <p className={`text-xs mt-2 ${
-                  msg.sender_type === 'admin' 
-                    ? isLight ? 'text-gray-400' : 'text-white/40'
-                    : 'text-white/70'
-                }`}>
-                  {formatMessageTime(msg.sent_at)}
-                </p>
-              </div>
-            </motion.div>
-          ))
-        )}
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
       </div>
       
       {/* Message input - fixed at bottom */}
       <form onSubmit={handleSendMessage} className={`p-4 border-t ${isLight ? 'border-gray-200 bg-white' : 'border-white/10 bg-[#1A1A2E]'}`}>
-        <div className="flex flex-col gap-2">
+        {/* Constrain input to same max width as messages */}
+        <div className="max-w-2xl mx-auto flex flex-col gap-2">
           <textarea
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
-            rows={4}
-            className={`w-full rounded-xl px-4 py-3 focus:outline-none resize-none min-h-[120px] ${
+            rows={3}
+            className={`w-full rounded-xl px-4 py-3 focus:outline-none resize-none ${
               isLight 
                 ? 'bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 focus:border-[#00D4FF]/50'
                 : 'bg-white/10 border border-white/10 text-white placeholder-white/40 focus:border-[#00D4FF]/50'
