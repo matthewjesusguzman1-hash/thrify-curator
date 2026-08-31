@@ -2826,9 +2826,9 @@ export default function AdminDashboard() {
                     <div className="mt-2 text-white/80 text-xs">
                       {payrollSummary.current_period?.start && payrollSummary.current_period?.end ? (
                         <>
-                          {new Date(payrollSummary.current_period.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {new Date(payrollSummary.current_period.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}
                           {' - '}
-                          {new Date(payrollSummary.current_period.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {new Date(payrollSummary.current_period.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}
                         </>
                       ) : 'Current Period'}
                     </div>
@@ -3833,13 +3833,9 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <div className="ml-auto text-xs text-[#888]">
-                    {(() => {
-                      const period = calculateBiweeklyPeriod();
-                      if (period) {
-                        return `${period.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${period.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-                      }
-                      return '';
-                    })()}
+                    {payrollSummary.current_period?.start && payrollSummary.current_period?.end ? (
+                      `${new Date(payrollSummary.current_period.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })} - ${new Date(payrollSummary.current_period.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}`
+                    ) : ''}
                   </div>
                 </div>
 

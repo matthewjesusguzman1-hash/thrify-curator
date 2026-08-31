@@ -359,3 +359,19 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - **API Used**: `GET /api/admin/payroll/summary` returns `current_period.by_employee` array with `name`, `amount`, `hours`, `hourly_rate`
 - **Files Updated**:
   - `frontend/src/components/admin/sections/PaymentRecordsSection.jsx` - Added payroll summary fetch and auto-fill logic
+
+### Pay Period Date Fix & Remote Worker Timezone Toggle (2026-08-31) - NEW
+- **Pay Period Date Bug Fix**: Fixed timezone conversion issue where pay period dates were off by one day
+  - Root cause: JavaScript's `toLocaleDateString()` converted UTC dates to local timezone, shifting dates
+  - Solution: Added `timeZone: 'UTC'` to date formatting options across all pay period displays
+  - Fixed in: `PayrollSummaryCard.jsx`, `AdminDashboard.jsx`
+- **Remote Worker Timezone Toggle**: Added ability for remote workers to view dates/times in either Central Time or Philippine Time
+  - Toggle bar appears below header only for remote workers
+  - Buttons: 🇺🇸 Central (default) | 🇵🇭 Philippine
+  - Affects `formatDateTime` function which displays clock in/out times, shift times, etc.
+  - Central Time: America/Chicago (UTC-6/5 with DST)
+  - Philippine Time: Asia/Manila (UTC+8, 13-14 hours ahead)
+- **Files Updated**:
+  - `frontend/src/components/admin/PayrollSummaryCard.jsx` - UTC date formatting
+  - `frontend/src/pages/AdminDashboard.jsx` - UTC date formatting for pay period displays
+  - `frontend/src/pages/EmployeeDashboard.jsx` - Added timezone toggle and updated formatDateTime function

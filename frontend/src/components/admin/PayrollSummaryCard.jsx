@@ -16,9 +16,11 @@ export default function PayrollSummaryCard({
 
   const formatPeriodDates = (start, end) => {
     if (!start || !end) return '';
+    // Parse ISO dates and format in UTC to avoid timezone shifts
     const startDate = new Date(start);
     const endDate = new Date(end);
-    return `${startDate.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}`;
+    const formatOptions = { month: 'short', day: 'numeric', timeZone: 'UTC' };
+    return `${startDate.toLocaleDateString('en-US', formatOptions)} - ${endDate.toLocaleDateString('en-US', formatOptions)}`;
   };
 
   return (

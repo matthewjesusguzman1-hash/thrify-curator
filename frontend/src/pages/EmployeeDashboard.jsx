@@ -171,6 +171,9 @@ export default function EmployeeDashboard({
   const [elapsedTime, setElapsedTime] = useState(0);
   const [locationStatus, setLocationStatus] = useState({ checking: false, withinRange: null, distance: null, denied: false });
   
+  // Timezone preference for remote workers (Central Time default, can toggle to Philippine Time)
+  const [showPhilippineTime, setShowPhilippineTime] = useState(false);
+  
   // Track if Live Activity has been started this session to avoid restarting
   const liveActivityStartedRef = useRef(false);
   
@@ -1399,12 +1402,17 @@ export default function EmployeeDashboard({
   };
 
   const formatDateTime = (isoString) => {
+    // For remote workers, respect the timezone toggle
+    // Central Time: America/Chicago (UTC-6 or UTC-5 with DST)
+    // Philippine Time: Asia/Manila (UTC+8, 13-14 hours ahead of CT)
+    const timezone = isRemoteWorker() && showPhilippineTime ? 'Asia/Manila' : 'America/Chicago';
     return new Date(isoString).toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
+      timeZone: timezone
     });
   };
 
@@ -1532,6 +1540,45 @@ export default function EmployeeDashboard({
           </div>
         </div>
       </header>
+
+      {/* Timezone Toggle for Remote Workers */}
+      {isRemoteWorker() && !isAdminView && (
+        <div className="bg-[#1A1A2E]/80 border-b border-white/10 px-4 py-2">
+          <div className="max-w-2xl mx-auto flex items-center justify-center gap-3">
+            <span className="text-white/60 text-xs">Display times in:</span>
+            <div className="flex items-center bg-white/10 rounded-full p-0.5">
+              <button
+                onClick={() => {
+                  lightTap();
+                  setShowPhilippineTime(false);
+                }}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                  !showPhilippineTime 
+                    ? 'bg-[#00D4FF] text-white shadow-md' 
+                    : 'text-white/60 hover:text-white'
+                }`}
+                data-testid="timezone-ct-btn"
+              >
+                🇺🇸 Central
+              </button>
+              <button
+                onClick={() => {
+                  lightTap();
+                  setShowPhilippineTime(true);
+                }}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                  showPhilippineTime 
+                    ? 'bg-[#8B5CF6] text-white shadow-md' 
+                    : 'text-white/60 hover:text-white'
+                }`}
+                data-testid="timezone-ph-btn"
+              >
+                🇵🇭 Philippine
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Employee Walkthrough Modal - Never show in admin view */}
       {!isAdminView && (
