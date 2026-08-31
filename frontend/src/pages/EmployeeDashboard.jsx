@@ -1954,13 +1954,15 @@ export default function EmployeeDashboard({
                   if (!summary?.period_start || !summary?.period_end) return "Recent Shifts";
                   const periodStart = new Date(summary.period_start);
                   const periodEnd = new Date(summary.period_end);
+                  // Use timezone-aware formatting for remote workers
+                  const timezone = isRemoteWorker() && showPhilippineTime ? 'Asia/Manila' : 'America/Chicago';
                   // Check if any entries in current period
                   const currentPeriodEntries = entries.filter(entry => {
                     const clockIn = new Date(entry.clock_in);
                     return clockIn >= periodStart && clockIn <= periodEnd;
                   });
-                  const startStr = periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                  const endStr = periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  const startStr = periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
+                  const endStr = periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
                   if (currentPeriodEntries.length > 0) {
                     return (
                       <span className="block">
@@ -1974,8 +1976,8 @@ export default function EmployeeDashboard({
                   prevStart.setDate(prevStart.getDate() - 14);
                   const prevEnd = new Date(periodEnd);
                   prevEnd.setDate(prevEnd.getDate() - 14);
-                  const prevStartStr = prevStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                  const prevEndStr = prevEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  const prevStartStr = prevStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
+                  const prevEndStr = prevEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
                   return (
                     <span className="block">
                       <span className="block sm:inline">Previous Period</span>
