@@ -199,8 +199,8 @@ export default function FullScreenMessaging({
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto p-4"
       >
-        {/* Constrain messages to max width on desktop for better readability */}
-        <div className="max-w-2xl mx-auto space-y-3">
+        {/* Constrain messages to comfortable width on desktop */}
+        <div className="max-w-4xl mx-auto space-y-3">
           {loading ? (
             <div className="flex items-center justify-center h-full min-h-[200px]">
               <Loader2 className={`w-8 h-8 animate-spin ${isLight ? 'text-[#1A1A2E]' : 'text-[#00D4FF]'}`} />
@@ -252,7 +252,7 @@ export default function FullScreenMessaging({
       {/* Message input - fixed at bottom */}
       <form onSubmit={handleSendMessage} className={`p-4 border-t ${isLight ? 'border-gray-200 bg-white' : 'border-white/10 bg-[#1A1A2E]'}`}>
         {/* Constrain input to same max width as messages */}
-        <div className="max-w-2xl mx-auto flex flex-col gap-2">
+        <div className="max-w-4xl mx-auto flex flex-col gap-2">
           <textarea
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
