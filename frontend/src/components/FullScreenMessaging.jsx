@@ -107,12 +107,8 @@ export default function FullScreenMessaging({
         const newMessages = response.data?.messages || [];
         const adminMessages = newMessages.filter(m => m.sender_type === "admin");
         
-        // Check if there's a new admin message
+        // Check if there's a new admin message - just vibrate, no toast
         if (adminMessages.length > previousMessageCountRef.current && !muted) {
-          const latestAdmin = adminMessages[adminMessages.length - 1];
-          toast.info(`New message from ${latestAdmin.sender_name || "Admin"}`, {
-            description: latestAdmin.content.substring(0, 50) + (latestAdmin.content.length > 50 ? "..." : "")
-          });
           triggerVibration([200, 100, 200]);
         }
         previousMessageCountRef.current = adminMessages.length;
