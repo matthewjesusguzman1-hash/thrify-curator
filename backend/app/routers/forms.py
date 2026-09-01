@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, BackgroundTasks
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel, EmailStr
 import os
 import uuid as uuid_module
@@ -8,7 +8,8 @@ import base64
 import secrets
 
 from app.database import db
-from app.dependencies import get_admin_user, get_current_user
+from app.dependencies import get_admin_user, get_current_user, get_consignor_user, get_consignor_or_admin, create_consignor_token
+from app.services.security import check_lockout, record_failed_attempt, clear_attempts
 from app.models.forms import JobApplication, ConsignmentInquiry, ConsignmentAgreement, UpdateSubmissionStatus, PaymentMethodUpdate, ConsignmentItemAddition, ConsignmentApproval
 from app.models.notifications import AdminNotification
 from app.services.email_service import (
@@ -117,8 +118,10 @@ async def get_consignment_photo(filename: str):
 
 
 @router.get("/forms/payment-history/{email}")
-async def get_consignment_payment_history(email: str):
-    """Get payment history for a consignment client (public endpoint for clients to view their payments)"""
+async def get_consignment_payment_history(email: str, auth: dict = Depends(get_consignor_or_admin)):
+    """Get payment history for a consignment client (requires consignor session or admin)"""
+    if auth["type"] == "consignor" and auth["email"] != email.lower():
+        raise HTTPException(status_code=403, detail="Not authorized for this account")
     # Find all payments made to this client
     payments = await db.payroll_check_records.find(
         {"consignment_client_email": email.lower(), "payment_type": "consignment"},
@@ -145,9 +148,12 @@ async def get_consignment_payment_history(email: str):
 
 
 @router.get("/forms/payment-image/{record_id}")
-async def get_consignment_payment_image(record_id: str, email: str):
-    """Get payment record image for a consignment client (requires matching email for security)"""
+async def get_consignment_payment_image(record_id: str, email: str, auth: dict = Depends(get_consignor_or_admin)):
+    """Get payment record image for a consignment client (requires consignor session or admin)"""
     from fastapi.responses import Response
+    
+    if auth["type"] == "consignor" and auth["email"] != email.lower():
+        raise HTTPException(status_code=403, detail="Not authorized for this account")
     
     # Verify this payment belongs to the requesting client
     record = await db.payroll_check_records.find_one({
@@ -570,8 +576,10 @@ async def submit_consignment_agreement(agreement: ConsignmentAgreement, backgrou
 
 
 @router.get("/forms/check-existing-agreement")
-async def check_existing_agreement(email: str):
-    """Check if user has an existing consignment agreement"""
+async def check_existing_agreement(email: str, auth: dict = Depends(get_consignor_or_admin)):
+    """Check if user has an existing consignment agreement (requires consignor session or admin)"""
+    if auth["type"] == "consignor" and auth["email"] != email.lower():
+        raise HTTPException(status_code=403, detail="Not authorized for this account")
     existing = await db.consignment_agreements.find_one(
         {"email": email.lower()}, 
         {"_id": 0, "full_name": 1, "email": 1, "phone": 1, "address": 1, "payment_method": 1, "payment_details": 1, "items_description": 1, "submitted_at": 1, "agreed_percentage": 1}
@@ -582,8 +590,10 @@ async def check_existing_agreement(email: str):
 
 
 @router.get("/forms/my-submissions/{email}")
-async def get_user_submissions(email: str):
-    """Get all submissions for a user by email - allows users to view their submission history and status"""
+async def get_user_submissions(email: str, auth: dict = Depends(get_consignor_or_admin)):
+    """Get all submissions for a user by email (requires consignor session or admin)"""
+    if auth["type"] == "consignor" and auth["email"] != email.lower():
+        raise HTTPException(status_code=403, detail="Not authorized for this account")
     email_lower = email.lower()
     
     # First check if the user has an agreement
@@ -673,8 +683,10 @@ async def get_user_submissions(email: str):
 
 
 @router.post("/forms/update-payment-method")
-async def update_payment_method(update: PaymentMethodUpdate, background_tasks: BackgroundTasks):
-    """Update payment method for existing consignment agreement"""
+async def update_payment_method(update: PaymentMethodUpdate, background_tasks: BackgroundTasks, consignor: dict = Depends(get_consignor_user)):
+    """Update payment method for existing consignment agreement (requires consignor session)"""
+    if consignor["email"] != update.email.lower():
+        raise HTTPException(status_code=403, detail="Not authorized for this account")
     # Find existing agreement by email
     existing = await db.consignment_agreements.find_one({"email": update.email.lower()})
     if not existing:
@@ -1779,9 +1791,14 @@ class AdminResetPasswordRequest(BaseModel):
     new_password: str
 
 @router.post("/forms/consignment/set-password")
-async def set_consignment_password(request: SetPasswordRequest):
-    """Allow consignment client to set a password for their account"""
+async def set_consignment_password(request: SetPasswordRequest, consignor: dict = Depends(get_consignor_user)):
+    """Allow a signed-in consignor to set a password for their account"""
     email = request.email.lower()
+    if consignor["email"] != email:
+        raise HTTPException(status_code=403, detail="Not authorized for this account")
+    
+    if len(request.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
     
     # Check if agreement exists
     agreement = await db.consignment_agreements.find_one({"email": email})
@@ -1801,6 +1818,8 @@ async def set_consignment_password(request: SetPasswordRequest):
 async def consignment_password_login(request: PasswordLoginRequest):
     """Login with email and password for consignment clients"""
     email = request.email.lower()
+    lock_id = f"consignor-login:{email}"
+    await check_lockout(lock_id)
     
     # Find agreement
     agreement = await db.consignment_agreements.find_one({"email": email})
@@ -1818,15 +1837,111 @@ async def consignment_password_login(request: PasswordLoginRequest):
     
     # Verify password
     if not verify_password(request.password, stored_hash):
+        await record_failed_attempt(lock_id)
         raise HTTPException(status_code=401, detail="Invalid password")
+    
+    await clear_attempts(lock_id)
+    
+    # Issue a consignor session token
+    access_token = create_consignor_token(email, agreement.get("full_name"))
     
     # Return user info (without password hash)
     return {
         "success": True,
+        "access_token": access_token,
         "user": {
             "email": agreement.get("email"),
             "full_name": agreement.get("full_name"),
             "has_password": True
+        }
+    }
+
+
+class MagicLinkRequest(BaseModel):
+    email: EmailStr
+
+
+class MagicLinkVerify(BaseModel):
+    token: str
+
+
+@router.post("/forms/consignment/request-login-link")
+async def request_consignor_login_link(request: MagicLinkRequest, background_tasks: BackgroundTasks):
+    """Email a one-time secure sign-in link to a consignor. Always returns success (no account enumeration)."""
+    import os as _os
+    email = request.email.lower().strip()
+    lock_id = f"magiclink:{email}"
+    await check_lockout(lock_id)
+    await record_failed_attempt(lock_id)  # throttles link requests (max 5 per 15 min)
+    
+    generic = {"success": True, "message": "If an account exists for this email, a sign-in link has been sent."}
+    
+    agreement = await db.consignment_agreements.find_one({"email": email})
+    if not agreement or agreement.get("is_locked"):
+        return generic
+    
+    token = secrets.token_urlsafe(32)
+    await db.consignor_login_tokens.insert_one({
+        "token": token,
+        "email": email,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat(),
+        "used": False
+    })
+    
+    frontend_url = _os.environ.get("FRONTEND_URL", "https://thrifty-curator.com").rstrip("/")
+    link = f"{frontend_url}/consignment-agreement?login_token={token}"
+    first_name = (agreement.get("full_name") or "there").split(" ")[0]
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto;">
+      <h2 style="color: #333;">Your Thrifty Curator Sign-In Link</h2>
+      <p>Hi {first_name},</p>
+      <p>Tap the button below to securely sign in to your consignment account. This link works once and expires in 30 minutes.</p>
+      <p style="text-align: center; margin: 28px 0;">
+        <a href="{link}" style="background: #8B5CF6; color: #fff; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: bold;">Sign In to My Account</a>
+      </p>
+      <p style="color: #888; font-size: 13px;">If you didn't request this, you can safely ignore this email.</p>
+      <p style="color: #888; font-size: 13px;">Thrifty Curator &bull; Curated Resale Finds</p>
+    </div>
+    """
+    from app.services.email_service import send_email
+    background_tasks.add_task(
+        send_email,
+        to_email=email,
+        subject="Your secure sign-in link - Thrifty Curator",
+        html_content=html,
+        email_type="consignor_login_link",
+        recipient_name=agreement.get("full_name")
+    )
+    
+    return generic
+
+
+@router.post("/forms/consignment/verify-login-link")
+async def verify_consignor_login_link(request: MagicLinkVerify):
+    """Exchange a one-time login token for a consignor session"""
+    doc = await db.consignor_login_tokens.find_one({"token": request.token})
+    if not doc or doc.get("used"):
+        raise HTTPException(status_code=401, detail="This sign-in link is invalid or has already been used. Please request a new one.")
+    
+    if datetime.fromisoformat(doc["expires_at"]) < datetime.now(timezone.utc):
+        raise HTTPException(status_code=401, detail="This sign-in link has expired. Please request a new one.")
+    
+    await db.consignor_login_tokens.update_one({"token": request.token}, {"$set": {"used": True}})
+    
+    email = doc["email"]
+    agreement = await db.consignment_agreements.find_one({"email": email})
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Account not found")
+    
+    access_token = create_consignor_token(email, agreement.get("full_name"))
+    return {
+        "success": True,
+        "access_token": access_token,
+        "user": {
+            "email": email,
+            "full_name": agreement.get("full_name"),
+            "has_password": bool(agreement.get("password_hash"))
         }
     }
 

@@ -8,6 +8,11 @@ import { triggerVibration } from "./WebPushSettings";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+const consignorAuthHeader = () => {
+  const t = localStorage.getItem('consignorToken');
+  return t ? { headers: { Authorization: `Bearer ${t}` } } : {};
+};
+
 // Polling interval for real-time updates (3 seconds)
 const POLLING_INTERVAL = 3000;
 
@@ -65,7 +70,8 @@ export default function FullScreenMessaging({
         );
       } else {
         response = await axios.get(
-          `${API}/conversations/consignor/my-conversation?email=${encodeURIComponent(userEmail)}`
+          `${API}/conversations/consignor/my-conversation`,
+          consignorAuthHeader()
         );
       }
       setConversation(response.data);
@@ -104,7 +110,8 @@ export default function FullScreenMessaging({
           );
         } else {
           response = await axios.get(
-            `${API}/conversations/consignor/my-conversation?email=${encodeURIComponent(userEmail)}`
+            `${API}/conversations/consignor/my-conversation`,
+          consignorAuthHeader()
           );
         }
         
@@ -211,7 +218,8 @@ export default function FullScreenMessaging({
             email: userEmail,
             name: userName,
             ...messageData
-          }
+          },
+          consignorAuthHeader()
         );
       }
       setNewMessage("");

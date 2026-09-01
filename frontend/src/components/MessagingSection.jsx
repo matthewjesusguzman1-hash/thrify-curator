@@ -8,6 +8,11 @@ import { triggerVibration } from "./WebPushSettings";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+const consignorAuthHeader = () => {
+  const t = localStorage.getItem('consignorToken');
+  return t ? { headers: { Authorization: `Bearer ${t}` } } : {};
+};
+
 // Polling interval for real-time updates (3 seconds for instant messaging feel)
 const POLLING_INTERVAL = 2000; // 2 seconds for instant messenger feel
 
@@ -91,7 +96,8 @@ export default function MessagingSection({
         );
       } else {
         response = await axios.get(
-          `${API}/conversations/consignor/my-conversation?email=${encodeURIComponent(userEmail)}`
+          `${API}/conversations/consignor/my-conversation`,
+          consignorAuthHeader()
         );
       }
       
@@ -120,7 +126,8 @@ export default function MessagingSection({
             );
           } else {
             response = await axios.get(
-              `${API}/conversations/consignor/my-conversation?email=${encodeURIComponent(userEmail)}`
+              `${API}/conversations/consignor/my-conversation`,
+          consignorAuthHeader()
             );
           }
           
@@ -175,8 +182,9 @@ export default function MessagingSection({
         );
       } else {
         await axios.post(
-          `${API}/conversations/consignor/send?email=${encodeURIComponent(userEmail)}`,
-          { content: newMessage.trim(), sender_name: userName }
+          `${API}/conversations/consignor/send`,
+          { content: newMessage.trim(), sender_name: userName },
+          consignorAuthHeader()
         );
       }
       
@@ -228,7 +236,8 @@ export default function MessagingSection({
         );
       } else {
         await axios.delete(
-          `${API}/conversations/consignor/message/${messageId}?email=${encodeURIComponent(userEmail)}`
+          `${API}/conversations/consignor/message/${messageId}`,
+          consignorAuthHeader()
         );
       }
       

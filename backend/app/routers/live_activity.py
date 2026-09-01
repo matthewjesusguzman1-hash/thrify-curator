@@ -13,6 +13,7 @@ from app.services.apns_service import (
     update_admin_live_activities
 )
 from app.database import get_database
+from app.dependencies import get_admin_user
 
 router = APIRouter(prefix="/live-activity", tags=["Live Activity"])
 
@@ -154,7 +155,7 @@ async def deactivate_device_token(request: DeactivateDeviceTokenRequest):
 
 
 @router.get("/token-status/{user_id}")
-async def get_token_status(user_id: str):
+async def get_token_status(user_id: str, admin: dict = Depends(get_admin_user)):
     """Get the status of all push tokens for a user (for debugging)"""
     try:
         db = get_database()
@@ -168,7 +169,7 @@ async def get_token_status(user_id: str):
 
 
 @router.post("/deactivate-all-admin-tokens")
-async def deactivate_all_admin_tokens():
+async def deactivate_all_admin_tokens(admin: dict = Depends(get_admin_user)):
     """Emergency endpoint to deactivate ALL admin push tokens.
     Use this if notifications are being sent incorrectly.
     """
@@ -212,7 +213,7 @@ async def update_admin_activity(request: UpdateAdminActivityRequest):
 
 
 @router.get("/debug/tokens")
-async def debug_tokens():
+async def debug_tokens(admin: dict = Depends(get_admin_user)):
     """Debug endpoint to view all registered tokens"""
     db = get_database()
     
@@ -226,7 +227,7 @@ async def debug_tokens():
 
 
 @router.delete("/debug/clear-all-tokens")
-async def clear_all_tokens():
+async def clear_all_tokens(admin: dict = Depends(get_admin_user)):
     """Debug endpoint to clear all tokens for fresh testing"""
     db = get_database()
     

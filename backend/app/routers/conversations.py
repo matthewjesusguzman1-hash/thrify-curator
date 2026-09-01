@@ -6,7 +6,7 @@ import os
 import base64
 
 from app.database import db
-from app.dependencies import get_admin_user, get_current_user
+from app.dependencies import get_admin_user, get_current_user, get_consignor_user
 from app.models.conversations import (
     ConversationMessage,
     ConversationCreate,
@@ -465,9 +465,9 @@ async def employee_send_message(message: ConversationCreate, user: dict = Depend
 # ============ CONSIGNOR MESSAGING ============
 
 @router.get("/consignor/my-conversation")
-async def get_consignor_conversation(email: str):
-    """Get or create the consignor's conversation with admin"""
-    email = email.lower()
+async def get_consignor_conversation(consignor: dict = Depends(get_consignor_user)):
+    """Get or create the consignor's conversation with admin (email derived from session token)"""
+    email = consignor["email"]
     
     # Verify consignor exists
     agreement = await db.consignment_agreements.find_one({"email": email})
@@ -545,11 +545,11 @@ async def get_consignor_conversation(email: str):
 
 
 @router.post("/consignor/send")
-async def consignor_send_message(email: str, message: ConversationCreate):
-    """Consignor sends a message to admin"""
+async def consignor_send_message(message: ConversationCreate, consignor: dict = Depends(get_consignor_user)):
+    """Consignor sends a message to admin (email derived from session token)"""
     from app.services.apns_service import send_admin_push_notification
     
-    email = email.lower()
+    email = consignor["email"]
     
     # Verify consignor exists
     agreement = await db.consignment_agreements.find_one({"email": email})
@@ -1037,10 +1037,10 @@ async def employee_delete_message(message_id: str, user: dict = Depends(get_curr
 
 
 @router.delete("/consignor/message/{message_id}")
-async def consignor_delete_message(message_id: str, email: str):
+async def consignor_delete_message(message_id: str, consignor: dict = Depends(get_consignor_user)):
     """Consignor: Delete a specific message that was sent by this consignor"""
     
-    email = email.lower()
+    email = consignor["email"]
     
     # Find the consignor's conversation
     conversation = await db.conversations.find_one({

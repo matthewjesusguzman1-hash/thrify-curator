@@ -11,6 +11,7 @@ from pydantic import BaseModel, EmailStr
 from datetime import datetime, timezone, timedelta
 import secrets
 import hashlib
+import re
 
 from app.database import db
 from app.services.email_service import send_password_reset_email
@@ -143,7 +144,7 @@ async def request_password_reset(request: PasswordResetRequest, background_tasks
     # Check if user exists based on type
     if user_type == "employee":
         user = await db.users.find_one(
-            {"email": {"$regex": f"^{email_lower}$", "$options": "i"}},
+            {"email": {"$regex": f"^{re.escape(email_lower)}$", "$options": "i"}},
             {"_id": 0, "id": 1, "name": 1, "email": 1, "role": 1}
         )
         if not user:
@@ -158,7 +159,7 @@ async def request_password_reset(request: PasswordResetRequest, background_tasks
         
     elif user_type == "consignor":
         agreement = await db.consignment_agreements.find_one(
-            {"email": {"$regex": f"^{email_lower}$", "$options": "i"}},
+            {"email": {"$regex": f"^{re.escape(email_lower)}$", "$options": "i"}},
             {"_id": 0, "id": 1, "full_name": 1, "email": 1}
         )
         if not agreement:
@@ -276,7 +277,7 @@ async def reset_password(request: PasswordResetConfirm):
     # Update password based on user type
     if user_type == "employee":
         result = await db.users.update_one(
-            {"email": {"$regex": f"^{email}$", "$options": "i"}},
+            {"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}},
             {"$set": {
                 "password_hash": password_hash,
                 "password_set_at": datetime.now(timezone.utc).isoformat()
@@ -284,7 +285,7 @@ async def reset_password(request: PasswordResetConfirm):
         )
     elif user_type == "consignor":
         result = await db.consignment_agreements.update_one(
-            {"email": {"$regex": f"^{email}$", "$options": "i"}},
+            {"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}},
             {"$set": {
                 "password_hash": password_hash,
                 "password_set_at": datetime.now(timezone.utc).isoformat()

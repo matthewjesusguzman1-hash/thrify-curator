@@ -37,6 +37,46 @@ def create_token(user_id: str, email: str, role: str, admin_code: str = None, ad
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
+def create_consignor_token(email: str, full_name: str = None) -> str:
+    payload = {
+        "sub": f"consignor:{email}",
+        "email": email,
+        "role": "consignor",
+        "name": full_name or "",
+        "exp": datetime.now(timezone.utc) + timedelta(days=7)
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+async def get_consignor_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Authenticate a consignor session token (magic link or password login)."""
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Session expired. Please sign in again.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    if payload.get("role") != "consignor" or not payload.get("email"):
+        raise HTTPException(status_code=403, detail="Consignor access required")
+    return {"email": payload["email"].lower(), "name": payload.get("name", "")}
+
+
+async def get_consignor_or_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Allow either a consignor session (returns their email) or an admin user."""
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Session expired. Please sign in again.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    if payload.get("role") == "consignor" and payload.get("email"):
+        return {"type": "consignor", "email": payload["email"].lower()}
+    user = await db.users.find_one({"id": payload.get("sub")}, {"_id": 0, "role": 1, "email": 1})
+    if user and user.get("role") == "admin":
+        return {"type": "admin", "email": user.get("email")}
+    raise HTTPException(status_code=403, detail="Not authorized")
+
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
         payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])

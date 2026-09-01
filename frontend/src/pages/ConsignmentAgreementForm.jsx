@@ -26,6 +26,12 @@ import axios from "axios";
 import OnboardingModal from "@/components/OnboardingModal";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Consignor session auth header (magic link / password login token)
+const consignorAuth = (extra = {}) => {
+  const t = localStorage.getItem('consignorToken');
+  return t ? { ...extra, headers: { ...(extra.headers || {}), Authorization: `Bearer ${t}` } } : extra;
+};
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_f87e31a4-f19a-4a3f-9c26-c5ad57e131e1/artifacts/vh1p37dl_IMG_0092.png";
 
 // Helper function to extract error message from API responses
@@ -66,7 +72,8 @@ function ConsignorMessagingSection({ email, userName }) {
     try {
       setLoading(true);
       const response = await axios.get(
-        `${API}/conversations/consignor/my-conversation?email=${encodeURIComponent(email)}`
+        `${API}/conversations/consignor/my-conversation`,
+        consignorAuth()
       );
       setMessages(response.data.messages || []);
     } catch (error) {
@@ -95,8 +102,9 @@ function ConsignorMessagingSection({ email, userName }) {
     try {
       setSending(true);
       await axios.post(
-        `${API}/conversations/consignor/send?email=${encodeURIComponent(email)}`,
-        { content: newMessage.trim(), sender_name: userName }
+        `${API}/conversations/consignor/send`,
+        { content: newMessage.trim(), sender_name: userName },
+        consignorAuth()
       );
       setNewMessage("");
       await fetchMessages();
@@ -365,11 +373,57 @@ export default function ConsignmentAgreementForm() {
   
   // Confirmation dialog state
   const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
+  
+  // Magic link (secure sign-in) state
+  const [magicLinkSentTo, setMagicLinkSentTo] = useState("");
+  const [verifyingMagicLink, setVerifyingMagicLink] = useState(false);
 
   // Scroll to top when component mounts
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Handle magic-link sign-in token from email link
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const loginToken = params.get('login_token');
+    if (!loginToken) return;
+    
+    (async () => {
+      setVerifyingMagicLink(true);
+      try {
+        const res = await axios.post(`${API}/forms/consignment/verify-login-link`, { token: loginToken });
+        const { access_token, user } = res.data;
+        localStorage.setItem('consignorToken', access_token);
+        localStorage.setItem('consignorEmail', user.email);
+        setAddItemsEmail(user.email);
+        setHasPassword(user.has_password);
+        setShowInitialChoice(false);
+        setShowChangePayment(false);
+        setShowAddItems(true);
+        await loadAgreementData(user.email);
+        if (!user.has_password) {
+          setShowFirstTimePasswordPrompt(true);
+        }
+        toast.success("Signed in securely!");
+      } catch (error) {
+        toast.error(getErrorMessage(error, "Sign-in link is invalid or expired. Please request a new one."));
+      } finally {
+        setVerifyingMagicLink(false);
+        // Remove token from the URL
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  
+  // Request a secure sign-in link for a consignor email
+  const requestMagicLink = async (email) => {
+    await axios.post(`${API}/forms/consignment/request-login-link`, { email: email.trim() });
+    setMagicLinkSentTo(email.trim());
+    setLoginMode("magic-sent");
+    toast.success("Check your email! We sent you a secure sign-in link.", { duration: 8000 });
+  };
 
   // Photo upload handler
   const handlePhotoUpload = async (files, isUpdate = false) => {
@@ -417,7 +471,7 @@ export default function ConsignmentAgreementForm() {
   const fetchPaymentHistory = async (email) => {
     setLoadingPaymentHistory(true);
     try {
-      const response = await axios.get(`${API}/forms/payment-history/${encodeURIComponent(email)}`);
+      const response = await axios.get(`${API}/forms/payment-history/${encodeURIComponent(email)}`, consignorAuth());
       setPaymentHistory(response.data);
     } catch (error) {
       console.error("Failed to fetch payment history:", error);
@@ -440,7 +494,7 @@ export default function ConsignmentAgreementForm() {
     try {
       const response = await axios.get(
         `${API}/forms/payment-image/${recordId}?email=${encodeURIComponent(email)}`,
-        { responseType: 'blob' }
+        consignorAuth({ responseType: 'blob' })
       );
       console.log("Image response received:", response.data.size, "bytes");
       const imageUrl = URL.createObjectURL(response.data);
@@ -511,7 +565,7 @@ export default function ConsignmentAgreementForm() {
 
   const selectedPaymentMethod = PAYMENT_METHODS.find(m => m.id === formData.payment_method);
 
-  // Check for existing agreement
+  // Check for existing agreement (change payment flow) - now sends a secure sign-in link
   const handleCheckExistingAgreement = async () => {
     if (!changePaymentEmail.trim()) {
       toast.error("Please enter your email address");
@@ -520,18 +574,11 @@ export default function ConsignmentAgreementForm() {
     
     setCheckingEmail(true);
     try {
-      const response = await axios.get(`${API}/forms/check-existing-agreement?email=${encodeURIComponent(changePaymentEmail)}`);
-      if (response.data.has_agreement) {
-        setExistingAgreement(response.data.agreement);
-        setChangePaymentMethod(response.data.agreement.payment_method || "");
-        setChangePaymentDetails(response.data.agreement.payment_details || "");
-      } else {
-        toast.error("No existing agreement found for this email. Please sign a new agreement.");
-        setShowChangePayment(false);
-        setShowInitialChoice(false);
-      }
+      await axios.post(`${API}/forms/consignment/request-login-link`, { email: changePaymentEmail.trim() });
+      toast.success("Check your email! We sent you a secure sign-in link to manage your account.", { duration: 8000 });
+      setMagicLinkSentTo(changePaymentEmail.trim());
     } catch (error) {
-      toast.error("Failed to check for existing agreement");
+      toast.error(getErrorMessage(error, "Failed to send sign-in link"));
     } finally {
       setCheckingEmail(false);
     }
@@ -556,7 +603,7 @@ export default function ConsignmentAgreementForm() {
         email: changePaymentEmail,
         payment_method: changePaymentMethod,
         payment_details: changePaymentDetails
-      });
+      }, consignorAuth());
       setPaymentUpdated(true);
       toast.success("Payment method updated successfully!");
     } catch (error) {
@@ -583,6 +630,8 @@ export default function ConsignmentAgreementForm() {
     }
     
     // Reset all state
+    localStorage.removeItem('consignorToken');
+    localStorage.removeItem('consignorEmail');
     setShowInitialChoice(true);
     setShowAddItems(false);
     setAddItemsAgreement(null);
@@ -634,9 +683,21 @@ export default function ConsignmentAgreementForm() {
             
             // Handle passwordless consignor login
             if (bioResult.credentials.password === 'EMAIL_ONLY_LOGIN') {
-              // Email-only login - just load the agreement data directly
-              await loadAgreementData(bioResult.credentials.username);
-              loginSuccessful = true;
+              // Try existing secure session; otherwise send a fresh sign-in link
+              const storedToken = localStorage.getItem('consignorToken');
+              if (storedToken) {
+                try {
+                  await loadAgreementData(bioResult.credentials.username);
+                  loginSuccessful = true;
+                } catch (sessionErr) {
+                  localStorage.removeItem('consignorToken');
+                }
+              }
+              if (!loginSuccessful) {
+                await requestMagicLink(bioResult.credentials.username);
+                setCheckingEmail(false);
+                return;
+              }
             } else {
               // Password-based login
               const loginResponse = await axios.post(`${API}/forms/consignment/login`, {
@@ -644,6 +705,13 @@ export default function ConsignmentAgreementForm() {
                 password: bioResult.credentials.password
               });
               loginSuccessful = loginResponse.data.success;
+              if (loginResponse.data.access_token) {
+                localStorage.setItem('consignorToken', loginResponse.data.access_token);
+                localStorage.setItem('consignorEmail', bioResult.credentials.username.toLowerCase());
+              }
+              if (loginSuccessful) {
+                await loadAgreementData(bioResult.credentials.username);
+              }
             }
             
             if (loginSuccessful) {
@@ -694,44 +762,22 @@ export default function ConsignmentAgreementForm() {
         return;
       }
       
-      // No password set, use email-only login (existing behavior)
-      await loadAgreementData(addItemsEmail);
-      
-      // Request push notifications for passwordless consignor
-      try {
-        const { PushNotifications } = await import('@capacitor/push-notifications');
-        const permResult = await PushNotifications.requestPermissions();
-        
-        if (permResult.receive === 'granted') {
-          await PushNotifications.register();
-          try {
-            const tokenResult = await PushNotifications.getToken();
-            if (tokenResult?.value) {
-              await axios.post(`${API}/live-activity/register-device-token-typed`, {
-                user_id: addItemsEmail.toLowerCase(),
-                device_token: tokenResult.value,
-                user_type: 'consignor'
-              });
-              console.log('Consignor push token registered (passwordless)');
-            }
-          } catch (tokenErr) {
-            console.log('Token retrieval skipped:', tokenErr);
-          }
+      // No password set — use secure emailed sign-in link
+      const storedToken = localStorage.getItem('consignorToken');
+      const storedEmail = localStorage.getItem('consignorEmail');
+      if (storedToken && storedEmail === addItemsEmail.toLowerCase().trim()) {
+        try {
+          await loadAgreementData(addItemsEmail);
+          setCheckingEmail(false);
+          return;
+        } catch (sessionErr) {
+          localStorage.removeItem('consignorToken');
+          localStorage.removeItem('consignorEmail');
         }
-      } catch (pushErr) {
-        console.log('Push notification registration skipped:', pushErr);
       }
-      
-      // Save credentials for Face ID even for passwordless login
-      if (biometricAvailable && isNative) {
-        await setCredentials('consignment_portal', addItemsEmail, 'EMAIL_ONLY_LOGIN');
-        toast.success("Face ID enabled for future logins!", { duration: 2000 });
-      }
-      
-      // Show first-time password setup prompt
-      setShowFirstTimePasswordPrompt(true);
+      await requestMagicLink(addItemsEmail);
     } catch (error) {
-      toast.error("Failed to check for existing agreement");
+      toast.error(getErrorMessage(error, "Failed to check for existing agreement"));
     } finally {
       setCheckingEmail(false);
     }
@@ -740,7 +786,7 @@ export default function ConsignmentAgreementForm() {
   // Load agreement data after authentication
   const loadAgreementData = async (email) => {
     try {
-      const response = await axios.get(`${API}/forms/check-existing-agreement?email=${encodeURIComponent(email)}`);
+      const response = await axios.get(`${API}/forms/check-existing-agreement?email=${encodeURIComponent(email)}`, consignorAuth());
       if (response.data.has_agreement) {
         setAddItemsAgreement(response.data.agreement);
         setUpdateEmail(response.data.agreement.email || email);
@@ -782,6 +828,11 @@ export default function ConsignmentAgreementForm() {
       });
       
       if (response.data.success) {
+        // Store secure session token
+        if (response.data.access_token) {
+          localStorage.setItem('consignorToken', response.data.access_token);
+          localStorage.setItem('consignorEmail', addItemsEmail.toLowerCase().trim());
+        }
         // Save credentials for biometric if available
         if (biometricAvailable && isNative) {
           await setCredentials('consignment_portal', addItemsEmail, loginPassword);
@@ -836,8 +887,8 @@ export default function ConsignmentAgreementForm() {
       toast.error("Passwords do not match");
       return;
     }
-    if (newPassword.length < 4) {
-      toast.error("Password must be at least 4 characters");
+    if (newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
       return;
     }
     
@@ -846,7 +897,7 @@ export default function ConsignmentAgreementForm() {
       await axios.post(`${API}/forms/consignment/set-password`, {
         email: addItemsAgreement.email,
         password: newPassword
-      });
+      }, consignorAuth());
       
       // Save credentials for biometric if available
       if (biometricAvailable && isNative) {
@@ -870,7 +921,7 @@ export default function ConsignmentAgreementForm() {
   // Fetch user submissions for display
   const fetchUserSubmissions = async (email) => {
     try {
-      const response = await axios.get(`${API}/forms/my-submissions/${encodeURIComponent(email)}`);
+      const response = await axios.get(`${API}/forms/my-submissions/${encodeURIComponent(email)}`, consignorAuth());
       setUserSubmissions(response.data);
     } catch (error) {
       console.error("Failed to fetch submissions:", error);
@@ -1213,11 +1264,31 @@ export default function ConsignmentAgreementForm() {
             <div className="h-1.5 bg-gradient-to-r from-[#F59E0B] to-[#D97706]" />
             <div className="p-6 space-y-5">
               {!existingAgreement ? (
-                // Step 1: Enter email to find existing agreement
+                // Step 1: Enter email - we email a secure sign-in link
+                magicLinkSentTo ? (
+                  <div className="text-center py-4" data-testid="change-payment-link-sent">
+                    <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Mail className="w-6 h-6 text-amber-600" />
+                    </div>
+                    <p className="font-semibold text-[#1A1A2E] mb-1">Check your email!</p>
+                    <p className="text-sm text-[#666] mb-4">
+                      We sent a secure sign-in link to <span className="font-medium">{magicLinkSentTo}</span>.
+                      Tap it to access your account and update your payment method. It expires in 30 minutes.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setMagicLinkSentTo("")}
+                      className="text-sm text-amber-600 hover:text-amber-700 font-medium"
+                      data-testid="change-payment-link-back"
+                    >
+                      Use a different email
+                    </button>
+                  </div>
+                ) : (
                 <>
                   <div>
                     <Label className="text-sm font-semibold text-[#1A1A2E] mb-2 block">Email Address</Label>
-                    <p className="text-xs text-[#888] mb-2">Enter the email you used when signing your agreement</p>
+                    <p className="text-xs text-[#888] mb-2">Enter the email you used when signing your agreement. We'll email you a secure sign-in link.</p>
                     <Input
                       type="email"
                       value={changePaymentEmail}
@@ -1233,9 +1304,10 @@ export default function ConsignmentAgreementForm() {
                     className="w-full bg-gradient-to-r from-[#F59E0B] to-[#D97706] hover:from-[#D97706] hover:to-[#B45309] text-white font-semibold py-3 rounded-lg"
                     data-testid="find-agreement-btn"
                   >
-                    {checkingEmail ? "Checking..." : "Find My Agreement"}
+                    {checkingEmail ? "Sending..." : "Email Me a Sign-In Link"}
                   </Button>
                 </>
+                )
               ) : (
                 // Step 2: Show current info and allow updating payment method
                 <>
@@ -1630,6 +1702,27 @@ export default function ConsignmentAgreementForm() {
                         Need more help logging in? Send a message from the homepage.
                       </p>
                     </>
+                  )}
+                  
+                  {loginMode === "magic-sent" && (
+                    <div className="text-center py-4" data-testid="magic-link-sent-message">
+                      <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Mail className="w-6 h-6 text-emerald-600" />
+                      </div>
+                      <p className="font-semibold text-[#1A1A2E] mb-1">Check your email!</p>
+                      <p className="text-sm text-[#666] mb-4">
+                        We sent a secure sign-in link to <span className="font-medium">{magicLinkSentTo}</span>.
+                        Tap the link in that email to access your account. It expires in 30 minutes.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setLoginMode("email")}
+                        className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                        data-testid="magic-link-back-btn"
+                      >
+                        Use a different email
+                      </button>
+                    </div>
                   )}
                   
                   {loginMode === "password" && (

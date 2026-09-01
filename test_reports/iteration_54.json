@@ -1,0 +1,33 @@
+{
+  "summary": "Tested security remediation: brute-force lockout, admin/employee login, bcrypt password login, consignor magic-link flow (request/verify/single-use), consignor-protected endpoints (payment-history, check-existing-agreement, my-submissions, consignor conversation), cross-account 403, admin access via get_consignor_or_admin, debug endpoints admin-only, password min length 8, and regression on employee/admin conversations + payroll + admin reply. Frontend: /consignment-agreement Add More Items -> magic-link-sent UI, magic-link auto sign-in via ?login_token=, admin & employee /login regression. Backend 28/28 pass. Frontend all critical flows pass EXCEPT the Change Payment Method entry point is unreachable in UI (dead code).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ConsignmentAgreementForm.jsx (showChangePayment)", "issue": "The Change Payment Method flow (data-testid=change-payment-page / change-payment-email / change-payment-link-sent) is unreachable from the UI. `setShowChangePayment(true)` is never called anywhere in the codebase (only setShowChangePayment(false) calls exist). The entire change-payment JSX block including the 'Email Me a Sign-In Link' button is dead code and cannot be tested end-to-end.", "selector": "[data-testid=change-payment-page]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_security_remediation.py",
+    "/app/test_reports/pytest/test_security_remediation.xml"
+  ],
+  "action_items": [
+    "Add a UI entry point (button/link on the initial /consignment-agreement choice screen or on the Manage My Account portal) that calls setShowChangePayment(true) so consignors can access the Change Payment Method flow. Alternatively wire it to a URL param like ?change_payment=1 in the login_token useEffect. Currently the whole change-payment magic-link flow is orphaned/unreachable."
+  ],
+  "critical_code_review_comments": [
+    "ConsignmentAgreementForm.jsx has 4077 lines - split into subcomponents (ChoiceScreen, AddItemsFlow, ChangePaymentFlow, PortalDashboard) to improve maintainability.",
+    "showChangePayment state has no setter call to true - the entire branch is dead code (see UI bug above).",
+    "Multiple identical setShowChangePayment(false) sequences (lines 1179, 1233, 1389, 402) - DRY violation.",
+    "Magic-link verification stores JWT in localStorage; consider httpOnly cookie for consignor session for consistency with the auth playbook (though acceptable since consignor JWT is same-origin).",
+    "test_credentials.md correctly documents both admin codes and consignor magic-link flow. Good."
+  ],
+  "updated_files": ["/app/backend/tests/test_security_remediation.py"],
+  "success_rate": {"backend": "100% (28/28)", "frontend": "80% (4/5 flows; change-payment entry unreachable)"},
+  "test_credentials": "Admin matthewjesusguzman1@gmail.com code 4399; Employee testemployee@thriftycurator.com (passwordless); Employee tester@tester.com / legacy1234 (bcrypt); Consignor test@test.com (magic link)",
+  "seed_data_creation": "None. Cleared db.login_attempts after lockout tests.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend security remediation fully verified via /app/backend/tests/test_security_remediation.py (pytest, 28 passing). The consignment page splash takes ~6s to clear - always wait. To trigger admin login flow via Playwright reliably, use page.press('[data-testid=login-email]', 'Enter') to submit the first Find My Account step (force-clicking the submit button before focus stabilises can drop the event). Fresh magic-link tokens can be pulled from db.consignor_login_tokens after POST /api/forms/consignment/request-login-link. Always clear db.login_attempts after any lockout testing to avoid locking admin. The one open issue is the Change Payment Method flow entry point (dead code in JSX).",
+  "rca of the issue": "Frontend Change Payment flow unreachable: setShowChangePayment(true) is not called anywhere. Reproduction: visit /consignment-agreement fresh — only 'Sell With Us' and 'Manage My Account' buttons appear on the choice screen; no button/link elsewhere calls setShowChangePayment(true), so the change-payment page (with data-testid change-payment-page) can never render. Mitigation: add a button on the initial choice screen (e.g. 'Change Payment Method') that calls `setShowInitialChoice(false); setShowChangePayment(true);` OR support a URL param like ?change_payment=1 handled in the existing useEffect that already handles ?login_token=."
+}

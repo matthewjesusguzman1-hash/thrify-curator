@@ -21,3 +21,15 @@ ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'matthewjesusguzman1@gmail.com')
 
 # CORS Configuration
 CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '*').split(',')
+
+# Admin owner access codes: "code:email:name|code:email:name"
+def _parse_owner_codes():
+    raw = os.environ.get('ADMIN_OWNER_CODES', '')
+    codes = {}
+    for part in raw.split('|'):
+        pieces = part.strip().split(':')
+        if len(pieces) >= 3:
+            codes[pieces[0]] = {"email": pieces[1], "name": ':'.join(pieces[2:])}
+    return codes
+
+OWNER_CODES = _parse_owner_codes()
