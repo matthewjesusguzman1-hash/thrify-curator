@@ -45,8 +45,8 @@ class AnydeskMapping(BaseModel):
     employee_id: Optional[str] = None
 
 
-async def notify_admins_session_event(event: SessionEvent, host: str):
-    """Push notify admins when a remote worker connects or is rejected"""
+async def notify_admins_session_event(event: SessionEvent, host: str, duration_seconds: int = None):
+    """Push notify admins when a remote worker connects, disconnects, or is rejected"""
     try:
         mapping = await db.anydesk_id_mappings.find_one({"anydesk_id": event.anydesk_id}) if event.anydesk_id else None
         who = (mapping and mapping.get("worker_name")) or event.alias or f"AnyDesk {event.anydesk_id}"
@@ -54,6 +54,13 @@ async def notify_admins_session_event(event: SessionEvent, host: str):
         if event.auth_method == "REJECTED":
             title = "🚫 Remote connection REJECTED"
             body = f"{who} was rejected connecting to {host}"
+        elif event.event_type == "session_end":
+            title = "📴 Remote worker disconnected"
+            if duration_seconds and duration_seconds > 0:
+                mins = duration_seconds // 60
+                body = f"{who} disconnected from {host} (session: {mins}min)"
+            else:
+                body = f"{who} disconnected from {host}"
         else:
             title = "🖥️ Remote worker connected"
             body = f"{who} connected to {host} via AnyDesk"
@@ -303,6 +310,7 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
             })
             
             resolved_anydesk_id = None
+            duration = None
             if open_session:
                 try:
                     start = datetime.fromisoformat(open_session["started_at"])
@@ -317,17 +325,28 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                 matched_ends += 1
                 resolved_anydesk_id = open_session.get("anydesk_id")
 
-            # Auto clock-out: use the event's anydesk_id first, fall back to the matched session's
-            # Only auto-clock-out for recent events (< 5 min old) to avoid retroactive changes from historical imports
+            # Notify admins of disconnect (only for recent events)
+            notify_anydesk_id = event.anydesk_id or resolved_anydesk_id
+            try:
+                end_time = datetime.fromisoformat(event.timestamp)
+                if end_time.tzinfo is None:
+                    end_time = end_time.replace(tzinfo=timezone.utc)
+                end_age_minutes = (now - end_time).total_seconds() / 60
+            except (ValueError, TypeError):
+                end_age_minutes = 0
+
+            if end_age_minutes <= 5:
+                if notify_anydesk_id:
+                    disconnect_event = SessionEvent(
+                        event_type="session_end",
+                        anydesk_id=notify_anydesk_id,
+                        timestamp=event.timestamp
+                    )
+                    await notify_admins_session_event(disconnect_event, batch.host, duration_seconds=duration)
+
+            # Auto clock-out: reuse the already-computed end_age_minutes
             target_anydesk_id = event.anydesk_id or resolved_anydesk_id
             if target_anydesk_id:
-                try:
-                    end_time = datetime.fromisoformat(event.timestamp)
-                    if end_time.tzinfo is None:
-                        end_time = end_time.replace(tzinfo=timezone.utc)
-                    end_age_minutes = (now - end_time).total_seconds() / 60
-                except (ValueError, TypeError):
-                    end_age_minutes = 0
                 if end_age_minutes <= 5:
                     try:
                         entry_id = await auto_clock_out_for_disconnect(target_anydesk_id, event.timestamp)
