@@ -1538,25 +1538,22 @@ async def upload_tax_return(year: int, file: UploadFile = File(...), description
     """Upload a completed tax return document"""
     import os
     
+    from app.services.object_storage import put_object, APP_NAME
+    
     # Validate file type
     allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic']
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Only PDF and image files are allowed")
     
-    # Create uploads directory if it doesn't exist
-    upload_dir = f"/app/uploads/tax-returns/{year}"
-    os.makedirs(upload_dir, exist_ok=True)
-    
     # Generate unique filename
     doc_id = str(uuid.uuid4())
     file_ext = file.filename.split('.')[-1] if '.' in file.filename else 'pdf'
     filename = f"{doc_id}.{file_ext}"
-    filepath = f"{upload_dir}/{filename}"
     
-    # Save file
+    # Save to durable object storage
     content = await file.read()
-    with open(filepath, 'wb') as f:
-        f.write(content)
+    storage_path = f"{APP_NAME}/tax_returns/{year}/{filename}"
+    result = put_object(storage_path, content, file.content_type or "application/pdf")
     
     # Store metadata in database
     doc = {
@@ -1564,7 +1561,7 @@ async def upload_tax_return(year: int, file: UploadFile = File(...), description
         "year": year,
         "original_filename": file.filename,
         "stored_filename": filename,
-        "filepath": filepath,
+        "storage_path": result["path"],
         "content_type": file.content_type,
         "size": len(content),
         "description": description or f"Tax Return {year}",
@@ -1603,8 +1600,21 @@ async def download_tax_return(year: int, doc_id: str):
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     
+    headers = {"Content-Disposition": f"attachment; filename={doc['original_filename']}"}
+    
+    # Object storage (new uploads)
+    if doc.get("storage_path"):
+        from fastapi.responses import Response
+        from app.services.object_storage import get_object
+        try:
+            data, content_type = get_object(doc["storage_path"])
+            return Response(content=data, media_type=doc.get("content_type", content_type), headers=headers)
+        except Exception:
+            raise HTTPException(status_code=404, detail="File not found in storage")
+    
+    # Legacy local file fallback
     import os
-    if not os.path.exists(doc["filepath"]):
+    if not doc.get("filepath") or not os.path.exists(doc["filepath"]):
         raise HTTPException(status_code=404, detail="File not found on server")
     
     def file_iterator():
@@ -1614,7 +1624,7 @@ async def download_tax_return(year: int, doc_id: str):
     return StreamingResponse(
         file_iterator(),
         media_type=doc.get("content_type", "application/pdf"),
-        headers={"Content-Disposition": f"attachment; filename={doc['original_filename']}"}
+        headers=headers
     )
 
 @router.delete("/tax-returns/{year}/{doc_id}")
@@ -1630,8 +1640,8 @@ async def delete_tax_return(year: int, doc_id: str):
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    # Delete file from filesystem
-    if os.path.exists(doc["filepath"]):
+    # Delete legacy local file if present (object storage has no delete API; DB record removal suffices)
+    if doc.get("filepath") and os.path.exists(doc["filepath"]):
         os.remove(doc["filepath"])
     
     # Delete from database

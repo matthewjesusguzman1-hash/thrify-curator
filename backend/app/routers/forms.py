@@ -55,14 +55,15 @@ class InvitedJobApplication(BaseModel):
     # Remote worker field
     is_remote_worker: Optional[bool] = False
 
-# Ensure upload directory exists
+# Legacy local dir (files uploaded before object storage migration are served via /api/uploads static mount)
 UPLOAD_DIR = "/app/uploads/consignment_photos"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 @router.post("/forms/upload-photos")
 async def upload_consignment_photos(files: List[UploadFile] = File(...)):
-    """Upload photos for consignment forms. Returns list of file paths."""
+    """Upload photos for consignment forms to durable object storage. Returns list of file paths."""
+    from app.services.object_storage import put_object, APP_NAME
+    
     uploaded_paths = []
     
     for file in files:
@@ -73,19 +74,46 @@ async def upload_consignment_photos(files: List[UploadFile] = File(...)):
         # Generate unique filename
         ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
         unique_filename = f"{uuid_module.uuid4()}.{ext}"
-        file_path = os.path.join(UPLOAD_DIR, unique_filename)
         
-        # Save file
         try:
             contents = await file.read()
-            with open(file_path, "wb") as f:
-                f.write(contents)
-            uploaded_paths.append(f"/api/uploads/consignment_photos/{unique_filename}")
+            storage_path = f"{APP_NAME}/consignment_photos/{unique_filename}"
+            result = put_object(storage_path, contents, file.content_type or "image/jpeg")
+            await db.consignment_photo_files.insert_one({
+                "filename": unique_filename,
+                "storage_path": result["path"],
+                "original_filename": file.filename,
+                "mime_type": file.content_type,
+                "size": len(contents),
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            uploaded_paths.append(f"/api/forms/consignment-photo/{unique_filename}")
         except Exception as e:
             print(f"Error saving file {file.filename}: {e}")
             continue
     
     return {"uploaded_paths": uploaded_paths}
+
+
+@router.get("/forms/consignment-photo/{filename}")
+async def get_consignment_photo(filename: str):
+    """Serve a consignment photo from object storage (legacy local fallback)"""
+    from fastapi.responses import Response, FileResponse
+    from app.services.object_storage import get_object
+    
+    record = await db.consignment_photo_files.find_one({"filename": filename}, {"_id": 0})
+    if record:
+        try:
+            data, content_type = get_object(record["storage_path"])
+            return Response(content=data, media_type=record.get("mime_type") or content_type)
+        except Exception as e:
+            print(f"[ConsignmentPhoto] Object storage fetch failed for {filename}: {e}")
+    
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    
+    raise HTTPException(status_code=404, detail="Photo not found")
 
 
 @router.get("/forms/payment-history/{email}")

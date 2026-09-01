@@ -16,13 +16,13 @@ from app.models.conversations import (
     MessageAttachment
 )
 from app.services.web_push_service import get_web_push_service
+from app.services.object_storage import put_object, get_object, APP_NAME
 
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
 
-# Ensure upload directory exists - use absolute path relative to backend root
+# Legacy local storage dir (fallback for files uploaded before object storage migration)
 BACKEND_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 UPLOAD_DIR = os.path.join(BACKEND_ROOT, "uploads", "message_attachments")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Allowed file types
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
@@ -52,11 +52,20 @@ async def upload_message_attachment(
     file_ext = os.path.splitext(file.filename)[1] if file.filename else ""
     unique_id = str(uuid.uuid4())
     safe_filename = f"{unique_id}{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, safe_filename)
     
-    # Save file
-    with open(file_path, "wb") as f:
-        f.write(content)
+    # Save to durable object storage
+    storage_path = f"{APP_NAME}/message_attachments/{safe_filename}"
+    result = put_object(storage_path, content, file.content_type or "application/octet-stream")
+    
+    await db.message_attachment_files.insert_one({
+        "filename": safe_filename,
+        "storage_path": result["path"],
+        "original_filename": file.filename,
+        "mime_type": file.content_type,
+        "size": len(content),
+        "uploaded_by": current_user.get("id") or current_user.get("email"),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
     
     # Determine file type category
     file_type = "image" if file.content_type in ALLOWED_IMAGE_TYPES else "document"
@@ -74,43 +83,37 @@ async def upload_message_attachment(
 
 @router.get("/attachment/{filename}")
 async def get_message_attachment(filename: str):
-    """Serve a message attachment"""
-    from fastapi.responses import FileResponse
-    import logging
+    """Serve a message attachment from object storage (with legacy local-disk fallback)"""
+    from fastapi.responses import FileResponse, Response
     
+    record = await db.message_attachment_files.find_one({"filename": filename}, {"_id": 0})
+    if record:
+        try:
+            data, content_type = get_object(record["storage_path"])
+            return Response(content=data, media_type=record.get("mime_type") or content_type)
+        except Exception as e:
+            import logging
+            logging.error(f"[Attachment] Object storage fetch failed for {filename}: {e}")
+    
+    # Legacy fallback: files uploaded before object storage migration
     file_path = os.path.join(UPLOAD_DIR, filename)
-    logging.info(f"[Attachment] Requested: {filename}, Full path: {file_path}, Exists: {os.path.exists(file_path)}, UPLOAD_DIR: {UPLOAD_DIR}")
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
     
-    if not os.path.exists(file_path):
-        # List what files ARE in the directory for debugging
-        if os.path.exists(UPLOAD_DIR):
-            files_in_dir = os.listdir(UPLOAD_DIR)[:10]  # First 10 files
-            logging.error(f"[Attachment] File not found. Files in {UPLOAD_DIR}: {files_in_dir}")
-        else:
-            logging.error(f"[Attachment] Upload directory doesn't exist: {UPLOAD_DIR}")
-        raise HTTPException(status_code=404, detail=f"Attachment not found: {filename}")
-    
-    return FileResponse(file_path)
+    raise HTTPException(status_code=404, detail=f"Attachment not found: {filename}")
 
 
 @router.get("/attachment-debug")
-async def debug_attachment_storage():
-    """Debug endpoint to check attachment storage status"""
-    
+async def debug_attachment_storage(admin: dict = Depends(get_admin_user)):
+    """Admin: check attachment storage status"""
+    stored_count = await db.message_attachment_files.count_documents({})
     result = {
-        "upload_dir": UPLOAD_DIR,
-        "upload_dir_exists": os.path.exists(UPLOAD_DIR),
-        "backend_root": BACKEND_ROOT,
-        "cwd": os.getcwd(),
-        "files_count": 0,
-        "sample_files": []
+        "storage_mode": "emergent_object_storage",
+        "stored_files_count": stored_count,
+        "legacy_dir": UPLOAD_DIR,
+        "legacy_dir_exists": os.path.exists(UPLOAD_DIR),
+        "legacy_files_count": len(os.listdir(UPLOAD_DIR)) if os.path.exists(UPLOAD_DIR) else 0
     }
-    
-    if os.path.exists(UPLOAD_DIR):
-        files = os.listdir(UPLOAD_DIR)
-        result["files_count"] = len(files)
-        result["sample_files"] = files[:5]  # First 5 files
-    
     return result
 
 
@@ -197,23 +200,14 @@ async def send_other_admins_notification(sending_admin_id: str, sending_admin_na
         "user_type": "admin"
     }).to_list(100)
     
-    if not admin_tokens:
-        print(f"[PUSH] No active admin devices found")
-        return
-    
     # Filter out the sending admin's tokens
     other_admin_tokens = [t for t in admin_tokens if t.get("user_id") != sending_admin_id]
     
     print(f"[PUSH] Admin message notification: {len(admin_tokens)} total admin tokens, {len(other_admin_tokens)} after excluding sender ({sending_admin_id})")
     
-    if not other_admin_tokens:
-        print(f"[PUSH] No other admin devices to notify (sender: {sending_admin_name})")
-        return
-    
-    print(f"[PUSH] Sending '{notification_type}' to {len(other_admin_tokens)} other admin device(s)")
-    
+    # APNs leg (native app devices) - no early return; web push leg below must always run
     try:
-        token = generate_apns_token()
+        token = generate_apns_token() if other_admin_tokens else None
         
         for token_doc in other_admin_tokens:
             device_token = token_doc.get("device_token")
@@ -261,26 +255,30 @@ async def send_other_admins_notification(sending_admin_id: str, sending_admin_na
     except Exception as e:
         print(f"[PUSH] Error sending to other admins: {e}")
     
-    # Also send web push to other admins
+    # Also send web push to other admins (subscriptions store "role", not "user_type")
     try:
         other_admin_subscriptions = await db.web_push_subscriptions.find({
-            "user_type": "admin"
+            "role": {"$in": ["admin", "owner"]}
         }).to_list(100)
         
         # Filter out the sending admin
         other_admin_subscriptions = [s for s in other_admin_subscriptions if s.get("user_id") != sending_admin_id]
         
+        print(f"[WebPush] Admin message: {len(other_admin_subscriptions)} other-admin subscription(s) after excluding sender ({sending_admin_id})")
+        
         if other_admin_subscriptions:
             web_push = get_web_push_service()
             for subscription in other_admin_subscriptions:
                 try:
-                    await web_push.send_notification(
-                        subscription_info=subscription,
+                    result = await web_push.send_notification(
+                        subscription_info={"endpoint": subscription["endpoint"], "keys": subscription["keys"]},
                         title=title,
                         body=body,
                         url=f"/admin?section=messages&conversation={conversation_id}" if conversation_id else "/admin?section=messages",
                         tag=notification_type
                     )
+                    if result.get("should_remove"):
+                        await db.web_push_subscriptions.delete_one({"endpoint": subscription["endpoint"]})
                 except Exception as e:
                     print(f"[WebPush] Failed for admin subscription: {e}")
     except Exception as e:
@@ -867,23 +865,24 @@ async def admin_reply(reply: AdminReplyCreate, admin: dict = Depends(get_admin_u
     except Exception as e:
         print(f"Failed to send admin reply APNs push: {e}")
     
-    # Also send web push notification for PWA users
+    # Also send web push notification for PWA users (subscriptions store "role", not "user_type")
     try:
-        # Find user's web push subscription
-        subscription = await db.web_push_subscriptions.find_one({
-            "user_id": participant_id,
-            "user_type": participant_type
-        })
+        participant_subscriptions = await db.web_push_subscriptions.find({
+            "user_id": participant_id
+        }).to_list(20)
         
-        if subscription:
+        if participant_subscriptions:
             web_push = get_web_push_service()
-            await web_push.send_notification(
-                subscription_info=subscription,
-                title=f"New message from {admin_name}",
-                body=reply.content[:100] + "..." if len(reply.content) > 100 else reply.content,
-                url=notification_url,
-                tag="admin_message"
-            )
+            for subscription in participant_subscriptions:
+                result = await web_push.send_notification(
+                    subscription_info={"endpoint": subscription["endpoint"], "keys": subscription["keys"]},
+                    title=f"New message from {admin_name}",
+                    body=reply.content[:100] + "..." if len(reply.content) > 100 else reply.content,
+                    url=notification_url,
+                    tag="admin_message"
+                )
+                if result.get("should_remove"):
+                    await db.web_push_subscriptions.delete_one({"endpoint": subscription["endpoint"]})
     except Exception as e:
         print(f"Failed to send admin reply web push: {e}")
     

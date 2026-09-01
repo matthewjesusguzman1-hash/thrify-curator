@@ -385,18 +385,25 @@ async def upload_receipt(
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
     
-    # Create uploads directory if it doesn't exist
-    upload_dir = "/app/backend/uploads/receipts"
-    os.makedirs(upload_dir, exist_ok=True)
+    from app.services.object_storage import put_object, APP_NAME
     
-    # Save the file
+    # Save to durable object storage
     file_ext = os.path.splitext(receipt.filename)[1] or ".jpg"
     filename = f"{trip_id}_{uuid.uuid4().hex[:8]}{file_ext}"
-    file_path = os.path.join(upload_dir, filename)
     
     content = await receipt.read()
-    with open(file_path, "wb") as f:
-        f.write(content)
+    storage_path = f"{APP_NAME}/receipts/{filename}"
+    result = put_object(storage_path, content, receipt.content_type or "image/jpeg")
+    
+    await db.receipt_files.insert_one({
+        "filename": filename,
+        "storage_path": result["path"],
+        "original_filename": receipt.filename,
+        "mime_type": receipt.content_type,
+        "size": len(content),
+        "trip_id": trip_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
     
     # Update trip with receipt URL
     receipt_url = f"/api/admin/gps-trips/receipt/{filename}"
@@ -410,14 +417,24 @@ async def upload_receipt(
 
 @router.get("/receipt/{filename}")
 async def get_receipt(filename: str):
-    """Serve a receipt image"""
-    from fastapi.responses import FileResponse
+    """Serve a receipt image from object storage (legacy local fallback)"""
+    from fastapi.responses import FileResponse, Response
+    from app.services.object_storage import get_object
     
+    record = await db.receipt_files.find_one({"filename": filename}, {"_id": 0})
+    if record:
+        try:
+            data, content_type = get_object(record["storage_path"])
+            return Response(content=data, media_type=record.get("mime_type") or content_type)
+        except Exception as e:
+            print(f"[Receipt] Object storage fetch failed for {filename}: {e}")
+    
+    # Legacy fallback
     file_path = f"/app/backend/uploads/receipts/{filename}"
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Receipt not found")
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
     
-    return FileResponse(file_path)
+    raise HTTPException(status_code=404, detail="Receipt not found")
 
 
 @router.get("/trip/{trip_id}")

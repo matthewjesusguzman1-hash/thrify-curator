@@ -387,4 +387,28 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - **Files Updated**:
   - `frontend/src/components/FullScreenMessaging.jsx` - Relative URLs for attachment display
   - `frontend/src/components/AdminFullScreenMessaging.jsx` - Relative URLs for attachment display
-- **Note**: Uploaded attachments use local pod storage which may not persist across deployments. Low-volume usage is acceptable.
+
+### Admin-to-Admin Push Notification Fix (2026-09-01) - NEW
+- **Bug**: One admin never received push notifications when the other admin sent a message (unread badge worked, push did not). Employee-message pushes worked fine.
+- **Production RCA (via deployer debug agent)**:
+  1. ALL `device_push_tokens` in production are `active: false` (0 of 6) — the APNs channel is dead for everyone. Employee→admin notifications arrive ONLY via web push.
+  2. `send_other_admins_notification()` had an early `return` when 0 APNs tokens were found, so its web-push leg never ran.
+  3. Its web-push query filtered `{"user_type": "admin"}` but subscriptions store the field **`role`** — query always returned 0.
+- **Fixes in `backend/app/routers/conversations.py`**:
+  - Web-push query now uses `{"role": {"$in": ["admin", "owner"]}}` (matches the working employee path in `web_push_service.send_to_admins`)
+  - Removed early return: web-push leg always runs even with 0 APNs tokens
+  - Admin-reply→participant web push also fixed (same `user_type` vs `role` field trap) and now sends to ALL of the participant's subscriptions
+  - Expired subscriptions (404/410) are auto-removed
+- **Verified in preview**: simulated second-admin subscription received the fan-out (logs show `[WebPush] Admin message: 1 other-admin subscription(s)`)
+- **Known secondary issue (backlog)**: all APNs device tokens in production are inactive — native (non-PWA) push is dead platform-wide; likely sandbox/production APNs mismatch or token invalidation on 400/410. Web push covers current admin usage.
+
+### Durable Object Storage Migration (2026-09-01) - NEW
+- **All file uploads migrated from pod-local disk to Emergent Object Storage** (survives redeploys/pod restarts):
+  1. Message attachments (`conversations.py`) — records in `db.message_attachment_files`
+  2. Consignment photos (`forms.py`) — new serve route `GET /api/forms/consignment-photo/{filename}`, records in `db.consignment_photo_files`
+  3. Tax return documents (`financials.py`) — docs store `storage_path`, records in `db.tax_return_documents`
+  4. GPS trip receipts (`gps_trips.py`) — records in `db.receipt_files`
+- New service: `backend/app/services/object_storage.py` (init/put/get via `EMERGENT_LLM_KEY` + `INTEGRATION_PROXY_URL`)
+- **Legacy fallback**: each serve endpoint falls back to the old local path for files uploaded before migration; old consignment photos still served by `/api/uploads` static mount
+- URL formats returned to the frontend are unchanged (no frontend changes needed)
+- All 4 upload+serve flows verified e2e in preview via curl (byte-for-byte match)
