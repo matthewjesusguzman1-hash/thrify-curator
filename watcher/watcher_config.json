@@ -1,0 +1,7 @@
+{
+  "backend_url": "https://reseller-dashboard-11.emergent.host",
+  "watcher_key": "PASTE_ANYDESK_WATCHER_KEY_FROM_BACKEND_ENV",
+  "host_label": "store-pc-1",
+  "parse_service_trace": true,
+  "trace_files": []
+}

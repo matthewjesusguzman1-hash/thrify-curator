@@ -20,6 +20,7 @@ from app.routers import (
 )
 from app.routers.messages import router as messages_router
 from app.routers.monthly_mileage import router as monthly_mileage_router
+from app.routers.remote_sessions import router as remote_sessions_router
 from app.routers.push_notifications import router as push_notifications_router
 from app.routers.password_reset import router as password_reset_router
 from app.routers.live_activity import router as live_activity_router
@@ -145,6 +146,7 @@ async def employee_upload_w9(
 
 # Include routers with /api prefix
 app.include_router(auth_router, prefix="/api")
+app.include_router(remote_sessions_router, prefix="/api")
 app.include_router(time_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(notifications_router, prefix="/api")

@@ -152,6 +152,30 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - Verified via Playwright: dropdown on top, previous period (Aug 17-30) displays shifts, edit modal on top.
 - **Rule reminder**: any dropdown/modal opened from inside a `z-[9999]` portaled modal needs an explicit higher z-index.
 
+### AnyDesk Remote Session Tracking (2026-09-01) - NEW
+- **No AnyDesk API needed** (works on Solo tier): a Python watcher on the Windows host reads AnyDesk's local `connection_trace.txt` (session starts: timestamp, AnyDesk ID, alias, auth method) + best-effort session ENDs from `ad_svc.trace`/`ad.trace` for durations.
+- **Watcher** `/app/watcher/anydesk_session_watcher.py`: watchdog PollingObserver + 30s safety scan, offset-based tail reading (no file locking), fingerprint dedup persisted in `watcher_state.json`, handles file truncation/recreation, failed posts queued in `failed_events.jsonl` and retried. First run starts at EOF (only new sessions). Config: `watcher_config.json` (backend_url, watcher_key, host_label). Setup guide: `/app/watcher/README_SETUP.md` (Task Scheduler + NSSM).
+- **Backend** `/app/backend/app/routers/remote_sessions.py`:
+  - `POST /api/remote-sessions/log` — auth via `X-Watcher-Key` header matching `ANYDESK_WATCHER_KEY` in backend .env; batch events; dedup by fingerprint; end events matched to latest open session (per host/ID) to compute duration_seconds
+  - `GET /api/remote-sessions` (admin) — sessions newest-first with worker_name from `db.anydesk_id_mappings`
+  - `POST /api/remote-sessions/map`, `GET /api/remote-sessions/mappings` (admin) — map AnyDesk ID → worker name
+  - Collections: `anydesk_sessions`, `anydesk_session_events`, `anydesk_id_mappings`
+- **Frontend**: `RemoteSessionsSection.jsx` in Admin Dashboard → Team Management group: live/ended indicator, start/end/duration/auth, host label, inline "Assign name" for unmapped IDs.
+- Tested: curl (key auth 401, dedup, end-matching 3h45m), watcher simulation e2e against preview backend, dashboard screenshot with mapped + unmapped sessions.
+
+### Security Remediation (2026-09-01) - NEW
+Full audit remediation, backend 28/28 tests passing (testing agent iteration_54):
+1. **Brute-force lockout** (`app/services/security.py`): 5 failed attempts per identity per 15 min → 429 lockout. Applied to admin code login, employee password login, consignor password login, magic-link request throttling.
+2. **Admin codes moved to env** `ADMIN_OWNER_CODES` in backend .env (still 4 digits per user choice); constant-time comparison.
+3. **Consignor magic-link auth (user chose links over passwords)**: `POST /api/forms/consignment/request-login-link` (generic response, 30-min single-use token in `db.consignor_login_tokens`, email via Resend) → `POST /api/forms/consignment/verify-login-link` → 7-day consignor JWT (role "consignor"). Consignor password login also returns the JWT now.
+4. **Protected consignor endpoints** (previously public by email): payment-history, payment-image, check-existing-agreement, my-submissions, update-payment-method, set-password, consignor conversation get/send/delete. Deps: `get_consignor_user` / `get_consignor_or_admin` in dependencies.py. Cross-account access → 403.
+5. **Debug endpoints admin-only**: live-activity debug/tokens, clear-all-tokens, deactivate-all-admin-tokens, token-status.
+6. **Regex injection fixed**: `re.escape()` on email regex queries in auth.py + password_reset.py.
+7. **bcrypt migration**: employee passwords rehash transparently from legacy sha256 on next successful login; new min length 8 (existing shorter passwords still work).
+8. **CORS restricted** to explicit origins in .env (incl. capacitor://localhost, https://localhost for native apps).
+- Frontend: consignor portal flows send `Authorization: Bearer <consignorToken>` (localStorage), magic-link landing via `/consignment-agreement?login_token=`, "Check your email" UIs. Files: ConsignmentAgreementForm.jsx, MessagingSection.jsx, FullScreenMessaging.jsx.
+- **Known/accepted**: standalone "Change Payment Method" page was pre-existing dead code (no entry button anywhere, even before remediation); endpoint is protected. Employee passwordless login intentionally retained per user choice. Consignor attachments upload was already non-functional pre-remediation (requires employee/admin JWT).
+
 ## 3rd Party Integrations
 - Capacitor v8
 - Transistorsoft Background Geolocation

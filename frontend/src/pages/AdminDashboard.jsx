@@ -84,6 +84,7 @@ import MessagesSection from "@/components/admin/sections/MessagesSection";
 
 import AllEmployeesSection from "@/components/admin/sections/AllEmployeesSection";
 import HoursByEmployeeSection from "@/components/admin/sections/HoursByEmployeeSection";
+import RemoteSessionsSection from "@/components/admin/sections/RemoteSessionsSection";
 import PasswordManagementSection from "@/components/admin/sections/PasswordManagementSection";
 import FinancialsSection from "@/components/admin/sections/FinancialsSection";
 import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArchiveSection";
@@ -3868,6 +3869,11 @@ export default function AdminDashboard() {
                   onDeleteEntry={handleDeleteEntry}
                   payPeriodStart={payrollSettings.pay_period_start_date}
                 />
+              </div>
+
+              {/* Remote AnyDesk Sessions */}
+              <div data-testid="remote-sessions-section">
+                <RemoteSessionsSection getAuthHeader={getAuthHeader} formatDateTime={formatDateTime} />
               </div>
 
               {/* Password Management for Employees */}
