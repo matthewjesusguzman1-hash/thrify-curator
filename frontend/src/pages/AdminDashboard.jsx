@@ -84,7 +84,6 @@ import MessagesSection from "@/components/admin/sections/MessagesSection";
 
 import AllEmployeesSection from "@/components/admin/sections/AllEmployeesSection";
 import HoursByEmployeeSection from "@/components/admin/sections/HoursByEmployeeSection";
-import RemoteSessionsSection from "@/components/admin/sections/RemoteSessionsSection";
 import PasswordManagementSection from "@/components/admin/sections/PasswordManagementSection";
 import FinancialsSection from "@/components/admin/sections/FinancialsSection";
 import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArchiveSection";
@@ -3245,12 +3244,18 @@ export default function AdminDashboard() {
               <span className="hidden sm:inline">Home</span>
             </Button>
           </Link>
-          <Link to="/dashboard" onClick={() => lightTap()}>
-            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 p-3 sm:px-3 sm:py-2" data-testid="my-dashboard-btn" title="My Dashboard">
-              <User className="w-6 h-6 sm:w-4 sm:h-4 sm:mr-1" />
-              <span className="hidden sm:inline">My Dashboard</span>
-            </Button>
-          </Link>
+          {/* Remote Sessions - opens full review page */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-white/70 hover:text-white hover:bg-white/10 p-3 sm:px-3 sm:py-2"
+            onClick={() => { lightTap(); navigate("/remote-sessions"); }}
+            data-testid="remote-sessions-header-btn"
+            title="Remote Sessions"
+          >
+            <Monitor className="w-6 h-6 sm:w-4 sm:h-4 sm:mr-1" />
+            <span className="hidden sm:inline">Remote Sessions</span>
+          </Button>
           {/* Messages Shortcut */}
           <Button 
             variant="ghost" 
@@ -3869,11 +3874,6 @@ export default function AdminDashboard() {
                   onDeleteEntry={handleDeleteEntry}
                   payPeriodStart={payrollSettings.pay_period_start_date}
                 />
-              </div>
-
-              {/* Remote AnyDesk Sessions */}
-              <div data-testid="remote-sessions-section">
-                <RemoteSessionsSection getAuthHeader={getAuthHeader} formatDateTime={formatDateTime} />
               </div>
 
               {/* Password Management for Employees */}

@@ -14,6 +14,7 @@ import ConsignmentAgreementForm from "@/pages/ConsignmentAgreementForm";
 import AuthPage from "@/pages/AuthPage";
 import EmployeeDashboard from "@/pages/EmployeeDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
+import RemoteSessionsPage from "@/pages/RemoteSessionsPage";
 import ContactPage from "@/pages/ContactPage";
 import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
@@ -210,6 +211,11 @@ function AnimatedRoutes() {
         <Route path="/admin" element={
           <PageTransition>
             <AdminDashboard />
+          </PageTransition>
+        } />
+        <Route path="/remote-sessions" element={
+          <PageTransition>
+            <RemoteSessionsPage />
           </PageTransition>
         } />
         <Route path="/contact" element={

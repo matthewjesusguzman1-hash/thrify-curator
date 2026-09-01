@@ -160,7 +160,7 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - `GET /api/remote-sessions` (admin) — sessions newest-first with worker_name from `db.anydesk_id_mappings`
   - `POST /api/remote-sessions/map`, `GET /api/remote-sessions/mappings` (admin) — map AnyDesk ID → worker name
   - Collections: `anydesk_sessions`, `anydesk_session_events`, `anydesk_id_mappings`
-- **Frontend**: `RemoteSessionsSection.jsx` in Admin Dashboard → Team Management group: live/ended indicator, start/end/duration/auth, host label, inline "Assign name" for unmapped IDs.
+- **Frontend (updated 2026-09-01 per user request)**: dedicated full page `/remote-sessions` (`RemoteSessionsPage.jsx`) — dark themed, search, All/Active filters, LIVE badge, assign-name inline, back to /admin. Opened from the admin header **Remote Sessions** button (Monitor icon) which REPLACED the "My Dashboard" person-icon link. The Team Management dashboard section was removed per user request (RemoteSessionsSection.jsx deleted).
 - Tested: curl (key auth 401, dedup, end-matching 3h45m), watcher simulation e2e against preview backend, dashboard screenshot with mapped + unmapped sessions.
 
 ### Security Remediation (2026-09-01) - NEW
