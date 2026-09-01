@@ -2836,15 +2836,15 @@ export default function AdminDashboard() {
                     
                     // Only trigger if horizontal swipe is more significant than vertical
                     if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
-                      if (deltaX < 0) {
-                        // Swipe left - go to previous period
+                      if (deltaX > 0) {
+                        // Swipe right - go to previous period (past)
                         if (payrollPeriodIndex > -2) {
                           const newIndex = payrollPeriodIndex - 1;
                           setPayrollPeriodIndex(newIndex);
                           fetchPayrollSummary(newIndex);
                         }
                       } else {
-                        // Swipe right - go to next (more current) period
+                        // Swipe left - go to next (more current) period
                         if (payrollPeriodIndex < 0) {
                           const newIndex = payrollPeriodIndex + 1;
                           setPayrollPeriodIndex(newIndex);
@@ -2860,21 +2860,19 @@ export default function AdminDashboard() {
                     const now = Date.now();
                     if (now - lastWheelTime.current < 300) return; // 300ms debounce
                     
-                    // deltaX > 0 = scroll right (like swiping left) = go to past
-                    // deltaX < 0 = scroll left (like swiping right) = go to current
                     if (Math.abs(e.deltaX) > 30 && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
                       e.preventDefault();
                       lastWheelTime.current = now;
                       
-                      if (e.deltaX > 0) {
-                        // Scroll right = go to previous period (past)
+                      if (e.deltaX < 0) {
+                        // Scroll left = go to previous period (past)
                         if (payrollPeriodIndex > -2) {
                           const newIndex = payrollPeriodIndex - 1;
                           setPayrollPeriodIndex(newIndex);
                           fetchPayrollSummary(newIndex);
                         }
                       } else {
-                        // Scroll left = go to next period (toward current)
+                        // Scroll right = go to next period (toward current)
                         if (payrollPeriodIndex < 0) {
                           const newIndex = payrollPeriodIndex + 1;
                           setPayrollPeriodIndex(newIndex);
