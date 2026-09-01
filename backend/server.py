@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
+import asyncio
 import logging
 import base64
 import os
@@ -180,3 +181,22 @@ async def root():
 @app.on_event("shutdown")
 async def shutdown_db_client():
     await close_db_connection()
+
+
+# --- Background: periodic AnyDesk cross-check (every 3 min) ---
+_cross_check_task = None
+
+async def _periodic_cross_check():
+    """Run the AnyDesk/clock-in cross-check every 3 minutes."""
+    from app.routers.remote_sessions import run_cross_check_and_notify
+    while True:
+        await asyncio.sleep(180)  # 3 minutes
+        try:
+            await run_cross_check_and_notify()
+        except Exception as e:
+            logger.warning(f"Periodic cross-check failed: {e}")
+
+@app.on_event("startup")
+async def start_cross_check_loop():
+    global _cross_check_task
+    _cross_check_task = asyncio.create_task(_periodic_cross_check())
