@@ -1,8 +1,8 @@
 """
 AnyDesk Session Watcher for Thrifty Curator
 ============================================
-Monitors AnyDesk's local connection_trace.txt (and optionally ad_svc.trace)
-on a Windows host and posts session events to the Thrifty Curator backend.
+Monitors AnyDesk's local connection_trace.txt (and optionally trace files)
+on a macOS or Windows host and posts session events to the Thrifty Curator backend.
 
 Requirements:  pip install watchdog requests
 Run:           python anydesk_session_watcher.py
@@ -16,7 +16,9 @@ import sys
 import time
 import hashlib
 import logging
+import platform
 from datetime import datetime
+from pathlib import Path
 
 import requests
 from watchdog.observers.polling import PollingObserver
@@ -35,6 +37,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, "watcher_config.json")
 STATE_PATH = os.path.join(BASE_DIR, "watcher_state.json")
 RETRY_QUEUE_PATH = os.path.join(BASE_DIR, "failed_events.jsonl")
+IS_MAC = platform.system() == "Darwin"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -58,11 +61,45 @@ SVC_END_RE = re.compile(
 
 
 def default_trace_paths():
+    """Auto-detect AnyDesk connection_trace.txt location (macOS + Windows)."""
     paths = []
-    appdata = os.environ.get("APPDATA", "")
-    if appdata:
-        paths.append(os.path.join(appdata, "AnyDesk", "connection_trace.txt"))
-    paths.append(r"C:\ProgramData\AnyDesk\connection_trace.txt")
+    if IS_MAC:
+        # macOS: portable (uninstalled) location
+        home = str(Path.home())
+        paths.append(os.path.join(home, ".anydesk", "connection_trace.txt"))
+        # macOS: custom client variants
+        anydesk_dirs = [d for d in Path(home).glob(".anydesk_ad_*") if d.is_dir()]
+        for d in anydesk_dirs:
+            paths.append(str(d / "connection_trace.txt"))
+    else:
+        # Windows
+        appdata = os.environ.get("APPDATA", "")
+        if appdata:
+            paths.append(os.path.join(appdata, "AnyDesk", "connection_trace.txt"))
+        paths.append(r"C:\ProgramData\AnyDesk\connection_trace.txt")
+    return paths
+
+
+def default_service_trace_paths():
+    """Auto-detect AnyDesk service/session trace files for end-of-session detection."""
+    paths = []
+    if IS_MAC:
+        home = str(Path.home())
+        # macOS portable
+        paths.append(os.path.join(home, ".anydesk", "anydesk.trace"))
+        # macOS installed
+        paths.append("/var/log/anydesk.trace")
+        # macOS custom client variants
+        anydesk_dirs = [d for d in Path(home).glob(".anydesk_ad_*") if d.is_dir()]
+        for d in anydesk_dirs:
+            for f in d.glob("anydesk*.trace"):
+                paths.append(str(f))
+    else:
+        # Windows
+        appdata = os.environ.get("APPDATA", "")
+        if appdata:
+            paths.append(os.path.join(appdata, "AnyDesk", "ad.trace"))
+        paths.append(r"C:\ProgramData\AnyDesk\ad_svc.trace")
     return paths
 
 
@@ -83,14 +120,11 @@ def load_config():
             log.warning("No connection_trace.txt found yet - will keep watching default locations")
             cfg["trace_files"] = default_trace_paths()
     if cfg.get("parse_service_trace", True):
-        svc_paths = []
-        appdata = os.environ.get("APPDATA", "")
-        if appdata:
-            svc_paths.append(os.path.join(appdata, "AnyDesk", "ad.trace"))
-        svc_paths.append(r"C:\ProgramData\AnyDesk\ad_svc.trace")
+        svc_paths = default_service_trace_paths()
         cfg["service_trace_files"] = [p for p in svc_paths if os.path.exists(p)] or svc_paths
     else:
         cfg["service_trace_files"] = []
+    log.info(f"Platform: {'macOS' if IS_MAC else 'Windows'}")
     return cfg
 
 
@@ -248,7 +282,8 @@ class TraceHandler(FileSystemEventHandler):
         if event.is_directory:
             return
         name = os.path.basename(event.src_path).lower()
-        if name in ("connection_trace.txt", "ad.trace", "ad_svc.trace"):
+        # Trigger on any known AnyDesk log file (Windows or macOS names)
+        if name in ("connection_trace.txt", "ad.trace", "ad_svc.trace") or name.startswith("anydesk"):
             scan_all(self.cfg, self.state)
 
 
