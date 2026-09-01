@@ -146,6 +146,12 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - Production URL: https://thrifty-curator.com
 - Preview URL: https://curator-app-3.preview.emergentagent.com
 
+### Hours by Employee Modal Stacking Fixes (2026-09-01) - NEW
+- **Bug 1**: Edit-shift modal opened BEHIND the View Shifts modal. Root cause: `TimeEntryModal` was not portaled and used `z-50`, while the shifts modal portals to `document.body` at `z-[9999]`. Fix: `TimeEntryModal` now portals to `document.body` at `z-[10050]` (its employee Select at `z-[10060]`), plus `max-h-[90vh] overflow-y-auto`.
+- **Bug 2**: "Previous Pay Period" hard to select — the shadcn Select dropdown (default `z-50`) opened BEHIND the shifts modal. Fix: all `SelectContent` in `HoursByEmployeeSection` now use `z-[10000]`.
+- Verified via Playwright: dropdown on top, previous period (Aug 17-30) displays shifts, edit modal on top.
+- **Rule reminder**: any dropdown/modal opened from inside a `z-[9999]` portaled modal needs an explicit higher z-index.
+
 ## 3rd Party Integrations
 - Capacitor v8
 - Transistorsoft Background Geolocation

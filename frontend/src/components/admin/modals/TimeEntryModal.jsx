@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { X, Clock, Calculator, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -124,17 +125,17 @@ export default function TimeEntryModal({
 
   const isEdit = mode === 'edit';
 
-  return (
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10050] p-4"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+        className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         data-testid={isEdit ? "edit-entry-modal" : "add-entry-modal"}
       >
@@ -207,7 +208,7 @@ export default function TimeEntryModal({
                 <SelectTrigger className="form-input" data-testid="add-entry-employee-select">
                   <SelectValue placeholder="Select employee" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[10060]">
                   {employees.filter(e => e.role !== 'admin').map((emp) => (
                     <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
                   ))}
@@ -356,6 +357,7 @@ export default function TimeEntryModal({
           </div>
         </form>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }

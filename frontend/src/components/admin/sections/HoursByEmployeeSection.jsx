@@ -376,7 +376,7 @@ export default function HoursByEmployeeSection({
                     <SelectTrigger className="w-[180px] h-9">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[10000]">
                       <SelectItem value="period">Current Pay Period</SelectItem>
                       <SelectItem value="prev_period">Previous Pay Period</SelectItem>
                       <SelectItem value="month">Month</SelectItem>
@@ -390,7 +390,7 @@ export default function HoursByEmployeeSection({
                         <SelectTrigger className="w-[130px] h-9">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[10000]">
                           {months.map((month, idx) => (
                             <SelectItem key={idx} value={idx.toString()}>{month}</SelectItem>
                           ))}
@@ -400,7 +400,7 @@ export default function HoursByEmployeeSection({
                         <SelectTrigger className="w-[100px] h-9">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[10000]">
                           {years.map((year) => (
                             <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                           ))}
@@ -414,7 +414,7 @@ export default function HoursByEmployeeSection({
                       <SelectTrigger className="w-[100px] h-9">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[10000]">
                         {years.map((year) => (
                           <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                         ))}
