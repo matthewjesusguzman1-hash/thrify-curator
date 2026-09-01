@@ -49,14 +49,23 @@ logging.basicConfig(
 )
 log = logging.getLogger("anydesk-watcher")
 
-# Line format in connection_trace.txt:
+# Line format in connection_trace.txt (Windows):
 #   Incoming    2026-09-01, 14:02    123456789    worker-alias    User
 TRACE_LINE_RE = re.compile(
     r"^\s*(Incoming|Outgoing)\s+(\d{4}-\d{2}-\d{2}),?\s+(\d{2}:\d{2}(?::\d{2})?)\s+(\S+)\s*(\S*)\s*(\S*)\s*$"
 )
-# Best-effort session-end detection in ad_svc.trace / ad.trace
+# Session-end detection in trace files (tightened to app.backend_session only)
 SVC_END_RE = re.compile(
-    r"(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}).*?[Ss]ession (?:closed|stopped|ended)"
+    r"(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}).*?app\.backend_session\s*-\s*[Ss]ession (?:closed|stopped|ended)"
+)
+# macOS /var/log/anydesk.trace session start:
+#   info 2026-09-01 22:42:37.609  back  wrk1 ... app.backend_session - Incoming session request: - (1131282862)
+MAC_SESSION_START_RE = re.compile(
+    r"(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})\.\d+\s+.*?app\.backend_session\s*-\s*Incoming session request:\s*-?\s*\((\d+)\)"
+)
+# macOS auth: "3: Authenticated with permanent token."
+MAC_AUTH_RE = re.compile(
+    r"app\.session\s*-\s*\d+:\s*Authenticated with\s+(.+)\."
 )
 
 
@@ -176,6 +185,7 @@ def parse_connection_trace_line(line):
 
 
 def parse_service_trace_line(line):
+    """Parse session END from trace file (both Windows and macOS)."""
     m = SVC_END_RE.search(line)
     if not m:
         return None
@@ -183,6 +193,26 @@ def parse_service_trace_line(line):
         "event_type": "session_end",
         "timestamp": local_to_utc_iso(m.group(1), m.group(2)),
         "anydesk_id": None,
+        "raw_line": line.strip()[:300]
+    }
+
+
+def parse_mac_trace_start(line):
+    """Parse session START from macOS /var/log/anydesk.trace format."""
+    m = MAC_SESSION_START_RE.search(line)
+    if not m:
+        return None
+    date_part, time_part, anydesk_id = m.groups()
+    # Check for auth method on the same line or nearby (usually a few lines later)
+    auth_m = MAC_AUTH_RE.search(line)
+    auth_method = auth_m.group(1) if auth_m else None
+    return {
+        "event_type": "session_start",
+        "direction": "Incoming",
+        "timestamp": local_to_utc_iso(date_part, time_part),
+        "anydesk_id": anydesk_id,
+        "alias": None,
+        "auth_method": auth_method,
         "raw_line": line.strip()[:300]
     }
 
@@ -250,6 +280,8 @@ def read_new_lines(path, state):
 
 def scan_all(cfg, state):
     events = []
+
+    # 1. Windows: connection_trace.txt → session starts
     for path in cfg["trace_files"]:
         for line in read_new_lines(path, state):
             ev = parse_connection_trace_line(line)
@@ -259,15 +291,41 @@ def scan_all(cfg, state):
                     state.mark(fp)
                     events.append(ev)
                     log.info(f"Session start: AnyDesk ID {ev['anydesk_id']} ({ev.get('alias') or 'no alias'}) at {ev['timestamp']}")
+
+    # 2. Service trace files → session ends + macOS session starts
     for path in cfg["service_trace_files"]:
+        last_start_ev_index = None  # Track last start event to attach auth retroactively
         for line in read_new_lines(path, state):
-            ev = parse_service_trace_line(line)
-            if ev:
-                fp = hashlib.sha256((path + line).encode()).hexdigest()
-                if not state.seen(fp):
-                    state.mark(fp)
-                    events.append(ev)
-                    log.info(f"Session end detected at {ev['timestamp']}")
+            fp = hashlib.sha256((path + line).encode()).hexdigest()
+            if state.seen(fp):
+                continue
+
+            # Check for macOS session start (Incoming session request with AnyDesk ID)
+            start_ev = parse_mac_trace_start(line)
+            if start_ev:
+                state.mark(fp)
+                events.append(start_ev)
+                last_start_ev_index = len(events) - 1
+                log.info(f"Session start: AnyDesk ID {start_ev['anydesk_id']} at {start_ev['timestamp']}")
+                continue
+
+            # Auth line comes AFTER the session start — attach to the most recent start
+            auth_m = MAC_AUTH_RE.search(line)
+            if auth_m and last_start_ev_index is not None:
+                auth_method = auth_m.group(1)
+                events[last_start_ev_index]["auth_method"] = auth_method
+                log.info(f"  Auth: {auth_method}")
+                state.mark(fp)
+                last_start_ev_index = None
+                continue
+
+            # Check for session end
+            end_ev = parse_service_trace_line(line)
+            if end_ev:
+                state.mark(fp)
+                events.append(end_ev)
+                log.info(f"Session end detected at {end_ev['timestamp']}")
+
     if events:
         post_events(cfg, events)
         state.save()
