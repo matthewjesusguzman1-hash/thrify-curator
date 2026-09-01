@@ -241,6 +241,7 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
     duplicates = 0
     matched_ends = 0
     auto_clocked_out = []
+    now = datetime.now(timezone.utc)
     
     for event in batch.events:
         fingerprint = hashlib.sha256(
@@ -267,13 +268,23 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
             processed += 1
-            await notify_admins_session_event(event, batch.host)
-            # Run cross-check after session start (checks for "not clocked in" after grace period)
-            # Scheduled as fire-and-forget so watcher response isn't delayed
+            # Only send notifications/cross-checks for recent events (< 5 min old)
+            # This prevents notification floods when the watcher rescans historical logs
             try:
-                await run_cross_check_and_notify()
-            except Exception as e:
-                print(f"[RemoteSessions] Cross-check after session_start failed: {e}")
+                event_time = datetime.fromisoformat(event.timestamp)
+                if event_time.tzinfo is None:
+                    event_time = event_time.replace(tzinfo=timezone.utc)
+                event_age_minutes = (now - event_time).total_seconds() / 60
+            except (ValueError, TypeError):
+                event_age_minutes = 0
+            if event_age_minutes <= 5:
+                await notify_admins_session_event(event, batch.host)
+                try:
+                    await run_cross_check_and_notify()
+                except Exception as e:
+                    print(f"[RemoteSessions] Cross-check after session_start failed: {e}")
+            else:
+                print(f"[RemoteSessions] Skipping notification for historical event ({int(event_age_minutes)}min old): {event.anydesk_id}")
         
         elif event.event_type == "session_end":
             # Match the most recent open session (by anydesk_id if known, else by host)
@@ -307,14 +318,25 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                 resolved_anydesk_id = open_session.get("anydesk_id")
 
             # Auto clock-out: use the event's anydesk_id first, fall back to the matched session's
+            # Only auto-clock-out for recent events (< 5 min old) to avoid retroactive changes from historical imports
             target_anydesk_id = event.anydesk_id or resolved_anydesk_id
             if target_anydesk_id:
                 try:
-                    entry_id = await auto_clock_out_for_disconnect(target_anydesk_id, event.timestamp)
-                    if entry_id:
-                        auto_clocked_out.append(entry_id)
-                except Exception as e:
-                    print(f"[RemoteSessions] Auto clock-out failed for {target_anydesk_id}: {e}")
+                    end_time = datetime.fromisoformat(event.timestamp)
+                    if end_time.tzinfo is None:
+                        end_time = end_time.replace(tzinfo=timezone.utc)
+                    end_age_minutes = (now - end_time).total_seconds() / 60
+                except (ValueError, TypeError):
+                    end_age_minutes = 0
+                if end_age_minutes <= 5:
+                    try:
+                        entry_id = await auto_clock_out_for_disconnect(target_anydesk_id, event.timestamp)
+                        if entry_id:
+                            auto_clocked_out.append(entry_id)
+                    except Exception as e:
+                        print(f"[RemoteSessions] Auto clock-out failed for {target_anydesk_id}: {e}")
+                else:
+                    print(f"[RemoteSessions] Skipping auto-clock-out for historical disconnect ({int(end_age_minutes)}min old): {target_anydesk_id}")
 
             processed += 1
     
