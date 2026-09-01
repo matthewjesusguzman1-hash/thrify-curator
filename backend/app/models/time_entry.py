@@ -16,6 +16,10 @@ class TimeEntry(BaseModel):
     accumulated_hours: Optional[float] = None
     admin_note: Optional[str] = None  # Note visible only to admins
     adjusted_by_admin: Optional[bool] = None  # Flag if hours were manually adjusted
+    auto_clocked_out: Optional[bool] = None  # Flag if auto-clocked out (geofence or AnyDesk)
+    anydesk_auto_clocked_out: Optional[bool] = None  # Flag if auto-clocked out by AnyDesk disconnect
+    anydesk_auto_clock_out_note: Optional[str] = None  # Note for AnyDesk auto clock-out
+    admin_clocked: Optional[bool] = None  # Flag if clocked in/out by admin
 
 
 class ClockInOut(BaseModel):

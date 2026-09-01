@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Monitor, ArrowLeft, RefreshCw, UserPlus, Search, AlertTriangle, Info } from "lucide-react";
+import { Monitor, ArrowLeft, RefreshCw, UserPlus, Search, AlertTriangle, Info, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 

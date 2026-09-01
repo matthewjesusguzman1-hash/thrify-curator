@@ -84,38 +84,12 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - **Collapsible Tax Forms (2026-08-18)**: W-9 and W-8BEN sections in Employee Dashboard now collapse/expand with chevron animation to save vertical space
 - **Splash Screen Optimization (2026-08-18)**: Restored original animated blob design with GPU optimization hints (willChange, translateZ, backfaceVisibility) for smoother performance
 - **Applicant Skills Tests Portrait Layout Fix (2026-08-18)**: Fixed responsive layout bug where View, Invite, and Delete buttons were cut off in portrait mode. TestCard component now stacks content vertically with action buttons in their own row below the card content. Header also made responsive with Create Test button going full-width on mobile.
-- **Enhanced Timezone Display for Interview Scheduling (2026-08-22)**:
-  - Video interview applicants now see full CT date context including weekday (e.g., "Sun, Aug 24, 7:00 AM - 7:30 AM")
-  - When PHT time crosses midnight in CT (e.g., Monday PHT morning = Sunday CT evening), a warning note appears
-  - Both InterviewResponsePage.jsx (video) and SubmitAvailabilityPage.jsx (in-person) updated
-  - New helper functions: formatCTRange(), sameCtDate(), convertPHTtoCTTimeOnly()
-- **Admin Time Range Filter for Interview Scheduling (2026-08-22)**:
-  - Added optional time range filter when inviting applicants for video interviews
-  - Admin can enable/disable time range filter with checkbox
-  - When enabled, admin specifies preferred CT time window (e.g., 6:00 AM - 10:00 PM)
-  - Settings persist to localStorage for convenience
-  - Time range info sent with interview invitation email data
-- **Next Interview Highlight in View Schedule (2026-08-22)**:
-  - The "View Schedule" modal in Interview Inbox now highlights the next upcoming interview
-  - First future interview (by date/time) gets green styling with animated "NEXT" badge
-  - Visual distinction: green background, ring border, shadow, and pulsing clock icon
-  - Past interviews display normally without highlight
-- **In-Person Interview Onboarding Exclusion (2026-08-22)**:
-  - In-Person Interviews section now filters out onboarding applications
-  - Only generic job applications appear in "Review Applications" tab
-  - Onboarding applications (for adding someone to the system) remain separate
-  - Full application details available via popup modal when clicking an application
-- **Onboarding Email Simplification (2026-08-23)**:
-  - Onboarding application "received" emails now use simplified content
-  - Removed "what happens next" content as applicants already know the process
-  - Email now shows simple "Application Received" confirmation with note about next email coming for login setup
-- **Vendoo CSV Import Fix (2026-08-25)**:
-  - Fixed critical bug where sold items were not being detected in analytics/summary
-  - Issue: MongoDB regex queries `{"$regex": pattern, "$options": "i"}` weren't working with Motor 3.3.1/PyMongo 4.5.0
-  - Solution: Created `iregex()` helper function using Python's `re.compile(pattern, re.IGNORECASE)`
-  - Updated all 14 regex queries in `/app/backend/app/routers/inventory.py`
-  - Now correctly shows 11,328 sold items with $359,772.88 gross revenue
-  - Vendoo CSV headers with spaces (Cost of Goods, Marketplace Fees, etc.) parse correctly
+- **Enhanced Timezone Display for Interview Scheduling (2026-08-22)**
+- **Admin Time Range Filter for Interview Scheduling (2026-08-22)**
+- **Next Interview Highlight in View Schedule (2026-08-22)**
+- **In-Person Interview Onboarding Exclusion (2026-08-22)**
+- **Onboarding Email Simplification (2026-08-23)**
+- **Vendoo CSV Import Fix (2026-08-25)**
 
 ### Recently Removed
 - AI Reports Assistant (removed 2026-05-12 per user request)
@@ -146,13 +120,13 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - Production URL: https://thrifty-curator.com
 - Preview URL: https://curator-app-3.preview.emergentagent.com
 
-### Hours by Employee Modal Stacking Fixes (2026-09-01) - NEW
+### Hours by Employee Modal Stacking Fixes (2026-09-01)
 - **Bug 1**: Edit-shift modal opened BEHIND the View Shifts modal. Root cause: `TimeEntryModal` was not portaled and used `z-50`, while the shifts modal portals to `document.body` at `z-[9999]`. Fix: `TimeEntryModal` now portals to `document.body` at `z-[10050]` (its employee Select at `z-[10060]`), plus `max-h-[90vh] overflow-y-auto`.
 - **Bug 2**: "Previous Pay Period" hard to select — the shadcn Select dropdown (default `z-50`) opened BEHIND the shifts modal. Fix: all `SelectContent` in `HoursByEmployeeSection` now use `z-[10000]`.
 - Verified via Playwright: dropdown on top, previous period (Aug 17-30) displays shifts, edit modal on top.
 - **Rule reminder**: any dropdown/modal opened from inside a `z-[9999]` portaled modal needs an explicit higher z-index.
 
-### AnyDesk Remote Session Tracking (2026-09-01) - NEW
+### AnyDesk Remote Session Tracking (2026-09-01)
 - **No AnyDesk API needed** (works on Solo tier): a Python watcher on the Windows host reads AnyDesk's local `connection_trace.txt` (session starts: timestamp, AnyDesk ID, alias, auth method) + best-effort session ENDs from `ad_svc.trace`/`ad.trace` for durations.
 - **Watcher** `/app/watcher/anydesk_session_watcher.py`: watchdog PollingObserver + 30s safety scan, offset-based tail reading (no file locking), fingerprint dedup persisted in `watcher_state.json`, handles file truncation/recreation, failed posts queued in `failed_events.jsonl` and retried. First run starts at EOF (only new sessions). Config: `watcher_config.json` (backend_url, watcher_key, host_label). Setup guide: `/app/watcher/README_SETUP.md` (Task Scheduler + NSSM).
 - **Backend** `/app/backend/app/routers/remote_sessions.py`:
@@ -160,33 +134,32 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - `GET /api/remote-sessions` (admin) — sessions newest-first with worker_name from `db.anydesk_id_mappings`
   - `POST /api/remote-sessions/map`, `GET /api/remote-sessions/mappings` (admin) — map AnyDesk ID → worker name
   - Collections: `anydesk_sessions`, `anydesk_session_events`, `anydesk_id_mappings`
-- **Frontend (updated 2026-09-01 per user request)**: dedicated full page `/remote-sessions` (`RemoteSessionsPage.jsx`) — dark themed, search, All/Active filters, LIVE badge, assign-name inline, back to /admin. Opened from the admin header **Remote Sessions** button (Monitor icon) which REPLACED the "My Dashboard" person-icon link. The Team Management dashboard section was removed per user request (RemoteSessionsSection.jsx deleted).
-- Tested: curl (key auth 401, dedup, end-matching 3h45m), watcher simulation e2e against preview backend, dashboard screenshot with mapped + unmapped sessions.
+- **Frontend (updated 2026-09-01 per user request)**: dedicated full page `/remote-sessions` (`RemoteSessionsPage.jsx`) — dark themed, search, All/Active filters, LIVE badge, assign-name inline, back to /admin. Opened from the admin header **Remote Sessions** button (Monitor icon) which REPLACED the "My Dashboard" person-icon link.
 
-### Security Remediation (2026-09-01) - NEW
+### Security Remediation (2026-09-01)
 Full audit remediation, backend 28/28 tests passing (testing agent iteration_54):
-1. **Brute-force lockout** (`app/services/security.py`): 5 failed attempts per identity per 15 min → 429 lockout. Applied to admin code login, employee password login, consignor password login, magic-link request throttling.
+1. **Brute-force lockout** (`app/services/security.py`): 5 failed attempts per identity per 15 min → 429 lockout.
 2. **Admin codes moved to env** `ADMIN_OWNER_CODES` in backend .env (still 4 digits per user choice); constant-time comparison.
-3. **Consignor magic-link auth (user chose links over passwords)**: `POST /api/forms/consignment/request-login-link` (generic response, 30-min single-use token in `db.consignor_login_tokens`, email via Resend) → `POST /api/forms/consignment/verify-login-link` → 7-day consignor JWT (role "consignor"). Consignor password login also returns the JWT now.
-4. **Protected consignor endpoints** (previously public by email): payment-history, payment-image, check-existing-agreement, my-submissions, update-payment-method, set-password, consignor conversation get/send/delete. Deps: `get_consignor_user` / `get_consignor_or_admin` in dependencies.py. Cross-account access → 403.
-5. **Debug endpoints admin-only**: live-activity debug/tokens, clear-all-tokens, deactivate-all-admin-tokens, token-status.
-6. **Regex injection fixed**: `re.escape()` on email regex queries in auth.py + password_reset.py.
-7. **bcrypt migration**: employee passwords rehash transparently from legacy sha256 on next successful login; new min length 8 (existing shorter passwords still work).
-8. **CORS restricted** to explicit origins in .env (incl. capacitor://localhost, https://localhost for native apps).
-- Frontend: consignor portal flows send `Authorization: Bearer <consignorToken>` (localStorage), magic-link landing via `/consignment-agreement?login_token=`, "Check your email" UIs. Files: ConsignmentAgreementForm.jsx, MessagingSection.jsx, FullScreenMessaging.jsx.
-- **Known/accepted**: standalone "Change Payment Method" page was pre-existing dead code (no entry button anywhere, even before remediation); endpoint is protected. Employee passwordless login intentionally retained per user choice. Consignor attachments upload was already non-functional pre-remediation (requires employee/admin JWT).
+3. **Consignor magic-link auth**: 30-min single-use token, 7-day consignor JWT.
+4. **Protected consignor endpoints** (previously public by email).
+5. **Debug endpoints admin-only**.
+6. **Regex injection fixed**.
+7. **bcrypt migration**: employee passwords rehash transparently from legacy sha256.
+8. **CORS restricted** to explicit origins.
 
-### AnyDesk Cross-Check + Session Alerts (2026-09-01) - NEW
+### AnyDesk Cross-Check + Session Alerts (2026-09-01) - UPDATED
 - **Session Alerts**: on every new session_start posted by the watcher, admins get APNs + web push ("🖥️ Remote worker connected" / "🚫 Remote connection REJECTED"), tap-through URL /remote-sessions. Implemented via `notify_admins_session_event()` in remote_sessions.py.
 - **Hours Cross-Check** `GET /api/remote-sessions/cross-check` (admin):
   - `clocked_in_no_session` (warning): open time entry NOT `admin_clocked`, employee mapped to AnyDesk ID(s), no active session → flag. Admin-clocked entries never flag (rule per user).
-  - `session_no_clock_in` (alert): active session ≥5 min for a mapped employee with no open clock-in.
+  - `session_no_clock_in` (alert): active session ≥3 min (GRACE_MINUTES constant, reduced from 5) for a mapped employee with no open clock-in.
   - `unmapped_active_session` (info): active session from unmapped AnyDesk ID.
   - Active = ended_at null AND started within 12h (staleness guard) AND not REJECTED.
+- **Auto Clock-Out on AnyDesk Disconnect (2026-09-01)**: When watcher posts a session_end event, the system looks up the mapped employee. If they have an open time entry, it's automatically closed with clock_out = disconnect timestamp, `anydesk_auto_clocked_out: true`, and note "Auto-closed by AnyDesk disconnect at {timestamp}". Hours are calculated using the same rounding logic as normal clock-outs. Admins are push-notified.
+- **Flag Push Notifications (2026-09-01)**: Cross-check mismatches now trigger admin push notifications (both APNs + web push) for BOTH directions: "clocked in no session" and "session no clock-in". A 1-hour dedup prevents repeated alerts for the same flag type + employee. Dedup records stored in `anydesk_flag_notifications` collection. Notifications fire on every session_start event (checking for missed clock-ins) and auto clock-out fires on every session_end.
 - Mapping now supports `employee_id` (+email) — required for cross-checks; page has employee dropdown in Assign name UI (`page-worker-employee-select`).
-- **Watcher timestamps now converted to UTC** (`local_to_utc_iso`) since AnyDesk logs use PC-local time; critical for the 5-min comparisons.
-- Frontend: flags banner (red/amber/blue) atop /remote-sessions page (`cross-check-flags`, `flag-{type}` testids), header shows "N active now".
-- Tested via curl: all 4 scenarios (session-no-clockin flag, both-active no flag, clocked-in-no-session flag, admin-clocked no flag) + push path fired; screenshot verified flag banner + dropdown.
+- **Watcher timestamps now converted to UTC** (`local_to_utc_iso`) since AnyDesk logs use PC-local time; critical for the 3-min comparisons.
+- Frontend: flags banner (red/amber/blue) atop /remote-sessions page (`cross-check-flags`, `flag-{type}` testids), header shows "N active now". HoursByEmployeeSection and EmployeeDashboard show "AnyDesk Auto-Out" badge on auto-clocked entries.
+- Tested: all scenarios pass (9/9 backend tests, frontend verified). See `/app/test_reports/iteration_55.json`.
 
 ## 3rd Party Integrations
 - Capacitor v8
@@ -194,263 +167,61 @@ Full audit remediation, backend 28/28 tests passing (testing agent iteration_54)
 - Stripe (Payments) - requires user API key
 - Resend (Emails) - configured
 - Firebase (Push notifications for native apps) - configured
-- **Web Push (Safari PWA)** - NEW: VAPID-based push notifications for iOS home screen web apps (iOS 16.4+)
+- **Web Push (Safari PWA)** - VAPID-based push notifications for iOS home screen web apps (iOS 16.4+)
 
 ## Recent Updates (2026-08-19)
 
-### Employee Terminations Section (NEW)
+### Employee Terminations Section
 - Added dedicated "Employee Terminations" section in Team Management group of Admin Dashboard
-- Features:
-  - Active Employees list with "Terminate" buttons
-  - Termination History with reason, date, and details
-  - Termination reasons: Resignation, Performance, Misconduct, Layoff, Other
-  - Confirmation flow requiring name entry to prevent accidents
-  - Admin notes and final pay date tracking
-  - Rehire capability (removes termination record, restores employee)
-  - Terminated employees hidden from main employee list but preserved in database for payroll/tax purposes
 - Backend: `/app/backend/app/routers/employee_terminations.py`
 - Frontend: `/app/frontend/src/components/admin/sections/EmployeeTerminationsSection.jsx`
 
 ### Interview In-App Response Workflow (COMPLETED)
-- Fixed API route ordering bug - `/interview-inbox` routes now before `/{test_id}` wildcard
-- Applicants can submit availability via web form link instead of email reply
+- Fixed API route ordering bug
+- Applicants can submit availability via web form link
 - Admin sees responses in "Interview Inbox" modal
-- Admin can send meeting confirmation with Google Meet link and CT/PHT timezone
-- Interview Response page: `/app/frontend/src/pages/InterviewResponsePage.jsx`
 
-### Interview Scheduling Preselect/Review Workflow (2026-08-20) - NEW
-- **Bug Fixed**: CT (Central Time) conversion now displays correctly when admin selects specific 30-minute meeting time
-- **Schedule (Review Later)**: Admin can save interview times as drafts without immediately sending confirmation email
-- **Review Scheduled Summary**: Dedicated view showing all scheduled (draft) interviews with both PHT and CT times
-- **Individual Send**: Admin can send confirmation email to one applicant at a time
-- **Bulk Send All**: Admin can send all scheduled confirmations at once with one click
-- **Backend Endpoints Added**:
-  - `POST /api/applicant-tests/interview-inbox/{request_id}/schedule` - Save draft with PHT + CT times
-  - `POST /api/applicant-tests/interview-inbox/{request_id}/send-scheduled` - Send confirmation for previously scheduled interview
-- **Workflow**: Admin picks times → Schedule (saves draft) → Review all on one screen → Send individually or bulk
+### Interview Scheduling Preselect/Review Workflow (2026-08-20)
+- Schedule (Review Later), Review Scheduled Summary, Individual Send, Bulk Send All
 
 ### Safari Web Push Notifications
-- Implemented VAPID-based Web Push for Safari PWA (home screen bookmarked web app)
-- Backend service: `/app/backend/app/services/web_push_service.py`
-- Backend routes: `/app/backend/app/routers/web_push.py`
-- Frontend component: `/app/frontend/src/components/WebPushSettings.jsx`
-- Service worker updated with push event handlers: `/app/frontend/public/service-worker.js`
-- Added `applicant_test_submission` notification type for when applicants complete skills tests
-- WebPushSettings component appears in notification dropdown, shows instructions if not installed as PWA
-- All in-app notification types now trigger both FCM (native) and Web Push (Safari PWA) notifications
+- VAPID-based Web Push for Safari PWA (home screen bookmarked web app)
 
-### Preview Modal Safe Area Fix
-- Fixed close button positioning in test preview modal to respect iOS safe area (status bar)
-- Added `padding-top: max(env(safe-area-inset-top), 12px)` to modal header
+### In-Person Interview Scheduler Alignment with Video Call Flow (2026-08-21)
+- Full Feature Parity with video call interview workflow
 
-### In-Person Interview Scheduler Alignment with Video Call Flow (2026-08-21) - NEW
-- **Full Feature Parity**: The in-person interview scheduler now matches the video call interview workflow
-- **New Availability-Based Flow**:
-  1. Admin sends availability request to applicant (instead of slot-based invite)
-  2. Applicant receives email with link to submit their preferred availability windows
-  3. Applicant submits availability via new `/submit-availability/:token` page
-  4. Admin reviews responses in "Availability Inbox" tab
-  5. Admin selects a 30-minute slot from applicant's availability
-  6. Admin schedules as draft (Review Later) or sends confirmation immediately
-- **New UI Components**:
-  - "Availability Inbox" tab - shows pending, responded, scheduled, and confirmed interviews
-  - "Send Invites" tab - "Request Availability" button instead of direct slot invites
-  - Schedule modal with 30-minute slot selection grid showing both PHT and CT times
-- **Backend Endpoints Added**:
-  - `POST /api/interview-scheduler/admin/send-availability-request/{application_id}` - Send availability request email
-  - `GET/POST /api/interview-scheduler/availability/{token}` - Applicant views/submits availability
-  - `GET /api/interview-scheduler/admin/availability-inbox` - Get all availability requests
-  - `POST /api/interview-scheduler/admin/availability-inbox/{request_id}/schedule` - Save draft schedule
-  - `POST /api/interview-scheduler/admin/availability-inbox/{request_id}/unschedule` - Remove draft
-  - `POST /api/interview-scheduler/admin/availability-inbox/{request_id}/send-confirmation` - Send confirmation email
-  - `POST /api/interview-scheduler/admin/availability-inbox/{request_id}/send-message` - Request new times
-  - `GET /api/interview-scheduler/admin/check-conflicts` - Check for time conflicts
-- **MongoDB Collection**: `inperson_availability_requests` for storing availability submissions
-- **Existing Production Data**: Not affected - old slot-based bookings preserved
+### Send Application Link Feature (2026-08-21)
+- Send job application links directly from the app with customizable forms
 
-### Send Application Link Feature (2026-08-21) - NEW
-- **Purpose**: Send job application links directly from the app with customizable forms
-- **Location**: Hiring section > "Send Application Link"
-- **Email Templates**:
-  - "Please Apply" - Generic invitation for new potential hires
-  - "Onboarding" - Follow-up for candidates already in the hiring process
-- **Customizable Required Fields**: Admin can toggle which fields applicants must fill out
-- **Optional Phone with Alternative Contact**:
-  - Phone number is now optional
-  - Applicants can provide: Alternative Contact Name, Phone, and Reason
-  - Useful for applicants without personal phones
-- **Tracking**: Shows sent invites with status (Sent/Opened/Completed)
-- **Application Review**: "Invited" badge shown on applications submitted via invite link
-- **Backend Endpoints**:
-  - `POST /api/admin/application-invites/send` - Send invite
-  - `GET /api/admin/application-invites` - List sent invites
-  - `GET /api/admin/email-pool` - Get email suggestions from existing contacts
-  - `GET/POST /api/forms/application-invite/{token}` - Applicant views/submits application
-- **MongoDB Collection**: `application_invites` for tracking sent invites
-- **New Page**: `/apply/:token` - Invited application form with conditional fields
+### Contractor Agreement & W-8BEN Updates (2026-08-23)
+- Simplified Payment Information, W-8BEN Viewing Fix
 
-### Contractor Agreement & W-8BEN Updates (2026-08-23) - NEW
-- **Simplified Payment Information**: Replaced Wise/E-Wallet toggle with unified payment fields
-  - All fields are shown: Account Holder Name/Email, Wallet Provider, Wallet Number, Address, Country, Wise Tag
-  - User fills in whichever fields apply to them (more flexible)
-  - No required fields for payment - user chooses what to provide
-- **W-8BEN Viewing Fix**: 
-  - Fixed employee W-8BEN "View Document" - was using wrong API path (`/api/api/...` instead of `/api/...`)
-  - Fixed admin W-8BEN viewing - now uses authenticated blob fetch instead of direct window.open
-  - Both employee and admin can now properly view W-8BEN documents in new tab
-- **Admin Agreement Review**: 
-  - Updated payment info display to show all available fields
-  - Print/PDF template updated with new payment field format
-  - Agreement text is now properly returned from pending list endpoint
+### Message Deletion Feature (2026-08-24)
+- Thread Deletion (Admin Only), Individual Message Deletion
 
-### Message Deletion Feature (2026-08-24) - NEW
-- **Thread Deletion (Admin Only)**:
-  - Soft-delete: Threads are hidden but recoverable (deleted_at, deleted_by fields)
-  - Swipe-to-delete gesture on conversation list items (swipe right to reveal delete button)
-  - Confirmation dialog required before thread deletion
-  - Deleted conversations filtered from both admin list and employee/consignor views
-- **Individual Message Deletion**:
-  - Senders can only delete their own messages
-  - Admin messages: Delete button appears on hover (left side of message)
-  - Employee/consignor messages: Delete button on their own messages
-  - Soft-delete with deleted_at field, messages filtered from responses
-- **Backend Endpoints**:
-  - `DELETE /api/conversations/admin/conversation/{id}` - Admin soft-deletes thread
-  - `DELETE /api/conversations/admin/message/{conversation_id}/{message_id}` - Admin deletes own message
-  - `DELETE /api/conversations/employee/message/{message_id}` - Employee deletes own message
-  - `DELETE /api/conversations/consignor/message/{message_id}?email={email}` - Consignor deletes own message
-- **UI Components**:
-  - SwipeableConversationItem component with framer-motion drag gestures
-  - Delete confirmation dialog with AlertTriangle icon and cancel/confirm buttons
-  - "← Swipe right to delete a thread" hint text in conversation list
+### Read Receipts Feature (2026-08-24)
+- Read Status Tracking with checkmarks
 
-### Read Receipts Feature (2026-08-24) - NEW
-- **Read Status Tracking**:
-  - Backend sets `read_at` timestamp when messages are marked as read
-  - Single checkmark (✓) = Message delivered
-  - Double checkmark (✓✓) = Message read by recipient
-- **Admin Toggle**:
-  - Eye/eye-off icon in conversation header to enable/disable read receipts
-  - Toggle state persists in localStorage (`admin_read_receipts_enabled`)
-  - When disabled, checkmarks are hidden from admin's sent messages
-- **Visual Indicators**:
-  - Admin messages show read status with timestamp on hover ("Seen 5m ago")
-  - Employee/consignor messages also show when admin has read them
-  - Blue double checkmarks indicate read, gray single checkmark indicates delivered
+### Messaging UX Improvements (2026-08-24)
+- Explicit "Read" Labels, Notification Bell vs Messages Icon Separation
 
-### Messaging UX Improvements (2026-08-24) - NEW
-- **Explicit "Read" Labels**:
-  - Added visible "Read" and "Sent" text labels next to checkmark icons
-  - Increased icon size from w-3.5 to w-4 for better visibility
-  - Applied to ConversationsSection, AdminFullScreenMessaging, and MessagingSection
-- **Notification Bell vs Messages Icon Separation**:
-  - Bell (Alerts) now only shows non-message notifications (clock in/out, job apps, etc.)
-  - Message-type notifications (employee_message, consignor_message, new_message) excluded from bell
-  - Messages icon in header shows unread message count badge separately
-  - This prevents duplicate message alerts and gives Messages its own dedicated indicator
-- **Backend Changes**:
-  - `/api/admin/notifications` now filters out message types from count and list
-  - Mark-read and clear-all also exclude message types
-  - Message unread counts handled separately by `/api/conversations/admin/unread-count`
-
-### AnyDesk Remote Worker Setup (2026-08-27) - NEW
-- **Remote Access Reversal**: Switched all RustDesk references back to AnyDesk per user request
-- **Quick-Connect Button**: Added "Connect to Work Computer" button that opens AnyDesk app directly using `anydesk:` URI scheme
-- **Password Security**: AnyDesk password is displayed in the app ("Thrifty Curator") for easy contractor access
-- **Remote Work Setup Section** (visible only to `is_remote_worker: true` employees):
-  - Step 1: Download AnyDesk button linking to anydesk.com/en/downloads
-  - Step 2: Share Your AnyDesk Address (optional) - employee can share their ID with admin
-  - Step 3: Quick-connect button + collapsible Manual Connection Details showing company AnyDesk ID and password with copy buttons
-  - Instructions updated to reference "Log in automatically from now on" checkbox (correct AnyDesk wording)
-  - Important Tips section with connection guidelines
-- **Files Updated**:
-  - `frontend/src/pages/EmployeeDashboard.jsx` - AnyDesk section with quick-connect
-  - `frontend/src/components/admin/sections/AllEmployeesSection.jsx` - Shows anydesk_address badge
-  - `frontend/src/components/admin/sections/SendApplicationLinkSection.jsx` - "Include AnyDesk Instructions" option
-  - `backend/app/routers/contractor_agreement.py` - Updated all agreement text from RustDesk to AnyDesk
-- **Backend Endpoint**: `POST /api/time/employees/me/anydesk` - Employee shares their AnyDesk address
+### AnyDesk Remote Worker Setup (2026-08-27)
+- Quick-Connect Button, Password Security, Remote Work Setup Section
 
 ### Admin-to-Admin Message Notifications (2026-08-29) - UPDATED 2026-08-30
-- **Cross-Admin Notifications**: When one admin (e.g., Eunice) sends a message in a conversation, the other admin (e.g., Matthew) now receives a push notification
-- **Notification Content**: Shows "{Admin Name} messaged {Participant Name}" with message preview
-- **Both Push Types**: Sends both APNs (native app) and Web Push (Safari PWA) to other admins
-- **Excludes Sender**: The admin who sends the message does NOT receive their own notification
-- **Deep Linking**: Notification includes conversation_id for opening the specific conversation
-- **Per-Admin Unread Count (2026-08-30 Fix)**: 
-  - Fixed the unread count logic to track reads per-admin using `read_by_admins` array on each admin message
-  - When Admin A sends a message, their ID is added to `read_by_admins` (they've "read" their own message)
-  - When Admin B opens the conversation, their ID is added to `read_by_admins` for messages from other admins
-  - The `/api/conversations/admin/unread-count` endpoint now returns per-admin unread counts
-  - Admin A's messages don't count as unread for Admin A, only for Admin B
-- **File Updated**: `backend/app/routers/conversations.py` - Fixed `get_admin_unread_count`, `get_all_conversations`, and `get_conversation` endpoints
+- Cross-Admin Notifications, Per-Admin Unread Count
 
-### UI Display Fixes (2026-08-29) - NEW
-- **Employee Shifts Modal Fix**: Fixed modal overlay issues where content was showing through from behind. Used React Portal to render modal at document.body level, escaping parent overflow constraints
-- **Mobile Messaging Layout**: Fixed the conversation section so that when viewing a conversation on mobile, the conversation list is hidden to prevent overlapping/empty space issues
-- **Files Updated**:
-  - `frontend/src/components/admin/sections/HoursByEmployeeSection.jsx` - Portal-based modal rendering
-  - `frontend/src/components/admin/sections/ConversationsSection.jsx` - Hide list on mobile when conversation selected
+### Payment Records Auto-fill (2026-08-31)
+- Auto-fill amount field with owed amount when selecting employee
 
-### Payment Records Auto-fill (2026-08-31) - NEW
-- **Feature**: When entering payment records in the admin dashboard, selecting an employee now auto-fills the amount field with what they are owed for the current pay period
-- **Implementation Details**:
-  - Added `fetchPayrollSummary()` function to fetch payroll summary with per-employee breakdown
-  - Employee picker modal now shows "Owed: $X.XX" preview with sparkle icon for employees with amounts > 0
-  - On employee selection, amount field auto-populates with their owed amount
-  - Toast notification confirms: "Amount auto-filled: $X.XX owed for current period"
-- **API Used**: `GET /api/admin/payroll/summary` returns `current_period.by_employee` array with `name`, `amount`, `hours`, `hourly_rate`
-- **Files Updated**:
-  - `frontend/src/components/admin/sections/PaymentRecordsSection.jsx` - Added payroll summary fetch and auto-fill logic
+### Pay Period Date Fix & Remote Worker Timezone Toggle (2026-08-31)
+- Fixed timezone conversion, Added CT/PHT toggle for remote workers
 
-### Pay Period Date Fix & Remote Worker Timezone Toggle (2026-08-31) - NEW
-- **Pay Period Date Bug Fix**: Fixed timezone conversion issue where pay period dates were off by one day
-  - Root cause: JavaScript's `toLocaleDateString()` converted UTC dates to local timezone, shifting dates
-  - Solution: Added `timeZone: 'UTC'` to date formatting options across all pay period displays
-  - Fixed in: `PayrollSummaryCard.jsx`, `AdminDashboard.jsx`
-- **Remote Worker Timezone Toggle**: Added ability for remote workers to view dates/times in either Central Time or Philippine Time
-  - Toggle bar appears below header only for remote workers
-  - Buttons: 🇺🇸 Central (default) | 🇵🇭 Philippine
-  - Affects `formatDateTime` function which displays clock in/out times, shift times, etc.
-  - Central Time: America/Chicago (UTC-6/5 with DST)
-  - Philippine Time: Asia/Manila (UTC+8, 13-14 hours ahead)
-- **Files Updated**:
-  - `frontend/src/components/admin/PayrollSummaryCard.jsx` - UTC date formatting
-  - `frontend/src/pages/AdminDashboard.jsx` - UTC date formatting for pay period displays
-  - `frontend/src/pages/EmployeeDashboard.jsx` - Added timezone toggle and updated formatDateTime function
+### Message Attachment Display Fix (2026-08-31)
+- Fixed CSS rule hiding attachment URLs containing "emergent"
 
-### Message Attachment Display Fix (2026-08-31) - NEW
-- **Bug Fixed**: Image attachments in messages were showing only a paperclip icon instead of the actual photo thumbnail
-- **Root Cause**: The Emergent platform injects a CSS rule that hides any `<a>` elements with `href` containing "emergent":
-  ```css
-  [class*="emergent"], a[href*="emergent"], ... { display: none; visibility: hidden; }
-  ```
-  The attachment URLs used the full backend URL (`https://curator-app-3.preview.emergentagent.com/api/conversations/attachment/...`) which matched this rule.
-- **Solution**: Changed attachment `href` and `img src` to use relative URLs (`/api/conversations/attachment/...`) instead of absolute URLs, avoiding the CSS rule.
-- **Files Updated**:
-  - `frontend/src/components/FullScreenMessaging.jsx` - Relative URLs for attachment display
-  - `frontend/src/components/AdminFullScreenMessaging.jsx` - Relative URLs for attachment display
+### Admin-to-Admin Push Notification Fix (2026-09-01)
+- Fixed web-push query field (role vs user_type), removed early return
 
-### Admin-to-Admin Push Notification Fix (2026-09-01) - NEW
-- **Bug**: One admin never received push notifications when the other admin sent a message (unread badge worked, push did not). Employee-message pushes worked fine.
-- **Production RCA (via deployer debug agent)**:
-  1. ALL `device_push_tokens` in production are `active: false` (0 of 6) — the APNs channel is dead for everyone. Employee→admin notifications arrive ONLY via web push.
-  2. `send_other_admins_notification()` had an early `return` when 0 APNs tokens were found, so its web-push leg never ran.
-  3. Its web-push query filtered `{"user_type": "admin"}` but subscriptions store the field **`role`** — query always returned 0.
-- **Fixes in `backend/app/routers/conversations.py`**:
-  - Web-push query now uses `{"role": {"$in": ["admin", "owner"]}}` (matches the working employee path in `web_push_service.send_to_admins`)
-  - Removed early return: web-push leg always runs even with 0 APNs tokens
-  - Admin-reply→participant web push also fixed (same `user_type` vs `role` field trap) and now sends to ALL of the participant's subscriptions
-  - Expired subscriptions (404/410) are auto-removed
-- **Verified in preview**: simulated second-admin subscription received the fan-out (logs show `[WebPush] Admin message: 1 other-admin subscription(s)`)
-- **Known secondary issue (backlog)**: all APNs device tokens in production are inactive — native (non-PWA) push is dead platform-wide; likely sandbox/production APNs mismatch or token invalidation on 400/410. Web push covers current admin usage.
-
-### Durable Object Storage Migration (2026-09-01) - NEW
-- **All file uploads migrated from pod-local disk to Emergent Object Storage** (survives redeploys/pod restarts):
-  1. Message attachments (`conversations.py`) — records in `db.message_attachment_files`
-  2. Consignment photos (`forms.py`) — new serve route `GET /api/forms/consignment-photo/{filename}`, records in `db.consignment_photo_files`
-  3. Tax return documents (`financials.py`) — docs store `storage_path`, records in `db.tax_return_documents`
-  4. GPS trip receipts (`gps_trips.py`) — records in `db.receipt_files`
-- New service: `backend/app/services/object_storage.py` (init/put/get via `EMERGENT_LLM_KEY` + `INTEGRATION_PROXY_URL`)
-- **Legacy fallback**: each serve endpoint falls back to the old local path for files uploaded before migration; old consignment photos still served by `/api/uploads` static mount
-- URL formats returned to the frontend are unchanged (no frontend changes needed)
-- All 4 upload+serve flows verified e2e in preview via curl (byte-for-byte match)
+### Durable Object Storage Migration (2026-09-01)
+- All file uploads migrated from pod-local disk to Emergent Object Storage

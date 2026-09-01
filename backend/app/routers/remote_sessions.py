@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 import hashlib
+import math
 import secrets
 import uuid
 import os
@@ -11,6 +12,8 @@ from app.database import db
 from app.dependencies import get_admin_user
 
 router = APIRouter(prefix="/remote-sessions", tags=["Remote Sessions"])
+
+GRACE_MINUTES = 3  # How long an AnyDesk session can be active before flagging no clock-in
 
 
 def verify_watcher_key(x_watcher_key: Optional[str] = Header(None)):
@@ -66,12 +69,178 @@ async def notify_admins_session_event(event: SessionEvent, host: str):
         print(f"[RemoteSessions] Failed to notify admins: {e}")
 
 
+async def notify_admins_flag(title: str, body: str):
+    """Push notify admins when a cross-check mismatch flag is detected"""
+    try:
+        from app.services.apns_service import send_admin_push_notification
+        from app.services.web_push_service import get_web_push_service
+
+        await send_admin_push_notification(title=title, body=body, notification_type="remote_session_flag")
+        await get_web_push_service().send_to_admins(
+            db=db, title=title, body=body, url="/remote-sessions", notification_type="remote_session_flag"
+        )
+    except Exception as e:
+        print(f"[RemoteSessions] Failed to send flag notification: {e}")
+
+
+def _round_up_to_minute(seconds: float) -> float:
+    """Matches payroll rounding: round UP to the next whole minute, return decimal hours."""
+    if seconds <= 0:
+        return 0
+    minutes_raw = round(seconds / 60, 6)
+    total_minutes = math.ceil(minutes_raw)
+    return total_minutes / 60
+
+
+async def auto_clock_out_for_disconnect(anydesk_id: str, disconnect_iso: str):
+    """When AnyDesk session ends, auto clock-out the mapped employee if still clocked in.
+    Sets clock_out = disconnect time and adds an 'anydesk_auto_clocked_out' note."""
+    mapping = await db.anydesk_id_mappings.find_one({"anydesk_id": anydesk_id})
+    if not mapping or not mapping.get("employee_id"):
+        return None
+
+    employee_id = mapping["employee_id"]
+    worker_name = mapping.get("worker_name", "Unknown")
+
+    active_entry = await db.time_entries.find_one(
+        {"user_id": employee_id, "clock_out": None}, {"_id": 0}
+    )
+    if not active_entry:
+        return None  # Not clocked in — nothing to do
+
+    # Calculate hours using same logic as normal clock-out
+    try:
+        disconnect_time = datetime.fromisoformat(disconnect_iso)
+        if disconnect_time.tzinfo is None:
+            disconnect_time = disconnect_time.replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        disconnect_time = datetime.now(timezone.utc)
+
+    last_clock_in = active_entry.get("last_clock_in", active_entry["clock_in"])
+    clock_in_time = datetime.fromisoformat(last_clock_in)
+    if clock_in_time.tzinfo is None:
+        clock_in_time = clock_in_time.replace(tzinfo=timezone.utc)
+
+    session_seconds = max(0, (disconnect_time - clock_in_time).total_seconds())
+    accumulated_seconds = active_entry.get("accumulated_hours", 0.0) * 3600
+    total_seconds = accumulated_seconds + session_seconds
+    total_hours = _round_up_to_minute(total_seconds)
+
+    clock_out_iso = disconnect_time.isoformat()
+    await db.time_entries.update_one(
+        {"id": active_entry["id"]},
+        {"$set": {
+            "clock_out": clock_out_iso,
+            "total_hours": total_hours,
+            "accumulated_hours": total_hours,
+            "auto_clocked_out": True,
+            "anydesk_auto_clocked_out": True,
+            "anydesk_auto_clock_out_note": f"Auto-closed by AnyDesk disconnect at {clock_out_iso}"
+        }}
+    )
+    print(f"[RemoteSessions] Auto clocked-out {worker_name} (entry {active_entry['id']}) at {clock_out_iso}, hours={total_hours:.4f}")
+
+    # Notify admins about auto clock-out
+    await notify_admins_flag(
+        title="⏹️ Auto clock-out",
+        body=f"{worker_name} was auto-clocked out (AnyDesk disconnected). {total_hours:.2f}h logged."
+    )
+    return active_entry["id"]
+
+
+async def run_cross_check_and_notify():
+    """Run the cross-check logic and push-notify admins for any flags found.
+    Uses a dedup key so the same flag isn't pushed more than once per hour."""
+    now = datetime.now(timezone.utc)
+
+    mappings = await db.anydesk_id_mappings.find({}, {"_id": 0}).to_list(200)
+    mapping_by_anydesk = {m["anydesk_id"]: m for m in mappings}
+    employee_anydesk_ids = {}
+    for m in mappings:
+        if m.get("employee_id"):
+            employee_anydesk_ids.setdefault(m["employee_id"], []).append(m["anydesk_id"])
+
+    cutoff = (now - timedelta(hours=12)).isoformat()
+    active_sessions = await db.anydesk_sessions.find(
+        {"ended_at": None, "auth_method": {"$ne": "REJECTED"}, "started_at": {"$gte": cutoff}},
+        {"_id": 0, "fingerprint": 0}
+    ).to_list(100)
+    active_by_anydesk_id = {}
+    for s in active_sessions:
+        if s.get("anydesk_id"):
+            active_by_anydesk_id.setdefault(s["anydesk_id"], []).append(s)
+
+    open_entries = await db.time_entries.find({"clock_out": None}, {"_id": 0}).to_list(100)
+    open_by_employee = {e["user_id"]: e for e in open_entries if e.get("user_id")}
+
+    flags = []
+
+    # 1. Clocked in but no active AnyDesk session (skip admin-clocked)
+    for entry in open_entries:
+        if entry.get("admin_clocked"):
+            continue
+        emp_id = entry.get("user_id")
+        anydesk_ids = employee_anydesk_ids.get(emp_id)
+        if not anydesk_ids:
+            continue
+        if not any(aid in active_by_anydesk_id for aid in anydesk_ids):
+            flags.append({
+                "type": "clocked_in_no_session",
+                "employee_id": emp_id,
+                "worker_name": entry.get("user_name", "Unknown"),
+                "title": "⚠️ Clocked in, no AnyDesk",
+                "body": f"{entry.get('user_name', 'Unknown')} is clocked in but has no active AnyDesk session"
+            })
+
+    # 2. AnyDesk active > GRACE_MINUTES but not clocked in
+    for s in active_sessions:
+        mapping = mapping_by_anydesk.get(s.get("anydesk_id"))
+        try:
+            started = datetime.fromisoformat(s["started_at"])
+            if started.tzinfo is None:
+                started = started.replace(tzinfo=timezone.utc)
+            minutes_active = (now - started).total_seconds() / 60
+        except (ValueError, TypeError):
+            minutes_active = 0
+        if minutes_active < GRACE_MINUTES:
+            continue
+        if mapping and mapping.get("employee_id"):
+            if mapping["employee_id"] not in open_by_employee:
+                flags.append({
+                    "type": "session_no_clock_in",
+                    "employee_id": mapping["employee_id"],
+                    "worker_name": mapping.get("worker_name") or s.get("alias") or s.get("anydesk_id"),
+                    "title": "🚨 AnyDesk active, not clocked in",
+                    "body": f"{mapping.get('worker_name')} has been on AnyDesk for {int(minutes_active)} min but is NOT clocked in"
+                })
+
+    # Dedup: only push a flag if we haven't sent the same type+employee within the last hour
+    one_hour_ago = (now - timedelta(hours=1)).isoformat()
+    for flag in flags:
+        dedup_key = f"{flag['type']}:{flag.get('employee_id', 'unknown')}"
+        already_sent = await db.anydesk_flag_notifications.find_one({
+            "dedup_key": dedup_key, "sent_at": {"$gte": one_hour_ago}
+        })
+        if not already_sent:
+            await notify_admins_flag(title=flag["title"], body=flag["body"])
+            await db.anydesk_flag_notifications.insert_one({
+                "dedup_key": dedup_key,
+                "type": flag["type"],
+                "sent_at": now.isoformat(),
+                "detail": flag["body"]
+            })
+            print(f"[RemoteSessions] Flag notification sent: {flag['type']} for {flag.get('worker_name')}")
+        else:
+            print(f"[RemoteSessions] Flag deduped (already sent within 1h): {dedup_key}")
+
+
 @router.post("/log")
 async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_key)):
     """Receive parsed AnyDesk session events from the Windows watcher script"""
     processed = 0
     duplicates = 0
     matched_ends = 0
+    auto_clocked_out = []
     
     for event in batch.events:
         fingerprint = hashlib.sha256(
@@ -99,6 +268,12 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
             })
             processed += 1
             await notify_admins_session_event(event, batch.host)
+            # Run cross-check after session start (checks for "not clocked in" after grace period)
+            # Scheduled as fire-and-forget so watcher response isn't delayed
+            try:
+                await run_cross_check_and_notify()
+            except Exception as e:
+                print(f"[RemoteSessions] Cross-check after session_start failed: {e}")
         
         elif event.event_type == "session_end":
             # Match the most recent open session (by anydesk_id if known, else by host)
@@ -116,6 +291,7 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
             
+            resolved_anydesk_id = None
             if open_session:
                 try:
                     start = datetime.fromisoformat(open_session["started_at"])
@@ -128,9 +304,27 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                     {"$set": {"ended_at": event.timestamp, "duration_seconds": duration}}
                 )
                 matched_ends += 1
+                resolved_anydesk_id = open_session.get("anydesk_id")
+
+            # Auto clock-out: use the event's anydesk_id first, fall back to the matched session's
+            target_anydesk_id = event.anydesk_id or resolved_anydesk_id
+            if target_anydesk_id:
+                try:
+                    entry_id = await auto_clock_out_for_disconnect(target_anydesk_id, event.timestamp)
+                    if entry_id:
+                        auto_clocked_out.append(entry_id)
+                except Exception as e:
+                    print(f"[RemoteSessions] Auto clock-out failed for {target_anydesk_id}: {e}")
+
             processed += 1
     
-    return {"success": True, "processed": processed, "duplicates": duplicates, "matched_ends": matched_ends}
+    return {
+        "success": True,
+        "processed": processed,
+        "duplicates": duplicates,
+        "matched_ends": matched_ends,
+        "auto_clocked_out": auto_clocked_out
+    }
 
 
 @router.get("")
@@ -154,7 +348,7 @@ async def list_sessions(limit: int = 100, admin: dict = Depends(get_admin_user))
 async def hours_cross_check(admin: dict = Depends(get_admin_user)):
     """Flag mismatches between clock-ins and active AnyDesk sessions.
     - Clocked in (not by admin) but no active AnyDesk session
-    - AnyDesk session active >5 min but worker not clocked in
+    - AnyDesk session active > GRACE_MINUTES but worker not clocked in
     """
     now = datetime.now(timezone.utc)
     flags = []
@@ -197,7 +391,7 @@ async def hours_cross_check(admin: dict = Depends(get_admin_user)):
                 "detail": f"{entry.get('user_name', 'Unknown')} is clocked in (since {entry.get('last_clock_in') or entry.get('clock_in')}) but has no active AnyDesk session"
             })
     
-    # 2. AnyDesk active >5 min but not clocked in
+    # 2. AnyDesk active > GRACE_MINUTES but not clocked in
     for s in active_sessions:
         mapping = mapping_by_anydesk.get(s.get("anydesk_id"))
         try:
@@ -207,7 +401,7 @@ async def hours_cross_check(admin: dict = Depends(get_admin_user)):
             minutes_active = (now - started).total_seconds() / 60
         except (ValueError, TypeError):
             minutes_active = 0
-        if minutes_active < 5:
+        if minutes_active < GRACE_MINUTES:
             continue
         if mapping and mapping.get("employee_id"):
             if mapping["employee_id"] not in open_by_employee:

@@ -2059,10 +2059,15 @@ export default function EmployeeDashboard({
                         </div>
                         <div className="text-right">
                           {entry.clock_out ? (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#00D4FF]/10 rounded-full text-sm font-medium text-[#0891B2]">
-                              <Clock className="w-3 h-3" />
-                              {formatHoursToHMS(entry.total_hours)}
-                            </span>
+                            <div className="flex flex-col items-end gap-1">
+                              <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#00D4FF]/10 rounded-full text-sm font-medium text-[#0891B2]">
+                                <Clock className="w-3 h-3" />
+                                {formatHoursToHMS(entry.total_hours)}
+                              </span>
+                              {entry.anydesk_auto_clocked_out && (
+                                <span className="text-[10px] text-purple-600 font-medium">AnyDesk Auto-Out</span>
+                              )}
+                            </div>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 rounded-full text-sm font-medium text-green-700">
                               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />

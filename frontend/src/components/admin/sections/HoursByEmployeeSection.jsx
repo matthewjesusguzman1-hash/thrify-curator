@@ -454,6 +454,11 @@ export default function HoursByEmployeeSection({
                                   Active
                                 </span>
                               )}
+                              {entry.anydesk_auto_clocked_out && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 rounded-full text-xs font-medium text-purple-700" title={entry.anydesk_auto_clock_out_note || "Auto-closed by AnyDesk disconnect"}>
+                                  AnyDesk Auto-Out
+                                </span>
+                              )}
                             </div>
                             <div className="text-sm text-[#666] space-y-1">
                               <p><span className="font-medium">In:</span> {formatDateTime(entry.clock_in)}</p>

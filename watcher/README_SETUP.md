@@ -80,3 +80,13 @@ Per session: AnyDesk ID, alias, incoming/outgoing, auth method (password/token/
 manual accept or REJECTED), start time, end time + duration when detectable,
 and which host PC it happened on. In the dashboard you can assign a worker
 name to each AnyDesk ID so sessions show "Maria" instead of "123456789".
+
+## What happens automatically
+- **Session Alerts**: Admins get a push notification when a remote worker connects
+  or when a connection is rejected.
+- **Auto Clock-Out**: When an AnyDesk session ends (worker disconnects), the system
+  automatically clocks out any employee still clocked in who is mapped to that
+  AnyDesk ID. The time entry shows "Auto-closed by AnyDesk disconnect".
+- **Cross-Check Flags**: If a worker has been on AnyDesk for 3+ minutes without
+  clocking in, or is clocked in with no active AnyDesk session, admins get a push
+  notification (once per hour per flag). Admin-initiated clock-ins are excluded.
