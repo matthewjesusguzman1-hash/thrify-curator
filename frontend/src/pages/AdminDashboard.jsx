@@ -176,9 +176,10 @@ export default function AdminDashboard() {
   const [forceOpenPayrollGroup, setForceOpenPayrollGroup] = useState(false);
   const [forceOpenClockedInTracker, setForceOpenClockedInTracker] = useState(false);
   
-  // Touch swipe tracking for payroll quick view
+  // Touch/scroll swipe tracking for payroll quick view
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
+  const lastWheelTime = useRef(0); // Debounce trackpad scrolls
   
   // Track data updates for real-time sync
   const [lastDataUpdate, setLastDataUpdate] = useState(Date.now());
@@ -2853,6 +2854,34 @@ export default function AdminDashboard() {
                     }
                     touchStartX.current = null;
                     touchStartY.current = null;
+                  }}
+                  onWheel={(e) => {
+                    // Mac trackpad two-finger horizontal scroll with debounce
+                    const now = Date.now();
+                    if (now - lastWheelTime.current < 300) return; // 300ms debounce
+                    
+                    // deltaX > 0 = scroll right (like swiping left) = go to past
+                    // deltaX < 0 = scroll left (like swiping right) = go to current
+                    if (Math.abs(e.deltaX) > 30 && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                      e.preventDefault();
+                      lastWheelTime.current = now;
+                      
+                      if (e.deltaX > 0) {
+                        // Scroll right = go to previous period (past)
+                        if (payrollPeriodIndex > -2) {
+                          const newIndex = payrollPeriodIndex - 1;
+                          setPayrollPeriodIndex(newIndex);
+                          fetchPayrollSummary(newIndex);
+                        }
+                      } else {
+                        // Scroll left = go to next period (toward current)
+                        if (payrollPeriodIndex < 0) {
+                          const newIndex = payrollPeriodIndex + 1;
+                          setPayrollPeriodIndex(newIndex);
+                          fetchPayrollSummary(newIndex);
+                        }
+                      }
+                    }
                   }}
                 >
                   {/* Header */}
