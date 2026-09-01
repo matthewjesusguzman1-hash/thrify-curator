@@ -176,6 +176,18 @@ Full audit remediation, backend 28/28 tests passing (testing agent iteration_54)
 - Frontend: consignor portal flows send `Authorization: Bearer <consignorToken>` (localStorage), magic-link landing via `/consignment-agreement?login_token=`, "Check your email" UIs. Files: ConsignmentAgreementForm.jsx, MessagingSection.jsx, FullScreenMessaging.jsx.
 - **Known/accepted**: standalone "Change Payment Method" page was pre-existing dead code (no entry button anywhere, even before remediation); endpoint is protected. Employee passwordless login intentionally retained per user choice. Consignor attachments upload was already non-functional pre-remediation (requires employee/admin JWT).
 
+### AnyDesk Cross-Check + Session Alerts (2026-09-01) - NEW
+- **Session Alerts**: on every new session_start posted by the watcher, admins get APNs + web push ("🖥️ Remote worker connected" / "🚫 Remote connection REJECTED"), tap-through URL /remote-sessions. Implemented via `notify_admins_session_event()` in remote_sessions.py.
+- **Hours Cross-Check** `GET /api/remote-sessions/cross-check` (admin):
+  - `clocked_in_no_session` (warning): open time entry NOT `admin_clocked`, employee mapped to AnyDesk ID(s), no active session → flag. Admin-clocked entries never flag (rule per user).
+  - `session_no_clock_in` (alert): active session ≥5 min for a mapped employee with no open clock-in.
+  - `unmapped_active_session` (info): active session from unmapped AnyDesk ID.
+  - Active = ended_at null AND started within 12h (staleness guard) AND not REJECTED.
+- Mapping now supports `employee_id` (+email) — required for cross-checks; page has employee dropdown in Assign name UI (`page-worker-employee-select`).
+- **Watcher timestamps now converted to UTC** (`local_to_utc_iso`) since AnyDesk logs use PC-local time; critical for the 5-min comparisons.
+- Frontend: flags banner (red/amber/blue) atop /remote-sessions page (`cross-check-flags`, `flag-{type}` testids), header shows "N active now".
+- Tested via curl: all 4 scenarios (session-no-clockin flag, both-active no flag, clocked-in-no-session flag, admin-clocked no flag) + push path fired; screenshot verified flag banner + dropdown.
+
 ## 3rd Party Integrations
 - Capacitor v8
 - Transistorsoft Background Geolocation

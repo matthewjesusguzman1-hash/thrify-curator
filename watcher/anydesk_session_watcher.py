@@ -21,6 +21,15 @@ from datetime import datetime
 import requests
 from watchdog.observers.polling import PollingObserver
 from watchdog.events import FileSystemEventHandler
+from datetime import timezone
+
+
+def local_to_utc_iso(date_part, time_part):
+    """AnyDesk logs use the PC's local time; convert to UTC ISO for the backend."""
+    if len(time_part) == 5:
+        time_part += ":00"
+    naive = datetime.strptime(f"{date_part} {time_part}", "%Y-%m-%d %H:%M:%S")
+    return naive.astimezone().astimezone(timezone.utc).isoformat()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, "watcher_config.json")
@@ -120,7 +129,7 @@ def parse_connection_trace_line(line):
     auth_tokens = {"User", "Passwd", "Token", "REJECTED", "Permanent"}
     if not auth and alias in auth_tokens:
         auth, alias = alias, None
-    ts = f"{date_part}T{time_part if len(time_part) == 8 else time_part + ':00'}"
+    ts = local_to_utc_iso(date_part, time_part)
     return {
         "event_type": "session_start",
         "direction": direction,
@@ -138,7 +147,7 @@ def parse_service_trace_line(line):
         return None
     return {
         "event_type": "session_end",
-        "timestamp": f"{m.group(1)}T{m.group(2)}",
+        "timestamp": local_to_utc_iso(m.group(1), m.group(2)),
         "anydesk_id": None,
         "raw_line": line.strip()[:300]
     }

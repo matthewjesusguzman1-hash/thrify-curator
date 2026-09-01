@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Monitor, ArrowLeft, RefreshCw, UserPlus, Search } from "lucide-react";
+import { Monitor, ArrowLeft, RefreshCw, UserPlus, Search, AlertTriangle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -17,14 +17,21 @@ export default function RemoteSessionsPage() {
   const [search, setSearch] = useState("");
   const [mappingId, setMappingId] = useState(null);
   const [mappingName, setMappingName] = useState("");
+  const [mappingEmployeeId, setMappingEmployeeId] = useState("");
+  const [employees, setEmployees] = useState([]);
+  const [flags, setFlags] = useState([]);
 
   const getAuthHeader = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
 
   const fetchSessions = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/remote-sessions?limit=300`, getAuthHeader());
-      setSessions(res.data.sessions || []);
+      const [sessRes, flagRes] = await Promise.all([
+        axios.get(`${API}/remote-sessions?limit=300`, getAuthHeader()),
+        axios.get(`${API}/remote-sessions/cross-check`, getAuthHeader()).catch(() => ({ data: { flags: [] } }))
+      ]);
+      setSessions(sessRes.data.sessions || []);
+      setFlags(flagRes.data.flags || []);
     } catch (e) {
       if (e.response?.status === 401 || e.response?.status === 403) {
         navigate("/login");
@@ -42,15 +49,25 @@ export default function RemoteSessionsPage() {
       return;
     }
     fetchSessions();
+    axios.get(`${API}/admin/employees`, getAuthHeader())
+      .then((res) => setEmployees((Array.isArray(res.data) ? res.data : res.data.employees || []).filter((e) => e.role !== "admin")))
+      .catch(() => {});
   }, [fetchSessions, navigate]);
 
   const saveMapping = async (anydeskId) => {
     if (!mappingName.trim()) return;
     try {
-      await axios.post(`${API}/remote-sessions/map`, { anydesk_id: anydeskId, worker_name: mappingName.trim() }, getAuthHeader());
-      toast.success("Worker name saved");
+      const emp = employees.find((e) => e.id === mappingEmployeeId);
+      await axios.post(`${API}/remote-sessions/map`, {
+        anydesk_id: anydeskId,
+        worker_name: mappingName.trim(),
+        employee_id: mappingEmployeeId || null,
+        employee_email: emp?.email || null
+      }, getAuthHeader());
+      toast.success("Worker mapping saved");
       setMappingId(null);
       setMappingName("");
+      setMappingEmployeeId("");
       fetchSessions();
     } catch (e) {
       toast.error("Failed to save worker name");
@@ -118,6 +135,28 @@ export default function RemoteSessionsPage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-4 space-y-4">
+        {/* Cross-check flags */}
+        {flags.length > 0 && (
+          <div className="space-y-2" data-testid="cross-check-flags">
+            {flags.map((f, i) => (
+              <div
+                key={i}
+                className={`flex items-start gap-2.5 rounded-xl px-4 py-3 border text-sm ${
+                  f.severity === "alert"
+                    ? "bg-red-500/10 border-red-500/40 text-red-200"
+                    : f.severity === "warning"
+                    ? "bg-amber-500/10 border-amber-500/40 text-amber-200"
+                    : "bg-sky-500/10 border-sky-500/30 text-sky-200"
+                }`}
+                data-testid={`flag-${f.type}`}
+              >
+                {f.severity === "info" ? <Info className="w-4 h-4 mt-0.5 shrink-0" /> : <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />}
+                <span>{f.detail}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Filters */}
         <div className="flex gap-2 items-center">
           <div className="relative flex-1">
@@ -181,7 +220,7 @@ export default function RemoteSessionsPage() {
                   {s.auth_method === "REJECTED" && <span className="text-[10px] font-bold text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full">REJECTED</span>}
                   {!s.worker_name && (
                     <button
-                      onClick={() => { setMappingId(s.anydesk_id); setMappingName(""); }}
+                      onClick={() => { setMappingId(s.anydesk_id); setMappingName(""); setMappingEmployeeId(""); }}
                       className="text-xs text-indigo-300 hover:text-indigo-200 flex items-center gap-1"
                       data-testid={`page-assign-worker-${s.anydesk_id}`}
                     >
@@ -197,18 +236,34 @@ export default function RemoteSessionsPage() {
                   <span>Auth: <span className="text-white/80">{s.auth_method || "—"}</span></span>
                 </div>
                 {mappingId === s.anydesk_id && (
-                  <div className="mt-3 flex gap-2">
-                    <Input
-                      value={mappingName}
-                      onChange={(e) => setMappingName(e.target.value)}
-                      placeholder="Worker name (e.g. Maria)"
-                      className="h-8 text-sm bg-white/10 border-white/20 text-white placeholder:text-white/40"
-                      data-testid="page-worker-name-input"
-                      onKeyDown={(e) => e.key === "Enter" && saveMapping(s.anydesk_id)}
-                      autoFocus
-                    />
-                    <Button size="sm" className="h-8 bg-indigo-500 hover:bg-indigo-600" onClick={() => saveMapping(s.anydesk_id)} data-testid="page-worker-name-save">Save</Button>
-                    <Button size="sm" variant="ghost" className="h-8 text-white/60" onClick={() => setMappingId(null)}>Cancel</Button>
+                  <div className="mt-3 space-y-2">
+                    <select
+                      value={mappingEmployeeId}
+                      onChange={(e) => {
+                        setMappingEmployeeId(e.target.value);
+                        const emp = employees.find((emp2) => emp2.id === e.target.value);
+                        if (emp) setMappingName(emp.name);
+                      }}
+                      className="w-full h-9 rounded-lg bg-white/10 border border-white/20 text-white text-sm px-2 [&>option]:text-black"
+                      data-testid="page-worker-employee-select"
+                    >
+                      <option value="">Link to employee (enables hours cross-check)</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>{emp.name} ({emp.email})</option>
+                      ))}
+                    </select>
+                    <div className="flex gap-2">
+                      <Input
+                        value={mappingName}
+                        onChange={(e) => setMappingName(e.target.value)}
+                        placeholder="Display name (e.g. Maria)"
+                        className="h-8 text-sm bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                        data-testid="page-worker-name-input"
+                        onKeyDown={(e) => e.key === "Enter" && saveMapping(s.anydesk_id)}
+                      />
+                      <Button size="sm" className="h-8 bg-indigo-500 hover:bg-indigo-600" onClick={() => saveMapping(s.anydesk_id)} data-testid="page-worker-name-save">Save</Button>
+                      <Button size="sm" variant="ghost" className="h-8 text-white/60" onClick={() => { setMappingId(null); setMappingEmployeeId(""); }}>Cancel</Button>
+                    </div>
                   </div>
                 )}
               </motion.div>

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import hashlib
 import secrets
 import uuid
@@ -39,6 +39,31 @@ class AnydeskMapping(BaseModel):
     anydesk_id: str
     worker_name: str
     employee_email: Optional[str] = None
+    employee_id: Optional[str] = None
+
+
+async def notify_admins_session_event(event: SessionEvent, host: str):
+    """Push notify admins when a remote worker connects or is rejected"""
+    try:
+        mapping = await db.anydesk_id_mappings.find_one({"anydesk_id": event.anydesk_id}) if event.anydesk_id else None
+        who = (mapping and mapping.get("worker_name")) or event.alias or f"AnyDesk {event.anydesk_id}"
+        
+        if event.auth_method == "REJECTED":
+            title = "🚫 Remote connection REJECTED"
+            body = f"{who} was rejected connecting to {host}"
+        else:
+            title = "🖥️ Remote worker connected"
+            body = f"{who} connected to {host} via AnyDesk"
+        
+        from app.services.apns_service import send_admin_push_notification
+        from app.services.web_push_service import get_web_push_service
+        
+        await send_admin_push_notification(title=title, body=body, notification_type="remote_session")
+        await get_web_push_service().send_to_admins(
+            db=db, title=title, body=body, url="/remote-sessions", notification_type="remote_session"
+        )
+    except Exception as e:
+        print(f"[RemoteSessions] Failed to notify admins: {e}")
 
 
 @router.post("/log")
@@ -73,6 +98,7 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
             processed += 1
+            await notify_admins_session_event(event, batch.host)
         
         elif event.event_type == "session_end":
             # Match the most recent open session (by anydesk_id if known, else by host)
@@ -124,6 +150,85 @@ async def list_sessions(limit: int = 100, admin: dict = Depends(get_admin_user))
     return {"sessions": sessions, "total": len(sessions)}
 
 
+@router.get("/cross-check")
+async def hours_cross_check(admin: dict = Depends(get_admin_user)):
+    """Flag mismatches between clock-ins and active AnyDesk sessions.
+    - Clocked in (not by admin) but no active AnyDesk session
+    - AnyDesk session active >5 min but worker not clocked in
+    """
+    now = datetime.now(timezone.utc)
+    flags = []
+    
+    mappings = await db.anydesk_id_mappings.find({}, {"_id": 0}).to_list(200)
+    mapping_by_anydesk = {m["anydesk_id"]: m for m in mappings}
+    employee_anydesk_ids = {}
+    for m in mappings:
+        if m.get("employee_id"):
+            employee_anydesk_ids.setdefault(m["employee_id"], []).append(m["anydesk_id"])
+    
+    # Active sessions = no end recorded, started within last 12h (staleness guard)
+    cutoff = (now - timedelta(hours=12)).isoformat()
+    active_sessions = await db.anydesk_sessions.find(
+        {"ended_at": None, "auth_method": {"$ne": "REJECTED"}, "started_at": {"$gte": cutoff}},
+        {"_id": 0, "fingerprint": 0}
+    ).to_list(100)
+    active_by_anydesk_id = {}
+    for s in active_sessions:
+        if s.get("anydesk_id"):
+            active_by_anydesk_id.setdefault(s["anydesk_id"], []).append(s)
+    
+    open_entries = await db.time_entries.find({"clock_out": None}, {"_id": 0}).to_list(100)
+    open_by_employee = {e["user_id"]: e for e in open_entries if e.get("user_id")}
+    
+    # 1. Clocked in but no active AnyDesk session (skip admin-clocked entries)
+    for entry in open_entries:
+        if entry.get("admin_clocked"):
+            continue
+        emp_id = entry.get("user_id")
+        anydesk_ids = employee_anydesk_ids.get(emp_id)
+        if not anydesk_ids:
+            continue  # not a mapped remote worker
+        if not any(aid in active_by_anydesk_id for aid in anydesk_ids):
+            flags.append({
+                "type": "clocked_in_no_session",
+                "severity": "warning",
+                "employee_id": emp_id,
+                "worker_name": entry.get("user_name", "Unknown"),
+                "detail": f"{entry.get('user_name', 'Unknown')} is clocked in (since {entry.get('last_clock_in') or entry.get('clock_in')}) but has no active AnyDesk session"
+            })
+    
+    # 2. AnyDesk active >5 min but not clocked in
+    for s in active_sessions:
+        mapping = mapping_by_anydesk.get(s.get("anydesk_id"))
+        try:
+            started = datetime.fromisoformat(s["started_at"])
+            if started.tzinfo is None:
+                started = started.replace(tzinfo=timezone.utc)
+            minutes_active = (now - started).total_seconds() / 60
+        except (ValueError, TypeError):
+            minutes_active = 0
+        if minutes_active < 5:
+            continue
+        if mapping and mapping.get("employee_id"):
+            if mapping["employee_id"] not in open_by_employee:
+                flags.append({
+                    "type": "session_no_clock_in",
+                    "severity": "alert",
+                    "employee_id": mapping["employee_id"],
+                    "worker_name": mapping.get("worker_name") or s.get("alias") or s.get("anydesk_id"),
+                    "detail": f"{mapping.get('worker_name')} has an active AnyDesk session on {s.get('host')} for {int(minutes_active)} min but is NOT clocked in"
+                })
+        elif not mapping:
+            flags.append({
+                "type": "unmapped_active_session",
+                "severity": "info",
+                "worker_name": s.get("alias") or f"AnyDesk {s.get('anydesk_id')}",
+                "detail": f"Active session from unmapped AnyDesk ID {s.get('anydesk_id')} on {s.get('host')} - assign it to a worker to enable cross-checks"
+            })
+    
+    return {"flags": flags, "active_sessions": len(active_sessions), "open_clock_ins": len(open_entries)}
+
+
 @router.get("/mappings")
 async def list_mappings(admin: dict = Depends(get_admin_user)):
     mappings = await db.anydesk_id_mappings.find({}, {"_id": 0}).to_list(200)
@@ -139,6 +244,7 @@ async def map_anydesk_id(mapping: AnydeskMapping, admin: dict = Depends(get_admi
             "anydesk_id": mapping.anydesk_id,
             "worker_name": mapping.worker_name,
             "employee_email": mapping.employee_email,
+            "employee_id": mapping.employee_id,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }},
         upsert=True
