@@ -349,13 +349,31 @@ def format_id_for_config(plain_id):
 
 def update_anydesk_acl(cfg, acl_ids):
     """Write the ACL allowlist to AnyDesk's config file.
+    If AnyDesk has locked the config, briefly stop it, write, then restart.
     acl_ids: list of plain AnyDesk IDs (no spaces).
     Returns (success, message)."""
+    import subprocess
     config_path = ACL_CONFIG_PATH
     lock_path = config_path + ".lock"
 
+    # If config is locked by running AnyDesk, stop it briefly to write
     if os.path.exists(lock_path):
-        return False, f"Config is locked: {lock_path} exists. Not writing."
+        log.info("Config locked by AnyDesk — stopping it briefly to update ACL...")
+        try:
+            if IS_MAC:
+                subprocess.run(["pkill", "-x", "AnyDesk"], timeout=5, capture_output=True)
+                subprocess.run(["killall", "AnyDesk"], timeout=5, capture_output=True)
+            else:
+                subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5, capture_output=True)
+        except Exception:
+            pass
+        # Wait for lock to release (up to 5 seconds)
+        for _ in range(10):
+            if not os.path.exists(lock_path):
+                break
+            time.sleep(0.5)
+        if os.path.exists(lock_path):
+            return False, f"Lock file still present after stopping AnyDesk: {lock_path}"
 
     formatted_entries = [f"{format_id_for_config(aid)}:true" for aid in acl_ids]
     acl_line = "ad.security.acl_list=" + ";".join(formatted_entries)
@@ -396,7 +414,19 @@ def update_anydesk_acl(cfg, acl_ids):
         os.replace(tmp_path, config_path)
 
         log.info(f"ACL written to {config_path}: {len(acl_ids)} IDs allowed")
-        return True, f"ACL updated: {len(acl_ids)} IDs"
+
+        # Restart AnyDesk so it picks up the new config
+        log.info("Restarting AnyDesk with updated ACL...")
+        try:
+            if IS_MAC:
+                subprocess.Popen(["open", "-a", "AnyDesk"])
+            else:
+                subprocess.Popen(["cmd", "/c", "start", "", "AnyDesk.exe"])
+            time.sleep(1)
+        except Exception as e:
+            log.warning(f"Could not restart AnyDesk: {e}")
+
+        return True, f"ACL updated: {len(acl_ids)} IDs. AnyDesk restarted."
     except PermissionError:
         return False, f"Permission denied writing to {config_path}"
     except Exception as e:
