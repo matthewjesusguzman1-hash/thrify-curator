@@ -6,7 +6,7 @@ import asyncio
 import logging
 import base64
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import jwt
 
 from app.config import CORS_ORIGINS, JWT_SECRET, JWT_ALGORITHM
@@ -187,14 +187,27 @@ async def shutdown_db_client():
 _cross_check_task = None
 
 async def _periodic_cross_check():
-    """Run the AnyDesk/clock-in cross-check every 3 minutes."""
+    """Run the AnyDesk/clock-in cross-check every 3 minutes + auto-close stale sessions."""
     from app.routers.remote_sessions import run_cross_check_and_notify
+    from app.services.database import get_database
     while True:
         await asyncio.sleep(180)  # 3 minutes
         try:
             await run_cross_check_and_notify()
         except Exception as e:
             logger.warning(f"Periodic cross-check failed: {e}")
+        # Auto-close sessions stuck as "active" for 12+ hours
+        try:
+            db = get_database()
+            cutoff = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
+            result = await db.anydesk_sessions.update_many(
+                {"ended_at": None, "started_at": {"$lt": cutoff}},
+                {"$set": {"ended_at": datetime.now(timezone.utc).isoformat(), "duration_seconds": 0}}
+            )
+            if result.modified_count > 0:
+                logger.info(f"Auto-closed {result.modified_count} stale sessions (12h+ with no end)")
+        except Exception as e:
+            logger.warning(f"Stale session cleanup failed: {e}")
 
 @app.on_event("startup")
 async def start_cross_check_loop():
