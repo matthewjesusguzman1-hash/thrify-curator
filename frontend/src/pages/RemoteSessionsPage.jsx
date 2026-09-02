@@ -313,7 +313,8 @@ export default function RemoteSessionsPage() {
       await axios.post(`${API}/remote-sessions/disconnect`, {
         session_id: session.id, anydesk_id: session.anydesk_id
       }, getAuthHeader());
-      toast.success("Disconnect command sent — watcher will execute within seconds");
+      toast.success("Disconnected — session closed");
+      fetchData();
     } catch { toast.error("Failed to send disconnect command"); }
   };
 

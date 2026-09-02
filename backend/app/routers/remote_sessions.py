@@ -768,12 +768,15 @@ async def get_blocklist(admin: dict = Depends(get_admin_user)):
 
 @router.post("/disconnect")
 async def disconnect_session(req: DisconnectRequest, admin: dict = Depends(get_admin_user)):
-    """Admin: issue a disconnect command for the watcher to execute."""
+    """Admin: issue a disconnect command for the watcher to execute AND close the session record."""
     anydesk_id = req.anydesk_id
-    if req.session_id and not anydesk_id:
-        session = await db.anydesk_sessions.find_one({"id": req.session_id})
+    session_id = req.session_id
+    if session_id and not anydesk_id:
+        session = await db.anydesk_sessions.find_one({"id": session_id})
         if session:
             anydesk_id = session.get("anydesk_id")
+
+    # Queue the kill command for the watcher
     cmd_id = str(uuid.uuid4())
     await db.anydesk_commands.insert_one({
         "id": cmd_id,
@@ -783,7 +786,41 @@ async def disconnect_session(req: DisconnectRequest, admin: dict = Depends(get_a
         "status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat()
     })
-    return {"success": True, "command_id": cmd_id, "message": "Disconnect command queued. Watcher will execute within seconds."}
+
+    # Also close the session record in the DB so it stops showing as active
+    closed = 0
+    if session_id:
+        result = await db.anydesk_sessions.update_one(
+            {"id": session_id, "ended_at": None},
+            {"$set": {"ended_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        closed = result.modified_count
+    if anydesk_id:
+        # Close ALL open sessions for this AnyDesk ID
+        result = await db.anydesk_sessions.update_many(
+            {"anydesk_id": anydesk_id, "ended_at": None},
+            {"$set": {"ended_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        closed += result.modified_count
+
+    # Recalculate durations for closed sessions
+    if closed > 0:
+        open_sessions = await db.anydesk_sessions.find({"duration_seconds": None, "ended_at": {"$ne": None}}).to_list(50)
+        for s in open_sessions:
+            try:
+                start = datetime.fromisoformat(s["started_at"])
+                end = datetime.fromisoformat(s["ended_at"])
+                if start.tzinfo is None:
+                    start = start.replace(tzinfo=timezone.utc)
+                if end.tzinfo is None:
+                    end = end.replace(tzinfo=timezone.utc)
+                dur = max(0, int((end - start).total_seconds()))
+                await db.anydesk_sessions.update_one({"id": s["id"]}, {"$set": {"duration_seconds": dur}})
+            except (ValueError, TypeError):
+                pass
+
+    return {"success": True, "command_id": cmd_id, "sessions_closed": closed,
+            "message": "Disconnect command queued and session(s) closed."}
 
 
 @router.get("/watcher-commands")
