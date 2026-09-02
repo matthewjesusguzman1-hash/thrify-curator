@@ -266,8 +266,8 @@ export default function RemoteSessionsPage() {
   const [blockedIds, setBlockedIds] = useState(new Set());
   const [showBlockReminder, setShowBlockReminder] = useState(null); // AnyDesk ID to show reminder for
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const dateParam = selectedDate ? `&date=${selectedDate}` : `&month=${month}`;
       const [sessRes, flagRes] = await Promise.all([
@@ -278,8 +278,8 @@ export default function RemoteSessionsPage() {
       setFlags(flagRes.data.flags || []);
     } catch (e) {
       if (e.response?.status === 401 || e.response?.status === 403) { navigate("/login"); return; }
-      toast.error("Failed to load remote sessions");
-    } finally { setLoading(false); }
+      if (!silent) toast.error("Failed to load remote sessions");
+    } finally { if (!silent) setLoading(false); }
   }, [navigate, month, selectedDate]);
 
   const fetchAlerts = useCallback(async () => {
@@ -298,6 +298,12 @@ export default function RemoteSessionsPage() {
     axios.get(`${API}/admin/employees`, getAuthHeader())
       .then((res) => setEmployees((Array.isArray(res.data) ? res.data : res.data.employees || []).filter((e) => e.role !== "admin")))
       .catch(() => {});
+    // Auto-refresh every 10 seconds
+    const poll = setInterval(() => {
+      fetchData(true);
+      fetchAlerts();
+    }, 10000);
+    return () => clearInterval(poll);
   }, [fetchData, fetchAlerts, navigate]);
 
   const fetchBlocklist = async () => {
