@@ -259,16 +259,68 @@ def poll_commands(cfg):
 
 
 def execute_disconnect():
-    """Kill AnyDesk to disconnect all sessions. Does NOT restart — admin must reopen AnyDesk manually when ready."""
+    """Kill AnyDesk AND stop its system service to prevent auto-restart on macOS.
+    Admin must manually reopen AnyDesk when ready to allow connections again."""
     import subprocess
+    import glob
     try:
         if IS_MAC:
-            log.warning("Executing emergency disconnect: killing AnyDesk (will NOT auto-restart)...")
-            subprocess.run(["pkill", "-x", "AnyDesk"], timeout=5)
+            log.warning("Executing emergency disconnect...")
+
+            # Step 1: Find and unload AnyDesk's LaunchDaemons/Agents to prevent auto-restart
+            # System-level daemons (need sudo — watcher's LaunchAgent should be set up with admin user)
+            daemon_patterns = [
+                "/Library/LaunchDaemons/*anydesk*",
+                "/Library/LaunchDaemons/*AnyDesk*",
+                "/Library/LaunchDaemons/*philandro*",
+            ]
+            for pattern in daemon_patterns:
+                for plist in glob.glob(pattern):
+                    svc_label = os.path.splitext(os.path.basename(plist))[0]
+                    log.warning(f"Stopping AnyDesk daemon service: {svc_label}")
+                    # Try bootout first (modern macOS), then legacy unload
+                    r1 = subprocess.run(["launchctl", "bootout", f"system/{svc_label}"],
+                                        timeout=10, capture_output=True, text=True)
+                    if r1.returncode != 0:
+                        r2 = subprocess.run(["launchctl", "unload", "-w", plist],
+                                            timeout=10, capture_output=True, text=True)
+                        log.info(f"  unload result: {r2.returncode} {r2.stderr.strip()}")
+                    else:
+                        log.info(f"  bootout result: success")
+
+            # User-level agents
+            home = str(Path.home())
+            user_agent_patterns = [
+                os.path.join(home, "Library/LaunchAgents/*anydesk*"),
+                os.path.join(home, "Library/LaunchAgents/*AnyDesk*"),
+                os.path.join(home, "Library/LaunchAgents/*philandro*"),
+            ]
+            uid = os.getuid()
+            for pattern in user_agent_patterns:
+                for plist in glob.glob(pattern):
+                    svc_label = os.path.splitext(os.path.basename(plist))[0]
+                    # Skip our own watcher agent
+                    if "thriftycurator" in svc_label.lower():
+                        continue
+                    log.warning(f"Stopping AnyDesk user agent: {svc_label}")
+                    subprocess.run(["launchctl", "bootout", f"gui/{uid}/{svc_label}"],
+                                   timeout=10, capture_output=True)
+                    subprocess.run(["launchctl", "unload", "-w", plist],
+                                   timeout=10, capture_output=True)
+
+            # Step 2: Kill ALL AnyDesk processes forcefully
+            subprocess.run(["pkill", "-9", "-fi", "anydesk"], timeout=5, capture_output=True)
+            time.sleep(1)
+            # Double-check it's dead
+            subprocess.run(["killall", "-9", "AnyDesk"], timeout=5, capture_output=True)
+
+            log.info("AnyDesk killed and services stopped. Remote access is OFF until you manually reopen AnyDesk.")
         else:
-            log.warning("Executing emergency disconnect: killing AnyDesk (Windows, will NOT auto-restart)...")
+            log.warning("Executing emergency disconnect (Windows)...")
             subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
-        log.info("AnyDesk killed. Remote workers disconnected. Reopen AnyDesk manually to allow connections again.")
+            subprocess.run(["net", "stop", "AnyDesk"], timeout=10, capture_output=True)
+
+        log.info("Disconnect complete. Reopen AnyDesk manually when ready.")
         return True
     except Exception as e:
         log.error(f"Disconnect execution failed: {e}")
