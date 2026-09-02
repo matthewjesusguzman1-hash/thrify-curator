@@ -15,6 +15,7 @@ router = APIRouter(prefix="/remote-sessions", tags=["Remote Sessions"])
 
 GRACE_MINUTES = 3  # How long an AnyDesk session can be active before flagging no clock-in
 MERGE_GAP_MINUTES = 2  # Sessions from the same ID within this gap are merged into one
+AUTO_CLOCKOUT_GRACE_MINUTES = 3  # Wait this long after disconnect before auto-clocking out
 
 
 def verify_watcher_key(x_watcher_key: Optional[str] = Header(None)):
@@ -200,8 +201,36 @@ async def auto_clock_out_for_disconnect(anydesk_id: str, disconnect_iso: str):
 
 async def run_cross_check_and_notify():
     """Run the cross-check logic and push-notify admins for any flags found.
-    Uses a dedup key so the same flag isn't pushed more than once per hour."""
+    Also processes deferred auto-clock-outs after the grace period."""
     now = datetime.now(timezone.utc)
+
+    # --- Process pending auto-clock-outs (grace period elapsed) ---
+    grace_cutoff = (now - timedelta(minutes=AUTO_CLOCKOUT_GRACE_MINUTES)).isoformat()
+    pending = await db.anydesk_pending_clockouts.find(
+        {"created_at": {"$lte": grace_cutoff}}
+    ).to_list(50)
+    for p in pending:
+        aid = p.get("anydesk_id")
+        # Check if worker reconnected (has an active session now)
+        cutoff_12h = (now - timedelta(hours=12)).isoformat()
+        active = await db.anydesk_sessions.find_one({
+            "anydesk_id": aid, "ended_at": None,
+            "auth_method": {"$ne": "REJECTED"},
+            "started_at": {"$gte": cutoff_12h}
+        })
+        if active:
+            # Worker reconnected — cancel
+            await db.anydesk_pending_clockouts.delete_one({"anydesk_id": aid})
+            print(f"[RemoteSessions] Pending auto-clock-out cancelled for {aid} — active session found")
+            continue
+        # Grace period passed, no active session → execute auto-clock-out
+        try:
+            entry_id = await auto_clock_out_for_disconnect(aid, p.get("disconnect_at", now.isoformat()))
+            if entry_id:
+                print(f"[RemoteSessions] Deferred auto-clock-out executed for {p.get('worker_name')} ({aid})")
+        except Exception as e:
+            print(f"[RemoteSessions] Deferred auto-clock-out failed for {aid}: {e}")
+        await db.anydesk_pending_clockouts.delete_one({"anydesk_id": aid})
 
     mappings = await db.anydesk_id_mappings.find({}, {"_id": 0}).to_list(200)
     mapping_by_anydesk = {m["anydesk_id"]: m for m in mappings}
@@ -351,6 +380,11 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                     "created_at": datetime.now(timezone.utc).isoformat()
                 })
                 processed += 1
+            # Cancel any pending auto-clock-out for this ID — they reconnected
+            if event.anydesk_id:
+                cancelled = await db.anydesk_pending_clockouts.delete_one({"anydesk_id": event.anydesk_id})
+                if cancelled.deleted_count:
+                    print(f"[RemoteSessions] Cancelled pending auto-clock-out for {event.anydesk_id} — reconnected")
             # Only send notifications/cross-checks for recent events (< 5 min old)
             # This prevents notification floods when the watcher rescans historical logs
             try:
@@ -469,16 +503,33 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                     )
                     await notify_admins_session_event(disconnect_event, batch.host, duration_seconds=duration)
 
-            # Auto clock-out: reuse the already-computed end_age_minutes
+            # Deferred auto clock-out: store a pending record instead of clocking out immediately.
+            # The background task processes these after AUTO_CLOCKOUT_GRACE_MINUTES,
+            # giving the worker time to reconnect without losing their clock-in.
             target_anydesk_id = event.anydesk_id or resolved_anydesk_id
             if target_anydesk_id:
                 if end_age_minutes <= 5:
                     try:
-                        entry_id = await auto_clock_out_for_disconnect(target_anydesk_id, event.timestamp)
-                        if entry_id:
-                            auto_clocked_out.append(entry_id)
+                        mapping = await db.anydesk_id_mappings.find_one({"anydesk_id": target_anydesk_id})
+                        if mapping and mapping.get("employee_id"):
+                            active_entry = await db.time_entries.find_one(
+                                {"user_id": mapping["employee_id"], "clock_out": None}
+                            )
+                            if active_entry:
+                                await db.anydesk_pending_clockouts.update_one(
+                                    {"anydesk_id": target_anydesk_id},
+                                    {"$set": {
+                                        "anydesk_id": target_anydesk_id,
+                                        "employee_id": mapping["employee_id"],
+                                        "worker_name": mapping.get("worker_name", "Unknown"),
+                                        "disconnect_at": event.timestamp,
+                                        "created_at": datetime.now(timezone.utc).isoformat()
+                                    }},
+                                    upsert=True
+                                )
+                                print(f"[RemoteSessions] Pending auto-clock-out queued for {mapping.get('worker_name')} (grace: {AUTO_CLOCKOUT_GRACE_MINUTES}min)")
                     except Exception as e:
-                        print(f"[RemoteSessions] Auto clock-out failed for {target_anydesk_id}: {e}")
+                        print(f"[RemoteSessions] Pending auto-clock-out failed for {target_anydesk_id}: {e}")
                 else:
                     print(f"[RemoteSessions] Skipping auto-clock-out for historical disconnect ({int(end_age_minutes)}min old): {target_anydesk_id}")
 
