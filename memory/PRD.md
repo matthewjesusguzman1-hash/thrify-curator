@@ -220,8 +220,15 @@ Full audit remediation, backend 28/28 tests passing (testing agent iteration_54)
 - Admin time-entry edit recalculates accumulated/total hours on save.
 - **Preview-only** — requires user redeploy for production.
 
+### Blocked-ID Reconnect Lockdown Fix (2026-09-02)
+- **Bug**: After admin restarts AnyDesk, blocked users could reconnect because lockdown was cleared and `enforce_lockdown()` was inactive.
+- **Fix**: `check_blocked_session()` in watcher now re-engages lockdown both locally (`cfg._server_lockdown = True`) and on the server (via new `POST /watcher-blocked-reconnect` endpoint).
+- Backend endpoint re-sets lockdown + creates a "blocked_connection" critical alert.
+- `enforce_lockdown()` then continuously keeps AnyDesk dead every 10s until admin unblocks or manually restarts.
+- **Requires watcher re-download** for the fix to take effect on Mac.
+
 #### Watcher re-download needed:
-- User's installed watcher may still be the failed Phase 3 ACL version. After redeploy, one watcher re-download is required to get the reverted Phase 1/2 behavior.
+- User's installed watcher may still be the failed Phase 3 ACL version. After redeploy, one watcher re-download is required to get the reverted Phase 1/2 behavior + blocked-reconnect lockdown fix.
 
 ## 3rd Party Integrations
 - Capacitor v8

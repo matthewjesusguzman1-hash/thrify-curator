@@ -1098,6 +1098,35 @@ async def get_watcher_commands(_: bool = Depends(verify_watcher_key)):
     return {"commands": commands, "blocked_ids": blocked_ids, "lockdown": lockdown}
 
 
+@router.post("/watcher-blocked-reconnect")
+async def watcher_blocked_reconnect(data: dict, _: bool = Depends(verify_watcher_key)):
+    """Watcher reports a blocked ID tried to reconnect after restart.
+    Re-engages lockdown so enforce_lockdown keeps AnyDesk dead."""
+    anydesk_id = data.get("anydesk_id", "unknown")
+    host = data.get("host", "")
+
+    # Re-engage lockdown
+    await _set_lockdown(True, f"Blocked ID {anydesk_id} tried to reconnect")
+
+    # Create alert so admin sees it
+    dedup_key = f"blocked_reconnect:{anydesk_id}:{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H')}"
+    existing = await db.anydesk_flag_notifications.find_one({"dedup_key": dedup_key})
+    if not existing:
+        mapping = await db.anydesk_id_mappings.find_one({"anydesk_id": anydesk_id})
+        worker_name = mapping["worker_name"] if mapping else anydesk_id
+        await db.anydesk_flag_notifications.insert_one({
+            "type": "blocked_connection",
+            "anydesk_id": anydesk_id,
+            "detail": f"BLOCKED ID {worker_name} ({anydesk_id}) tried to reconnect. AnyDesk shut down again — lockdown re-engaged.",
+            "severity": "critical",
+            "dedup_key": dedup_key,
+            "sent_at": datetime.now(timezone.utc).isoformat()
+        })
+
+    blocked_count = await db.anydesk_blocklist.count_documents({})
+    return {"success": True, "lockdown": True, "blocked_count": blocked_count}
+
+
 @router.post("/heartbeat")
 async def watcher_heartbeat(data: dict, _: bool = Depends(verify_watcher_key)):
     """Watcher reports its status. If AnyDesk is not running, auto-close all active sessions for this host."""

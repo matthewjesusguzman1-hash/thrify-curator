@@ -327,7 +327,8 @@ def execute_restart():
 
 def check_blocked_session(cfg, anydesk_id):
     """If a session start is from a blocked ID, security-kill AnyDesk immediately.
-    30s cooldown between kills. enforce_lockdown keeps AnyDesk dead every 10s."""
+    Re-engages lockdown so enforce_lockdown keeps AnyDesk dead continuously.
+    Also notifies backend to re-set lockdown and show the red banner."""
     blocked_ids = cfg.get("_blocked_ids", set())
     if anydesk_id and anydesk_id in blocked_ids:
         now = time.time()
@@ -336,11 +337,31 @@ def check_blocked_session(cfg, anydesk_id):
         if now - last_kick < 30:
             log.warning(f"BLOCKED {anydesk_id} detected — cooldown, enforce_lockdown handles it")
             return True
-        log.warning(f"BLOCKED {anydesk_id} detected! Security-killing AnyDesk.")
+        log.warning(f"BLOCKED {anydesk_id} detected! Security-killing AnyDesk and re-engaging lockdown.")
         execute_security_kill()
         last_kicks[anydesk_id] = now
+        # Re-engage lockdown locally so enforce_lockdown keeps AnyDesk dead immediately
+        cfg["_server_lockdown"] = True
+        # Notify backend to re-set lockdown + create alert
+        notify_blocked_reconnect(cfg, anydesk_id)
         return True
     return False
+
+
+def notify_blocked_reconnect(cfg, anydesk_id):
+    """Tell backend a blocked ID tried to reconnect — re-engages server lockdown."""
+    url = f"{cfg['backend_url']}/api/remote-sessions/watcher-blocked-reconnect"
+    try:
+        resp = requests.post(url, json={
+            "anydesk_id": anydesk_id,
+            "host": cfg.get("host_label", "")
+        }, headers={"X-Watcher-Key": cfg["watcher_key"]}, timeout=10)
+        if resp.status_code == 200:
+            log.info(f"Backend re-engaged lockdown for blocked ID {anydesk_id}")
+        else:
+            log.warning(f"Backend lockdown re-engage failed: {resp.status_code}")
+    except requests.RequestException as e:
+        log.warning(f"Failed to notify backend of blocked reconnect: {e}")
 
 
 def enforce_lockdown(cfg):
