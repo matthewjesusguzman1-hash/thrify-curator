@@ -235,6 +235,11 @@ def poll_commands(cfg):
             return
         data = resp.json()
         commands = data.get("commands", [])
+        blocked_ids = set(data.get("blocked_ids", []))
+
+        # Store blocked IDs and server lockdown state
+        cfg["_blocked_ids"] = blocked_ids
+        cfg["_server_lockdown"] = data.get("lockdown", False)
 
         for cmd in commands:
             cmd_id = cmd.get("id")
@@ -318,6 +323,44 @@ def execute_restart():
         log.error(f"Restart failed: {e}")
         return False
 
+
+
+def check_blocked_session(cfg, anydesk_id):
+    """If a session start is from a blocked ID, security-kill AnyDesk immediately.
+    30s cooldown between kills. enforce_lockdown keeps AnyDesk dead every 10s."""
+    blocked_ids = cfg.get("_blocked_ids", set())
+    if anydesk_id and anydesk_id in blocked_ids:
+        now = time.time()
+        last_kicks = cfg.setdefault("_last_blocked_kick", {})
+        last_kick = last_kicks.get(anydesk_id, 0)
+        if now - last_kick < 30:
+            log.warning(f"BLOCKED {anydesk_id} detected — cooldown, enforce_lockdown handles it")
+            return True
+        log.warning(f"BLOCKED {anydesk_id} detected! Security-killing AnyDesk.")
+        execute_security_kill()
+        last_kicks[anydesk_id] = now
+        return True
+    return False
+
+
+def enforce_lockdown(cfg):
+    """If server says lockdown is active, kill AnyDesk if it's running."""
+    import subprocess
+    if not cfg.get("_server_lockdown", False):
+        return
+    try:
+        if IS_MAC:
+            result = subprocess.run(["pgrep", "-x", "AnyDesk"], timeout=5, capture_output=True)
+            if result.returncode == 0:
+                log.warning("LOCKDOWN: AnyDesk restarted itself — killing it again.")
+                subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True)
+                subprocess.run(["killall", "-9", "AnyDesk"], timeout=5, capture_output=True)
+        else:
+            result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq AnyDesk.exe"], timeout=5, capture_output=True, text=True)
+            if "AnyDesk.exe" in result.stdout:
+                subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
+    except Exception as e:
+        log.debug(f"Lockdown check error: {e}")
 
 
 def ack_command(cfg, command_id, success):
@@ -586,6 +629,7 @@ def scan_all(cfg, state):
                     state.mark(fp)
                     events.append(ev)
                     log.info(f"Session start: AnyDesk ID {ev['anydesk_id']} ({ev.get('alias') or 'no alias'}) at {ev['timestamp']}")
+                    check_blocked_session(cfg, ev['anydesk_id'])
 
     # 2. Service trace files → session ends + macOS session starts
     for path in cfg["service_trace_files"]:
@@ -602,6 +646,7 @@ def scan_all(cfg, state):
                 events.append(start_ev)
                 last_start_ev_index = len(events) - 1
                 log.info(f"Session start: AnyDesk ID {start_ev['anydesk_id']} at {start_ev['timestamp']}")
+                check_blocked_session(cfg, start_ev['anydesk_id'])
                 continue
 
             # Auth line comes AFTER the session start — attach to the most recent start
@@ -670,6 +715,8 @@ def main():
                 last_scan = now
             # Poll for commands every cycle (every 10s)
             poll_commands(cfg)
+            # Enforce lockdown — kill AnyDesk if it restarted while blocked
+            enforce_lockdown(cfg)
             # Heartbeat every 60 seconds
             if now - last_heartbeat >= 60:
                 send_heartbeat(cfg)

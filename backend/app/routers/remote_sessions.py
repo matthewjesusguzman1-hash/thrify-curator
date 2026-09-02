@@ -884,13 +884,12 @@ async def map_anydesk_id(mapping: AnydeskMapping, admin: dict = Depends(get_admi
 
 @router.post("/block")
 async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_user)):
-    """Block an AnyDesk ID by removing it from the native AnyDesk allowlist.
-    The watcher writes the updated ACL to the Mac config file.
+    """Block an AnyDesk ID. Kills AnyDesk and enters lockdown — stays off until Restart.
     Owner IDs cannot be blocked."""
     normalized = req.anydesk_id.replace(" ", "")
     owner_ids = await _get_owner_ids()
     if normalized in owner_ids:
-        raise HTTPException(status_code=400, detail="Cannot block a protected (owner) ID. Remove it from owner IDs first.")
+        raise HTTPException(status_code=400, detail="Cannot block a protected (owner) ID.")
 
     await db.anydesk_blocklist.update_one(
         {"anydesk_id": normalized},
@@ -903,8 +902,16 @@ async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_us
         upsert=True
     )
 
-    # Compute and queue ACL update — watcher will write to AnyDesk config
-    acl = await _queue_acl_update(admin.get("name", "Admin"))
+    # Kill AnyDesk and enter lockdown
+    await db.anydesk_commands.insert_one({
+        "id": str(uuid.uuid4()),
+        "command": "security_kill",
+        "anydesk_id": normalized,
+        "reason": f"Blocked & killed by {admin.get('name', 'Admin')}",
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    await _set_lockdown(True, f"Blocked {normalized}")
 
     # Close any active session records
     await db.anydesk_sessions.update_many(
@@ -914,8 +921,8 @@ async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_us
 
     return {
         "success": True,
-        "message": f"Blocked {normalized}. AnyDesk allowlist updated — they can no longer connect. {len(acl)} ID(s) remain allowed.",
-        "acl_count": len(acl)
+        "kicked": True,
+        "message": f"AnyDesk ID {normalized} blocked — AnyDesk shutting down. Use Restart when ready."
     }
 
 
@@ -925,7 +932,8 @@ class UnblockRequest(BaseModel):
 
 @router.post("/unblock/{anydesk_id}")
 async def unblock_anydesk_id(anydesk_id: str, req: UnblockRequest, admin: dict = Depends(get_admin_user)):
-    """Remove an AnyDesk ID from the blocklist and add it back to the allowlist."""
+    """Remove an AnyDesk ID from the blocklist. If blocklist becomes empty,
+    clears lockdown and restarts AnyDesk automatically."""
     codes_str = os.environ.get("ADMIN_OWNER_CODES", "")
     valid_codes = [entry.split(":")[0] for entry in codes_str.split("|") if entry.strip()]
     if req.admin_code not in valid_codes:
@@ -936,15 +944,31 @@ async def unblock_anydesk_id(anydesk_id: str, req: UnblockRequest, admin: dict =
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="ID not in blocklist")
 
-    # Compute and queue ACL update — watcher will add them back to allowlist
-    acl = await _queue_acl_update(admin.get("name", "Admin"))
     remaining = await db.anydesk_blocklist.count_documents({})
+    restarted = False
+    still_blocked = []
+
+    if remaining == 0:
+        # Blocklist empty — clear lockdown and restart AnyDesk
+        await _set_lockdown(False, "All IDs unblocked")
+        await db.anydesk_commands.insert_one({
+            "id": str(uuid.uuid4()),
+            "command": "restart_anydesk",
+            "anydesk_id": None,
+            "reason": f"Auto-restart: blocklist empty after unblock by {admin.get('name', 'Admin')}",
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        restarted = True
+    else:
+        blocked_docs = await db.anydesk_blocklist.find({}, {"_id": 0, "anydesk_id": 1}).to_list(50)
+        still_blocked = [b["anydesk_id"] for b in blocked_docs]
 
     return {
         "success": True,
-        "message": f"Unblocked {normalized}. They can connect again. {len(acl)} ID(s) on allowlist.",
-        "acl_count": len(acl),
-        "still_blocked_count": remaining
+        "restarted": restarted,
+        "still_blocked": still_blocked,
+        "message": "Unblocked. AnyDesk restarting." if restarted else f"Unblocked, but {remaining} ID(s) still blocked — AnyDesk stays off."
     }
 
 
