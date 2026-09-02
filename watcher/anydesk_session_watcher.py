@@ -259,20 +259,24 @@ def poll_commands(cfg):
 
 
 def execute_disconnect():
-    """Kill AnyDesk to drop all connections. AnyDesk will auto-restart via its system service.
+    """Kill AnyDesk to drop all connections, wait briefly, then reopen it.
     Blocked users (auto-blocked on disconnect) will be caught by check_blocked_session on reconnect."""
     import subprocess
     try:
         if IS_MAC:
-            log.warning("Executing disconnect: killing AnyDesk (it will auto-restart, blocked users stay blocked)...")
+            log.warning("Executing disconnect: killing AnyDesk...")
             subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True)
-            # Also catch helper processes
-            subprocess.run(["killall", "-9", "AnyDesk"], timeout=5, capture_output=True)
+            # Wait for process to fully die, then reopen
+            time.sleep(5)
+            log.info("Reopening AnyDesk so admin can reconnect...")
+            subprocess.run(["open", "-a", "AnyDesk"], timeout=10, capture_output=True)
         else:
             log.warning("Executing disconnect: killing AnyDesk (Windows)...")
             subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
+            time.sleep(5)
+            subprocess.Popen(["AnyDesk.exe"], shell=True)
 
-        log.info("AnyDesk killed. It will auto-restart. Blocked users cannot reconnect.")
+        log.info("AnyDesk restarted. Blocked users cannot reconnect.")
         return True
     except Exception as e:
         log.error(f"Disconnect execution failed: {e}")

@@ -520,7 +520,7 @@ export default function RemoteSessionsPage() {
   return (
     <div className="min-h-screen bg-[#0F0F23]" data-testid="remote-sessions-page">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-[#0F0F23]/95 backdrop-blur-md border-b border-white/10 px-4 py-3">
+      <div className="sticky top-0 z-20 bg-[#0F0F23]/95 backdrop-blur-md border-b border-white/10 px-4 py-3" style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}>
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <button onClick={() => navigate("/admin")} className="text-white/70 hover:text-white p-2 -ml-2 rounded-lg hover:bg-white/10 transition-colors" data-testid="remote-sessions-back-btn">
             <ArrowLeft className="w-5 h-5" />
@@ -545,17 +545,17 @@ export default function RemoteSessionsPage() {
             title={silenced ? "Notifications silenced — tap to resume" : "Silence notifications"}
             data-testid="silence-notifications-btn"
           >
-            {silenced ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+            {silenced ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
           </button>
-          <Button variant="ghost" size="sm" onClick={handleMergeHistorical} className="text-white/50 hover:text-white hover:bg-white/10 gap-1 text-xs" data-testid="merge-sessions-btn">
-            <Merge className="w-4 h-4" /> Clean Up
-          </Button>
-          <Button variant="ghost" size="sm" onClick={handleExport} className="text-white/50 hover:text-white hover:bg-white/10 gap-1 text-xs" data-testid="export-csv-btn">
-            <Download className="w-4 h-4" /> CSV
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => { fetchData(); fetchAlerts(); }} disabled={loading} className="text-white/70 hover:text-white hover:bg-white/10" data-testid="remote-sessions-refresh">
-            <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
-          </Button>
+          <button onClick={handleMergeHistorical} className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors" title="Merge fragmented sessions" data-testid="merge-sessions-btn">
+            <Merge className="w-4 h-4" />
+          </button>
+          <button onClick={handleExport} className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors" title="Export CSV" data-testid="export-csv-btn">
+            <Download className="w-4 h-4" />
+          </button>
+          <button onClick={() => { fetchData(); fetchAlerts(); }} disabled={loading} className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors" data-testid="remote-sessions-refresh">
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
         </div>
       </div>
 
