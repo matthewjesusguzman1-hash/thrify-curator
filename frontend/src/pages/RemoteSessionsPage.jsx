@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import {
   Monitor, ArrowLeft, RefreshCw, UserPlus, Search, AlertTriangle,
   Info, Clock, ChevronLeft, ChevronRight, Download, CalendarDays,
-  LogIn, LogOut, Wifi, WifiOff, Bell, BellOff, ShieldOff, ShieldBan, Power, ShieldAlert, Merge,
+  LogIn, LogOut, Wifi, WifiOff, Bell, BellOff, ShieldOff, ShieldBan, ShieldAlert, Merge,
   Trash2, X, Unlink, RotateCcw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -95,7 +95,7 @@ function formatDT(iso) {
   return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-function SessionCard({ s, isActive, onAssign, onRemoveMapping, onDisconnect, onBlock, onUnblock, onClose, onDelete, blockedIds, employees, mappingId, mappingName, setMappingName, mappingEmployeeId, setMappingEmployeeId, saveMapping, setMappingId }) {
+function SessionCard({ s, isActive, onAssign, onRemoveMapping, onBlock, onUnblock, onClose, onDelete, blockedIds, employees, mappingId, mappingName, setMappingName, mappingEmployeeId, setMappingEmployeeId, saveMapping, setMappingId }) {
   const isBlocked = blockedIds.has(s.anydesk_id);
   return (
     <div
@@ -185,18 +185,9 @@ function SessionCard({ s, isActive, onAssign, onRemoveMapping, onDisconnect, onB
         </div>
       )}
 
-      {/* Action buttons: Disconnect + Block + Close/Delete */}
+      {/* Action buttons: Block + Close/Delete */}
       {s.anydesk_id && (
         <div className="mt-2.5 ml-4 flex flex-wrap gap-2">
-          {isActive && (
-            <button
-              onClick={() => onDisconnect(s)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-medium hover:bg-red-500/25 transition-colors"
-              data-testid={`disconnect-btn-${s.id}`}
-            >
-              <Power className="w-3 h-3" /> Disconnect
-            </button>
-          )}
           {isActive && (
             <button
               onClick={() => onClose(s.id)}
@@ -355,20 +346,6 @@ export default function RemoteSessionsPage() {
       setSilenced(res.data.silenced);
       toast.success(res.data.silenced ? "Notifications silenced" : "Notifications resumed");
     } catch { toast.error("Failed to toggle notifications"); }
-  };
-
-  const handleDisconnect = async (session) => {
-    const who = session.worker_name || session.anydesk_id;
-    if (!confirm(`Disconnect & Block ${who}?\n\nThis will:\n• Kill AnyDesk on the Mac (ALL connections drop)\n• AnyDesk will restart after 5 seconds\n• Auto-block ${who} so they can't reconnect\n• You can reconnect from your phone\n\nUse this for emergencies when you need someone off immediately.`)) return;
-    try {
-      await axios.post(`${API}/remote-sessions/disconnect`, {
-        session_id: session.id, anydesk_id: session.anydesk_id
-      }, getAuthHeader());
-      toast.success(`${who} disconnected & blocked`);
-      setBlockedIds(prev => new Set([...prev, session.anydesk_id]));
-      fetchData();
-      setShowBlockReminder(session.anydesk_id);
-    } catch { toast.error("Failed to send disconnect command"); }
   };
 
   const handleBlock = async (anydeskId) => {
@@ -696,7 +673,6 @@ export default function RemoteSessionsPage() {
                             isActive={isActive(s)}
                             onAssign={handleAssign}
                             onRemoveMapping={handleRemoveMapping}
-                            onDisconnect={handleDisconnect}
                             onBlock={handleBlock}
                             onUnblock={handleUnblock}
                             onClose={handleCloseSession}
