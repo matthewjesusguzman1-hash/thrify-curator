@@ -356,7 +356,7 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                             # Queue security kill (no restart)
                             await db.anydesk_commands.insert_one({
                                 "id": str(uuid.uuid4()),
-                                "command": "disconnect",
+                                "command": "security_kill",
                                 "anydesk_id": event.anydesk_id,
                                 "reason": f"Blocked ID {event.anydesk_id} connected — security kill",
                                 "status": "pending",
@@ -776,7 +776,7 @@ async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_us
     if active:
         await db.anydesk_commands.insert_one({
             "id": str(uuid.uuid4()),
-            "command": "disconnect",
+            "command": "security_kill",
             "anydesk_id": req.anydesk_id,
             "reason": f"Blocked & security-killed by {admin.get('name', 'Admin')}",
             "status": "pending",

@@ -251,6 +251,9 @@ def poll_commands(cfg):
             if cmd_type == "disconnect":
                 success = execute_disconnect()
                 ack_command(cfg, cmd_id, success)
+            elif cmd_type == "security_kill":
+                success = execute_security_kill()
+                ack_command(cfg, cmd_id, success)
             elif cmd_type == "restart_anydesk":
                 success = execute_restart()
                 ack_command(cfg, cmd_id, success)
