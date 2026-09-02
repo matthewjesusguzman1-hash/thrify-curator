@@ -792,3 +792,15 @@ async def unread_session_alerts(admin: dict = Depends(get_admin_user)):
         "ended_at": None, "auth_method": {"$ne": "REJECTED"}, "started_at": {"$gte": active_cutoff}
     })
     return {"alert_count": count, "active_sessions": active}
+
+
+# ─── Watcher script download ────────────────────────────────
+
+@router.get("/download-watcher")
+async def download_watcher_script(admin: dict = Depends(get_admin_user)):
+    """Admin: download the latest watcher Python script."""
+    from fastapi.responses import FileResponse
+    script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "watcher", "anydesk_session_watcher.py")
+    if not os.path.exists(script_path):
+        raise HTTPException(status_code=404, detail="Watcher script not found")
+    return FileResponse(script_path, filename="anydesk_session_watcher.py", media_type="text/x-python")
