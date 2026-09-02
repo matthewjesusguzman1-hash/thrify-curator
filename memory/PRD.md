@@ -182,12 +182,10 @@ Full audit remediation, backend 28/28 tests passing (testing agent iteration_54)
   - Stored in `anydesk_settings` collection.
   - Tested 7/7 backend + 100% frontend (iteration_59).
 - **Disconnect + Auto-Block (2026-09-02)**:
-  - Disconnect now **auto-blocks** the disconnected AnyDesk ID in the blocklist.
-  - AnyDesk is allowed to auto-restart via its own macOS service (no longer fighting it).
-  - Admin can reconnect from phone; blocked user cannot reconnect.
-  - Watcher simplified: just kills AnyDesk, lets system service restart it; blocked IDs caught by `check_blocked_session` on reconnect.
-  - Block reminder modal shown after disconnect.
-  - Backend tested: disconnect returns `blocked: true` and ID appears in blocklist.
+  - **Disconnect** = emergency kick. Auto-blocks the user, kills AnyDesk (brief blip for all users), AnyDesk auto-restarts, blocked user can't reconnect. Confirmation warns: "ALL connections drop briefly."
+  - **Block** = soft block. Adds to blocklist only. Current session stays active, no disruption to others. They can't reconnect once they disconnect. Confirmation warns: "Use Disconnect if you need them off immediately."
+  - Both show AnyDesk ACL reminder modal after action.
+  - Watcher simplified: just kills AnyDesk on disconnect, lets system service restart it; blocked IDs caught by `check_blocked_session` on reconnect.
 
 ## 3rd Party Integrations
 - Capacitor v8

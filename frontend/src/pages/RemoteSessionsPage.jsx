@@ -359,7 +359,7 @@ export default function RemoteSessionsPage() {
 
   const handleDisconnect = async (session) => {
     const who = session.worker_name || session.anydesk_id;
-    if (!confirm(`Disconnect & block ${who}?\n\nAnyDesk will restart automatically — you can reconnect, but ${who} will be blocked from reconnecting.`)) return;
+    if (!confirm(`⚠️ Disconnect & Block ${who}?\n\nThis will:\n• Kill AnyDesk on the Mac (ALL connections drop briefly)\n• Auto-block ${who} so they can't reconnect\n• AnyDesk will restart — you and other users can reconnect\n\nUse this for emergencies when you need someone off immediately.`)) return;
     try {
       await axios.post(`${API}/remote-sessions/disconnect`, {
         session_id: session.id, anydesk_id: session.anydesk_id
@@ -372,12 +372,13 @@ export default function RemoteSessionsPage() {
   };
 
   const handleBlock = async (anydeskId) => {
+    const session = sessions.find(s => s.anydesk_id === anydeskId);
+    const who = session?.worker_name || anydeskId;
+    if (!confirm(`Block ${who}?\n\nThis will:\n• Prevent them from reconnecting next time\n• Their current session stays active until they disconnect\n• No disruption to other users\n\nUse "Disconnect" instead if you need them off immediately.`)) return;
     try {
-      const res = await axios.post(`${API}/remote-sessions/block`, { anydesk_id: anydeskId }, getAuthHeader());
-      const msg = res.data.kicked ? "Blocked & disconnected" : "Blocked — will kick on next connection";
-      toast.success(msg);
+      await axios.post(`${API}/remote-sessions/block`, { anydesk_id: anydeskId }, getAuthHeader());
+      toast.success(`${who} blocked — can't reconnect`);
       setBlockedIds(prev => new Set([...prev, anydeskId]));
-      if (res.data.kicked) fetchData();
       setShowBlockReminder(anydeskId);
     } catch { toast.error("Failed to block"); }
   };
