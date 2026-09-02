@@ -90,6 +90,7 @@ async def update_time_entry(entry_id: str, update_data: EditTimeEntryRequest, ad
     
     if update_data.total_hours is not None:
         update_fields["total_hours"] = update_data.total_hours
+        update_fields["accumulated_hours"] = update_data.total_hours
         update_fields["adjusted_by_admin"] = True
     elif clock_in and clock_out and (update_data.clock_in or update_data.clock_out):
         try:
@@ -98,6 +99,7 @@ async def update_time_entry(entry_id: str, update_data: EditTimeEntryRequest, ad
             total_seconds = (out_time - in_time).total_seconds()
             calculated_hours = round_to_nearest_minute(total_seconds)
             update_fields["total_hours"] = calculated_hours
+            update_fields["accumulated_hours"] = calculated_hours
             update_fields["adjusted_by_admin"] = False
         except ValueError:
             pass
@@ -296,6 +298,35 @@ async def get_employee_clock_status(employee_id: str, admin: dict = Depends(get_
         "clock_in_time": active.get("last_clock_in") or active.get("clock_in") if active else None,
         "entry_id": active.get("id") if active else None
     }
+
+
+@router.post("/time-entries/{entry_id}/recalculate")
+async def recalculate_entry_hours(entry_id: str, admin: dict = Depends(get_admin_user)):
+    """Recalculate total_hours from clock_in and clock_out timestamps."""
+    entry = await db.time_entries.find_one({"id": entry_id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Time entry not found")
+    if not entry.get("clock_in") or not entry.get("clock_out"):
+        raise HTTPException(status_code=400, detail="Entry must have both clock_in and clock_out")
+
+    ci = datetime.fromisoformat(entry["clock_in"].replace('Z', '+00:00'))
+    co = datetime.fromisoformat(entry["clock_out"].replace('Z', '+00:00'))
+    total_seconds = (co - ci).total_seconds()
+    if total_seconds <= 0:
+        raise HTTPException(status_code=400, detail="clock_out must be after clock_in")
+
+    total_hours = round_to_nearest_minute(total_seconds)
+    await db.time_entries.update_one(
+        {"id": entry_id},
+        {"$set": {
+            "total_hours": total_hours,
+            "accumulated_hours": total_hours,
+            "edited_by": admin.get("name", "Admin"),
+            "edited_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    return {"entry_id": entry_id, "total_hours": total_hours, "message": f"Recalculated: {total_hours:.4f} hours"}
+
 
 
 @router.post("/time-entries")
