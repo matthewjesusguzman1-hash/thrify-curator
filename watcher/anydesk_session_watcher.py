@@ -295,6 +295,27 @@ def check_blocked_session(cfg, anydesk_id):
     return False
 
 
+def send_heartbeat(cfg):
+    """Report watcher status + whether AnyDesk is actually running to the backend."""
+    import subprocess
+    try:
+        # Check if AnyDesk process is running
+        if IS_MAC:
+            result = subprocess.run(["pgrep", "-x", "AnyDesk"], capture_output=True, timeout=5)
+            anydesk_running = result.returncode == 0
+        else:
+            result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq AnyDesk.exe"], capture_output=True, text=True, timeout=5)
+            anydesk_running = "AnyDesk.exe" in result.stdout
+
+        url = f"{cfg['backend_url']}/api/remote-sessions/heartbeat"
+        requests.post(url, json={
+            "host": cfg["host_label"],
+            "anydesk_running": anydesk_running,
+        }, headers={"X-Watcher-Key": cfg["watcher_key"]}, timeout=10)
+    except Exception as e:
+        log.debug(f"Heartbeat failed: {e}")
+
+
 def post_events(cfg, events):
     if not events:
         return True
@@ -443,6 +464,7 @@ def main():
 
     try:
         last_scan = 0
+        last_heartbeat = 0
         while True:
             now = time.time()
             # Full scan + retry every 30 seconds
@@ -452,6 +474,10 @@ def main():
                 last_scan = now
             # Poll for commands every cycle (every 10s)
             poll_commands(cfg)
+            # Heartbeat every 60 seconds
+            if now - last_heartbeat >= 60:
+                send_heartbeat(cfg)
+                last_heartbeat = now
             time.sleep(10)
     except KeyboardInterrupt:
         observer.stop()

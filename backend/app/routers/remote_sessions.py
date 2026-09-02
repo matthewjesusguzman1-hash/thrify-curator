@@ -836,6 +836,54 @@ async def get_watcher_commands(_: bool = Depends(verify_watcher_key)):
     return {"commands": commands, "blocked_ids": blocked_ids}
 
 
+@router.post("/heartbeat")
+async def watcher_heartbeat(data: dict, _: bool = Depends(verify_watcher_key)):
+    """Watcher reports its status. If AnyDesk is not running, auto-close all active sessions for this host."""
+    host = data.get("host", "")
+    anydesk_running = data.get("anydesk_running", True)
+
+    # Store heartbeat timestamp
+    await db.anydesk_watcher_status.update_one(
+        {"host": host},
+        {"$set": {
+            "host": host,
+            "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+            "anydesk_running": anydesk_running
+        }},
+        upsert=True
+    )
+
+    closed = 0
+    if not anydesk_running:
+        # AnyDesk is dead — close all "active" sessions for this host
+        staleness_cutoff = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
+        result = await db.anydesk_sessions.update_many(
+            {"host": host, "ended_at": None, "started_at": {"$gte": staleness_cutoff}},
+            {"$set": {"ended_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        closed = result.modified_count
+        if closed:
+            # Recalculate durations
+            updated = await db.anydesk_sessions.find(
+                {"host": host, "duration_seconds": None, "ended_at": {"$ne": None}}
+            ).to_list(50)
+            for s in updated:
+                try:
+                    start = datetime.fromisoformat(s["started_at"])
+                    end = datetime.fromisoformat(s["ended_at"])
+                    if start.tzinfo is None:
+                        start = start.replace(tzinfo=timezone.utc)
+                    if end.tzinfo is None:
+                        end = end.replace(tzinfo=timezone.utc)
+                    dur = max(0, int((end - start).total_seconds()))
+                    await db.anydesk_sessions.update_one({"id": s["id"]}, {"$set": {"duration_seconds": dur}})
+                except (ValueError, TypeError):
+                    pass
+            print(f"[Heartbeat] AnyDesk not running on {host} — closed {closed} active session(s)")
+
+    return {"success": True, "sessions_closed": closed}
+
+
 @router.post("/watcher-commands/ack")
 async def ack_watcher_command(
     command_id: str,

@@ -206,6 +206,21 @@ async def _periodic_cross_check():
             )
             if result.modified_count > 0:
                 logger.info(f"Auto-closed {result.modified_count} stale sessions (12h+ with no end)")
+            # Check if watcher has gone silent (no heartbeat in 5+ minutes) with active sessions
+            five_min_ago = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+            stale_watchers = await db.anydesk_watcher_status.find(
+                {"last_heartbeat": {"$lt": five_min_ago}}
+            ).to_list(10)
+            for w in stale_watchers:
+                host = w.get("host", "")
+                active = await db.anydesk_sessions.count_documents({"host": host, "ended_at": None})
+                if active > 0:
+                    # Close them — watcher is dead so we can't trust the session state
+                    await db.anydesk_sessions.update_many(
+                        {"host": host, "ended_at": None},
+                        {"$set": {"ended_at": datetime.now(timezone.utc).isoformat()}}
+                    )
+                    logger.warning(f"Watcher for {host} silent 5+ min — closed {active} active session(s)")
         except Exception as e:
             logger.warning(f"Stale session cleanup failed: {e}")
 
