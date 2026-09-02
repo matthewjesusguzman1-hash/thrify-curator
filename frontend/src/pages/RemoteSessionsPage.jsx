@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import {
   Monitor, ArrowLeft, RefreshCw, UserPlus, Search, AlertTriangle,
   Info, Clock, ChevronLeft, ChevronRight, Download, CalendarDays,
-  LogIn, LogOut, Wifi, WifiOff, Bell, ShieldOff, ShieldBan, Power, ShieldAlert
+  LogIn, LogOut, Wifi, WifiOff, Bell, ShieldOff, ShieldBan, Power, ShieldAlert, Merge
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -328,6 +328,20 @@ export default function RemoteSessionsPage() {
     } catch { toast.error("Export failed"); }
   };
 
+  const handleMergeHistorical = async () => {
+    if (!confirm("Merge fragmented sessions? Sessions from the same AnyDesk ID with gaps ≤ 2 minutes will be combined into single sessions.")) return;
+    try {
+      const res = await axios.post(`${API}/remote-sessions/merge-historical`, {}, getAuthHeader());
+      const d = res.data;
+      if (d.merged_count > 0) {
+        toast.success(`Merged ${d.merged_count} fragmented sessions (${d.sessions_removed} removed)`);
+        fetchData();
+      } else {
+        toast.info("No fragmented sessions found to merge");
+      }
+    } catch { toast.error("Merge failed"); }
+  };
+
   const saveMapping = async (anydeskId) => {
     if (!mappingName.trim()) return;
     try {
@@ -381,6 +395,9 @@ export default function RemoteSessionsPage() {
               {activeCount === 0 && "AnyDesk session history"}
             </p>
           </div>
+          <Button variant="ghost" size="sm" onClick={handleMergeHistorical} className="text-white/50 hover:text-white hover:bg-white/10 gap-1 text-xs" data-testid="merge-sessions-btn">
+            <Merge className="w-4 h-4" /> Merge
+          </Button>
           <Button variant="ghost" size="sm" onClick={handleExport} className="text-white/50 hover:text-white hover:bg-white/10 gap-1 text-xs" data-testid="export-csv-btn">
             <Download className="w-4 h-4" /> CSV
           </Button>

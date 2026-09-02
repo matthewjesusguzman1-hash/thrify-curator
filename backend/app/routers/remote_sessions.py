@@ -14,6 +14,7 @@ from app.dependencies import get_admin_user
 router = APIRouter(prefix="/remote-sessions", tags=["Remote Sessions"])
 
 GRACE_MINUTES = 3  # How long an AnyDesk session can be active before flagging no clock-in
+MERGE_GAP_MINUTES = 2  # Sessions from the same ID within this gap are merged into one
 
 
 def verify_watcher_key(x_watcher_key: Optional[str] = Header(None)):
@@ -271,20 +272,53 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
             continue
         
         if event.event_type == "session_start":
-            await db.anydesk_sessions.insert_one({
-                "id": str(uuid.uuid4()),
-                "host": batch.host,
-                "anydesk_id": event.anydesk_id,
-                "alias": event.alias,
-                "auth_method": event.auth_method,
-                "direction": event.direction or "Incoming",
-                "started_at": event.timestamp,
-                "ended_at": None,
-                "duration_seconds": None,
-                "fingerprint": fingerprint,
-                "created_at": datetime.now(timezone.utc).isoformat()
-            })
-            processed += 1
+            # Check if we should merge with a recently-ended session from the same ID
+            merged = False
+            if event.anydesk_id:
+                try:
+                    start_time = datetime.fromisoformat(event.timestamp)
+                    if start_time.tzinfo is None:
+                        start_time = start_time.replace(tzinfo=timezone.utc)
+                    merge_cutoff = (start_time - timedelta(minutes=MERGE_GAP_MINUTES)).isoformat()
+                    recent_ended = await db.anydesk_sessions.find_one({
+                        "host": batch.host,
+                        "anydesk_id": event.anydesk_id,
+                        "ended_at": {"$ne": None, "$gte": merge_cutoff}
+                    }, sort=[("ended_at", -1)])
+                    if recent_ended:
+                        # Reopen the previous session — next session_end will close it with updated duration
+                        await db.anydesk_sessions.update_one(
+                            {"id": recent_ended["id"]},
+                            {"$set": {"ended_at": None, "duration_seconds": None}}
+                        )
+                        await db.anydesk_session_events.insert_one({
+                            "fingerprint": fingerprint,
+                            "host": batch.host,
+                            "event_type": "session_merge",
+                            "timestamp": event.timestamp,
+                            "created_at": datetime.now(timezone.utc).isoformat()
+                        })
+                        merged = True
+                        processed += 1
+                        print(f"[RemoteSessions] Merged session start into existing session {recent_ended['id']} for {event.anydesk_id}")
+                except (ValueError, TypeError):
+                    pass
+
+            if not merged:
+                await db.anydesk_sessions.insert_one({
+                    "id": str(uuid.uuid4()),
+                    "host": batch.host,
+                    "anydesk_id": event.anydesk_id,
+                    "alias": event.alias,
+                    "auth_method": event.auth_method,
+                    "direction": event.direction or "Incoming",
+                    "started_at": event.timestamp,
+                    "ended_at": None,
+                    "duration_seconds": None,
+                    "fingerprint": fingerprint,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                })
+                processed += 1
             # Only send notifications/cross-checks for recent events (< 5 min old)
             # This prevents notification floods when the watcher rescans historical logs
             try:
@@ -804,3 +838,92 @@ async def download_watcher_script(admin: dict = Depends(get_admin_user)):
     if not os.path.exists(script_path):
         raise HTTPException(status_code=404, detail="Watcher script not found")
     return FileResponse(script_path, filename="anydesk_session_watcher.py", media_type="text/x-python")
+
+
+# ─── Historical session merge ───────────────────────────────
+
+@router.post("/merge-historical")
+async def merge_historical_sessions(admin: dict = Depends(get_admin_user)):
+    """Admin: merge fragmented historical sessions (same AnyDesk ID, gaps ≤ 2 min) into single sessions."""
+    # Get all unique anydesk_id + host combos
+    pipeline = [
+        {"$group": {"_id": {"anydesk_id": "$anydesk_id", "host": "$host"}}},
+    ]
+    combos = await db.anydesk_sessions.aggregate(pipeline).to_list(500)
+
+    total_merged = 0
+    total_deleted = 0
+
+    for combo in combos:
+        aid = combo["_id"]["anydesk_id"]
+        host = combo["_id"]["host"]
+        if not aid:
+            continue
+
+        sessions = await db.anydesk_sessions.find(
+            {"anydesk_id": aid, "host": host},
+            {"_id": 0}
+        ).sort("started_at", 1).to_list(500)
+
+        if len(sessions) < 2:
+            continue
+
+        # Walk through sorted sessions, merge when gap ≤ MERGE_GAP_MINUTES
+        i = 0
+        while i < len(sessions) - 1:
+            current = sessions[i]
+            if not current.get("ended_at"):
+                i += 1
+                continue
+
+            next_sess = sessions[i + 1]
+            try:
+                cur_end = datetime.fromisoformat(current["ended_at"])
+                nxt_start = datetime.fromisoformat(next_sess["started_at"])
+                if cur_end.tzinfo is None:
+                    cur_end = cur_end.replace(tzinfo=timezone.utc)
+                if nxt_start.tzinfo is None:
+                    nxt_start = nxt_start.replace(tzinfo=timezone.utc)
+                gap_minutes = (nxt_start - cur_end).total_seconds() / 60
+            except (ValueError, TypeError):
+                i += 1
+                continue
+
+            if gap_minutes <= MERGE_GAP_MINUTES:
+                # Merge: extend current session to cover next session, delete next
+                new_ended = next_sess.get("ended_at")
+                new_duration = None
+                if new_ended:
+                    try:
+                        start_dt = datetime.fromisoformat(current["started_at"])
+                        end_dt = datetime.fromisoformat(new_ended)
+                        if start_dt.tzinfo is None:
+                            start_dt = start_dt.replace(tzinfo=timezone.utc)
+                        if end_dt.tzinfo is None:
+                            end_dt = end_dt.replace(tzinfo=timezone.utc)
+                        new_duration = max(0, int((end_dt - start_dt).total_seconds()))
+                    except (ValueError, TypeError):
+                        pass
+
+                await db.anydesk_sessions.update_one(
+                    {"id": current["id"]},
+                    {"$set": {"ended_at": new_ended, "duration_seconds": new_duration}}
+                )
+                await db.anydesk_sessions.delete_one({"id": next_sess["id"]})
+
+                # Update in-memory for continued chaining
+                current["ended_at"] = new_ended
+                current["duration_seconds"] = new_duration
+                sessions.pop(i + 1)
+                total_merged += 1
+                total_deleted += 1
+                # Don't increment i — check if next session also chains
+            else:
+                i += 1
+
+    return {
+        "success": True,
+        "merged_count": total_merged,
+        "sessions_removed": total_deleted,
+        "message": f"Merged {total_merged} fragmented sessions into their parent sessions ({total_deleted} records removed)"
+    }
