@@ -26,6 +26,10 @@ from watchdog.events import FileSystemEventHandler
 from datetime import timezone
 
 
+# Global lockdown flag — when True, watcher continuously kills AnyDesk if it starts
+LOCKDOWN_ACTIVE = False
+
+
 def local_to_utc_iso(date_part, time_part):
     """AnyDesk connection_trace.txt uses the PC's local time; convert to UTC ISO for the backend."""
     if len(time_part) == 5:
@@ -286,16 +290,20 @@ def execute_disconnect():
 
 
 def execute_security_kill():
-    """Security kill: Kill AnyDesk and do NOT restart. Used for blocked user enforcement.
-    Admin must use 'Restart AnyDesk' button in the app to bring it back."""
+    """Security kill: Kill AnyDesk and enable LOCKDOWN MODE.
+    Watcher will continuously re-kill AnyDesk if its system service restarts it.
+    Lockdown stays active until admin sends 'restart_anydesk' command."""
     import subprocess
+    global LOCKDOWN_ACTIVE
+    LOCKDOWN_ACTIVE = True
     try:
         if IS_MAC:
-            log.warning("SECURITY KILL: Killing AnyDesk — will NOT restart until admin sends restart command.")
+            log.warning("SECURITY KILL + LOCKDOWN: Killing AnyDesk. Will keep killing it until admin sends Restart.")
             subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True)
+            subprocess.run(["killall", "-9", "AnyDesk"], timeout=5, capture_output=True)
         else:
             subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
-        log.info("AnyDesk killed (security). Use 'Restart AnyDesk' in the app to bring it back.")
+        log.info("AnyDesk killed. LOCKDOWN MODE ACTIVE — AnyDesk will be killed again if it restarts.")
         return True
     except Exception as e:
         log.error(f"Security kill failed: {e}")
@@ -303,19 +311,41 @@ def execute_security_kill():
 
 
 def execute_restart():
-    """Restart AnyDesk. Used when admin taps 'Restart AnyDesk' button."""
+    """Restart AnyDesk and disable lockdown mode. Used when admin taps 'Restart AnyDesk' button."""
     import subprocess
+    global LOCKDOWN_ACTIVE
+    LOCKDOWN_ACTIVE = False
     try:
         if IS_MAC:
-            log.info("Restarting AnyDesk by admin command...")
+            log.info("LOCKDOWN LIFTED. Restarting AnyDesk by admin command...")
             subprocess.run(["open", "-a", "AnyDesk"], timeout=10, capture_output=True)
         else:
             subprocess.Popen(["AnyDesk.exe"], shell=True)
-        log.info("AnyDesk restarted by admin command.")
+        log.info("AnyDesk restarted. Lockdown mode OFF.")
         return True
     except Exception as e:
         log.error(f"Restart failed: {e}")
         return False
+
+
+def enforce_lockdown():
+    """If lockdown is active, check if AnyDesk is running and kill it immediately."""
+    import subprocess
+    if not LOCKDOWN_ACTIVE:
+        return
+    try:
+        if IS_MAC:
+            result = subprocess.run(["pgrep", "-x", "AnyDesk"], timeout=5, capture_output=True)
+            if result.returncode == 0:
+                log.warning("LOCKDOWN: AnyDesk restarted itself — killing it again.")
+                subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True)
+                subprocess.run(["killall", "-9", "AnyDesk"], timeout=5, capture_output=True)
+        else:
+            result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq AnyDesk.exe"], timeout=5, capture_output=True, text=True)
+            if "AnyDesk.exe" in result.stdout:
+                subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
+    except Exception as e:
+        log.debug(f"Lockdown check error: {e}")
 
 
 def ack_command(cfg, command_id, success):
@@ -526,6 +556,8 @@ def main():
                 last_scan = now
             # Poll for commands every cycle (every 10s)
             poll_commands(cfg)
+            # Enforce lockdown — kill AnyDesk if its service restarted it
+            enforce_lockdown()
             # Heartbeat every 60 seconds
             if now - last_heartbeat >= 60:
                 send_heartbeat(cfg)
