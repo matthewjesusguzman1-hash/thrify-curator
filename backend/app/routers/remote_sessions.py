@@ -747,7 +747,7 @@ async def map_anydesk_id(mapping: AnydeskMapping, admin: dict = Depends(get_admi
 
 @router.post("/block")
 async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_user)):
-    """Admin: add an AnyDesk ID to the blocklist. Auto-disconnect will fire on next connection."""
+    """Admin: block an AnyDesk ID + immediately disconnect them. AnyDesk auto-restarts but blocked user can't reconnect."""
     await db.anydesk_blocklist.update_one(
         {"anydesk_id": req.anydesk_id},
         {"$set": {
@@ -758,7 +758,34 @@ async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_us
         }},
         upsert=True
     )
-    return {"success": True, "message": f"AnyDesk ID {req.anydesk_id} blocked. Remember to also block this ID in AnyDesk → Settings → Security → Access Control List on your Mac."}
+
+    # Check if this ID has an active session — if so, queue disconnect to kick them now
+    active = await db.anydesk_sessions.find_one({
+        "anydesk_id": req.anydesk_id, "ended_at": None
+    })
+    kicked = False
+    if active:
+        await db.anydesk_commands.insert_one({
+            "id": str(uuid.uuid4()),
+            "command": "disconnect",
+            "anydesk_id": req.anydesk_id,
+            "reason": f"Blocked & kicked by {admin.get('name', 'Admin')}",
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        # Close the session record
+        now_iso = datetime.now(timezone.utc).isoformat()
+        await db.anydesk_sessions.update_many(
+            {"anydesk_id": req.anydesk_id, "ended_at": None},
+            {"$set": {"ended_at": now_iso}}
+        )
+        kicked = True
+
+    return {
+        "success": True,
+        "kicked": kicked,
+        "message": f"AnyDesk ID {req.anydesk_id} blocked{' and disconnected' if kicked else ''}. AnyDesk will restart but they cannot reconnect. Also block this ID in AnyDesk → Settings → Security → Access Control List on your Mac."
+    }
 
 
 @router.delete("/block/{anydesk_id}")

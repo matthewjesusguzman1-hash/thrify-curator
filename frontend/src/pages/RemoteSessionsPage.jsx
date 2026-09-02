@@ -374,8 +374,10 @@ export default function RemoteSessionsPage() {
   const handleBlock = async (anydeskId) => {
     try {
       const res = await axios.post(`${API}/remote-sessions/block`, { anydesk_id: anydeskId }, getAuthHeader());
-      toast.success("ID blocked — auto-disconnect on future connections");
+      const msg = res.data.kicked ? "Blocked & disconnected" : "Blocked — will kick on next connection";
+      toast.success(msg);
       setBlockedIds(prev => new Set([...prev, anydeskId]));
+      if (res.data.kicked) fetchData();
       setShowBlockReminder(anydeskId);
     } catch { toast.error("Failed to block"); }
   };
