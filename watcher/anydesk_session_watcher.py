@@ -235,12 +235,6 @@ def poll_commands(cfg):
             return
         data = resp.json()
         commands = data.get("commands", [])
-        blocked_ids = set(data.get("blocked_ids", []))
-
-        # Store blocked IDs in config for quick lookup during scan
-        cfg["_blocked_ids"] = blocked_ids
-        # Store server-side lockdown flag
-        cfg["_server_lockdown"] = data.get("lockdown", False)
 
         for cmd in commands:
             cmd_id = cmd.get("id")
@@ -257,6 +251,11 @@ def poll_commands(cfg):
                 ack_command(cfg, cmd_id, success)
             elif cmd_type == "restart_anydesk":
                 success = execute_restart()
+                ack_command(cfg, cmd_id, success)
+            elif cmd_type == "update_acl":
+                acl_ids = cmd.get("acl_ids", [])
+                success, msg = update_anydesk_acl(cfg, acl_ids)
+                log.info(f"ACL update command: {msg}")
                 ack_command(cfg, cmd_id, success)
             else:
                 log.warning(f"Unknown command type: {cmd_type}")
@@ -320,25 +319,6 @@ def execute_restart():
         return False
 
 
-def enforce_lockdown(cfg):
-    """If server says lockdown is active, check if AnyDesk is running and kill it immediately."""
-    import subprocess
-    if not cfg.get("_server_lockdown", False):
-        return
-    try:
-        if IS_MAC:
-            result = subprocess.run(["pgrep", "-x", "AnyDesk"], timeout=5, capture_output=True)
-            if result.returncode == 0:
-                log.warning("LOCKDOWN: AnyDesk restarted itself — killing it again.")
-                subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True)
-                subprocess.run(["killall", "-9", "AnyDesk"], timeout=5, capture_output=True)
-        else:
-            result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq AnyDesk.exe"], timeout=5, capture_output=True, text=True)
-            if "AnyDesk.exe" in result.stdout:
-                subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
-    except Exception as e:
-        log.debug(f"Lockdown check error: {e}")
-
 
 def ack_command(cfg, command_id, success):
     """Acknowledge a command back to the backend."""
@@ -350,23 +330,77 @@ def ack_command(cfg, command_id, success):
         pass
 
 
-def check_blocked_session(cfg, anydesk_id):
-    """If a session start is from a blocked ID, security-kill AnyDesk immediately.
-    30s cooldown between kills to avoid log spam. enforce_lockdown (server-driven)
-    keeps AnyDesk dead every 10s regardless."""
-    blocked_ids = cfg.get("_blocked_ids", set())
-    if anydesk_id and anydesk_id in blocked_ids:
-        now = time.time()
-        last_kicks = cfg.setdefault("_last_blocked_kick", {})
-        last_kick = last_kicks.get(anydesk_id, 0)
-        if now - last_kick < 30:
-            log.warning(f"BLOCKED {anydesk_id} detected — cooldown, enforce_lockdown handles it")
-            return True
-        log.warning(f"BLOCKED {anydesk_id} detected! Security-killing AnyDesk.")
-        execute_security_kill()
-        last_kicks[anydesk_id] = now
-        return True
-    return False
+# ─── ACL management (Phase 3) ───────────────────────────────
+
+ACL_CONFIG_PATH = "/etc/anydesk/system.conf"
+
+
+def format_id_for_config(plain_id):
+    """Format AnyDesk ID for config file: '1131282862' -> '1 131 282 862'"""
+    s = plain_id.replace(" ", "")
+    result = []
+    while len(s) > 3:
+        result.append(s[-3:])
+        s = s[:-3]
+    if s:
+        result.append(s)
+    return " ".join(reversed(result))
+
+
+def update_anydesk_acl(cfg, acl_ids):
+    """Write the ACL allowlist to AnyDesk's config file.
+    acl_ids: list of plain AnyDesk IDs (no spaces).
+    Returns (success, message)."""
+    config_path = ACL_CONFIG_PATH
+    lock_path = config_path + ".lock"
+
+    if os.path.exists(lock_path):
+        return False, f"Config is locked: {lock_path} exists. Not writing."
+
+    formatted_entries = [f"{format_id_for_config(aid)}:true" for aid in acl_ids]
+    acl_line = "ad.security.acl_list=" + ";".join(formatted_entries)
+    enabled_line = "ad.security.acl_enabled=true"
+
+    try:
+        # Read current config
+        if os.path.exists(config_path):
+            with open(config_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+        else:
+            lines = []
+
+        # Replace or add ACL lines
+        found_acl_list = False
+        found_acl_enabled = False
+        new_lines = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("ad.security.acl_list="):
+                new_lines.append(acl_line + "\n")
+                found_acl_list = True
+            elif stripped.startswith("ad.security.acl_enabled="):
+                new_lines.append(enabled_line + "\n")
+                found_acl_enabled = True
+            else:
+                new_lines.append(line)
+
+        if not found_acl_list:
+            new_lines.append(acl_line + "\n")
+        if not found_acl_enabled:
+            new_lines.append(enabled_line + "\n")
+
+        # Atomic write: temp file then replace
+        tmp_path = config_path + ".tmp"
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            f.writelines(new_lines)
+        os.replace(tmp_path, config_path)
+
+        log.info(f"ACL written to {config_path}: {len(acl_ids)} IDs allowed")
+        return True, f"ACL updated: {len(acl_ids)} IDs"
+    except PermissionError:
+        return False, f"Permission denied writing to {config_path}"
+    except Exception as e:
+        return False, f"ACL write failed: {e}"
 
 
 def send_heartbeat(cfg):
@@ -522,8 +556,6 @@ def scan_all(cfg, state):
                     state.mark(fp)
                     events.append(ev)
                     log.info(f"Session start: AnyDesk ID {ev['anydesk_id']} ({ev.get('alias') or 'no alias'}) at {ev['timestamp']}")
-                    # Check if this ID is blocked — auto-disconnect immediately
-                    check_blocked_session(cfg, ev['anydesk_id'])
 
     # 2. Service trace files → session ends + macOS session starts
     for path in cfg["service_trace_files"]:
@@ -540,7 +572,6 @@ def scan_all(cfg, state):
                 events.append(start_ev)
                 last_start_ev_index = len(events) - 1
                 log.info(f"Session start: AnyDesk ID {start_ev['anydesk_id']} at {start_ev['timestamp']}")
-                check_blocked_session(cfg, start_ev['anydesk_id'])
                 continue
 
             # Auth line comes AFTER the session start — attach to the most recent start
@@ -609,8 +640,6 @@ def main():
                 last_scan = now
             # Poll for commands every cycle (every 10s)
             poll_commands(cfg)
-            # Enforce lockdown — kill AnyDesk if its service restarted it
-            enforce_lockdown(cfg)
             # Heartbeat every 60 seconds
             if now - last_heartbeat >= 60:
                 send_heartbeat(cfg)

@@ -64,7 +64,7 @@ async def _is_silenced() -> bool:
 
 
 async def _set_lockdown(active: bool, reason: str = ""):
-    """Set or clear server-side lockdown flag."""
+    """Set or clear server-side lockdown flag. (Legacy — Phase 3 uses ACL instead.)"""
     await db.anydesk_settings.update_one(
         {"key": "lockdown_active"},
         {"$set": {
@@ -81,6 +81,54 @@ async def _is_lockdown() -> bool:
     """Check if lockdown mode is active."""
     setting = await db.anydesk_settings.find_one({"key": "lockdown_active"})
     return bool(setting and setting.get("value"))
+
+
+async def _get_owner_ids() -> list:
+    """Get protected owner AnyDesk IDs that must always stay on the allowlist."""
+    doc = await db.anydesk_settings.find_one({"key": "owner_ids"})
+    return doc.get("ids", []) if doc else []
+
+
+async def _set_owner_ids(ids: list):
+    """Set protected owner AnyDesk IDs."""
+    # Normalize: remove spaces from all IDs
+    normalized = [i.replace(" ", "") for i in ids]
+    await db.anydesk_settings.update_one(
+        {"key": "owner_ids"},
+        {"$set": {"key": "owner_ids", "ids": normalized, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+
+
+async def _compute_acl() -> list:
+    """Compute the AnyDesk allowlist: owner IDs + all mapped IDs - blocked IDs."""
+    owner_ids = await _get_owner_ids()
+    mappings = await db.anydesk_id_mappings.find({}, {"anydesk_id": 1}).to_list(200)
+    mapped_ids = [m["anydesk_id"].replace(" ", "") for m in mappings if m.get("anydesk_id")]
+    blocked = await db.anydesk_blocklist.find({}, {"anydesk_id": 1}).to_list(200)
+    blocked_ids = {b["anydesk_id"].replace(" ", "") for b in blocked}
+
+    all_ids = set(owner_ids) | set(mapped_ids)
+    acl = [aid for aid in all_ids if aid not in blocked_ids]
+    # Safety: owner IDs MUST always be present regardless of blocklist
+    for oid in owner_ids:
+        if oid not in acl:
+            acl.append(oid)
+    return acl
+
+
+async def _queue_acl_update(admin_name: str):
+    """Compute ACL and queue an update_acl command for the watcher."""
+    acl = await _compute_acl()
+    await db.anydesk_commands.insert_one({
+        "id": str(uuid.uuid4()),
+        "command": "update_acl",
+        "acl_ids": acl,
+        "reason": f"ACL update by {admin_name}",
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    return acl
 
 
 async def notify_admins_session_event(event: SessionEvent, host: str, duration_seconds: int = None):
@@ -836,12 +884,18 @@ async def map_anydesk_id(mapping: AnydeskMapping, admin: dict = Depends(get_admi
 
 @router.post("/block")
 async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_user)):
-    """Admin: block an AnyDesk ID. ALWAYS issues a security kill (AnyDesk dies, lockdown mode).
-    Admin must use 'Restart AnyDesk' button when ready."""
+    """Block an AnyDesk ID by removing it from the native AnyDesk allowlist.
+    The watcher writes the updated ACL to the Mac config file.
+    Owner IDs cannot be blocked."""
+    normalized = req.anydesk_id.replace(" ", "")
+    owner_ids = await _get_owner_ids()
+    if normalized in owner_ids:
+        raise HTTPException(status_code=400, detail="Cannot block a protected (owner) ID. Remove it from owner IDs first.")
+
     await db.anydesk_blocklist.update_one(
-        {"anydesk_id": req.anydesk_id},
+        {"anydesk_id": normalized},
         {"$set": {
-            "anydesk_id": req.anydesk_id,
+            "anydesk_id": normalized,
             "reason": req.reason or "Blocked by admin",
             "blocked_by": admin.get("name", "Admin"),
             "blocked_at": datetime.now(timezone.utc).isoformat()
@@ -849,27 +903,19 @@ async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_us
         upsert=True
     )
 
-    # Always queue security kill — kills AnyDesk and enters lockdown mode
-    await db.anydesk_commands.insert_one({
-        "id": str(uuid.uuid4()),
-        "command": "security_kill",
-        "anydesk_id": req.anydesk_id,
-        "reason": f"Blocked & security-killed by {admin.get('name', 'Admin')}",
-        "status": "pending",
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
-    await _set_lockdown(True, f"Blocked {req.anydesk_id}")
+    # Compute and queue ACL update — watcher will write to AnyDesk config
+    acl = await _queue_acl_update(admin.get("name", "Admin"))
 
     # Close any active session records
     await db.anydesk_sessions.update_many(
-        {"anydesk_id": req.anydesk_id, "ended_at": None},
+        {"anydesk_id": normalized, "ended_at": None},
         {"$set": {"ended_at": datetime.now(timezone.utc).isoformat()}}
     )
 
     return {
         "success": True,
-        "kicked": True,
-        "message": f"AnyDesk ID {req.anydesk_id} blocked — AnyDesk will be killed and locked down. Use Restart AnyDesk button when ready."
+        "message": f"Blocked {normalized}. AnyDesk allowlist updated — they can no longer connect. {len(acl)} ID(s) remain allowed.",
+        "acl_count": len(acl)
     }
 
 
@@ -879,43 +925,26 @@ class UnblockRequest(BaseModel):
 
 @router.post("/unblock/{anydesk_id}")
 async def unblock_anydesk_id(anydesk_id: str, req: UnblockRequest, admin: dict = Depends(get_admin_user)):
-    """Admin: remove an AnyDesk ID from the blocklist. Requires admin code.
-    If blocklist becomes empty, automatically clears lockdown and restarts AnyDesk."""
+    """Remove an AnyDesk ID from the blocklist and add it back to the allowlist."""
     codes_str = os.environ.get("ADMIN_OWNER_CODES", "")
     valid_codes = [entry.split(":")[0] for entry in codes_str.split("|") if entry.strip()]
     if req.admin_code not in valid_codes:
         raise HTTPException(status_code=403, detail="Invalid admin code")
-    result = await db.anydesk_blocklist.delete_one({"anydesk_id": anydesk_id})
+
+    normalized = anydesk_id.replace(" ", "")
+    result = await db.anydesk_blocklist.delete_one({"anydesk_id": normalized})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="ID not in blocklist")
 
-    # Check how many are still blocked
+    # Compute and queue ACL update — watcher will add them back to allowlist
+    acl = await _queue_acl_update(admin.get("name", "Admin"))
     remaining = await db.anydesk_blocklist.count_documents({})
-    restarted = False
-    still_blocked = []
-
-    if remaining == 0:
-        # Blocklist empty — clear lockdown and restart AnyDesk
-        await _set_lockdown(False, "All IDs unblocked")
-        await db.anydesk_commands.insert_one({
-            "id": str(uuid.uuid4()),
-            "command": "restart_anydesk",
-            "anydesk_id": None,
-            "reason": f"Auto-restart: blocklist empty after unblock by {admin.get('name', 'Admin')}",
-            "status": "pending",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        })
-        restarted = True
-    else:
-        # Others still blocked — lockdown stays on
-        blocked_docs = await db.anydesk_blocklist.find({}, {"_id": 0, "anydesk_id": 1}).to_list(50)
-        still_blocked = [b["anydesk_id"] for b in blocked_docs]
 
     return {
         "success": True,
-        "restarted": restarted,
-        "still_blocked": still_blocked,
-        "message": "Unblocked. AnyDesk restarting." if restarted else f"Unblocked, but {remaining} ID(s) still blocked — lockdown stays active."
+        "message": f"Unblocked {normalized}. They can connect again. {len(acl)} ID(s) on allowlist.",
+        "acl_count": len(acl),
+        "still_blocked_count": remaining
     }
 
 
@@ -923,6 +952,23 @@ async def unblock_anydesk_id(anydesk_id: str, req: UnblockRequest, admin: dict =
 async def get_blocklist(admin: dict = Depends(get_admin_user)):
     blocked = await db.anydesk_blocklist.find({}, {"_id": 0}).to_list(200)
     return {"blocked": blocked}
+
+
+@router.get("/owner-ids")
+async def get_owner_ids(admin: dict = Depends(get_admin_user)):
+    """Get the list of protected owner AnyDesk IDs."""
+    ids = await _get_owner_ids()
+    return {"owner_ids": ids}
+
+
+@router.post("/owner-ids")
+async def set_owner_ids(body: dict, admin: dict = Depends(get_admin_user)):
+    """Set the protected owner AnyDesk IDs. These can never be blocked."""
+    ids = body.get("ids", [])
+    if not isinstance(ids, list):
+        raise HTTPException(status_code=400, detail="ids must be a list of AnyDesk ID strings")
+    await _set_owner_ids(ids)
+    return {"success": True, "owner_ids": [i.replace(" ", "") for i in ids]}
 
 
 # ─── Disconnect / Watcher Commands ──────────────────────────

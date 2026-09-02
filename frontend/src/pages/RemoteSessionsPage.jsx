@@ -211,7 +211,7 @@ function SessionCard({ s, isActive, onAssign, onRemoveMapping, onBlock, onUnbloc
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-white/40 text-xs font-medium hover:bg-red-500/15 hover:border-red-500/30 hover:text-red-300 transition-colors"
               data-testid={`block-btn-${s.anydesk_id}`}
             >
-              <ShieldBan className="w-3 h-3" /> Shut Down & Block
+              <ShieldBan className="w-3 h-3" /> Block
             </button>
           )}
           <button
@@ -282,11 +282,10 @@ export default function RemoteSessionsPage() {
   const [mappingEmployeeId, setMappingEmployeeId] = useState("");
   const [employees, setEmployees] = useState([]);
   const [blockedIds, setBlockedIds] = useState(new Set());
-  const [showBlockReminder, setShowBlockReminder] = useState(null);
   const [silenced, setSilenced] = useState(false);
-  const [lockdown, setLockdown] = useState(false);
   const [blockedCount, setBlockedCount] = useState(0);
   const [configReport, setConfigReport] = useState(null);
+  const [ownerIds, setOwnerIds] = useState([]);
 
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -319,6 +318,7 @@ export default function RemoteSessionsPage() {
     fetchBlocklist();
     fetchSilenceStatus();
     fetchConfigReport();
+    fetchOwnerIds();
     axios.get(`${API}/admin/employees`, getAuthHeader())
       .then((res) => setEmployees((Array.isArray(res.data) ? res.data : res.data.employees || []).filter((e) => e.role !== "admin")))
       .catch(() => {});
@@ -342,7 +342,6 @@ export default function RemoteSessionsPage() {
     try {
       const res = await axios.get(`${API}/remote-sessions/notification-status`, getAuthHeader());
       setSilenced(res.data.silenced);
-      setLockdown(res.data.lockdown);
       setBlockedCount(res.data.blocked_count || 0);
     } catch { /* ignore */ }
   };
@@ -352,6 +351,21 @@ export default function RemoteSessionsPage() {
       const res = await axios.get(`${API}/remote-sessions/config-report`, getAuthHeader());
       setConfigReport(res.data.report || null);
     } catch { /* ignore */ }
+  };
+
+  const fetchOwnerIds = async () => {
+    try {
+      const res = await axios.get(`${API}/remote-sessions/owner-ids`, getAuthHeader());
+      setOwnerIds(res.data.owner_ids || []);
+    } catch { /* ignore */ }
+  };
+
+  const saveOwnerIds = async (ids) => {
+    try {
+      await axios.post(`${API}/remote-sessions/owner-ids`, { ids }, getAuthHeader());
+      setOwnerIds(ids.map(i => i.replace(/ /g, "")));
+      toast.success("Protected IDs saved");
+    } catch { toast.error("Failed to save"); }
   };
 
   const toggleSilence = async () => {
@@ -365,20 +379,17 @@ export default function RemoteSessionsPage() {
   const handleBlock = async (anydeskId) => {
     const session = sessions.find(s => s.anydesk_id === anydeskId);
     const who = session?.worker_name || anydeskId;
-    const active = session && !session.ended_at;
-    const msg = active
-      ? `Shut down AnyDesk & block ${who}?\n\nThis will:\n• SHUT DOWN AnyDesk on the Mac (everyone loses access)\n• AnyDesk stays off until you tap Restart\n• ${who} is blocklisted\n\nYou'll see a red banner at the top when lockdown is active.`
-      : `Shut down AnyDesk & block ${who}?\n\nAnyDesk will be shut down and ${who} blocklisted.\nUse Restart AnyDesk button when you're ready to get back on.`;
+    const msg = `Block ${who}?\n\nThis removes them from AnyDesk's allowlist — they won't be able to connect. Everyone else keeps working normally.\n\nYou can unblock them anytime to restore access.`;
     if (!confirm(msg)) return;
     try {
       const res = await axios.post(`${API}/remote-sessions/block`, { anydesk_id: anydeskId }, getAuthHeader());
-      toast.success(`${who} blocked — AnyDesk shutting down. Tap Restart when ready.`);
+      toast.success(res.data.message || `${who} blocked`);
       setBlockedIds(prev => new Set([...prev, anydeskId]));
-      setLockdown(true);
       setBlockedCount(c => c + 1);
       fetchData();
-      setShowBlockReminder(anydeskId);
-    } catch { toast.error("Failed to block"); }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to block");
+    }
   };
 
   const handleUnblock = async (anydeskId) => {
@@ -387,13 +398,8 @@ export default function RemoteSessionsPage() {
     try {
       const res = await axios.post(`${API}/remote-sessions/unblock/${anydeskId}`, { admin_code: code }, getAuthHeader());
       setBlockedIds(prev => { const n = new Set(prev); n.delete(anydeskId); return n; });
-      if (res.data.restarted) {
-        toast.success("Unblocked — AnyDesk restarting");
-        setLockdown(false);
-      } else {
-        toast.success(res.data.message);
-      }
-      setBlockedCount(res.data.still_blocked?.length || 0);
+      toast.success(res.data.message || "Unblocked");
+      setBlockedCount(res.data.still_blocked_count || 0);
       fetchBlocklist();
     } catch (err) {
       const msg = err.response?.data?.detail || "Failed to unblock";
@@ -402,11 +408,10 @@ export default function RemoteSessionsPage() {
   };
 
   const handleRestartAnyDesk = async () => {
-    if (!confirm("Restart AnyDesk on the Mac?\n\nThis clears lockdown and AnyDesk will accept connections again.\n\nBlocked IDs are only blocked in this app — AnyDesk itself doesn't know about them. If its allowlist is on, make sure blocked IDs are NOT on it (the allowlist permits listed IDs).")) return;
+    if (!confirm("Restart AnyDesk on the Mac?\n\nThis sends a restart command to the watcher. Use this if AnyDesk is unresponsive.")) return;
     try {
       await axios.post(`${API}/remote-sessions/restart-anydesk`, {}, getAuthHeader());
-      toast.success("Lockdown cleared. AnyDesk restarting.");
-      setLockdown(false);
+      toast.success("AnyDesk restart command sent.");
     } catch { toast.error("Failed to send restart command"); }
   };
 
@@ -582,23 +587,6 @@ export default function RemoteSessionsPage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-3 space-y-3">
-        {/* Lockdown banner */}
-        {lockdown && (
-          <div className="flex items-center gap-2.5 rounded-xl px-4 py-3 bg-red-500/15 border border-red-500/40" data-testid="lockdown-banner">
-            <ShieldAlert className="w-5 h-5 text-red-400 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <span className="text-red-200 text-sm font-semibold">AnyDesk is shut down</span>
-              <p className="text-red-200/70 text-xs mt-0.5">{blockedCount > 0 ? `${blockedCount} ID(s) blocked. ` : ""}All remote access is off until you restart.</p>
-            </div>
-            <button
-              onClick={handleRestartAnyDesk}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-colors shrink-0"
-              data-testid="lockdown-restart-btn"
-            >
-              <RotateCcw className="w-3.5 h-3.5" /> Restart AnyDesk
-            </button>
-          </div>
-        )}
         {/* Silenced banner */}
         {silenced && (
           <div className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 bg-amber-500/10 border border-amber-500/30" data-testid="silenced-banner">
@@ -892,44 +880,6 @@ export default function RemoteSessionsPage() {
           </div>
         )}
       </div>
-
-      {/* Block reminder overlay */}
-      {showBlockReminder && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowBlockReminder(null)}>
-          <div className="bg-[#1a1a3a] border border-amber-500/30 rounded-2xl p-5 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()} data-testid="block-reminder-modal">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
-                <ShieldAlert className="w-5 h-5 text-amber-400" />
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-base">AnyDesk is shut down & ID blocked</h3>
-                <p className="text-white/60 text-sm mt-1.5 leading-relaxed">
-                  AnyDesk ID <span className="text-amber-300 font-mono font-bold">{showBlockReminder}</span> is blocked in the app and AnyDesk has been killed. <span className="text-amber-200 font-semibold">It stays off until you tap Restart.</span>
-                </p>
-                <p className="text-amber-300/90 text-sm mt-2 leading-relaxed font-medium">
-                  When you do restart, this ID can still connect unless AnyDesk's own allowlist excludes them:
-                </p>
-                <div className="mt-2 bg-white/[0.06] rounded-lg px-3 py-2 text-xs text-white/80 space-y-1">
-                  <p>1. Open <span className="text-indigo-300 font-semibold">AnyDesk → Settings → Security</span></p>
-                  <p>2. Turn on <span className="text-indigo-300 font-semibold">Access Control List</span> (it's an <span className="text-amber-300 font-semibold">allowlist</span> — only listed IDs can connect)</p>
-                  <p>3. Make sure <span className="font-mono text-amber-300">{showBlockReminder}</span> is <span className="text-red-300 font-semibold">NOT on the list</span></p>
-                  <p>4. Make sure <span className="text-emerald-300 font-semibold">your own ID IS on the list</span> so you don't lock yourself out</p>
-                </div>
-                <p className="text-amber-300/80 text-xs mt-2">
-                  Also consider changing your unattended access password if this person had it.
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={() => setShowBlockReminder(null)}
-              className="w-full mt-4 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30"
-              data-testid="block-reminder-dismiss"
-            >
-              Got it
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
