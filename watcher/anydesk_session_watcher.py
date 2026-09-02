@@ -25,11 +25,6 @@ from watchdog.observers.polling import PollingObserver
 from watchdog.events import FileSystemEventHandler
 from datetime import timezone
 
-
-# Global lockdown flag — when True, watcher continuously kills AnyDesk if it starts
-LOCKDOWN_ACTIVE = False
-
-
 def local_to_utc_iso(date_part, time_part):
     """AnyDesk connection_trace.txt uses the PC's local time; convert to UTC ISO for the backend."""
     if len(time_part) == 5:
@@ -244,6 +239,8 @@ def poll_commands(cfg):
 
         # Store blocked IDs in config for quick lookup during scan
         cfg["_blocked_ids"] = blocked_ids
+        # Store server-side lockdown flag
+        cfg["_server_lockdown"] = data.get("lockdown", False)
 
         for cmd in commands:
             cmd_id = cmd.get("id")
@@ -290,20 +287,17 @@ def execute_disconnect():
 
 
 def execute_security_kill():
-    """Security kill: Kill AnyDesk and enable LOCKDOWN MODE.
-    Watcher will continuously re-kill AnyDesk if its system service restarts it.
-    Lockdown stays active until admin sends 'restart_anydesk' command."""
+    """Security kill: Kill AnyDesk. Server-side lockdown keeps it dead via enforce_lockdown.
+    Lockdown is stored on the server, not locally — survives watcher restarts."""
     import subprocess
-    global LOCKDOWN_ACTIVE
-    LOCKDOWN_ACTIVE = True
     try:
         if IS_MAC:
-            log.warning("SECURITY KILL + LOCKDOWN: Killing AnyDesk. Will keep killing it until admin sends Restart.")
+            log.warning("SECURITY KILL: Killing AnyDesk. Server lockdown will keep it dead.")
             subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True)
             subprocess.run(["killall", "-9", "AnyDesk"], timeout=5, capture_output=True)
         else:
             subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
-        log.info("AnyDesk killed. LOCKDOWN MODE ACTIVE — AnyDesk will be killed again if it restarts.")
+        log.info("AnyDesk killed. Lockdown enforced by server — use Restart button in app.")
         return True
     except Exception as e:
         log.error(f"Security kill failed: {e}")
@@ -311,27 +305,25 @@ def execute_security_kill():
 
 
 def execute_restart():
-    """Restart AnyDesk and disable lockdown mode. Used when admin taps 'Restart AnyDesk' button."""
+    """Restart AnyDesk. Server clears lockdown flag — this just opens the app."""
     import subprocess
-    global LOCKDOWN_ACTIVE
-    LOCKDOWN_ACTIVE = False
     try:
         if IS_MAC:
-            log.info("LOCKDOWN LIFTED. Restarting AnyDesk by admin command...")
+            log.info("Restarting AnyDesk by admin command...")
             subprocess.run(["open", "-a", "AnyDesk"], timeout=10, capture_output=True)
         else:
             subprocess.Popen(["AnyDesk.exe"], shell=True)
-        log.info("AnyDesk restarted. Lockdown mode OFF.")
+        log.info("AnyDesk restarted. Lockdown is off (server-side).")
         return True
     except Exception as e:
         log.error(f"Restart failed: {e}")
         return False
 
 
-def enforce_lockdown():
-    """If lockdown is active, check if AnyDesk is running and kill it immediately."""
+def enforce_lockdown(cfg):
+    """If server says lockdown is active, check if AnyDesk is running and kill it immediately."""
     import subprocess
-    if not LOCKDOWN_ACTIVE:
+    if not cfg.get("_server_lockdown", False):
         return
     try:
         if IS_MAC:
@@ -359,18 +351,18 @@ def ack_command(cfg, command_id, success):
 
 
 def check_blocked_session(cfg, anydesk_id):
-    """If a session start is from a blocked ID, security-kill AnyDesk (no restart).
-    Uses a 5-minute cooldown per ID to prevent rapid kill loops.
-    Admin must use 'Restart AnyDesk' button to bring it back after adding ID to AnyDesk ACL."""
+    """If a session start is from a blocked ID, security-kill AnyDesk immediately.
+    30s cooldown between kills to avoid log spam. enforce_lockdown (server-driven)
+    keeps AnyDesk dead every 10s regardless."""
     blocked_ids = cfg.get("_blocked_ids", set())
     if anydesk_id and anydesk_id in blocked_ids:
         now = time.time()
         last_kicks = cfg.setdefault("_last_blocked_kick", {})
         last_kick = last_kicks.get(anydesk_id, 0)
-        if now - last_kick < 300:  # 5-minute cooldown
-            log.warning(f"BLOCKED {anydesk_id} connected but cooldown active ({int(300 - (now - last_kick))}s remaining), skipping kill")
+        if now - last_kick < 30:
+            log.warning(f"BLOCKED {anydesk_id} detected — cooldown, enforce_lockdown handles it")
             return True
-        log.warning(f"BLOCKED {anydesk_id} detected! Security-killing AnyDesk (no restart). Use 'Restart AnyDesk' in app after adding to AnyDesk ACL.")
+        log.warning(f"BLOCKED {anydesk_id} detected! Security-killing AnyDesk.")
         execute_security_kill()
         last_kicks[anydesk_id] = now
         return True
@@ -396,6 +388,64 @@ def send_heartbeat(cfg):
         }, headers={"X-Watcher-Key": cfg["watcher_key"]}, timeout=10)
     except Exception as e:
         log.debug(f"Heartbeat failed: {e}")
+
+
+# ─── FORBIDDEN setting names — NEVER upload values for these ───
+FORBIDDEN_SETTINGS = frozenset({
+    "ad.anynet.cert", "ad.anynet.pkey", "ad.anynet.pwd_hash",
+    "ad.anynet.pwd_salt", "ad.anynet.token", "ad.security.password",
+})
+
+
+def report_anydesk_config(cfg):
+    """Scan AnyDesk config files and report SETTING NAMES ONLY to backend.
+    NEVER sends values. Forbidden settings are explicitly filtered."""
+    home = str(Path.home())
+    config_paths = [
+        os.path.join(home, ".anydesk", "user.conf"),
+        os.path.join(home, ".anydesk", "system.conf"),
+        "/etc/anydesk/system.conf",
+        "/etc/anydesk/service.conf",
+    ]
+
+    report = {"files": [], "host": cfg["host_label"]}
+
+    for fpath in config_paths:
+        entry = {
+            "path": fpath,
+            "exists": os.path.exists(fpath),
+            "writable": os.access(fpath, os.W_OK) if os.path.exists(fpath) else False,
+            "setting_names": [],
+        }
+        if entry["exists"]:
+            try:
+                with open(fpath, "r") as f:
+                    for line in f:
+                        line = line.strip()
+                        if "=" in line and not line.startswith("#"):
+                            name = line.split("=", 1)[0].strip()
+                            # SAFETY: only report the name, NEVER the value
+                            # Double-check: skip forbidden names entirely
+                            if name in FORBIDDEN_SETTINGS:
+                                entry["setting_names"].append(f"{name} [REDACTED - private key/hash]")
+                            else:
+                                entry["setting_names"].append(name)
+            except Exception as e:
+                entry["error"] = str(e)
+        report["files"].append(entry)
+
+    try:
+        url = f"{cfg['backend_url']}/api/remote-sessions/watcher-config-report"
+        resp = requests.post(url, json=report,
+                             headers={"X-Watcher-Key": cfg["watcher_key"]}, timeout=15)
+        if resp.status_code == 200:
+            log.info(f"Config report sent: {len(report['files'])} files scanned")
+        else:
+            log.warning(f"Config report failed: {resp.status_code}")
+    except Exception as e:
+        log.warning(f"Config report failed: {e}")
+
+
 
 
 def post_events(cfg, events):
@@ -535,6 +585,9 @@ def main():
     log.info(f"AnyDesk watcher starting. Host label: {cfg['host_label']}")
     log.info(f"Watching: {cfg['trace_files'] + cfg['service_trace_files']}")
 
+    # Report AnyDesk config metadata (names only) to backend on startup
+    report_anydesk_config(cfg)
+
     observer = PollingObserver(timeout=2)
     watch_dirs = {os.path.dirname(p) for p in cfg["trace_files"] + cfg["service_trace_files"] if os.path.dirname(p)}
     handler = TraceHandler(cfg, state)
@@ -557,7 +610,7 @@ def main():
             # Poll for commands every cycle (every 10s)
             poll_commands(cfg)
             # Enforce lockdown — kill AnyDesk if its service restarted it
-            enforce_lockdown()
+            enforce_lockdown(cfg)
             # Heartbeat every 60 seconds
             if now - last_heartbeat >= 60:
                 send_heartbeat(cfg)

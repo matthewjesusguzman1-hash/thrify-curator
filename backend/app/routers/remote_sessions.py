@@ -62,6 +62,26 @@ async def _is_silenced() -> bool:
     return bool(setting and setting.get("value"))
 
 
+async def _set_lockdown(active: bool, reason: str = ""):
+    """Set or clear server-side lockdown flag."""
+    await db.anydesk_settings.update_one(
+        {"key": "lockdown_active"},
+        {"$set": {
+            "key": "lockdown_active",
+            "value": active,
+            "reason": reason,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+
+
+async def _is_lockdown() -> bool:
+    """Check if lockdown mode is active."""
+    setting = await db.anydesk_settings.find_one({"key": "lockdown_active"})
+    return bool(setting and setting.get("value"))
+
+
 async def notify_admins_session_event(event: SessionEvent, host: str, duration_seconds: int = None):
     """Push notify admins when a remote worker connects, disconnects, or is rejected"""
     if await _is_silenced():
@@ -777,6 +797,7 @@ async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_us
         "status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat()
     })
+    await _set_lockdown(True, f"Blocked {req.anydesk_id}")
 
     # Close any active session records
     await db.anydesk_sessions.update_many(
@@ -797,8 +818,8 @@ class UnblockRequest(BaseModel):
 
 @router.post("/unblock/{anydesk_id}")
 async def unblock_anydesk_id(anydesk_id: str, req: UnblockRequest, admin: dict = Depends(get_admin_user)):
-    """Admin: remove an AnyDesk ID from the blocklist. Requires admin code for security."""
-    # Validate admin code against ADMIN_OWNER_CODES
+    """Admin: remove an AnyDesk ID from the blocklist. Requires admin code.
+    If blocklist becomes empty, automatically clears lockdown and restarts AnyDesk."""
     codes_str = os.environ.get("ADMIN_OWNER_CODES", "")
     valid_codes = [entry.split(":")[0] for entry in codes_str.split("|") if entry.strip()]
     if req.admin_code not in valid_codes:
@@ -806,7 +827,35 @@ async def unblock_anydesk_id(anydesk_id: str, req: UnblockRequest, admin: dict =
     result = await db.anydesk_blocklist.delete_one({"anydesk_id": anydesk_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="ID not in blocklist")
-    return {"success": True}
+
+    # Check how many are still blocked
+    remaining = await db.anydesk_blocklist.count_documents({})
+    restarted = False
+    still_blocked = []
+
+    if remaining == 0:
+        # Blocklist empty — clear lockdown and restart AnyDesk
+        await _set_lockdown(False, "All IDs unblocked")
+        await db.anydesk_commands.insert_one({
+            "id": str(uuid.uuid4()),
+            "command": "restart_anydesk",
+            "anydesk_id": None,
+            "reason": f"Auto-restart: blocklist empty after unblock by {admin.get('name', 'Admin')}",
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        restarted = True
+    else:
+        # Others still blocked — lockdown stays on
+        blocked_docs = await db.anydesk_blocklist.find({}, {"_id": 0, "anydesk_id": 1}).to_list(50)
+        still_blocked = [b["anydesk_id"] for b in blocked_docs]
+
+    return {
+        "success": True,
+        "restarted": restarted,
+        "still_blocked": still_blocked,
+        "message": "Unblocked. AnyDesk restarting." if restarted else f"Unblocked, but {remaining} ID(s) still blocked — lockdown stays active."
+    }
 
 
 @router.get("/blocklist")
@@ -891,7 +940,8 @@ async def disconnect_session(req: DisconnectRequest, admin: dict = Depends(get_a
 
 @router.post("/restart-anydesk")
 async def restart_anydesk(admin: dict = Depends(get_admin_user)):
-    """Admin: send command to watcher to restart AnyDesk. Use after security kill."""
+    """Admin: send command to watcher to restart AnyDesk and clear lockdown."""
+    await _set_lockdown(False, f"Manual restart by {admin.get('name', 'Admin')}")
     cmd_id = str(uuid.uuid4())
     await db.anydesk_commands.insert_one({
         "id": cmd_id,
@@ -901,7 +951,7 @@ async def restart_anydesk(admin: dict = Depends(get_admin_user)):
         "status": "pending",
         "created_at": datetime.now(timezone.utc).isoformat()
     })
-    return {"success": True, "command_id": cmd_id, "message": "Restart command sent. AnyDesk should reopen within 10 seconds."}
+    return {"success": True, "command_id": cmd_id, "message": "Lockdown cleared. AnyDesk restarting."}
 
 
 @router.get("/watcher-commands")
@@ -911,10 +961,10 @@ async def get_watcher_commands(_: bool = Depends(verify_watcher_key)):
         {"status": "pending"},
         {"_id": 0}
     ).sort("created_at", 1).to_list(20)
-    # Also include blocked IDs for the watcher to auto-disconnect
     blocked = await db.anydesk_blocklist.find({}, {"_id": 0, "anydesk_id": 1}).to_list(200)
     blocked_ids = [b["anydesk_id"] for b in blocked]
-    return {"commands": commands, "blocked_ids": blocked_ids}
+    lockdown = await _is_lockdown()
+    return {"commands": commands, "blocked_ids": blocked_ids, "lockdown": lockdown}
 
 
 @router.post("/heartbeat")
@@ -1046,9 +1096,11 @@ async def unread_session_alerts(admin: dict = Depends(get_admin_user)):
 
 @router.get("/notification-status")
 async def get_notification_status(admin: dict = Depends(get_admin_user)):
-    """Admin: check if remote session notifications are silenced."""
+    """Admin: check silence and lockdown status."""
     silenced = await _is_silenced()
-    return {"silenced": silenced}
+    lockdown = await _is_lockdown()
+    blocked_count = await db.anydesk_blocklist.count_documents({})
+    return {"silenced": silenced, "lockdown": lockdown, "blocked_count": blocked_count}
 
 
 @router.post("/silence-notifications")
@@ -1069,6 +1121,65 @@ async def toggle_silence_notifications(admin: dict = Depends(get_admin_user)):
     status = "silenced" if new_value else "active"
     print(f"[RemoteSessions] Notifications {status} by {admin.get('name', 'Admin')}")
     return {"success": True, "silenced": new_value}
+
+
+# ─── Watcher config metadata report ──────────────────────────
+
+class ConfigFileEntry(BaseModel):
+    path: str
+    exists: bool
+    writable: bool
+    setting_names: List[str] = []
+    error: Optional[str] = None
+
+
+class ConfigReport(BaseModel):
+    host: str
+    files: List[ConfigFileEntry]
+
+
+@router.post("/watcher-config-report")
+async def receive_config_report(report: ConfigReport, _: bool = Depends(verify_watcher_key)):
+    """Watcher posts AnyDesk config metadata (setting names only, never values).
+    Validates payload schema and rejects anything containing raw values."""
+    # Safety: ensure no entry has unexpected keys or embedded values
+    clean_files = []
+    for f in report.files:
+        clean_names = []
+        for name in f.setting_names:
+            # Only allow setting name strings — reject anything with '=' or suspiciously long content
+            if "=" in name and "[REDACTED" not in name:
+                continue  # Skip — looks like "name=value" leaked through
+            if len(name) > 200:
+                continue  # Skip — likely a raw value, not a name
+            clean_names.append(name)
+        clean_files.append({
+            "path": f.path,
+            "exists": f.exists,
+            "writable": f.writable,
+            "setting_names": clean_names,
+            "error": f.error,
+        })
+
+    await db.anydesk_config_reports.update_one(
+        {"host": report.host},
+        {"$set": {
+            "host": report.host,
+            "files": clean_files,
+            "received_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    return {"success": True, "files_received": len(clean_files)}
+
+
+@router.get("/config-report")
+async def get_config_report(admin: dict = Depends(get_admin_user)):
+    """Admin: view latest AnyDesk config metadata from watcher."""
+    report = await db.anydesk_config_reports.find_one({}, {"_id": 0}, sort=[("received_at", -1)])
+    if not report:
+        return {"report": None, "message": "No config report received yet. Watcher sends it on startup."}
+    return {"report": report}
 
 
 # ─── Watcher script download ────────────────────────────────

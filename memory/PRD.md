@@ -187,6 +187,30 @@ Full audit remediation, backend 28/28 tests passing (testing agent iteration_54)
   - Both show AnyDesk ACL reminder modal after action.
   - Watcher simplified: just kills AnyDesk on disconnect, lets system service restart it; blocked IDs caught by `check_blocked_session` on reconnect.
 
+### AnyDesk Phase 1 — Server Lockdown & UI (2026-09-02)
+- **Server-side lockdown**: `_set_lockdown()`/`_is_lockdown()` stored in `anydesk_settings` collection. Survives watcher restarts.
+- **Block** → renamed to "Shut Down & Block". Confirmation explicitly explains AnyDesk shuts down for ALL users until Restart. Issues `security_kill` command + sets server lockdown.
+- **Unblock logic**: If blocklist becomes empty after unblock → auto-queues `restart_anydesk` + clears lockdown. If other IDs still blocked → lockdown stays, response lists remaining blocked IDs.
+- **Manual Restart** → clears lockdown + queues `restart_anydesk` command.
+- **Persistent lockdown banner**: Red banner shown when lockdown active, includes Restart AnyDesk button + blocked count.
+- **Lockdown state in polling**: `GET /watcher-commands` returns `lockdown: true/false` for watcher.
+- **Notification status**: `GET /notification-status` returns silenced + lockdown + blocked_count.
+- **Allowlist wording fix**: Restart confirmation and block reminder modal updated to correctly describe AnyDesk ACL as an allowlist (listed IDs are ALLOWED; to block, remove from list).
+
+### AnyDesk Phase 2 — Watcher Hardening & Config Report (2026-09-02)
+- **Local LOCKDOWN_ACTIVE removed**: No global/module-level lockdown variable in watcher. Lockdown state sourced from server via `cfg["_server_lockdown"]` set during `poll_commands()`. Survives watcher restarts.
+- **`enforce_lockdown(cfg)`**: Runs every 10s in main loop. Reads `cfg["_server_lockdown"]`; if true + AnyDesk running → kills it.
+- **30-second cooldown**: `check_blocked_session()` uses 30s cooldown (was 5min). Still calls `execute_security_kill()` on first detection. During cooldown, returns True but `enforce_lockdown` keeps AnyDesk dead every 10s regardless.
+- **Config metadata report**: `report_anydesk_config(cfg)` called once at watcher startup. Scans `~/.anydesk/user.conf`, `~/.anydesk/system.conf`, `/etc/anydesk/system.conf`, `/etc/anydesk/service.conf`. Reports file existence, writability, and setting key names only. Private key/hash/password names tagged `[REDACTED]`. NEVER sends values.
+- **Backend config report**: `POST /watcher-config-report` (watcher-auth) receives and stores report. Server-side validation strips any `name=value` strings that leak through. `GET /config-report` (admin-auth) serves latest report.
+- **Config tab in UI**: New third tab on Remote Sessions page. Shows per-file: existence, writability, setting names. ACL-related settings highlighted. Redacted settings shown in red. Safety note explaining no values transmitted.
+- **Phase 3 deferred**: Config report provides data needed to decide if allowlist-based blocking is feasible. If ACL data is encoded or only in cached config, Phase 3 will not proceed.
+
+#### Watcher changes requiring re-download (one bundled update):
+1. `LOCKDOWN_ACTIVE` local variable removed → server-sourced lockdown
+2. 5-minute cooldown → 30-second cooldown (still kills)
+3. `report_anydesk_config(cfg)` added and called at startup
+
 ## 3rd Party Integrations
 - Capacitor v8
 - Transistorsoft Background Geolocation

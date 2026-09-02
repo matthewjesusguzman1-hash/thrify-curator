@@ -211,7 +211,7 @@ function SessionCard({ s, isActive, onAssign, onRemoveMapping, onBlock, onUnbloc
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-white/40 text-xs font-medium hover:bg-red-500/15 hover:border-red-500/30 hover:text-red-300 transition-colors"
               data-testid={`block-btn-${s.anydesk_id}`}
             >
-              <ShieldBan className="w-3 h-3" /> Block
+              <ShieldBan className="w-3 h-3" /> Shut Down & Block
             </button>
           )}
           <button
@@ -284,6 +284,9 @@ export default function RemoteSessionsPage() {
   const [blockedIds, setBlockedIds] = useState(new Set());
   const [showBlockReminder, setShowBlockReminder] = useState(null);
   const [silenced, setSilenced] = useState(false);
+  const [lockdown, setLockdown] = useState(false);
+  const [blockedCount, setBlockedCount] = useState(0);
+  const [configReport, setConfigReport] = useState(null);
 
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -315,6 +318,7 @@ export default function RemoteSessionsPage() {
     fetchAlerts();
     fetchBlocklist();
     fetchSilenceStatus();
+    fetchConfigReport();
     axios.get(`${API}/admin/employees`, getAuthHeader())
       .then((res) => setEmployees((Array.isArray(res.data) ? res.data : res.data.employees || []).filter((e) => e.role !== "admin")))
       .catch(() => {});
@@ -322,6 +326,7 @@ export default function RemoteSessionsPage() {
     const poll = setInterval(() => {
       fetchData(true);
       fetchAlerts();
+      fetchSilenceStatus();
     }, 10000);
     return () => clearInterval(poll);
   }, [fetchData, fetchAlerts, navigate]);
@@ -337,6 +342,15 @@ export default function RemoteSessionsPage() {
     try {
       const res = await axios.get(`${API}/remote-sessions/notification-status`, getAuthHeader());
       setSilenced(res.data.silenced);
+      setLockdown(res.data.lockdown);
+      setBlockedCount(res.data.blocked_count || 0);
+    } catch { /* ignore */ }
+  };
+
+  const fetchConfigReport = async () => {
+    try {
+      const res = await axios.get(`${API}/remote-sessions/config-report`, getAuthHeader());
+      setConfigReport(res.data.report || null);
     } catch { /* ignore */ }
   };
 
@@ -353,14 +367,16 @@ export default function RemoteSessionsPage() {
     const who = session?.worker_name || anydeskId;
     const active = session && !session.ended_at;
     const msg = active
-      ? `Block ${who}?\n\nThis will:\n• Add them to the blocklist\n• KILL AnyDesk immediately (all connections drop)\n• AnyDesk will NOT restart automatically\n\nAfter blocking:\n1. Add this ID in AnyDesk > Settings > Security > Access Control List\n2. Use the Restart AnyDesk button to bring it back`
-      : `Block ${who}?\n\nThis will prevent them from connecting in the future.\n\nAlso add this ID in AnyDesk > Settings > Security > Access Control List for full prevention.`;
+      ? `Shut down AnyDesk & block ${who}?\n\nThis will:\n• SHUT DOWN AnyDesk on the Mac (everyone loses access)\n• AnyDesk stays off until you tap Restart\n• ${who} is blocklisted\n\nYou'll see a red banner at the top when lockdown is active.`
+      : `Shut down AnyDesk & block ${who}?\n\nAnyDesk will be shut down and ${who} blocklisted.\nUse Restart AnyDesk button when you're ready to get back on.`;
     if (!confirm(msg)) return;
     try {
       const res = await axios.post(`${API}/remote-sessions/block`, { anydesk_id: anydeskId }, getAuthHeader());
-      toast.success(res.data.kicked ? `${who} blocked — AnyDesk killed. Use Restart button when ready.` : `${who} blocked`);
+      toast.success(`${who} blocked — AnyDesk shutting down. Tap Restart when ready.`);
       setBlockedIds(prev => new Set([...prev, anydeskId]));
-      if (res.data.kicked) fetchData();
+      setLockdown(true);
+      setBlockedCount(c => c + 1);
+      fetchData();
       setShowBlockReminder(anydeskId);
     } catch { toast.error("Failed to block"); }
   };
@@ -369,9 +385,16 @@ export default function RemoteSessionsPage() {
     const code = prompt("Enter your admin code to unblock:");
     if (!code) return;
     try {
-      await axios.post(`${API}/remote-sessions/unblock/${anydeskId}`, { admin_code: code }, getAuthHeader());
-      toast.success("ID unblocked");
+      const res = await axios.post(`${API}/remote-sessions/unblock/${anydeskId}`, { admin_code: code }, getAuthHeader());
       setBlockedIds(prev => { const n = new Set(prev); n.delete(anydeskId); return n; });
+      if (res.data.restarted) {
+        toast.success("Unblocked — AnyDesk restarting");
+        setLockdown(false);
+      } else {
+        toast.success(res.data.message);
+      }
+      setBlockedCount(res.data.still_blocked?.length || 0);
+      fetchBlocklist();
     } catch (err) {
       const msg = err.response?.data?.detail || "Failed to unblock";
       toast.error(msg === "Invalid admin code" ? "Wrong admin code" : msg);
@@ -379,10 +402,11 @@ export default function RemoteSessionsPage() {
   };
 
   const handleRestartAnyDesk = async () => {
-    if (!confirm("Restart AnyDesk on the Mac?\n\nMake sure you've added any blocked IDs to AnyDesk's own Access Control List first, otherwise they'll be able to reconnect.")) return;
+    if (!confirm("Restart AnyDesk on the Mac?\n\nThis clears lockdown and AnyDesk will accept connections again.\n\nBlocked IDs are only blocked in this app — AnyDesk itself doesn't know about them. If its allowlist is on, make sure blocked IDs are NOT on it (the allowlist permits listed IDs).")) return;
     try {
       await axios.post(`${API}/remote-sessions/restart-anydesk`, {}, getAuthHeader());
-      toast.success("Restart command sent — AnyDesk should reopen within 10 seconds");
+      toast.success("Lockdown cleared. AnyDesk restarting.");
+      setLockdown(false);
     } catch { toast.error("Failed to send restart command"); }
   };
 
@@ -558,6 +582,23 @@ export default function RemoteSessionsPage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-3 space-y-3">
+        {/* Lockdown banner */}
+        {lockdown && (
+          <div className="flex items-center gap-2.5 rounded-xl px-4 py-3 bg-red-500/15 border border-red-500/40" data-testid="lockdown-banner">
+            <ShieldAlert className="w-5 h-5 text-red-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <span className="text-red-200 text-sm font-semibold">AnyDesk is shut down</span>
+              <p className="text-red-200/70 text-xs mt-0.5">{blockedCount > 0 ? `${blockedCount} ID(s) blocked. ` : ""}All remote access is off until you restart.</p>
+            </div>
+            <button
+              onClick={handleRestartAnyDesk}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-colors shrink-0"
+              data-testid="lockdown-restart-btn"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Restart AnyDesk
+            </button>
+          </div>
+        )}
         {/* Silenced banner */}
         {silenced && (
           <div className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 bg-amber-500/10 border border-amber-500/30" data-testid="silenced-banner">
@@ -612,6 +653,15 @@ export default function RemoteSessionsPage() {
           >
             <Bell className="w-3.5 h-3.5" /> Alerts
             {alerts.length > 0 && <span className="text-[10px] bg-white/20 px-1.5 rounded-full">{alerts.length}</span>}
+          </button>
+          <button
+            onClick={() => { setTab("config"); fetchConfigReport(); }}
+            className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+              tab === "config" ? "bg-sky-500 text-white shadow" : "text-white/50 hover:text-white/80"
+            }`}
+            data-testid="tab-config"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" /> Config
           </button>
         </div>
 
@@ -695,8 +745,7 @@ export default function RemoteSessionsPage() {
               })}
             </div>
           )
-        ) : (
-          /* Alerts tab */
+        ) : tab === "alerts" ? (
           alerts.length === 0 ? (
             <div className="text-center py-14 px-6" data-testid="alerts-empty">
               <Bell className="w-10 h-10 text-white/20 mx-auto mb-3" />
@@ -761,6 +810,86 @@ export default function RemoteSessionsPage() {
               })}
             </div>
           )
+        ) : (
+          /* Config tab — AnyDesk configuration metadata from watcher */
+          <div className="space-y-4" data-testid="config-tab">
+            <div className="text-sm text-white/50">
+              AnyDesk configuration metadata reported by the watcher (setting names only — no values are transmitted or stored).
+            </div>
+            {!configReport ? (
+              <div className="text-center py-14 px-6" data-testid="config-empty">
+                <ShieldAlert className="w-10 h-10 text-white/20 mx-auto mb-3" />
+                <p className="text-white/60 font-medium">No config report received yet</p>
+                <p className="text-white/40 text-sm mt-1">The watcher sends a config report each time it starts. Download and run the latest watcher to generate a report.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-xs text-white/40">
+                  <span>Host: <span className="text-white/70 font-medium">{configReport.host}</span></span>
+                  <span className="ml-auto">Reported: {formatDT(configReport.received_at)}</span>
+                </div>
+                {configReport.files.map((f, i) => {
+                  const basename = f.path.split("/").pop();
+                  const hasAcl = f.setting_names.some(n => n.toLowerCase().includes("acl") || n.toLowerCase().includes("access_control") || n.toLowerCase().includes("allowlist"));
+                  return (
+                    <div key={i} className={`rounded-xl border px-4 py-3 ${f.exists ? "bg-white/[0.04] border-white/[0.08]" : "bg-white/[0.02] border-white/[0.05]"}`} data-testid={`config-file-${i}`}>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm text-white/80">{basename}</span>
+                        {f.exists ? (
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full">EXISTS</span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-white/30 bg-white/[0.05] px-2 py-0.5 rounded-full">NOT FOUND</span>
+                        )}
+                        {f.exists && f.writable && (
+                          <span className="text-[10px] font-bold text-sky-400 bg-sky-500/15 px-2 py-0.5 rounded-full">WRITABLE</span>
+                        )}
+                        {f.exists && !f.writable && (
+                          <span className="text-[10px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">READ-ONLY</span>
+                        )}
+                        {hasAcl && (
+                          <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/15 px-2 py-0.5 rounded-full">ACL SETTINGS</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-white/30 mt-1 font-mono break-all">{f.path}</p>
+                      {f.error && <p className="text-xs text-red-300 mt-1">{f.error}</p>}
+                      {f.setting_names.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-[10px] text-white/40 mb-1">{f.setting_names.length} setting(s):</p>
+                          <div className="flex flex-wrap gap-1">
+                            {f.setting_names.map((name, j) => {
+                              const isRedacted = name.includes("[REDACTED");
+                              const isAclRelated = name.toLowerCase().includes("acl") || name.toLowerCase().includes("access_control") || name.toLowerCase().includes("allowlist");
+                              return (
+                                <span
+                                  key={j}
+                                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                                    isRedacted ? "bg-red-500/15 text-red-300/80" :
+                                    isAclRelated ? "bg-indigo-500/15 text-indigo-300" :
+                                    "bg-white/[0.06] text-white/50"
+                                  }`}
+                                  data-testid={`setting-name-${i}-${j}`}
+                                >
+                                  {name}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      {f.exists && f.setting_names.length === 0 && (
+                        <p className="text-xs text-white/30 mt-1">File exists but contains no key=value settings</p>
+                      )}
+                    </div>
+                  );
+                })}
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-xs text-white/40 space-y-1" data-testid="config-safety-note">
+                  <p className="text-white/60 font-semibold">Safety note</p>
+                  <p>Only setting <em>names</em> (left of <code>=</code>) are reported. Values are never transmitted, logged, or stored. Private key/hash/password setting names are tagged <span className="text-red-300">[REDACTED]</span>.</p>
+                  <p className="mt-1">Look for ACL-related settings (highlighted in <span className="text-indigo-300">blue</span>) to determine if Phase 3 allowlist management is feasible. If IDs appear encoded or only in cached config, do not proceed with Phase 3.</p>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -773,18 +902,18 @@ export default function RemoteSessionsPage() {
                 <ShieldAlert className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <h3 className="text-white font-bold text-base">Block in AnyDesk to fully prevent access</h3>
+                <h3 className="text-white font-bold text-base">AnyDesk is shut down & ID blocked</h3>
                 <p className="text-white/60 text-sm mt-1.5 leading-relaxed">
-                  AnyDesk ID <span className="text-amber-300 font-mono font-bold">{showBlockReminder}</span> is blocked in the app, but <span className="text-amber-200 font-semibold">AnyDesk itself must also block them</span> to truly prevent connections.
+                  AnyDesk ID <span className="text-amber-300 font-mono font-bold">{showBlockReminder}</span> is blocked in the app and AnyDesk has been killed. <span className="text-amber-200 font-semibold">It stays off until you tap Restart.</span>
                 </p>
                 <p className="text-amber-300/90 text-sm mt-2 leading-relaxed font-medium">
-                  Without this step, they can still connect (you'll get alerts but they won't be stopped):
+                  When you do restart, this ID can still connect unless AnyDesk's own allowlist excludes them:
                 </p>
                 <div className="mt-2 bg-white/[0.06] rounded-lg px-3 py-2 text-xs text-white/80 space-y-1">
-                  <p>1. Open <span className="text-indigo-300 font-semibold">AnyDesk</span> on your Mac</p>
-                  <p>2. Go to <span className="text-indigo-300 font-semibold">Settings → Security</span></p>
-                  <p>3. Under <span className="text-indigo-300 font-semibold">Access Control List</span>, add ID <span className="font-mono text-amber-300">{showBlockReminder}</span></p>
-                  <p>4. Set it to <span className="text-red-300 font-semibold">Block</span></p>
+                  <p>1. Open <span className="text-indigo-300 font-semibold">AnyDesk → Settings → Security</span></p>
+                  <p>2. Turn on <span className="text-indigo-300 font-semibold">Access Control List</span> (it's an <span className="text-amber-300 font-semibold">allowlist</span> — only listed IDs can connect)</p>
+                  <p>3. Make sure <span className="font-mono text-amber-300">{showBlockReminder}</span> is <span className="text-red-300 font-semibold">NOT on the list</span></p>
+                  <p>4. Make sure <span className="text-emerald-300 font-semibold">your own ID IS on the list</span> so you don't lock yourself out</p>
                 </div>
                 <p className="text-amber-300/80 text-xs mt-2">
                   Also consider changing your unattended access password if this person had it.
