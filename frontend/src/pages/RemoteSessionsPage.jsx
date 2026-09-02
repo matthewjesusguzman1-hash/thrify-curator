@@ -286,8 +286,7 @@ export default function RemoteSessionsPage() {
   const [silenced, setSilenced] = useState(false);
   const [lockdown, setLockdown] = useState(false);
   const [blockedCount, setBlockedCount] = useState(0);
-  const [configReport, setConfigReport] = useState(null);
-  const [ownerIds, setOwnerIds] = useState([]);
+
 
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -319,8 +318,7 @@ export default function RemoteSessionsPage() {
     fetchAlerts();
     fetchBlocklist();
     fetchSilenceStatus();
-    fetchConfigReport();
-    fetchOwnerIds();
+
     axios.get(`${API}/admin/employees`, getAuthHeader())
       .then((res) => setEmployees((Array.isArray(res.data) ? res.data : res.data.employees || []).filter((e) => e.role !== "admin")))
       .catch(() => {});
@@ -349,27 +347,7 @@ export default function RemoteSessionsPage() {
     } catch { /* ignore */ }
   };
 
-  const fetchConfigReport = async () => {
-    try {
-      const res = await axios.get(`${API}/remote-sessions/config-report`, getAuthHeader());
-      setConfigReport(res.data.report || null);
-    } catch { /* ignore */ }
-  };
 
-  const fetchOwnerIds = async () => {
-    try {
-      const res = await axios.get(`${API}/remote-sessions/owner-ids`, getAuthHeader());
-      setOwnerIds(res.data.owner_ids || []);
-    } catch { /* ignore */ }
-  };
-
-  const saveOwnerIds = async (ids) => {
-    try {
-      await axios.post(`${API}/remote-sessions/owner-ids`, { ids }, getAuthHeader());
-      setOwnerIds(ids.map(i => i.replace(/ /g, "")));
-      toast.success("Protected IDs saved");
-    } catch { toast.error("Failed to save"); }
-  };
 
   const toggleSilence = async () => {
     try {
@@ -670,15 +648,6 @@ export default function RemoteSessionsPage() {
             <Bell className="w-3.5 h-3.5" /> Alerts
             {alerts.length > 0 && <span className="text-[10px] bg-white/20 px-1.5 rounded-full">{alerts.length}</span>}
           </button>
-          <button
-            onClick={() => { setTab("config"); fetchConfigReport(); }}
-            className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
-              tab === "config" ? "bg-sky-500 text-white shadow" : "text-white/50 hover:text-white/80"
-            }`}
-            data-testid="tab-config"
-          >
-            <ShieldAlert className="w-3.5 h-3.5" /> Config
-          </button>
         </div>
 
         {/* Month + Day navigation */}
@@ -761,7 +730,8 @@ export default function RemoteSessionsPage() {
               })}
             </div>
           )
-        ) : tab === "alerts" ? (
+        ) : (
+          /* Alerts tab */
           alerts.length === 0 ? (
             <div className="text-center py-14 px-6" data-testid="alerts-empty">
               <Bell className="w-10 h-10 text-white/20 mx-auto mb-3" />
@@ -826,86 +796,6 @@ export default function RemoteSessionsPage() {
               })}
             </div>
           )
-        ) : (
-          /* Config tab — AnyDesk configuration metadata from watcher */
-          <div className="space-y-4" data-testid="config-tab">
-            <div className="text-sm text-white/50">
-              AnyDesk configuration metadata reported by the watcher (setting names only — no values are transmitted or stored).
-            </div>
-            {!configReport ? (
-              <div className="text-center py-14 px-6" data-testid="config-empty">
-                <ShieldAlert className="w-10 h-10 text-white/20 mx-auto mb-3" />
-                <p className="text-white/60 font-medium">No config report received yet</p>
-                <p className="text-white/40 text-sm mt-1">The watcher sends a config report each time it starts. Download and run the latest watcher to generate a report.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs text-white/40">
-                  <span>Host: <span className="text-white/70 font-medium">{configReport.host}</span></span>
-                  <span className="ml-auto">Reported: {formatDT(configReport.received_at)}</span>
-                </div>
-                {configReport.files.map((f, i) => {
-                  const basename = f.path.split("/").pop();
-                  const hasAcl = f.setting_names.some(n => n.toLowerCase().includes("acl") || n.toLowerCase().includes("access_control") || n.toLowerCase().includes("allowlist"));
-                  return (
-                    <div key={i} className={`rounded-xl border px-4 py-3 ${f.exists ? "bg-white/[0.04] border-white/[0.08]" : "bg-white/[0.02] border-white/[0.05]"}`} data-testid={`config-file-${i}`}>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-sm text-white/80">{basename}</span>
-                        {f.exists ? (
-                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full">EXISTS</span>
-                        ) : (
-                          <span className="text-[10px] font-bold text-white/30 bg-white/[0.05] px-2 py-0.5 rounded-full">NOT FOUND</span>
-                        )}
-                        {f.exists && f.writable && (
-                          <span className="text-[10px] font-bold text-sky-400 bg-sky-500/15 px-2 py-0.5 rounded-full">WRITABLE</span>
-                        )}
-                        {f.exists && !f.writable && (
-                          <span className="text-[10px] font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full">READ-ONLY</span>
-                        )}
-                        {hasAcl && (
-                          <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/15 px-2 py-0.5 rounded-full">ACL SETTINGS</span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-white/30 mt-1 font-mono break-all">{f.path}</p>
-                      {f.error && <p className="text-xs text-red-300 mt-1">{f.error}</p>}
-                      {f.setting_names.length > 0 && (
-                        <div className="mt-2">
-                          <p className="text-[10px] text-white/40 mb-1">{f.setting_names.length} setting(s):</p>
-                          <div className="flex flex-wrap gap-1">
-                            {f.setting_names.map((name, j) => {
-                              const isRedacted = name.includes("[REDACTED");
-                              const isAclRelated = name.toLowerCase().includes("acl") || name.toLowerCase().includes("access_control") || name.toLowerCase().includes("allowlist");
-                              return (
-                                <span
-                                  key={j}
-                                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                                    isRedacted ? "bg-red-500/15 text-red-300/80" :
-                                    isAclRelated ? "bg-indigo-500/15 text-indigo-300" :
-                                    "bg-white/[0.06] text-white/50"
-                                  }`}
-                                  data-testid={`setting-name-${i}-${j}`}
-                                >
-                                  {name}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                      {f.exists && f.setting_names.length === 0 && (
-                        <p className="text-xs text-white/30 mt-1">File exists but contains no key=value settings</p>
-                      )}
-                    </div>
-                  );
-                })}
-                <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-xs text-white/40 space-y-1" data-testid="config-safety-note">
-                  <p className="text-white/60 font-semibold">Safety note</p>
-                  <p>Only setting <em>names</em> (left of <code>=</code>) are reported. Values are never transmitted, logged, or stored. Private key/hash/password setting names are tagged <span className="text-red-300">[REDACTED]</span>.</p>
-                  <p className="mt-1">Look for ACL-related settings (highlighted in <span className="text-indigo-300">blue</span>) to determine if Phase 3 allowlist management is feasible. If IDs appear encoded or only in cached config, do not proceed with Phase 3.</p>
-                </div>
-              </div>
-            )}
-          </div>
         )}
       </div>
 

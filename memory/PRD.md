@@ -201,15 +201,27 @@ Full audit remediation, backend 28/28 tests passing (testing agent iteration_54)
 - **Local LOCKDOWN_ACTIVE removed**: No global/module-level lockdown variable in watcher. Lockdown state sourced from server via `cfg["_server_lockdown"]` set during `poll_commands()`. Survives watcher restarts.
 - **`enforce_lockdown(cfg)`**: Runs every 10s in main loop. Reads `cfg["_server_lockdown"]`; if true + AnyDesk running → kills it.
 - **30-second cooldown**: `check_blocked_session()` uses 30s cooldown (was 5min). Still calls `execute_security_kill()` on first detection. During cooldown, returns True but `enforce_lockdown` keeps AnyDesk dead every 10s regardless.
-- **Config metadata report**: `report_anydesk_config(cfg)` called once at watcher startup. Scans `~/.anydesk/user.conf`, `~/.anydesk/system.conf`, `/etc/anydesk/system.conf`, `/etc/anydesk/service.conf`. Reports file existence, writability, and setting key names only. Private key/hash/password names tagged `[REDACTED]`. NEVER sends values.
-- **Backend config report**: `POST /watcher-config-report` (watcher-auth) receives and stores report. Server-side validation strips any `name=value` strings that leak through. `GET /config-report` (admin-auth) serves latest report.
-- **Config tab in UI**: New third tab on Remote Sessions page. Shows per-file: existence, writability, setting names. ACL-related settings highlighted. Redacted settings shown in red. Safety note explaining no values transmitted.
-- **Phase 3 deferred**: Config report provides data needed to decide if allowlist-based blocking is feasible. If ACL data is encoded or only in cached config, Phase 3 will not proceed.
+- **Config metadata report**: `report_anydesk_config(cfg)` called once at watcher startup. Backend endpoints still exist but UI tab removed.
 
-#### Watcher changes requiring re-download (one bundled update):
-1. `LOCKDOWN_ACTIVE` local variable removed → server-sourced lockdown
-2. 5-minute cooldown → 30-second cooldown (still kills)
-3. `report_anydesk_config(cfg)` added and called at startup
+### AnyDesk Phase 3 — Native Allowlist (ATTEMPTED & REVERTED 2026-09-02)
+- Attempted to write AnyDesk ACL allowlist via `/etc/anydesk/system.conf` from watcher.
+- **Failed**: AnyDesk's `.lock` file blocked writes. Stop/write/restart workaround also did not work on user's Mac.
+- **Reverted**: Restored Phase 1/2 host-wide "Shut Down & Block" / red lockdown banner / Restart AnyDesk behavior.
+- **Do not retry** native config writes unless user explicitly requests a new approach.
+
+### Config Tab Removal (2026-09-02)
+- User requested Config tab removed from Remote Sessions page — they do not use it.
+- Removed: Config tab button, Config panel JSX, `configReport`/`ownerIds` state, `fetchConfigReport`/`fetchOwnerIds`/`saveOwnerIds` functions.
+- Backend config-report endpoints remain (watcher still reports metadata on startup) but have no UI exposure.
+
+### Timekeeping Changes (2026-09-02)
+- **Removed auto-clock-out on AnyDesk disconnect** per user request (was causing payroll issues).
+- Added grace-period alert: if employee remains clocked in 3 minutes after AnyDesk disconnect, an alert is created.
+- Admin time-entry edit recalculates accumulated/total hours on save.
+- **Preview-only** — requires user redeploy for production.
+
+#### Watcher re-download needed:
+- User's installed watcher may still be the failed Phase 3 ACL version. After redeploy, one watcher re-download is required to get the reverted Phase 1/2 behavior.
 
 ## 3rd Party Integrations
 - Capacitor v8
