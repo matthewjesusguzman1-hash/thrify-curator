@@ -755,8 +755,8 @@ async def map_anydesk_id(mapping: AnydeskMapping, admin: dict = Depends(get_admi
 
 @router.post("/block")
 async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_user)):
-    """Admin: block an AnyDesk ID. If they're currently connected, issues a security kill (AnyDesk dies, no restart).
-    Admin must use 'Restart AnyDesk' button after adding ID to AnyDesk's ACL."""
+    """Admin: block an AnyDesk ID. ALWAYS issues a security kill (AnyDesk dies, lockdown mode).
+    Admin must use 'Restart AnyDesk' button when ready."""
     await db.anydesk_blocklist.update_one(
         {"anydesk_id": req.anydesk_id},
         {"$set": {
@@ -768,31 +768,26 @@ async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_us
         upsert=True
     )
 
-    # If they have an active session, queue disconnect (security kill — no restart)
-    active = await db.anydesk_sessions.find_one({
-        "anydesk_id": req.anydesk_id, "ended_at": None
+    # Always queue security kill — kills AnyDesk and enters lockdown mode
+    await db.anydesk_commands.insert_one({
+        "id": str(uuid.uuid4()),
+        "command": "security_kill",
+        "anydesk_id": req.anydesk_id,
+        "reason": f"Blocked & security-killed by {admin.get('name', 'Admin')}",
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
     })
-    kicked = False
-    if active:
-        await db.anydesk_commands.insert_one({
-            "id": str(uuid.uuid4()),
-            "command": "security_kill",
-            "anydesk_id": req.anydesk_id,
-            "reason": f"Blocked & security-killed by {admin.get('name', 'Admin')}",
-            "status": "pending",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        })
-        now_iso = datetime.now(timezone.utc).isoformat()
-        await db.anydesk_sessions.update_many(
-            {"anydesk_id": req.anydesk_id, "ended_at": None},
-            {"$set": {"ended_at": now_iso}}
-        )
-        kicked = True
+
+    # Close any active session records
+    await db.anydesk_sessions.update_many(
+        {"anydesk_id": req.anydesk_id, "ended_at": None},
+        {"$set": {"ended_at": datetime.now(timezone.utc).isoformat()}}
+    )
 
     return {
         "success": True,
-        "kicked": kicked,
-        "message": f"AnyDesk ID {req.anydesk_id} blocked{' and AnyDesk killed' if kicked else ''}. Add this ID to AnyDesk > Settings > Security > Access Control List, then use Restart AnyDesk button."
+        "kicked": True,
+        "message": f"AnyDesk ID {req.anydesk_id} blocked — AnyDesk will be killed and locked down. Use Restart AnyDesk button when ready."
     }
 
 
