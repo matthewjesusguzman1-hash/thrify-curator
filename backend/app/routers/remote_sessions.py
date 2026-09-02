@@ -369,20 +369,179 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
 
 
 @router.get("")
-async def list_sessions(limit: int = 100, admin: dict = Depends(get_admin_user)):
-    """Admin: list AnyDesk remote sessions, newest first, with worker name mapping"""
-    limit = min(limit, 500)
-    sessions = await db.anydesk_sessions.find({}, {"_id": 0, "fingerprint": 0}).sort("started_at", -1).to_list(limit)
-    
+async def list_sessions(
+    limit: int = 100,
+    date: Optional[str] = None,
+    month: Optional[str] = None,
+    employee: Optional[str] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Admin: list AnyDesk remote sessions with date/employee filtering and clock-in cross-reference.
+    - date: YYYY-MM-DD — show sessions for a specific day
+    - month: YYYY-MM — show sessions for a specific month
+    - employee: employee_id or worker name substring
+    """
+    limit = min(limit, 1000)
+    query: dict = {}
+
+    # Date filtering
+    if date:
+        try:
+            day_start = datetime.strptime(date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            day_end = day_start + timedelta(days=1)
+            query["started_at"] = {"$gte": day_start.isoformat(), "$lt": day_end.isoformat()}
+        except ValueError:
+            pass
+    elif month:
+        try:
+            month_start = datetime.strptime(month + "-01", "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            if month_start.month == 12:
+                month_end = month_start.replace(year=month_start.year + 1, month=1)
+            else:
+                month_end = month_start.replace(month=month_start.month + 1)
+            query["started_at"] = {"$gte": month_start.isoformat(), "$lt": month_end.isoformat()}
+        except ValueError:
+            pass
+
+    sessions = await db.anydesk_sessions.find(query, {"_id": 0, "fingerprint": 0}).sort("started_at", -1).to_list(limit)
+
     mappings = await db.anydesk_id_mappings.find({}, {"_id": 0}).to_list(200)
     mapping_by_id = {m["anydesk_id"]: m for m in mappings}
-    
+
+    # Employee filter
+    if employee:
+        emp_lower = employee.lower()
+        matched_anydesk_ids = set()
+        for m in mappings:
+            if (m.get("employee_id") == employee or
+                emp_lower in (m.get("worker_name") or "").lower()):
+                matched_anydesk_ids.add(m["anydesk_id"])
+        sessions = [s for s in sessions if s.get("anydesk_id") in matched_anydesk_ids]
+
+    # Collect employee IDs for time entry cross-reference
+    employee_ids = set()
     for s in sessions:
         m = mapping_by_id.get(s.get("anydesk_id"))
         s["worker_name"] = m["worker_name"] if m else None
         s["employee_email"] = m.get("employee_email") if m else None
-    
+        s["employee_id"] = m.get("employee_id") if m else None
+        if m and m.get("employee_id"):
+            employee_ids.add(m["employee_id"])
+
+    # Fetch time entries for mapped employees in the same date range
+    time_entries_by_employee = {}
+    if employee_ids:
+        te_query = {"user_id": {"$in": list(employee_ids)}}
+        if "started_at" in query:
+            te_query["clock_in"] = query["started_at"]
+        time_entries = await db.time_entries.find(te_query, {"_id": 0}).to_list(500)
+        for te in time_entries:
+            uid = te.get("user_id")
+            if uid:
+                time_entries_by_employee.setdefault(uid, []).append(te)
+
+    # Attach matching time entry to each session
+    for s in sessions:
+        s["time_entry"] = None
+        emp_id = s.get("employee_id")
+        if not emp_id or emp_id not in time_entries_by_employee:
+            continue
+        session_start = s.get("started_at", "")
+        session_end = s.get("ended_at")
+        for te in time_entries_by_employee[emp_id]:
+            ci = te.get("clock_in", "")
+            co = te.get("clock_out")
+            # Match: time entry overlaps with session
+            if co and session_start and co < session_start:
+                continue
+            if session_end and ci > session_end:
+                continue
+            s["time_entry"] = {
+                "id": te.get("id"),
+                "clock_in": ci,
+                "clock_out": co,
+                "total_hours": te.get("total_hours"),
+                "admin_clocked": te.get("admin_clocked", False),
+                "anydesk_auto_clocked_out": te.get("anydesk_auto_clocked_out", False),
+            }
+            break
+
     return {"sessions": sessions, "total": len(sessions)}
+
+
+@router.get("/alerts")
+async def list_alerts(
+    limit: int = 100,
+    date: Optional[str] = None,
+    month: Optional[str] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Admin: list historical cross-check alert notifications."""
+    limit = min(limit, 500)
+    query: dict = {}
+    if date:
+        try:
+            day_start = datetime.strptime(date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            day_end = day_start + timedelta(days=1)
+            query["sent_at"] = {"$gte": day_start.isoformat(), "$lt": day_end.isoformat()}
+        except ValueError:
+            pass
+    elif month:
+        try:
+            month_start = datetime.strptime(month + "-01", "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            if month_start.month == 12:
+                month_end = month_start.replace(year=month_start.year + 1, month=1)
+            else:
+                month_end = month_start.replace(month=month_start.month + 1)
+            query["sent_at"] = {"$gte": month_start.isoformat(), "$lt": month_end.isoformat()}
+        except ValueError:
+            pass
+    alerts = await db.anydesk_flag_notifications.find(query, {"_id": 0}).sort("sent_at", -1).to_list(limit)
+    return {"alerts": alerts, "total": len(alerts)}
+
+
+@router.get("/export")
+async def export_sessions_csv(
+    date: Optional[str] = None,
+    month: Optional[str] = None,
+    employee: Optional[str] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Admin: export sessions as CSV."""
+    from fastapi.responses import StreamingResponse
+    import io, csv
+
+    data = await list_sessions(limit=1000, date=date, month=month, employee=employee, admin=admin)
+    sessions = data["sessions"]
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Date", "Worker", "AnyDesk ID", "Host", "Start", "End", "Duration (min)", "Auth",
+                      "Clock In", "Clock Out", "Hours Logged", "Auto Clock-Out"])
+    for s in sessions:
+        dur_min = round(s.get("duration_seconds", 0) / 60, 1) if s.get("duration_seconds") else ""
+        te = s.get("time_entry") or {}
+        writer.writerow([
+            s.get("started_at", "")[:10],
+            s.get("worker_name") or s.get("alias") or s.get("anydesk_id"),
+            s.get("anydesk_id", ""),
+            s.get("host", ""),
+            s.get("started_at", ""),
+            s.get("ended_at", ""),
+            dur_min,
+            s.get("auth_method", ""),
+            te.get("clock_in", ""),
+            te.get("clock_out", ""),
+            round(te["total_hours"], 2) if te.get("total_hours") else "",
+            "Yes" if te.get("anydesk_auto_clocked_out") else ""
+        ])
+    output.seek(0)
+    filename = f"remote_sessions_{date or month or 'all'}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 @router.get("/cross-check")

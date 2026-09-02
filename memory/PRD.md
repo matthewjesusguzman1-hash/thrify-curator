@@ -126,15 +126,21 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - Verified via Playwright: dropdown on top, previous period (Aug 17-30) displays shifts, edit modal on top.
 - **Rule reminder**: any dropdown/modal opened from inside a `z-[9999]` portaled modal needs an explicit higher z-index.
 
-### AnyDesk Remote Session Tracking (2026-09-01)
-- **No AnyDesk API needed** (works on Solo tier): a Python watcher on the Windows host reads AnyDesk's local `connection_trace.txt` (session starts: timestamp, AnyDesk ID, alias, auth method) + best-effort session ENDs from `ad_svc.trace`/`ad.trace` for durations.
-- **Watcher** `/app/watcher/anydesk_session_watcher.py`: watchdog PollingObserver + 30s safety scan, offset-based tail reading (no file locking), fingerprint dedup persisted in `watcher_state.json`, handles file truncation/recreation, failed posts queued in `failed_events.jsonl` and retried. First run starts at EOF (only new sessions). Config: `watcher_config.json` (backend_url, watcher_key, host_label). Setup guide: `/app/watcher/README_SETUP.md` (Task Scheduler + NSSM).
+### AnyDesk Remote Session Tracking (2026-09-01) — UPDATED 2026-09-02
+- **No AnyDesk API needed** (works on Solo tier): a Python watcher on the Mac host reads AnyDesk's local trace files (session starts/ends) and posts events to the backend.
+- **Watcher** `/app/watcher/anydesk_session_watcher.py`: watchdog PollingObserver + 30s safety scan, macOS support (reads `/var/log/anydesk.trace`), fingerprint dedup, failed posts queued and retried. Config: `watcher_config.json` (backend_url, watcher_key, host_label). Setup: macOS Launch Agent.
 - **Backend** `/app/backend/app/routers/remote_sessions.py`:
-  - `POST /api/remote-sessions/log` — auth via `X-Watcher-Key` header matching `ANYDESK_WATCHER_KEY` in backend .env; batch events; dedup by fingerprint; end events matched to latest open session (per host/ID) to compute duration_seconds
-  - `GET /api/remote-sessions` (admin) — sessions newest-first with worker_name from `db.anydesk_id_mappings`
-  - `POST /api/remote-sessions/map`, `GET /api/remote-sessions/mappings` (admin) — map AnyDesk ID → worker name
-  - Collections: `anydesk_sessions`, `anydesk_session_events`, `anydesk_id_mappings`
-- **Frontend (updated 2026-09-01 per user request)**: dedicated full page `/remote-sessions` (`RemoteSessionsPage.jsx`) — dark themed, search, All/Active filters, LIVE badge, assign-name inline, back to /admin. Opened from the admin header **Remote Sessions** button (Monitor icon) which REPLACED the "My Dashboard" person-icon link.
+  - `POST /api/remote-sessions/log` — watcher auth via `X-Watcher-Key` header; batch events; dedup; end events matched to open sessions for duration. **Historical flood protection**: events >5min old are stored but skip notifications/auto-clock-out.
+  - `GET /api/remote-sessions` — sessions with date/month/employee filtering, grouped by day, with clock-in/out time entry cross-reference for mapped employees.
+  - `GET /api/remote-sessions/alerts` — historical cross-check flag notification history with date filtering.
+  - `GET /api/remote-sessions/export` — CSV export of sessions with time entry data.
+  - `GET /api/remote-sessions/cross-check` — live mismatch flags.
+  - `POST /api/remote-sessions/map` — map AnyDesk ID to employee.
+  - Collections: `anydesk_sessions`, `anydesk_session_events`, `anydesk_id_mappings`, `anydesk_flag_notifications`
+- **Push Notifications**: Connect ("🖥️ Remote worker connected"), disconnect ("📴 Remote worker disconnected" with duration), rejected ("🚫 REJECTED"), auto clock-out ("⏹️ Auto clock-out"), cross-check flags. All skip for historical events.
+- **Periodic cross-check**: Background task runs every 3 minutes (server.py) to catch "AnyDesk active ≥3min but not clocked in" and "clocked in but no session" flags. Deduped per hour per employee.
+- **Auto Clock-Out**: When AnyDesk disconnects, mapped employee's open time entry is auto-closed with disconnect timestamp and badge.
+- **Frontend** `/remote-sessions` page: Sessions + Alerts tabs, month/day navigation, sessions grouped by day with clock-in/out cross-reference, search, CSV export, worker assignment. Tested 21/21 backend + 100% frontend (iteration_56).
 
 ### Security Remediation (2026-09-01)
 Full audit remediation, backend 28/28 tests passing (testing agent iteration_54):
@@ -147,19 +153,11 @@ Full audit remediation, backend 28/28 tests passing (testing agent iteration_54)
 7. **bcrypt migration**: employee passwords rehash transparently from legacy sha256.
 8. **CORS restricted** to explicit origins.
 
-### AnyDesk Cross-Check + Session Alerts (2026-09-01) - UPDATED
-- **Session Alerts**: on every new session_start posted by the watcher, admins get APNs + web push ("🖥️ Remote worker connected" / "🚫 Remote connection REJECTED"), tap-through URL /remote-sessions. Implemented via `notify_admins_session_event()` in remote_sessions.py.
-- **Hours Cross-Check** `GET /api/remote-sessions/cross-check` (admin):
-  - `clocked_in_no_session` (warning): open time entry NOT `admin_clocked`, employee mapped to AnyDesk ID(s), no active session → flag. Admin-clocked entries never flag (rule per user).
-  - `session_no_clock_in` (alert): active session ≥3 min (GRACE_MINUTES constant, reduced from 5) for a mapped employee with no open clock-in.
-  - `unmapped_active_session` (info): active session from unmapped AnyDesk ID.
-  - Active = ended_at null AND started within 12h (staleness guard) AND not REJECTED.
-- **Auto Clock-Out on AnyDesk Disconnect (2026-09-01)**: When watcher posts a session_end event, the system looks up the mapped employee. If they have an open time entry, it's automatically closed with clock_out = disconnect timestamp, `anydesk_auto_clocked_out: true`, and note "Auto-closed by AnyDesk disconnect at {timestamp}". Hours are calculated using the same rounding logic as normal clock-outs. Admins are push-notified.
-- **Flag Push Notifications (2026-09-01)**: Cross-check mismatches now trigger admin push notifications (both APNs + web push) for BOTH directions: "clocked in no session" and "session no clock-in". A 1-hour dedup prevents repeated alerts for the same flag type + employee. Dedup records stored in `anydesk_flag_notifications` collection. Notifications fire on every session_start event (checking for missed clock-ins) and auto clock-out fires on every session_end.
-- Mapping now supports `employee_id` (+email) — required for cross-checks; page has employee dropdown in Assign name UI (`page-worker-employee-select`).
-- **Watcher timestamps now converted to UTC** (`local_to_utc_iso`) since AnyDesk logs use PC-local time; critical for the 3-min comparisons.
-- Frontend: flags banner (red/amber/blue) atop /remote-sessions page (`cross-check-flags`, `flag-{type}` testids), header shows "N active now". HoursByEmployeeSection and EmployeeDashboard show "AnyDesk Auto-Out" badge on auto-clocked entries.
-- Tested: all scenarios pass (9/9 backend tests, frontend verified). See `/app/test_reports/iteration_55.json`.
+### AnyDesk Cross-Check + Session Alerts (2026-09-01) - UPDATED 2026-09-02
+- **Session Alerts**: Connect + disconnect notifications for admins. Historical events (>5min old) skip notifications to prevent floods during log rescans.
+- **Periodic background cross-check** (every 3 min via asyncio task in server.py): catches "AnyDesk active ≥3min but not clocked in" and "clocked in but no session" with 1-hour dedup.
+- **Auto Clock-Out on AnyDesk Disconnect**: Open time entries auto-closed on disconnect (recent events only). Badge shown in Hours by Employee and Employee Dashboard.
+- **Remote Sessions Reference Page (2026-09-02)**: Complete redesign with Sessions + Alerts tabs, month/day date navigation, sessions grouped by day with clock-in/out cross-reference, employee search, CSV export. Backend: date/month/employee filtering on all endpoints. Tested 21/21 backend + 100% frontend (iteration_56).
 
 ## 3rd Party Integrations
 - Capacitor v8
