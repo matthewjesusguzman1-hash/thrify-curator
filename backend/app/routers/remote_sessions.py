@@ -891,10 +891,58 @@ async def ack_watcher_command(
     _: bool = Depends(verify_watcher_key)
 ):
     """Watcher acknowledges a command was executed."""
+    status = "completed" if success else "failed"
     await db.anydesk_commands.update_one(
         {"id": command_id},
-        {"$set": {"status": "done" if success else "failed", "completed_at": datetime.now(timezone.utc).isoformat()}}
+        {"$set": {"status": status, "acked_at": datetime.now(timezone.utc).isoformat()}}
     )
+    return {"success": True}
+
+
+@router.delete("/alert/{dedup_key:path}")
+async def delete_single_alert(dedup_key: str, admin: dict = Depends(get_admin_user)):
+    """Admin: delete a single alert by its dedup_key."""
+    result = await db.anydesk_flag_notifications.delete_one({"dedup_key": dedup_key})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return {"success": True}
+
+
+@router.delete("/alerts")
+async def clear_alerts(
+    date: Optional[str] = None,
+    month: Optional[str] = None,
+    admin: dict = Depends(get_admin_user)
+):
+    """Admin: clear alert history. If date/month provided, only clear that range."""
+    query: dict = {}
+    if date:
+        try:
+            day_start = datetime.strptime(date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            day_end = day_start + timedelta(days=1)
+            query["sent_at"] = {"$gte": day_start.isoformat(), "$lt": day_end.isoformat()}
+        except ValueError:
+            pass
+    elif month:
+        try:
+            month_start = datetime.strptime(month + "-01", "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            if month_start.month == 12:
+                month_end = month_start.replace(year=month_start.year + 1, month=1)
+            else:
+                month_end = month_start.replace(month=month_start.month + 1)
+            query["sent_at"] = {"$gte": month_start.isoformat(), "$lt": month_end.isoformat()}
+        except ValueError:
+            pass
+    result = await db.anydesk_flag_notifications.delete_many(query)
+    return {"success": True, "deleted": result.deleted_count}
+
+
+@router.delete("/map/{anydesk_id}")
+async def delete_mapping(anydesk_id: str, admin: dict = Depends(get_admin_user)):
+    """Admin: remove a worker name mapping."""
+    result = await db.anydesk_id_mappings.delete_one({"anydesk_id": anydesk_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Mapping not found")
     return {"success": True}
 
 

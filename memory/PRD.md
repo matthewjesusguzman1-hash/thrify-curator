@@ -159,12 +159,20 @@ Full audit remediation, backend 28/28 tests passing (testing agent iteration_54)
 - **Auto Clock-Out on AnyDesk Disconnect**: Open time entries auto-closed on disconnect (recent events only). Badge shown in Hours by Employee and Employee Dashboard.
 - **Remote Sessions Reference Page (2026-09-02)**: Complete redesign with Sessions + Alerts tabs, month/day date navigation, sessions grouped by day with clock-in/out cross-reference, employee search, CSV export. Backend: date/month/employee filtering on all endpoints. Tested 21/21 backend + 100% frontend (iteration_56).
 - **Block/Disconnect/Alerts (2026-09-02)**:
-  - **Disconnect**: Red button on active sessions → queues command → watcher polls and kills AnyDesk via CLI → restarts AnyDesk. Endpoints: POST /disconnect, GET/POST /watcher-commands, /watcher-commands/ack.
+  - **Disconnect**: Red button on active sessions → queues command → watcher polls and kills AnyDesk via CLI (no auto-restart). Endpoints: POST /disconnect, GET/POST /watcher-commands, /watcher-commands/ack.
   - **Blocklist**: Block/unblock AnyDesk IDs. Blocked ID connecting → auto-disconnect command queued + critical alert in Alerts tab + urgent push. Reminder modal shows AnyDesk ACL instructions. Endpoints: POST /block, DELETE /block/{id}, GET /blocklist.
   - **Unmapped alerts**: Unknown AnyDesk IDs connecting stored as alert records in Alerts tab (1-hour dedup).
   - **Header badge**: Monitor icon shows red badge with 24h alert count or green badge with active session count.
-  - Watcher updated: polls for commands every 10s, executes disconnect (pkill AnyDesk + restart), checks blocked IDs on session detection.
+  - Watcher updated: polls for commands every 10s, executes disconnect (pkill AnyDesk, no restart), checks blocked IDs on session detection.
   - Tested 13/13 backend + 100% frontend (iteration_57).
+- **Alert Clearing + Mapping Management + ID Visibility (2026-09-02)**:
+  - **Clear All Alerts**: Button on Alerts tab with confirmation, calls DELETE /api/remote-sessions/alerts with date/month params.
+  - **Individual Alert Delete**: X button on each alert, calls DELETE /api/remote-sessions/alert/{dedup_key}.
+  - **AnyDesk ID Always Visible**: Mono font badge shows AnyDesk ID on every session card, even when mapped to an employee name.
+  - **Edit Mapping**: Clicking "edit" on a mapped session pre-fills the inline form with current worker name and employee.
+  - **Remove Mapping**: Unlink icon + "Remove" button in form, calls DELETE /api/remote-sessions/map/{anydesk_id} to unassign employee.
+  - **Watcher Command Ack**: Fixed empty endpoint body — now updates command status to completed/failed in DB.
+  - Tested 16/16 backend + 100% frontend (iteration_58).
 
 ## 3rd Party Integrations
 - Capacitor v8

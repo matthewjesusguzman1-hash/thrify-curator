@@ -6,7 +6,8 @@ import { motion } from "framer-motion";
 import {
   Monitor, ArrowLeft, RefreshCw, UserPlus, Search, AlertTriangle,
   Info, Clock, ChevronLeft, ChevronRight, Download, CalendarDays,
-  LogIn, LogOut, Wifi, WifiOff, Bell, ShieldOff, ShieldBan, Power, ShieldAlert, Merge
+  LogIn, LogOut, Wifi, WifiOff, Bell, ShieldOff, ShieldBan, Power, ShieldAlert, Merge,
+  Trash2, X, Unlink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,7 +95,7 @@ function formatDT(iso) {
   return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-function SessionCard({ s, isActive, onAssign, onDisconnect, onBlock, onUnblock, onClose, onDelete, blockedIds, employees, mappingId, mappingName, setMappingName, mappingEmployeeId, setMappingEmployeeId, saveMapping, setMappingId }) {
+function SessionCard({ s, isActive, onAssign, onRemoveMapping, onDisconnect, onBlock, onUnblock, onClose, onDelete, blockedIds, employees, mappingId, mappingName, setMappingName, mappingEmployeeId, setMappingEmployeeId, saveMapping, setMappingId }) {
   const isBlocked = blockedIds.has(s.anydesk_id);
   return (
     <div
@@ -109,10 +110,13 @@ function SessionCard({ s, isActive, onAssign, onDisconnect, onBlock, onUnblock, 
         <span className="font-semibold text-white text-sm">
           {s.worker_name || s.alias || `AnyDesk ${s.anydesk_id}`}
         </span>
+        {s.anydesk_id && (
+          <span className="text-[10px] text-white/40 font-mono bg-white/[0.05] px-1.5 py-0.5 rounded">{s.anydesk_id}</span>
+        )}
         {isBlocked && <span className="text-[10px] font-bold text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full flex items-center gap-0.5"><ShieldBan className="w-2.5 h-2.5" /> BLOCKED</span>}
         {isActive && !isBlocked && <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full">LIVE</span>}
         {s.auth_method === "REJECTED" && <span className="text-[10px] font-bold text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full">REJECTED</span>}
-        {!s.worker_name && (
+        {!s.worker_name ? (
           <button
             onClick={() => onAssign(s.anydesk_id)}
             className="text-xs text-indigo-300 hover:text-indigo-200 flex items-center gap-1"
@@ -120,6 +124,24 @@ function SessionCard({ s, isActive, onAssign, onDisconnect, onBlock, onUnblock, 
           >
             <UserPlus className="w-3 h-3" /> Assign
           </button>
+        ) : (
+          <span className="flex items-center gap-1.5">
+            <button
+              onClick={() => onAssign(s.anydesk_id)}
+              className="text-[10px] text-white/30 hover:text-indigo-300 transition-colors"
+              data-testid={`edit-worker-${s.anydesk_id}`}
+            >
+              edit
+            </button>
+            <button
+              onClick={() => onRemoveMapping(s.anydesk_id)}
+              className="text-[10px] text-white/20 hover:text-red-300 transition-colors"
+              data-testid={`remove-worker-${s.anydesk_id}`}
+              title="Remove assignment"
+            >
+              <Unlink className="w-2.5 h-2.5" />
+            </button>
+          </span>
         )}
         <span className="text-[11px] text-white/30 ml-auto">{s.host}</span>
       </div>
@@ -241,6 +263,11 @@ function SessionCard({ s, isActive, onAssign, onDisconnect, onBlock, onUnblock, 
             />
             <Button size="sm" className="h-8 bg-indigo-500 hover:bg-indigo-600" onClick={() => saveMapping(s.anydesk_id)} data-testid="worker-name-save">Save</Button>
             <Button size="sm" variant="ghost" className="h-8 text-white/60" onClick={() => { setMappingId(null); setMappingEmployeeId(""); }}>Cancel</Button>
+            {s.worker_name && (
+              <Button size="sm" variant="ghost" className="h-8 text-red-300 hover:text-red-200 hover:bg-red-500/10" onClick={() => onRemoveMapping(s.anydesk_id)} data-testid="worker-remove-btn">
+                <Unlink className="w-3 h-3 mr-1" /> Remove
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -400,6 +427,52 @@ export default function RemoteSessionsPage() {
     } catch { toast.error("Failed to save"); }
   };
 
+  const handleRemoveMapping = async (anydeskId) => {
+    if (!confirm(`Remove the worker assignment for AnyDesk ID ${anydeskId}?`)) return;
+    try {
+      await axios.delete(`${API}/remote-sessions/map/${anydeskId}`, getAuthHeader());
+      toast.success("Assignment removed");
+      setMappingId(null); setMappingName(""); setMappingEmployeeId("");
+      fetchData();
+    } catch { toast.error("Failed to remove assignment"); }
+  };
+
+  const handleClearAlerts = async () => {
+    const dateParam = selectedDate || null;
+    const monthParam = !selectedDate ? month : null;
+    const label = selectedDate ? `alerts for ${selectedDate}` : `alerts for ${month}`;
+    if (!confirm(`Clear all ${label}? This cannot be undone.`)) return;
+    try {
+      const params = new URLSearchParams();
+      if (dateParam) params.set("date", dateParam);
+      else if (monthParam) params.set("month", monthParam);
+      const res = await axios.delete(`${API}/remote-sessions/alerts?${params}`, getAuthHeader());
+      toast.success(`Cleared ${res.data.deleted} alert(s)`);
+      fetchAlerts();
+    } catch { toast.error("Failed to clear alerts"); }
+  };
+
+  const handleDeleteAlert = async (dedupKey) => {
+    try {
+      await axios.delete(`${API}/remote-sessions/alert/${encodeURIComponent(dedupKey)}`, getAuthHeader());
+      toast.success("Alert deleted");
+      fetchAlerts();
+    } catch { toast.error("Failed to delete alert"); }
+  };
+
+  const handleAssign = (anydeskId) => {
+    // Pre-fill form if session already has a mapping
+    const session = sessions.find(s => s.anydesk_id === anydeskId);
+    setMappingId(anydeskId);
+    if (session?.worker_name) {
+      setMappingName(session.worker_name);
+      setMappingEmployeeId(session.employee_id || "");
+    } else {
+      setMappingName("");
+      setMappingEmployeeId("");
+    }
+  };
+
   const isActive = (s) => !s.ended_at && s.duration_seconds === null;
   const activeCount = sessions.filter(isActive).length;
 
@@ -551,7 +624,8 @@ export default function RemoteSessionsPage() {
                           <SessionCard
                             s={s}
                             isActive={isActive(s)}
-                            onAssign={(id) => { setMappingId(id); setMappingName(""); setMappingEmployeeId(""); }}
+                            onAssign={handleAssign}
+                            onRemoveMapping={handleRemoveMapping}
                             onDisconnect={handleDisconnect}
                             onBlock={handleBlock}
                             onUnblock={handleUnblock}
@@ -585,6 +659,15 @@ export default function RemoteSessionsPage() {
             </div>
           ) : (
             <div className="space-y-2">
+              <div className="flex justify-end">
+                <button
+                  onClick={handleClearAlerts}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/25 text-red-300 text-xs font-medium hover:bg-red-500/20 transition-colors"
+                  data-testid="clear-all-alerts-btn"
+                >
+                  <Trash2 className="w-3 h-3" /> Clear All
+                </button>
+              </div>
               {alerts.map((a, i) => {
                 const typeLabel = a.type === "clocked_in_no_session" ? "Clocked in, no session"
                   : a.type === "session_no_clock_in" ? "Session, no clock-in"
@@ -596,7 +679,7 @@ export default function RemoteSessionsPage() {
                   : "warning";
                 return (
                   <motion.div
-                    key={i}
+                    key={a.dedup_key || i}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: Math.min(i * 0.03, 0.2) }}
@@ -613,6 +696,16 @@ export default function RemoteSessionsPage() {
                             severity === "critical" ? "bg-red-500/30 text-red-200" : severity === "alert" ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300"
                           }`}>{typeLabel}</span>
                           <span className="text-white/30 text-xs ml-auto">{formatDT(a.sent_at)}</span>
+                          {a.dedup_key && (
+                            <button
+                              onClick={() => handleDeleteAlert(a.dedup_key)}
+                              className="text-white/20 hover:text-red-300 transition-colors p-0.5"
+                              data-testid={`delete-alert-${i}`}
+                              title="Delete this alert"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                         <p className={`mt-1 ${severity === "critical" ? "text-red-200" : severity === "alert" ? "text-red-200" : "text-amber-200"}`}>{a.detail}</p>
                       </div>
