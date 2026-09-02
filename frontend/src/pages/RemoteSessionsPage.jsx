@@ -94,7 +94,7 @@ function formatDT(iso) {
   return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-function SessionCard({ s, isActive, onAssign, onDisconnect, onBlock, onUnblock, blockedIds, employees, mappingId, mappingName, setMappingName, mappingEmployeeId, setMappingEmployeeId, saveMapping, setMappingId }) {
+function SessionCard({ s, isActive, onAssign, onDisconnect, onBlock, onUnblock, onClose, onDelete, blockedIds, employees, mappingId, mappingName, setMappingName, mappingEmployeeId, setMappingEmployeeId, saveMapping, setMappingId }) {
   const isBlocked = blockedIds.has(s.anydesk_id);
   return (
     <div
@@ -163,7 +163,7 @@ function SessionCard({ s, isActive, onAssign, onDisconnect, onBlock, onUnblock, 
         </div>
       )}
 
-      {/* Action buttons: Disconnect + Block */}
+      {/* Action buttons: Disconnect + Block + Close/Delete */}
       {s.anydesk_id && (
         <div className="mt-2.5 ml-4 flex flex-wrap gap-2">
           {isActive && (
@@ -173,6 +173,15 @@ function SessionCard({ s, isActive, onAssign, onDisconnect, onBlock, onUnblock, 
               data-testid={`disconnect-btn-${s.id}`}
             >
               <Power className="w-3 h-3" /> Disconnect
+            </button>
+          )}
+          {isActive && (
+            <button
+              onClick={() => onClose(s.id)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-medium hover:bg-amber-500/20 transition-colors"
+              data-testid={`close-session-btn-${s.id}`}
+            >
+              <Clock className="w-3 h-3" /> Mark Ended
             </button>
           )}
           {isBlocked ? (
@@ -192,6 +201,14 @@ function SessionCard({ s, isActive, onAssign, onDisconnect, onBlock, onUnblock, 
               <ShieldBan className="w-3 h-3" /> Block
             </button>
           )}
+          <button
+            onClick={() => onDelete(s.id)}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-white/20 text-xs hover:text-red-300 hover:bg-red-500/10 transition-colors ml-auto"
+            data-testid={`delete-session-btn-${s.id}`}
+            title="Delete this session record"
+          >
+            &times;
+          </button>
         </div>
       )}
 
@@ -315,6 +332,23 @@ export default function RemoteSessionsPage() {
       toast.success("ID unblocked");
       setBlockedIds(prev => { const n = new Set(prev); n.delete(anydeskId); return n; });
     } catch { toast.error("Failed to unblock"); }
+  };
+
+  const handleCloseSession = async (sessionId) => {
+    try {
+      await axios.post(`${API}/remote-sessions/close-session/${sessionId}`, {}, getAuthHeader());
+      toast.success("Session marked as ended");
+      fetchData();
+    } catch { toast.error("Failed to close session"); }
+  };
+
+  const handleDeleteSession = async (sessionId) => {
+    if (!confirm("Delete this session record? This cannot be undone.")) return;
+    try {
+      await axios.delete(`${API}/remote-sessions/session/${sessionId}`, getAuthHeader());
+      toast.success("Session deleted");
+      fetchData();
+    } catch { toast.error("Failed to delete session"); }
   };
 
   const handleExport = async () => {
@@ -511,6 +545,8 @@ export default function RemoteSessionsPage() {
                             onDisconnect={handleDisconnect}
                             onBlock={handleBlock}
                             onUnblock={handleUnblock}
+                            onClose={handleCloseSession}
+                            onDelete={handleDeleteSession}
                             blockedIds={blockedIds}
                             employees={employees}
                             mappingId={mappingId}

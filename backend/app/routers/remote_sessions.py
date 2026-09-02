@@ -840,6 +840,44 @@ async def download_watcher_script(admin: dict = Depends(get_admin_user)):
     return FileResponse(script_path, filename="anydesk_session_watcher.py", media_type="text/x-python")
 
 
+# ─── Manual session management ───────────────────────────────
+
+@router.post("/close-session/{session_id}")
+async def close_session(session_id: str, admin: dict = Depends(get_admin_user)):
+    """Admin: manually close a stuck 'active' session."""
+    session = await db.anydesk_sessions.find_one({"id": session_id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.get("ended_at"):
+        return {"success": True, "message": "Session already ended"}
+    # Use the start time + reasonable duration, or just now
+    ended_at = datetime.now(timezone.utc).isoformat()
+    duration = None
+    try:
+        start = datetime.fromisoformat(session["started_at"])
+        end = datetime.now(timezone.utc)
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        duration = max(0, int((end - start).total_seconds()))
+    except (ValueError, TypeError):
+        pass
+    await db.anydesk_sessions.update_one(
+        {"id": session_id},
+        {"$set": {"ended_at": ended_at, "duration_seconds": duration}}
+    )
+    return {"success": True, "message": "Session closed"}
+
+
+@router.delete("/session/{session_id}")
+async def delete_session(session_id: str, admin: dict = Depends(get_admin_user)):
+    """Admin: delete a session (for cleanup of bad data)."""
+    result = await db.anydesk_sessions.delete_one({"id": session_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"success": True}
+
+
+
 # ─── Historical session merge ───────────────────────────────
 
 @router.post("/merge-historical")
