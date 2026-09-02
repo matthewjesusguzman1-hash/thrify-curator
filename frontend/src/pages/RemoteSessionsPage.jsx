@@ -368,13 +368,16 @@ export default function RemoteSessionsPage() {
     try {
       const res = await axios.post(`${API}/remote-sessions/merge-historical`, {}, getAuthHeader());
       const d = res.data;
-      if (d.merged_count > 0) {
-        toast.success(`Merged ${d.merged_count} fragmented sessions (${d.sessions_removed} removed)`);
+      // Also run cleanup for stale/stuck sessions
+      const cleanup = await axios.post(`${API}/remote-sessions/cleanup-stale`, {}, getAuthHeader());
+      const total = (d.merged_count || 0) + (cleanup.data.stale_closed || 0) + (cleanup.data.test_deleted || 0);
+      if (total > 0) {
+        toast.success(`Cleaned up: ${d.merged_count} merged, ${cleanup.data.stale_closed} stale closed, ${cleanup.data.test_deleted} test removed`);
         fetchData();
       } else {
-        toast.info("No fragmented sessions found to merge");
+        toast.info("Everything looks clean — nothing to merge or clean up");
       }
-    } catch { toast.error("Merge failed"); }
+    } catch { toast.error("Cleanup failed"); }
   };
 
   const saveMapping = async (anydeskId) => {
@@ -431,7 +434,7 @@ export default function RemoteSessionsPage() {
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={handleMergeHistorical} className="text-white/50 hover:text-white hover:bg-white/10 gap-1 text-xs" data-testid="merge-sessions-btn">
-            <Merge className="w-4 h-4" /> Merge
+            <Merge className="w-4 h-4" /> Clean Up
           </Button>
           <Button variant="ghost" size="sm" onClick={handleExport} className="text-white/50 hover:text-white hover:bg-white/10 gap-1 text-xs" data-testid="export-csv-btn">
             <Download className="w-4 h-4" /> CSV

@@ -876,6 +876,26 @@ async def download_watcher_script(admin: dict = Depends(get_admin_user)):
         raise HTTPException(status_code=404, detail="Watcher script not found")
     return FileResponse(script_path, filename="anydesk_session_watcher.py", media_type="text/x-python")
 
+@router.post("/cleanup-stale")
+async def cleanup_stale_sessions(admin: dict = Depends(get_admin_user)):
+    """Admin: delete sessions with no end time older than 12 hours (stuck/orphaned records)
+    and remove duplicate sessions from timezone-bug era."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
+    # Close stale "active" sessions
+    result = await db.anydesk_sessions.update_many(
+        {"ended_at": None, "started_at": {"$lt": cutoff}},
+        {"$set": {"ended_at": cutoff, "duration_seconds": 0}}
+    )
+    closed = result.modified_count
+    # Delete very short sessions (< 5 sec) that are likely test/duplicate artifacts
+    result2 = await db.anydesk_sessions.delete_many({
+        "duration_seconds": {"$lte": 5}, "host": {"$in": ["test-host", "test-merge", "key-test", "key-test-2", "mac-test", "test-historical"]}
+    })
+    deleted = result2.deleted_count
+    return {"success": True, "stale_closed": closed, "test_deleted": deleted}
+
+
+
 
 # ─── Manual session management ───────────────────────────────
 

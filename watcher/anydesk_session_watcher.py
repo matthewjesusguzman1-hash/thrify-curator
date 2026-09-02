@@ -259,23 +259,16 @@ def poll_commands(cfg):
 
 
 def execute_disconnect():
-    """Kill AnyDesk and restart it to disconnect all active sessions."""
+    """Kill AnyDesk to disconnect all sessions. Does NOT restart — admin must reopen AnyDesk manually when ready."""
     import subprocess
     try:
         if IS_MAC:
-            log.warning("Executing emergency disconnect: killing AnyDesk...")
+            log.warning("Executing emergency disconnect: killing AnyDesk (will NOT auto-restart)...")
             subprocess.run(["pkill", "-x", "AnyDesk"], timeout=5)
-            time.sleep(2)
-            log.info("Restarting AnyDesk...")
-            subprocess.Popen(["open", "-a", "AnyDesk"])
         else:
-            log.warning("Executing emergency disconnect: killing AnyDesk (Windows)...")
+            log.warning("Executing emergency disconnect: killing AnyDesk (Windows, will NOT auto-restart)...")
             subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
-            time.sleep(2)
-            anydesk_path = r"C:\Program Files (x86)\AnyDesk\AnyDesk.exe"
-            if os.path.exists(anydesk_path):
-                subprocess.Popen([anydesk_path])
-        log.info("AnyDesk disconnect + restart completed")
+        log.info("AnyDesk killed. Remote workers disconnected. Reopen AnyDesk manually to allow connections again.")
         return True
     except Exception as e:
         log.error(f"Disconnect execution failed: {e}")
