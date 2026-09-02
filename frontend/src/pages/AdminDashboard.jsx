@@ -169,6 +169,10 @@ export default function AdminDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
   
+  // Remote session alert badge
+  const [remoteAlertCount, setRemoteAlertCount] = useState(0);
+  const [remoteActiveCount, setRemoteActiveCount] = useState(0);
+  
   // Payroll quick view state
   const [showPayrollQuickView, setShowPayrollQuickView] = useState(false);
   const [payrollPeriodIndex, setPayrollPeriodIndex] = useState(0); // 0 = current, -1 = previous
@@ -881,7 +885,15 @@ export default function AdminDashboard() {
       fetchNotifications();
       fetchMessageUnreadCount(); // Also poll for new messages
       fetchData(); // Also refresh main data to keep all sections in sync
+      // Fetch remote session badge count
+      axios.get(`${API}/remote-sessions/unread-count`, getAuthHeader())
+        .then(res => { setRemoteAlertCount(res.data.alert_count || 0); setRemoteActiveCount(res.data.active_sessions || 0); })
+        .catch(() => {});
     }, 30000);
+    // Initial remote badge fetch
+    axios.get(`${API}/remote-sessions/unread-count`, getAuthHeader())
+      .then(res => { setRemoteAlertCount(res.data.alert_count || 0); setRemoteActiveCount(res.data.active_sessions || 0); })
+      .catch(() => {});
     return () => clearInterval(pollInterval);
   }, [navigate, fetchNotifications, fetchMessageUnreadCount, fetchPayrollSettings, fetchPayrollSummary, fetchFormSubmissions]);
 
@@ -3248,13 +3260,20 @@ export default function AdminDashboard() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-white/70 hover:text-white hover:bg-white/10 p-3 sm:px-3 sm:py-2"
+            className="text-white/70 hover:text-white hover:bg-white/10 p-3 sm:px-3 sm:py-2 relative"
             onClick={() => { lightTap(); navigate("/remote-sessions"); }}
             data-testid="remote-sessions-header-btn"
             title="Remote Sessions"
           >
             <Monitor className="w-6 h-6 sm:w-4 sm:h-4 sm:mr-1" />
             <span className="hidden sm:inline">Remote Sessions</span>
+            {(remoteAlertCount > 0 || remoteActiveCount > 0) && (
+              <span className={`absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold ${
+                remoteAlertCount > 0 ? "bg-red-500 text-white animate-pulse" : "bg-emerald-500 text-white"
+              }`} data-testid="remote-sessions-badge">
+                {remoteAlertCount > 0 ? remoteAlertCount : remoteActiveCount}
+              </span>
+            )}
           </Button>
           {/* Messages Shortcut */}
           <Button 

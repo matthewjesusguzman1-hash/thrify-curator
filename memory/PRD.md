@@ -158,6 +158,13 @@ Full audit remediation, backend 28/28 tests passing (testing agent iteration_54)
 - **Periodic background cross-check** (every 3 min via asyncio task in server.py): catches "AnyDesk active ≥3min but not clocked in" and "clocked in but no session" with 1-hour dedup.
 - **Auto Clock-Out on AnyDesk Disconnect**: Open time entries auto-closed on disconnect (recent events only). Badge shown in Hours by Employee and Employee Dashboard.
 - **Remote Sessions Reference Page (2026-09-02)**: Complete redesign with Sessions + Alerts tabs, month/day date navigation, sessions grouped by day with clock-in/out cross-reference, employee search, CSV export. Backend: date/month/employee filtering on all endpoints. Tested 21/21 backend + 100% frontend (iteration_56).
+- **Block/Disconnect/Alerts (2026-09-02)**:
+  - **Disconnect**: Red button on active sessions → queues command → watcher polls and kills AnyDesk via CLI → restarts AnyDesk. Endpoints: POST /disconnect, GET/POST /watcher-commands, /watcher-commands/ack.
+  - **Blocklist**: Block/unblock AnyDesk IDs. Blocked ID connecting → auto-disconnect command queued + critical alert in Alerts tab + urgent push. Reminder modal shows AnyDesk ACL instructions. Endpoints: POST /block, DELETE /block/{id}, GET /blocklist.
+  - **Unmapped alerts**: Unknown AnyDesk IDs connecting stored as alert records in Alerts tab (1-hour dedup).
+  - **Header badge**: Monitor icon shows red badge with 24h alert count or green badge with active session count.
+  - Watcher updated: polls for commands every 10s, executes disconnect (pkill AnyDesk + restart), checks blocked IDs on session detection.
+  - Tested 13/13 backend + 100% frontend (iteration_57).
 
 ## 3rd Party Integrations
 - Capacitor v8

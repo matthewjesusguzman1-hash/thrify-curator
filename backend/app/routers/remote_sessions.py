@@ -45,6 +45,16 @@ class AnydeskMapping(BaseModel):
     employee_id: Optional[str] = None
 
 
+class BlockRequest(BaseModel):
+    anydesk_id: str
+    reason: Optional[str] = None
+
+
+class DisconnectRequest(BaseModel):
+    session_id: Optional[str] = None
+    anydesk_id: Optional[str] = None
+
+
 async def notify_admins_session_event(event: SessionEvent, host: str, duration_seconds: int = None):
     """Push notify admins when a remote worker connects, disconnects, or is rejected"""
     try:
@@ -286,6 +296,47 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                 event_age_minutes = 0
             if event_age_minutes <= 5:
                 await notify_admins_session_event(event, batch.host)
+                # Check blocklist — if blocked, queue disconnect command + urgent alert
+                if event.anydesk_id:
+                    blocked = await db.anydesk_blocklist.find_one({"anydesk_id": event.anydesk_id})
+                    if blocked:
+                        await db.anydesk_commands.insert_one({
+                            "id": str(uuid.uuid4()),
+                            "command": "disconnect",
+                            "anydesk_id": event.anydesk_id,
+                            "reason": f"Blocked ID {event.anydesk_id} connected — auto-disconnecting",
+                            "status": "pending",
+                            "created_at": datetime.now(timezone.utc).isoformat()
+                        })
+                        alert_detail = f"BLOCKED AnyDesk ID {event.anydesk_id} connected to {batch.host} — auto-disconnect issued"
+                        await db.anydesk_flag_notifications.insert_one({
+                            "dedup_key": f"blocked_connect:{event.anydesk_id}",
+                            "type": "blocked_connection",
+                            "sent_at": datetime.now(timezone.utc).isoformat(),
+                            "detail": alert_detail,
+                            "severity": "critical"
+                        })
+                        await notify_admins_flag(
+                            title="🚨 BLOCKED user connected!",
+                            body=alert_detail
+                        )
+                    # Check if unmapped — store alert
+                    else:
+                        mapping = await db.anydesk_id_mappings.find_one({"anydesk_id": event.anydesk_id})
+                        if not mapping:
+                            one_hour_ago = (now - timedelta(hours=1)).isoformat()
+                            dedup_key = f"unmapped_connect:{event.anydesk_id}"
+                            already = await db.anydesk_flag_notifications.find_one({
+                                "dedup_key": dedup_key, "sent_at": {"$gte": one_hour_ago}
+                            })
+                            if not already:
+                                await db.anydesk_flag_notifications.insert_one({
+                                    "dedup_key": dedup_key,
+                                    "type": "unmapped_connection",
+                                    "sent_at": datetime.now(timezone.utc).isoformat(),
+                                    "detail": f"Unmapped AnyDesk ID {event.anydesk_id} connected to {batch.host} — assign to enable cross-checks",
+                                    "severity": "warning"
+                                })
                 try:
                     await run_cross_check_and_notify()
                 except Exception as e:
@@ -644,3 +695,100 @@ async def map_anydesk_id(mapping: AnydeskMapping, admin: dict = Depends(get_admi
         upsert=True
     )
     return {"success": True}
+
+
+# ─── Blocklist ───────────────────────────────────────────────
+
+@router.post("/block")
+async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_user)):
+    """Admin: add an AnyDesk ID to the blocklist. Auto-disconnect will fire on next connection."""
+    await db.anydesk_blocklist.update_one(
+        {"anydesk_id": req.anydesk_id},
+        {"$set": {
+            "anydesk_id": req.anydesk_id,
+            "reason": req.reason or "Blocked by admin",
+            "blocked_by": admin.get("name", "Admin"),
+            "blocked_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    return {"success": True, "message": f"AnyDesk ID {req.anydesk_id} blocked. Remember to also block this ID in AnyDesk → Settings → Security → Access Control List on your Mac."}
+
+
+@router.delete("/block/{anydesk_id}")
+async def unblock_anydesk_id(anydesk_id: str, admin: dict = Depends(get_admin_user)):
+    """Admin: remove an AnyDesk ID from the blocklist."""
+    result = await db.anydesk_blocklist.delete_one({"anydesk_id": anydesk_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="ID not in blocklist")
+    return {"success": True}
+
+
+@router.get("/blocklist")
+async def get_blocklist(admin: dict = Depends(get_admin_user)):
+    blocked = await db.anydesk_blocklist.find({}, {"_id": 0}).to_list(200)
+    return {"blocked": blocked}
+
+
+# ─── Disconnect / Watcher Commands ──────────────────────────
+
+@router.post("/disconnect")
+async def disconnect_session(req: DisconnectRequest, admin: dict = Depends(get_admin_user)):
+    """Admin: issue a disconnect command for the watcher to execute."""
+    anydesk_id = req.anydesk_id
+    if req.session_id and not anydesk_id:
+        session = await db.anydesk_sessions.find_one({"id": req.session_id})
+        if session:
+            anydesk_id = session.get("anydesk_id")
+    cmd_id = str(uuid.uuid4())
+    await db.anydesk_commands.insert_one({
+        "id": cmd_id,
+        "command": "disconnect",
+        "anydesk_id": anydesk_id,
+        "reason": f"Manual disconnect by {admin.get('name', 'Admin')}",
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    return {"success": True, "command_id": cmd_id, "message": "Disconnect command queued. Watcher will execute within seconds."}
+
+
+@router.get("/watcher-commands")
+async def get_watcher_commands(_: bool = Depends(verify_watcher_key)):
+    """Watcher polls for pending commands."""
+    commands = await db.anydesk_commands.find(
+        {"status": "pending"},
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(20)
+    # Also include blocked IDs for the watcher to auto-disconnect
+    blocked = await db.anydesk_blocklist.find({}, {"_id": 0, "anydesk_id": 1}).to_list(200)
+    blocked_ids = [b["anydesk_id"] for b in blocked]
+    return {"commands": commands, "blocked_ids": blocked_ids}
+
+
+@router.post("/watcher-commands/ack")
+async def ack_watcher_command(
+    command_id: str,
+    success: bool = True,
+    _: bool = Depends(verify_watcher_key)
+):
+    """Watcher acknowledges a command was executed."""
+    await db.anydesk_commands.update_one(
+        {"id": command_id},
+        {"$set": {"status": "done" if success else "failed", "completed_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"success": True}
+
+
+# ─── Notification badge count ────────────────────────────────
+
+@router.get("/unread-count")
+async def unread_session_alerts(admin: dict = Depends(get_admin_user)):
+    """Count of session alerts in the last 24h for the header badge."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    count = await db.anydesk_flag_notifications.count_documents({"sent_at": {"$gte": cutoff}})
+    # Also count active sessions
+    active_cutoff = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
+    active = await db.anydesk_sessions.count_documents({
+        "ended_at": None, "auth_method": {"$ne": "REJECTED"}, "started_at": {"$gte": active_cutoff}
+    })
+    return {"alert_count": count, "active_sessions": active}

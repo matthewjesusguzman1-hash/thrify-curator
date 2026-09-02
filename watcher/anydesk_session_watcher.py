@@ -217,6 +217,81 @@ def parse_mac_trace_start(line):
     }
 
 
+def poll_commands(cfg):
+    """Poll backend for pending commands (disconnect, etc.) and execute them."""
+    url = f"{cfg['backend_url']}/api/remote-sessions/watcher-commands"
+    try:
+        resp = requests.get(url, headers={"X-Watcher-Key": cfg["watcher_key"]}, timeout=10)
+        if resp.status_code != 200:
+            return
+        data = resp.json()
+        commands = data.get("commands", [])
+        blocked_ids = set(data.get("blocked_ids", []))
+
+        # Store blocked IDs in config for quick lookup during scan
+        cfg["_blocked_ids"] = blocked_ids
+
+        for cmd in commands:
+            cmd_id = cmd.get("id")
+            cmd_type = cmd.get("command")
+            anydesk_id = cmd.get("anydesk_id")
+            reason = cmd.get("reason", "")
+            log.warning(f"Received command: {cmd_type} (ID: {anydesk_id}) — {reason}")
+
+            if cmd_type == "disconnect":
+                success = execute_disconnect()
+                ack_command(cfg, cmd_id, success)
+            else:
+                log.warning(f"Unknown command type: {cmd_type}")
+                ack_command(cfg, cmd_id, False)
+    except requests.RequestException as e:
+        log.debug(f"Command poll failed (will retry): {e}")
+
+
+def execute_disconnect():
+    """Kill AnyDesk and restart it to disconnect all active sessions."""
+    import subprocess
+    try:
+        if IS_MAC:
+            log.warning("Executing emergency disconnect: killing AnyDesk...")
+            subprocess.run(["pkill", "-x", "AnyDesk"], timeout=5)
+            time.sleep(2)
+            log.info("Restarting AnyDesk...")
+            subprocess.Popen(["open", "-a", "AnyDesk"])
+        else:
+            log.warning("Executing emergency disconnect: killing AnyDesk (Windows)...")
+            subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
+            time.sleep(2)
+            anydesk_path = r"C:\Program Files (x86)\AnyDesk\AnyDesk.exe"
+            if os.path.exists(anydesk_path):
+                subprocess.Popen([anydesk_path])
+        log.info("AnyDesk disconnect + restart completed")
+        return True
+    except Exception as e:
+        log.error(f"Disconnect execution failed: {e}")
+        return False
+
+
+def ack_command(cfg, command_id, success):
+    """Acknowledge a command back to the backend."""
+    url = f"{cfg['backend_url']}/api/remote-sessions/watcher-commands/ack"
+    try:
+        requests.post(url, params={"command_id": command_id, "success": success},
+                       headers={"X-Watcher-Key": cfg["watcher_key"]}, timeout=10)
+    except requests.RequestException:
+        pass
+
+
+def check_blocked_session(cfg, anydesk_id):
+    """If a session start is from a blocked ID, auto-issue disconnect."""
+    blocked_ids = cfg.get("_blocked_ids", set())
+    if anydesk_id and anydesk_id in blocked_ids:
+        log.warning(f"BLOCKED AnyDesk ID {anydesk_id} detected! Auto-disconnecting...")
+        execute_disconnect()
+        return True
+    return False
+
+
 def post_events(cfg, events):
     if not events:
         return True
@@ -291,6 +366,8 @@ def scan_all(cfg, state):
                     state.mark(fp)
                     events.append(ev)
                     log.info(f"Session start: AnyDesk ID {ev['anydesk_id']} ({ev.get('alias') or 'no alias'}) at {ev['timestamp']}")
+                    # Check if this ID is blocked — auto-disconnect immediately
+                    check_blocked_session(cfg, ev['anydesk_id'])
 
     # 2. Service trace files → session ends + macOS session starts
     for path in cfg["service_trace_files"]:
@@ -307,6 +384,7 @@ def scan_all(cfg, state):
                 events.append(start_ev)
                 last_start_ev_index = len(events) - 1
                 log.info(f"Session start: AnyDesk ID {start_ev['anydesk_id']} at {start_ev['timestamp']}")
+                check_blocked_session(cfg, start_ev['anydesk_id'])
                 continue
 
             # Auth line comes AFTER the session start — attach to the most recent start
@@ -361,11 +439,17 @@ def main():
     observer.start()
 
     try:
+        last_scan = 0
         while True:
-            # Periodic safety scan + retry queue (covers missed FS events)
-            scan_all(cfg, state)
-            retry_failed(cfg)
-            time.sleep(30)
+            now = time.time()
+            # Full scan + retry every 30 seconds
+            if now - last_scan >= 30:
+                scan_all(cfg, state)
+                retry_failed(cfg)
+                last_scan = now
+            # Poll for commands every cycle (every 10s)
+            poll_commands(cfg)
+            time.sleep(10)
     except KeyboardInterrupt:
         observer.stop()
     observer.join()

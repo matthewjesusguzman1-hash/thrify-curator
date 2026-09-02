@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import {
   Monitor, ArrowLeft, RefreshCw, UserPlus, Search, AlertTriangle,
   Info, Clock, ChevronLeft, ChevronRight, Download, CalendarDays,
-  LogIn, LogOut, Wifi, WifiOff, Bell
+  LogIn, LogOut, Wifi, WifiOff, Bell, ShieldOff, ShieldBan, Power, ShieldAlert
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,19 +94,23 @@ function formatDT(iso) {
   return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-function SessionCard({ s, isActive, onAssign, employees, mappingId, mappingName, setMappingName, mappingEmployeeId, setMappingEmployeeId, saveMapping, setMappingId }) {
+function SessionCard({ s, isActive, onAssign, onDisconnect, onBlock, onUnblock, blockedIds, employees, mappingId, mappingName, setMappingName, mappingEmployeeId, setMappingEmployeeId, saveMapping, setMappingId }) {
+  const isBlocked = blockedIds.has(s.anydesk_id);
   return (
     <div
-      className={`bg-white/[0.04] border rounded-xl p-3.5 ${isActive ? "border-emerald-500/40" : "border-white/[0.08]"}`}
+      className={`bg-white/[0.04] border rounded-xl p-3.5 ${
+        isBlocked ? "border-red-500/50 bg-red-500/[0.03]" : isActive ? "border-emerald-500/40" : "border-white/[0.08]"
+      }`}
       data-testid={`session-card-${s.id}`}
     >
       {/* Top row: worker + status */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className={`w-2 h-2 rounded-full shrink-0 ${isActive ? "bg-emerald-400 animate-pulse" : "bg-white/20"}`} />
+        <span className={`w-2 h-2 rounded-full shrink-0 ${isBlocked ? "bg-red-500" : isActive ? "bg-emerald-400 animate-pulse" : "bg-white/20"}`} />
         <span className="font-semibold text-white text-sm">
           {s.worker_name || s.alias || `AnyDesk ${s.anydesk_id}`}
         </span>
-        {isActive && <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full">LIVE</span>}
+        {isBlocked && <span className="text-[10px] font-bold text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full flex items-center gap-0.5"><ShieldBan className="w-2.5 h-2.5" /> BLOCKED</span>}
+        {isActive && !isBlocked && <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full">LIVE</span>}
         {s.auth_method === "REJECTED" && <span className="text-[10px] font-bold text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full">REJECTED</span>}
         {!s.worker_name && (
           <button
@@ -156,6 +160,38 @@ function SessionCard({ s, isActive, onAssign, employees, mappingId, mappingName,
       {s.employee_id && !s.time_entry && (
         <div className="mt-2 ml-4 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-200/80">
           No matching clock-in for this session
+        </div>
+      )}
+
+      {/* Action buttons: Disconnect + Block */}
+      {s.anydesk_id && (
+        <div className="mt-2.5 ml-4 flex flex-wrap gap-2">
+          {isActive && (
+            <button
+              onClick={() => onDisconnect(s)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-medium hover:bg-red-500/25 transition-colors"
+              data-testid={`disconnect-btn-${s.id}`}
+            >
+              <Power className="w-3 h-3" /> Disconnect
+            </button>
+          )}
+          {isBlocked ? (
+            <button
+              onClick={() => onUnblock(s.anydesk_id)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white/60 text-xs font-medium hover:bg-white/20 transition-colors"
+              data-testid={`unblock-btn-${s.anydesk_id}`}
+            >
+              <ShieldOff className="w-3 h-3" /> Unblock
+            </button>
+          ) : (
+            <button
+              onClick={() => onBlock(s.anydesk_id)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-white/40 text-xs font-medium hover:bg-red-500/15 hover:border-red-500/30 hover:text-red-300 transition-colors"
+              data-testid={`block-btn-${s.anydesk_id}`}
+            >
+              <ShieldBan className="w-3 h-3" /> Block
+            </button>
+          )}
         </div>
       )}
 
@@ -210,6 +246,8 @@ export default function RemoteSessionsPage() {
   const [mappingName, setMappingName] = useState("");
   const [mappingEmployeeId, setMappingEmployeeId] = useState("");
   const [employees, setEmployees] = useState([]);
+  const [blockedIds, setBlockedIds] = useState(new Set());
+  const [showBlockReminder, setShowBlockReminder] = useState(null); // AnyDesk ID to show reminder for
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -239,10 +277,45 @@ export default function RemoteSessionsPage() {
     if (!localStorage.getItem("token")) { navigate("/login"); return; }
     fetchData();
     fetchAlerts();
+    fetchBlocklist();
     axios.get(`${API}/admin/employees`, getAuthHeader())
       .then((res) => setEmployees((Array.isArray(res.data) ? res.data : res.data.employees || []).filter((e) => e.role !== "admin")))
       .catch(() => {});
   }, [fetchData, fetchAlerts, navigate]);
+
+  const fetchBlocklist = async () => {
+    try {
+      const res = await axios.get(`${API}/remote-sessions/blocklist`, getAuthHeader());
+      setBlockedIds(new Set((res.data.blocked || []).map(b => b.anydesk_id)));
+    } catch { /* ignore */ }
+  };
+
+  const handleDisconnect = async (session) => {
+    if (!confirm(`Disconnect ${session.worker_name || session.anydesk_id}? This will kill all AnyDesk sessions on the host.`)) return;
+    try {
+      await axios.post(`${API}/remote-sessions/disconnect`, {
+        session_id: session.id, anydesk_id: session.anydesk_id
+      }, getAuthHeader());
+      toast.success("Disconnect command sent — watcher will execute within seconds");
+    } catch { toast.error("Failed to send disconnect command"); }
+  };
+
+  const handleBlock = async (anydeskId) => {
+    try {
+      const res = await axios.post(`${API}/remote-sessions/block`, { anydesk_id: anydeskId }, getAuthHeader());
+      toast.success("ID blocked — auto-disconnect on future connections");
+      setBlockedIds(prev => new Set([...prev, anydeskId]));
+      setShowBlockReminder(anydeskId);
+    } catch { toast.error("Failed to block"); }
+  };
+
+  const handleUnblock = async (anydeskId) => {
+    try {
+      await axios.delete(`${API}/remote-sessions/block/${anydeskId}`, getAuthHeader());
+      toast.success("ID unblocked");
+      setBlockedIds(prev => { const n = new Set(prev); n.delete(anydeskId); return n; });
+    } catch { toast.error("Failed to unblock"); }
+  };
 
   const handleExport = async () => {
     try {
@@ -418,6 +491,10 @@ export default function RemoteSessionsPage() {
                             s={s}
                             isActive={isActive(s)}
                             onAssign={(id) => { setMappingId(id); setMappingName(""); setMappingEmployeeId(""); }}
+                            onDisconnect={handleDisconnect}
+                            onBlock={handleBlock}
+                            onUnblock={handleUnblock}
+                            blockedIds={blockedIds}
                             employees={employees}
                             mappingId={mappingId}
                             mappingName={mappingName}
@@ -448,8 +525,12 @@ export default function RemoteSessionsPage() {
               {alerts.map((a, i) => {
                 const typeLabel = a.type === "clocked_in_no_session" ? "Clocked in, no session"
                   : a.type === "session_no_clock_in" ? "Session, no clock-in"
+                  : a.type === "blocked_connection" ? "Blocked ID connected"
+                  : a.type === "unmapped_connection" ? "Unmapped ID connected"
                   : a.type || "Alert";
-                const severity = a.type === "session_no_clock_in" ? "alert" : "warning";
+                const severity = a.type === "blocked_connection" ? "critical"
+                  : a.type === "session_no_clock_in" ? "alert"
+                  : "warning";
                 return (
                   <motion.div
                     key={i}
@@ -457,20 +538,20 @@ export default function RemoteSessionsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: Math.min(i * 0.03, 0.2) }}
                     className={`rounded-xl px-4 py-3 border text-sm ${
-                      severity === "alert" ? "bg-red-500/10 border-red-500/30" : "bg-amber-500/10 border-amber-500/30"
+                      severity === "critical" ? "bg-red-600/15 border-red-500/50" : severity === "alert" ? "bg-red-500/10 border-red-500/30" : "bg-amber-500/10 border-amber-500/30"
                     }`}
                     data-testid={`alert-item-${i}`}
                   >
                     <div className="flex items-start gap-2.5">
-                      <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${severity === "alert" ? "text-red-400" : "text-amber-400"}`} />
+                      <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${severity === "critical" ? "text-red-400" : severity === "alert" ? "text-red-400" : "text-amber-400"}`} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            severity === "alert" ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300"
+                            severity === "critical" ? "bg-red-500/30 text-red-200" : severity === "alert" ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300"
                           }`}>{typeLabel}</span>
                           <span className="text-white/30 text-xs ml-auto">{formatDT(a.sent_at)}</span>
                         </div>
-                        <p className={`mt-1 ${severity === "alert" ? "text-red-200" : "text-amber-200"}`}>{a.detail}</p>
+                        <p className={`mt-1 ${severity === "critical" ? "text-red-200" : severity === "alert" ? "text-red-200" : "text-amber-200"}`}>{a.detail}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -480,6 +561,44 @@ export default function RemoteSessionsPage() {
           )
         )}
       </div>
+
+      {/* Block reminder overlay */}
+      {showBlockReminder && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowBlockReminder(null)}>
+          <div className="bg-[#1a1a3a] border border-amber-500/30 rounded-2xl p-5 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()} data-testid="block-reminder-modal">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
+                <ShieldAlert className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold text-base">Also block in AnyDesk</h3>
+                <p className="text-white/60 text-sm mt-1.5 leading-relaxed">
+                  AnyDesk ID <span className="text-amber-300 font-mono font-bold">{showBlockReminder}</span> is now blocked in the app. The watcher will auto-disconnect them on future connections.
+                </p>
+                <p className="text-white/60 text-sm mt-2 leading-relaxed">
+                  For full prevention, also block this ID in AnyDesk directly:
+                </p>
+                <div className="mt-2 bg-white/[0.06] rounded-lg px-3 py-2 text-xs text-white/80 space-y-1">
+                  <p>1. Open <span className="text-indigo-300 font-semibold">AnyDesk</span> on your Mac</p>
+                  <p>2. Go to <span className="text-indigo-300 font-semibold">Settings → Security</span></p>
+                  <p>3. Under <span className="text-indigo-300 font-semibold">Access Control List</span>, add ID <span className="font-mono text-amber-300">{showBlockReminder}</span></p>
+                  <p>4. Set it to <span className="text-red-300 font-semibold">Block</span></p>
+                </div>
+                <p className="text-amber-300/80 text-xs mt-2">
+                  Also consider changing your unattended access password if this person had it.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setShowBlockReminder(null)}
+              className="w-full mt-4 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30"
+              data-testid="block-reminder-dismiss"
+            >
+              Got it
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
