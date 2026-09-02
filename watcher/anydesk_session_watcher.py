@@ -294,11 +294,11 @@ def ack_command(cfg, command_id, success):
 
 
 def check_blocked_session(cfg, anydesk_id):
-    """If a session start is from a blocked ID, auto-issue disconnect."""
+    """If a session start is from a blocked ID, log a warning (do NOT auto-disconnect — causes kill/restart loop).
+    The admin should add blocked IDs to AnyDesk's own Security > Access Control List for true prevention."""
     blocked_ids = cfg.get("_blocked_ids", set())
     if anydesk_id and anydesk_id in blocked_ids:
-        log.warning(f"BLOCKED AnyDesk ID {anydesk_id} detected! Auto-disconnecting...")
-        execute_disconnect()
+        log.warning(f"BLOCKED AnyDesk ID {anydesk_id} connected! Add this ID to AnyDesk > Settings > Security > Access Control List to block them.")
         return True
     return False
 

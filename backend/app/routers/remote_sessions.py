@@ -346,26 +346,26 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                 if event.anydesk_id:
                     blocked = await db.anydesk_blocklist.find_one({"anydesk_id": event.anydesk_id})
                     if blocked:
-                        await db.anydesk_commands.insert_one({
-                            "id": str(uuid.uuid4()),
-                            "command": "disconnect",
-                            "anydesk_id": event.anydesk_id,
-                            "reason": f"Blocked ID {event.anydesk_id} connected — auto-disconnecting",
-                            "status": "pending",
-                            "created_at": datetime.now(timezone.utc).isoformat()
+                        # Alert only — do NOT auto-disconnect, it creates a kill/restart loop.
+                        # The admin should add this ID to AnyDesk's own blocklist for true prevention.
+                        dedup_key = f"blocked_connect:{event.anydesk_id}"
+                        one_hour_ago = (now - timedelta(hours=1)).isoformat()
+                        already = await db.anydesk_flag_notifications.find_one({
+                            "dedup_key": dedup_key, "sent_at": {"$gte": one_hour_ago}
                         })
-                        alert_detail = f"BLOCKED AnyDesk ID {event.anydesk_id} connected to {batch.host} — auto-disconnect issued"
-                        await db.anydesk_flag_notifications.insert_one({
-                            "dedup_key": f"blocked_connect:{event.anydesk_id}",
-                            "type": "blocked_connection",
-                            "sent_at": datetime.now(timezone.utc).isoformat(),
-                            "detail": alert_detail,
-                            "severity": "critical"
-                        })
-                        await notify_admins_flag(
-                            title="🚨 BLOCKED user connected!",
-                            body=alert_detail
-                        )
+                        if not already:
+                            alert_detail = f"BLOCKED AnyDesk ID {event.anydesk_id} connected to {batch.host} — add to AnyDesk's own blocklist to prevent access"
+                            await db.anydesk_flag_notifications.insert_one({
+                                "dedup_key": dedup_key,
+                                "type": "blocked_connection",
+                                "sent_at": datetime.now(timezone.utc).isoformat(),
+                                "detail": alert_detail,
+                                "severity": "critical"
+                            })
+                            await notify_admins_flag(
+                                title="BLOCKED user connected!",
+                                body=alert_detail
+                            )
                     # Check if unmapped — store alert
                     else:
                         mapping = await db.anydesk_id_mappings.find_one({"anydesk_id": event.anydesk_id})

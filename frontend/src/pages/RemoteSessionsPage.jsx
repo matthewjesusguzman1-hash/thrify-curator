@@ -776,12 +776,12 @@ export default function RemoteSessionsPage() {
                 <ShieldAlert className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <h3 className="text-white font-bold text-base">Also block in AnyDesk</h3>
+                <h3 className="text-white font-bold text-base">Block in AnyDesk to fully prevent access</h3>
                 <p className="text-white/60 text-sm mt-1.5 leading-relaxed">
-                  AnyDesk ID <span className="text-amber-300 font-mono font-bold">{showBlockReminder}</span> is now blocked in the app. The watcher will auto-disconnect them on future connections.
+                  AnyDesk ID <span className="text-amber-300 font-mono font-bold">{showBlockReminder}</span> is blocked in the app, but <span className="text-amber-200 font-semibold">AnyDesk itself must also block them</span> to truly prevent connections.
                 </p>
-                <p className="text-white/60 text-sm mt-2 leading-relaxed">
-                  For full prevention, also block this ID in AnyDesk directly:
+                <p className="text-amber-300/90 text-sm mt-2 leading-relaxed font-medium">
+                  Without this step, they can still connect (you'll get alerts but they won't be stopped):
                 </p>
                 <div className="mt-2 bg-white/[0.06] rounded-lg px-3 py-2 text-xs text-white/80 space-y-1">
                   <p>1. Open <span className="text-indigo-300 font-semibold">AnyDesk</span> on your Mac</p>
