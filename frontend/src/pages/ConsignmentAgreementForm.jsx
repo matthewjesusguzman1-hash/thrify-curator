@@ -414,7 +414,6 @@ export default function ConsignmentAgreementForm() {
         window.history.replaceState({}, '', window.location.pathname);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   // Request a secure sign-in link for a consignor email

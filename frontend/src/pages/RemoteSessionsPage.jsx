@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import {
   Monitor, ArrowLeft, RefreshCw, UserPlus, Search, AlertTriangle,
   Info, Clock, ChevronLeft, ChevronRight, Download, CalendarDays,
-  LogIn, LogOut, Wifi, WifiOff, Bell, ShieldOff, ShieldBan, Power, ShieldAlert, Merge,
+  LogIn, LogOut, Wifi, WifiOff, Bell, BellOff, ShieldOff, ShieldBan, Power, ShieldAlert, Merge,
   Trash2, X, Unlink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -291,7 +291,8 @@ export default function RemoteSessionsPage() {
   const [mappingEmployeeId, setMappingEmployeeId] = useState("");
   const [employees, setEmployees] = useState([]);
   const [blockedIds, setBlockedIds] = useState(new Set());
-  const [showBlockReminder, setShowBlockReminder] = useState(null); // AnyDesk ID to show reminder for
+  const [showBlockReminder, setShowBlockReminder] = useState(null);
+  const [silenced, setSilenced] = useState(false);
 
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -322,6 +323,7 @@ export default function RemoteSessionsPage() {
     fetchData();
     fetchAlerts();
     fetchBlocklist();
+    fetchSilenceStatus();
     axios.get(`${API}/admin/employees`, getAuthHeader())
       .then((res) => setEmployees((Array.isArray(res.data) ? res.data : res.data.employees || []).filter((e) => e.role !== "admin")))
       .catch(() => {});
@@ -340,14 +342,32 @@ export default function RemoteSessionsPage() {
     } catch { /* ignore */ }
   };
 
+  const fetchSilenceStatus = async () => {
+    try {
+      const res = await axios.get(`${API}/remote-sessions/notification-status`, getAuthHeader());
+      setSilenced(res.data.silenced);
+    } catch { /* ignore */ }
+  };
+
+  const toggleSilence = async () => {
+    try {
+      const res = await axios.post(`${API}/remote-sessions/silence-notifications`, {}, getAuthHeader());
+      setSilenced(res.data.silenced);
+      toast.success(res.data.silenced ? "Notifications silenced" : "Notifications resumed");
+    } catch { toast.error("Failed to toggle notifications"); }
+  };
+
   const handleDisconnect = async (session) => {
-    if (!confirm(`Disconnect ${session.worker_name || session.anydesk_id}? This will kill all AnyDesk sessions on the host.`)) return;
+    const who = session.worker_name || session.anydesk_id;
+    if (!confirm(`Disconnect & block ${who}?\n\nAnyDesk will restart automatically — you can reconnect, but ${who} will be blocked from reconnecting.`)) return;
     try {
       await axios.post(`${API}/remote-sessions/disconnect`, {
         session_id: session.id, anydesk_id: session.anydesk_id
       }, getAuthHeader());
-      toast.success("Disconnected — session closed");
+      toast.success(`${who} disconnected & blocked`);
+      setBlockedIds(prev => new Set([...prev, session.anydesk_id]));
       fetchData();
+      setShowBlockReminder(session.anydesk_id);
     } catch { toast.error("Failed to send disconnect command"); }
   };
 
@@ -512,6 +532,18 @@ export default function RemoteSessionsPage() {
               {activeCount === 0 && "AnyDesk session history"}
             </p>
           </div>
+          <button
+            onClick={toggleSilence}
+            className={`p-2 rounded-lg transition-colors ${
+              silenced
+                ? "bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"
+                : "text-white/50 hover:text-white hover:bg-white/10"
+            }`}
+            title={silenced ? "Notifications silenced — tap to resume" : "Silence notifications"}
+            data-testid="silence-notifications-btn"
+          >
+            {silenced ? <BellOff className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+          </button>
           <Button variant="ghost" size="sm" onClick={handleMergeHistorical} className="text-white/50 hover:text-white hover:bg-white/10 gap-1 text-xs" data-testid="merge-sessions-btn">
             <Merge className="w-4 h-4" /> Clean Up
           </Button>
@@ -525,6 +557,20 @@ export default function RemoteSessionsPage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-3 space-y-3">
+        {/* Silenced banner */}
+        {silenced && (
+          <div className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 bg-amber-500/10 border border-amber-500/30" data-testid="silenced-banner">
+            <BellOff className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className="text-amber-200 text-sm flex-1">Notifications are silenced</span>
+            <button
+              onClick={toggleSilence}
+              className="text-xs text-amber-300 hover:text-amber-100 font-medium px-2 py-1 rounded-lg hover:bg-amber-500/20 transition-colors"
+              data-testid="resume-notifications-btn"
+            >
+              Resume
+            </button>
+          </div>
+        )}
         {/* Live cross-check flags */}
         {flags.length > 0 && (
           <div className="space-y-2" data-testid="cross-check-flags">

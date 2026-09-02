@@ -56,8 +56,17 @@ class DisconnectRequest(BaseModel):
     anydesk_id: Optional[str] = None
 
 
+async def _is_silenced() -> bool:
+    """Check if remote session notifications are currently silenced."""
+    setting = await db.anydesk_settings.find_one({"key": "notifications_silenced"})
+    return bool(setting and setting.get("value"))
+
+
 async def notify_admins_session_event(event: SessionEvent, host: str, duration_seconds: int = None):
     """Push notify admins when a remote worker connects, disconnects, or is rejected"""
+    if await _is_silenced():
+        print(f"[RemoteSessions] Notifications silenced — skipping push for {event.event_type}")
+        return
     try:
         mapping = await db.anydesk_id_mappings.find_one({"anydesk_id": event.anydesk_id}) if event.anydesk_id else None
         who = (mapping and mapping.get("worker_name")) or event.alias or f"AnyDesk {event.anydesk_id}"
@@ -89,6 +98,9 @@ async def notify_admins_session_event(event: SessionEvent, host: str, duration_s
 
 async def notify_admins_flag(title: str, body: str):
     """Push notify admins when a cross-check mismatch flag is detected"""
+    if await _is_silenced():
+        print(f"[RemoteSessions] Notifications silenced — skipping flag push: {title}")
+        return
     try:
         from app.services.apns_service import send_admin_push_notification
         from app.services.web_push_service import get_web_push_service
@@ -787,6 +799,21 @@ async def disconnect_session(req: DisconnectRequest, admin: dict = Depends(get_a
         "created_at": datetime.now(timezone.utc).isoformat()
     })
 
+    # Auto-block the disconnected AnyDesk ID so they can't reconnect when AnyDesk restarts
+    blocked = False
+    if anydesk_id:
+        await db.anydesk_blocklist.update_one(
+            {"anydesk_id": anydesk_id},
+            {"$set": {
+                "anydesk_id": anydesk_id,
+                "reason": f"Auto-blocked on disconnect by {admin.get('name', 'Admin')}",
+                "blocked_by": admin.get("name", "Admin"),
+                "blocked_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
+        blocked = True
+
     # Also close the session record in the DB so it stops showing as active
     closed = 0
     if session_id:
@@ -819,8 +846,8 @@ async def disconnect_session(req: DisconnectRequest, admin: dict = Depends(get_a
             except (ValueError, TypeError):
                 pass
 
-    return {"success": True, "command_id": cmd_id, "sessions_closed": closed,
-            "message": "Disconnect command queued and session(s) closed."}
+    return {"success": True, "command_id": cmd_id, "sessions_closed": closed, "blocked": blocked,
+            "message": "Disconnect command queued, user blocked, and session(s) closed. AnyDesk will restart but the blocked user cannot reconnect."}
 
 
 @router.get("/watcher-commands")
@@ -959,6 +986,35 @@ async def unread_session_alerts(admin: dict = Depends(get_admin_user)):
         "ended_at": None, "auth_method": {"$ne": "REJECTED"}, "started_at": {"$gte": active_cutoff}
     })
     return {"alert_count": count, "active_sessions": active}
+
+
+# ─── Notification silence toggle ─────────────────────────────
+
+@router.get("/notification-status")
+async def get_notification_status(admin: dict = Depends(get_admin_user)):
+    """Admin: check if remote session notifications are silenced."""
+    silenced = await _is_silenced()
+    return {"silenced": silenced}
+
+
+@router.post("/silence-notifications")
+async def toggle_silence_notifications(admin: dict = Depends(get_admin_user)):
+    """Admin: toggle remote session notification silence on/off."""
+    current = await _is_silenced()
+    new_value = not current
+    await db.anydesk_settings.update_one(
+        {"key": "notifications_silenced"},
+        {"$set": {
+            "key": "notifications_silenced",
+            "value": new_value,
+            "toggled_by": admin.get("name", "Admin"),
+            "toggled_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    status = "silenced" if new_value else "active"
+    print(f"[RemoteSessions] Notifications {status} by {admin.get('name', 'Admin')}")
+    return {"success": True, "silenced": new_value}
 
 
 # ─── Watcher script download ────────────────────────────────

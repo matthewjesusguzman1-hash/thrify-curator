@@ -173,6 +173,21 @@ Full audit remediation, backend 28/28 tests passing (testing agent iteration_54)
   - **Remove Mapping**: Unlink icon + "Remove" button in form, calls DELETE /api/remote-sessions/map/{anydesk_id} to unassign employee.
   - **Watcher Command Ack**: Fixed empty endpoint body — now updates command status to completed/failed in DB.
   - Tested 16/16 backend + 100% frontend (iteration_58).
+- **Silence Notifications Toggle (2026-09-02)**:
+  - Bell icon in header toggles all AnyDesk push notifications on/off.
+  - Stays silenced until manually resumed (no auto-expire).
+  - Amber banner shown when silenced with quick "Resume" button.
+  - Backend: `_is_silenced()` check in both `notify_admins_session_event` and `notify_admins_flag`.
+  - Endpoints: GET /notification-status, POST /silence-notifications.
+  - Stored in `anydesk_settings` collection.
+  - Tested 7/7 backend + 100% frontend (iteration_59).
+- **Disconnect + Auto-Block (2026-09-02)**:
+  - Disconnect now **auto-blocks** the disconnected AnyDesk ID in the blocklist.
+  - AnyDesk is allowed to auto-restart via its own macOS service (no longer fighting it).
+  - Admin can reconnect from phone; blocked user cannot reconnect.
+  - Watcher simplified: just kills AnyDesk, lets system service restart it; blocked IDs caught by `check_blocked_session` on reconnect.
+  - Block reminder modal shown after disconnect.
+  - Backend tested: disconnect returns `blocked: true` and ID appears in blocklist.
 
 ## 3rd Party Integrations
 - Capacitor v8
