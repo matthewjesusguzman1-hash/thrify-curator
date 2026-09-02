@@ -27,11 +27,19 @@ from datetime import timezone
 
 
 def local_to_utc_iso(date_part, time_part):
-    """AnyDesk logs use the PC's local time; convert to UTC ISO for the backend."""
+    """AnyDesk connection_trace.txt uses the PC's local time; convert to UTC ISO for the backend."""
     if len(time_part) == 5:
         time_part += ":00"
     naive = datetime.strptime(f"{date_part} {time_part}", "%Y-%m-%d %H:%M:%S")
     return naive.astimezone().astimezone(timezone.utc).isoformat()
+
+
+def as_utc_iso(date_part, time_part):
+    """macOS /var/log/anydesk.trace timestamps are already in UTC."""
+    if len(time_part) == 5:
+        time_part += ":00"
+    dt = datetime.strptime(f"{date_part} {time_part}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    return dt.isoformat()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, "watcher_config.json")
@@ -189,9 +197,11 @@ def parse_service_trace_line(line):
     m = SVC_END_RE.search(line)
     if not m:
         return None
+    date_part, time_part = m.group(1), m.group(2)
+    ts = as_utc_iso(date_part, time_part) if IS_MAC else local_to_utc_iso(date_part, time_part)
     return {
         "event_type": "session_end",
-        "timestamp": local_to_utc_iso(m.group(1), m.group(2)),
+        "timestamp": ts,
         "anydesk_id": None,
         "raw_line": line.strip()[:300]
     }
@@ -209,7 +219,7 @@ def parse_mac_trace_start(line):
     return {
         "event_type": "session_start",
         "direction": "Incoming",
-        "timestamp": local_to_utc_iso(date_part, time_part),
+        "timestamp": as_utc_iso(date_part, time_part),
         "anydesk_id": anydesk_id,
         "alias": None,
         "auth_method": auth_method,
