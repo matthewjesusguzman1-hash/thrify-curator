@@ -203,6 +203,50 @@ async def run_cross_check_and_notify():
     """Run the cross-check logic and push-notify admins for any flags found."""
     now = datetime.now(timezone.utc)
 
+    # --- Process pending disconnect checks (grace period elapsed) ---
+    grace_cutoff = (now - timedelta(minutes=AUTO_CLOCKOUT_GRACE_MINUTES)).isoformat()
+    pending = await db.anydesk_pending_clockouts.find(
+        {"created_at": {"$lte": grace_cutoff}}
+    ).to_list(50)
+    for p in pending:
+        aid = p.get("anydesk_id")
+        emp_id = p.get("employee_id")
+        name = p.get("worker_name", "Unknown")
+        # Check if worker reconnected (has an active session now)
+        cutoff_12h = (now - timedelta(hours=12)).isoformat()
+        active_session = await db.anydesk_sessions.find_one({
+            "anydesk_id": aid, "ended_at": None,
+            "auth_method": {"$ne": "REJECTED"},
+            "started_at": {"$gte": cutoff_12h}
+        })
+        if active_session:
+            await db.anydesk_pending_clockouts.delete_one({"anydesk_id": aid})
+            continue
+        # No active session — check if still clocked in
+        still_clocked_in = await db.time_entries.find_one(
+            {"user_id": emp_id, "clock_out": None}
+        ) if emp_id else None
+        if still_clocked_in:
+            # Alert: disconnected for 3+ min but still on the clock
+            alert = {
+                "id": str(uuid.uuid4()),
+                "type": "still_clocked_in_after_disconnect",
+                "anydesk_id": aid,
+                "employee_id": emp_id,
+                "worker_name": name,
+                "message": f"{name} is still clocked in but AnyDesk disconnected {AUTO_CLOCKOUT_GRACE_MINUTES}+ minutes ago",
+                "disconnect_at": p.get("disconnect_at"),
+                "created_at": now.isoformat(),
+                "read": False
+            }
+            await db.anydesk_alerts.insert_one(alert)
+            await notify_admins_flag(
+                title="Still clocked in",
+                body=f"{name} disconnected from AnyDesk {AUTO_CLOCKOUT_GRACE_MINUTES}+ min ago but hasn't clocked out"
+            )
+            print(f"[RemoteSessions] Alert: {name} still clocked in after {AUTO_CLOCKOUT_GRACE_MINUTES}min disconnect")
+        await db.anydesk_pending_clockouts.delete_one({"anydesk_id": aid})
+
     mappings = await db.anydesk_id_mappings.find({}, {"_id": 0}).to_list(200)
     mapping_by_anydesk = {m["anydesk_id"]: m for m in mappings}
     employee_anydesk_ids = {}
@@ -351,8 +395,11 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                     "created_at": datetime.now(timezone.utc).isoformat()
                 })
                 processed += 1
-            # Cancel any pending auto-clock-out for this ID — they reconnected
-            # (kept for safety in case deferred clock-out is re-enabled later)
+            # Cancel any pending disconnect-check — they reconnected
+            if event.anydesk_id:
+                cancelled = await db.anydesk_pending_clockouts.delete_one({"anydesk_id": event.anydesk_id})
+                if cancelled.deleted_count:
+                    print(f"[RemoteSessions] Cancelled pending disconnect-check for {event.anydesk_id} — reconnected")
             # Only send notifications/cross-checks for recent events (< 5 min old)
             # This prevents notification floods when the watcher rescans historical logs
             try:
@@ -471,9 +518,30 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                     )
                     await notify_admins_session_event(disconnect_event, batch.host, duration_seconds=duration)
 
-            # Auto clock-out removed — brief AnyDesk disconnections caused
-            # repeated clock-outs for workers who reconnect seconds later.
-            # Clock-out is handled manually or by normal time entry flows.
+            # Queue a deferred clock-in check: if the worker is still clocked in
+            # after the grace period with no active AnyDesk session, alert admins.
+            target_anydesk_id = event.anydesk_id or resolved_anydesk_id
+            if target_anydesk_id and end_age_minutes <= 5:
+                try:
+                    mapping = await db.anydesk_id_mappings.find_one({"anydesk_id": target_anydesk_id})
+                    if mapping and mapping.get("employee_id"):
+                        active_entry = await db.time_entries.find_one(
+                            {"user_id": mapping["employee_id"], "clock_out": None}
+                        )
+                        if active_entry:
+                            await db.anydesk_pending_clockouts.update_one(
+                                {"anydesk_id": target_anydesk_id},
+                                {"$set": {
+                                    "anydesk_id": target_anydesk_id,
+                                    "employee_id": mapping["employee_id"],
+                                    "worker_name": mapping.get("worker_name", "Unknown"),
+                                    "disconnect_at": event.timestamp,
+                                    "created_at": datetime.now(timezone.utc).isoformat()
+                                }},
+                                upsert=True
+                            )
+                except Exception as e:
+                    print(f"[RemoteSessions] Pending disconnect-check failed for {target_anydesk_id}: {e}")
 
             processed += 1
     
