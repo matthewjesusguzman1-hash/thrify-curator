@@ -346,15 +346,23 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                 if event.anydesk_id:
                     blocked = await db.anydesk_blocklist.find_one({"anydesk_id": event.anydesk_id})
                     if blocked:
-                        # Alert only — do NOT auto-disconnect, it creates a kill/restart loop.
-                        # The admin should add this ID to AnyDesk's own blocklist for true prevention.
+                        # Queue disconnect with 5-min dedup to avoid rapid kill loops
                         dedup_key = f"blocked_connect:{event.anydesk_id}"
-                        one_hour_ago = (now - timedelta(hours=1)).isoformat()
-                        already = await db.anydesk_flag_notifications.find_one({
-                            "dedup_key": dedup_key, "sent_at": {"$gte": one_hour_ago}
+                        five_min_ago = (now - timedelta(minutes=5)).isoformat()
+                        recent_disconnect = await db.anydesk_flag_notifications.find_one({
+                            "dedup_key": dedup_key, "sent_at": {"$gte": five_min_ago}
                         })
-                        if not already:
-                            alert_detail = f"BLOCKED AnyDesk ID {event.anydesk_id} connected to {batch.host} — add to AnyDesk's own blocklist to prevent access"
+                        if not recent_disconnect:
+                            # Queue security kill (no restart)
+                            await db.anydesk_commands.insert_one({
+                                "id": str(uuid.uuid4()),
+                                "command": "disconnect",
+                                "anydesk_id": event.anydesk_id,
+                                "reason": f"Blocked ID {event.anydesk_id} connected — security kill",
+                                "status": "pending",
+                                "created_at": datetime.now(timezone.utc).isoformat()
+                            })
+                            alert_detail = f"BLOCKED AnyDesk ID {event.anydesk_id} connected to {batch.host} — AnyDesk killed. Use 'Restart AnyDesk' button after adding ID to AnyDesk's ACL."
                             await db.anydesk_flag_notifications.insert_one({
                                 "dedup_key": dedup_key,
                                 "type": "blocked_connection",
@@ -363,7 +371,7 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
                                 "severity": "critical"
                             })
                             await notify_admins_flag(
-                                title="BLOCKED user connected!",
+                                title="BLOCKED user connected — AnyDesk killed!",
                                 body=alert_detail
                             )
                     # Check if unmapped — store alert
@@ -747,8 +755,8 @@ async def map_anydesk_id(mapping: AnydeskMapping, admin: dict = Depends(get_admi
 
 @router.post("/block")
 async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_user)):
-    """Admin: add an AnyDesk ID to the blocklist (soft block — no immediate kick).
-    They can't reconnect next time, but current session stays until they disconnect naturally."""
+    """Admin: block an AnyDesk ID. If they're currently connected, issues a security kill (AnyDesk dies, no restart).
+    Admin must use 'Restart AnyDesk' button after adding ID to AnyDesk's ACL."""
     await db.anydesk_blocklist.update_one(
         {"anydesk_id": req.anydesk_id},
         {"$set": {
@@ -759,15 +767,47 @@ async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_us
         }},
         upsert=True
     )
+
+    # If they have an active session, queue disconnect (security kill — no restart)
+    active = await db.anydesk_sessions.find_one({
+        "anydesk_id": req.anydesk_id, "ended_at": None
+    })
+    kicked = False
+    if active:
+        await db.anydesk_commands.insert_one({
+            "id": str(uuid.uuid4()),
+            "command": "disconnect",
+            "anydesk_id": req.anydesk_id,
+            "reason": f"Blocked & security-killed by {admin.get('name', 'Admin')}",
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        now_iso = datetime.now(timezone.utc).isoformat()
+        await db.anydesk_sessions.update_many(
+            {"anydesk_id": req.anydesk_id, "ended_at": None},
+            {"$set": {"ended_at": now_iso}}
+        )
+        kicked = True
+
     return {
         "success": True,
-        "message": f"AnyDesk ID {req.anydesk_id} blocked. They cannot reconnect once they disconnect. Also block this ID in AnyDesk → Settings → Security → Access Control List on your Mac."
+        "kicked": kicked,
+        "message": f"AnyDesk ID {req.anydesk_id} blocked{' and AnyDesk killed' if kicked else ''}. Add this ID to AnyDesk > Settings > Security > Access Control List, then use Restart AnyDesk button."
     }
 
 
-@router.delete("/block/{anydesk_id}")
-async def unblock_anydesk_id(anydesk_id: str, admin: dict = Depends(get_admin_user)):
-    """Admin: remove an AnyDesk ID from the blocklist."""
+class UnblockRequest(BaseModel):
+    admin_code: str
+
+
+@router.post("/unblock/{anydesk_id}")
+async def unblock_anydesk_id(anydesk_id: str, req: UnblockRequest, admin: dict = Depends(get_admin_user)):
+    """Admin: remove an AnyDesk ID from the blocklist. Requires admin code for security."""
+    # Validate admin code against ADMIN_OWNER_CODES
+    codes_str = os.environ.get("ADMIN_OWNER_CODES", "")
+    valid_codes = [entry.split(":")[0] for entry in codes_str.split("|") if entry.strip()]
+    if req.admin_code not in valid_codes:
+        raise HTTPException(status_code=403, detail="Invalid admin code")
     result = await db.anydesk_blocklist.delete_one({"anydesk_id": anydesk_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="ID not in blocklist")
@@ -852,6 +892,21 @@ async def disconnect_session(req: DisconnectRequest, admin: dict = Depends(get_a
 
     return {"success": True, "command_id": cmd_id, "sessions_closed": closed, "blocked": blocked,
             "message": "Disconnect command queued, user blocked, and session(s) closed. AnyDesk will restart but the blocked user cannot reconnect."}
+
+
+@router.post("/restart-anydesk")
+async def restart_anydesk(admin: dict = Depends(get_admin_user)):
+    """Admin: send command to watcher to restart AnyDesk. Use after security kill."""
+    cmd_id = str(uuid.uuid4())
+    await db.anydesk_commands.insert_one({
+        "id": cmd_id,
+        "command": "restart_anydesk",
+        "anydesk_id": None,
+        "reason": f"Manual restart by {admin.get('name', 'Admin')}",
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    return {"success": True, "command_id": cmd_id, "message": "Restart command sent. AnyDesk should reopen within 10 seconds."}
 
 
 @router.get("/watcher-commands")

@@ -7,7 +7,7 @@ import {
   Monitor, ArrowLeft, RefreshCw, UserPlus, Search, AlertTriangle,
   Info, Clock, ChevronLeft, ChevronRight, Download, CalendarDays,
   LogIn, LogOut, Wifi, WifiOff, Bell, BellOff, ShieldOff, ShieldBan, Power, ShieldAlert, Merge,
-  Trash2, X, Unlink
+  Trash2, X, Unlink, RotateCcw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -359,7 +359,7 @@ export default function RemoteSessionsPage() {
 
   const handleDisconnect = async (session) => {
     const who = session.worker_name || session.anydesk_id;
-    if (!confirm(`⚠️ Disconnect & Block ${who}?\n\nThis will:\n• Kill AnyDesk on the Mac (ALL connections drop briefly)\n• Auto-block ${who} so they can't reconnect\n• AnyDesk will restart — you and other users can reconnect\n\nUse this for emergencies when you need someone off immediately.`)) return;
+    if (!confirm(`Disconnect & Block ${who}?\n\nThis will:\n• Kill AnyDesk on the Mac (ALL connections drop)\n• AnyDesk will restart after 5 seconds\n• Auto-block ${who} so they can't reconnect\n• You can reconnect from your phone\n\nUse this for emergencies when you need someone off immediately.`)) return;
     try {
       await axios.post(`${API}/remote-sessions/disconnect`, {
         session_id: session.id, anydesk_id: session.anydesk_id
@@ -374,21 +374,39 @@ export default function RemoteSessionsPage() {
   const handleBlock = async (anydeskId) => {
     const session = sessions.find(s => s.anydesk_id === anydeskId);
     const who = session?.worker_name || anydeskId;
-    if (!confirm(`Block ${who}?\n\nThis will:\n• Prevent them from reconnecting next time\n• Their current session stays active until they disconnect\n• No disruption to other users\n\nUse "Disconnect" instead if you need them off immediately.`)) return;
+    const active = session && !session.ended_at;
+    const msg = active
+      ? `Block ${who}?\n\nThis will:\n• Add them to the blocklist\n• KILL AnyDesk immediately (all connections drop)\n• AnyDesk will NOT restart automatically\n\nAfter blocking:\n1. Add this ID in AnyDesk > Settings > Security > Access Control List\n2. Use the Restart AnyDesk button to bring it back`
+      : `Block ${who}?\n\nThis will prevent them from connecting in the future.\n\nAlso add this ID in AnyDesk > Settings > Security > Access Control List for full prevention.`;
+    if (!confirm(msg)) return;
     try {
-      await axios.post(`${API}/remote-sessions/block`, { anydesk_id: anydeskId }, getAuthHeader());
-      toast.success(`${who} blocked — can't reconnect`);
+      const res = await axios.post(`${API}/remote-sessions/block`, { anydesk_id: anydeskId }, getAuthHeader());
+      toast.success(res.data.kicked ? `${who} blocked — AnyDesk killed. Use Restart button when ready.` : `${who} blocked`);
       setBlockedIds(prev => new Set([...prev, anydeskId]));
+      if (res.data.kicked) fetchData();
       setShowBlockReminder(anydeskId);
     } catch { toast.error("Failed to block"); }
   };
 
   const handleUnblock = async (anydeskId) => {
+    const code = prompt("Enter your admin code to unblock:");
+    if (!code) return;
     try {
-      await axios.delete(`${API}/remote-sessions/block/${anydeskId}`, getAuthHeader());
+      await axios.post(`${API}/remote-sessions/unblock/${anydeskId}`, { admin_code: code }, getAuthHeader());
       toast.success("ID unblocked");
       setBlockedIds(prev => { const n = new Set(prev); n.delete(anydeskId); return n; });
-    } catch { toast.error("Failed to unblock"); }
+    } catch (err) {
+      const msg = err.response?.data?.detail || "Failed to unblock";
+      toast.error(msg === "Invalid admin code" ? "Wrong admin code" : msg);
+    }
+  };
+
+  const handleRestartAnyDesk = async () => {
+    if (!confirm("Restart AnyDesk on the Mac?\n\nMake sure you've added any blocked IDs to AnyDesk's own Access Control List first, otherwise they'll be able to reconnect.")) return;
+    try {
+      await axios.post(`${API}/remote-sessions/restart-anydesk`, {}, getAuthHeader());
+      toast.success("Restart command sent — AnyDesk should reopen within 10 seconds");
+    } catch { toast.error("Failed to send restart command"); }
   };
 
   const handleCloseSession = async (sessionId) => {
@@ -546,6 +564,9 @@ export default function RemoteSessionsPage() {
             data-testid="silence-notifications-btn"
           >
             {silenced ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+          </button>
+          <button onClick={handleRestartAnyDesk} className="p-2 rounded-lg text-emerald-400/70 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors" title="Restart AnyDesk on Mac" data-testid="restart-anydesk-btn">
+            <RotateCcw className="w-4 h-4" />
           </button>
           <button onClick={handleMergeHistorical} className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors" title="Merge fragmented sessions" data-testid="merge-sessions-btn">
             <Merge className="w-4 h-4" />

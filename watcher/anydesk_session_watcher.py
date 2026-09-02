@@ -251,6 +251,9 @@ def poll_commands(cfg):
             if cmd_type == "disconnect":
                 success = execute_disconnect()
                 ack_command(cfg, cmd_id, success)
+            elif cmd_type == "restart_anydesk":
+                success = execute_restart()
+                ack_command(cfg, cmd_id, success)
             else:
                 log.warning(f"Unknown command type: {cmd_type}")
                 ack_command(cfg, cmd_id, False)
@@ -259,27 +262,56 @@ def poll_commands(cfg):
 
 
 def execute_disconnect():
-    """Kill AnyDesk to drop all connections, wait briefly, then reopen it.
-    Blocked users (auto-blocked on disconnect) will be caught by check_blocked_session on reconnect."""
+    """Admin-initiated: Kill AnyDesk + restart after delay. Used when admin taps Disconnect button."""
     import subprocess
     try:
         if IS_MAC:
-            log.warning("Executing disconnect: killing AnyDesk...")
+            log.warning("Admin disconnect: killing AnyDesk...")
             subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True)
-            # Wait for process to fully die, then reopen
             time.sleep(5)
             log.info("Reopening AnyDesk so admin can reconnect...")
             subprocess.run(["open", "-a", "AnyDesk"], timeout=10, capture_output=True)
         else:
-            log.warning("Executing disconnect: killing AnyDesk (Windows)...")
             subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
             time.sleep(5)
             subprocess.Popen(["AnyDesk.exe"], shell=True)
-
-        log.info("AnyDesk restarted. Blocked users cannot reconnect.")
+        log.info("AnyDesk restarted after admin disconnect.")
         return True
     except Exception as e:
-        log.error(f"Disconnect execution failed: {e}")
+        log.error(f"Disconnect failed: {e}")
+        return False
+
+
+def execute_security_kill():
+    """Security kill: Kill AnyDesk and do NOT restart. Used for blocked user enforcement.
+    Admin must use 'Restart AnyDesk' button in the app to bring it back."""
+    import subprocess
+    try:
+        if IS_MAC:
+            log.warning("SECURITY KILL: Killing AnyDesk — will NOT restart until admin sends restart command.")
+            subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True)
+        else:
+            subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
+        log.info("AnyDesk killed (security). Use 'Restart AnyDesk' in the app to bring it back.")
+        return True
+    except Exception as e:
+        log.error(f"Security kill failed: {e}")
+        return False
+
+
+def execute_restart():
+    """Restart AnyDesk. Used when admin taps 'Restart AnyDesk' button."""
+    import subprocess
+    try:
+        if IS_MAC:
+            log.info("Restarting AnyDesk by admin command...")
+            subprocess.run(["open", "-a", "AnyDesk"], timeout=10, capture_output=True)
+        else:
+            subprocess.Popen(["AnyDesk.exe"], shell=True)
+        log.info("AnyDesk restarted by admin command.")
+        return True
+    except Exception as e:
+        log.error(f"Restart failed: {e}")
         return False
 
 
@@ -294,11 +326,20 @@ def ack_command(cfg, command_id, success):
 
 
 def check_blocked_session(cfg, anydesk_id):
-    """If a session start is from a blocked ID, log a warning (do NOT auto-disconnect — causes kill/restart loop).
-    The admin should add blocked IDs to AnyDesk's own Security > Access Control List for true prevention."""
+    """If a session start is from a blocked ID, security-kill AnyDesk (no restart).
+    Uses a 5-minute cooldown per ID to prevent rapid kill loops.
+    Admin must use 'Restart AnyDesk' button to bring it back after adding ID to AnyDesk ACL."""
     blocked_ids = cfg.get("_blocked_ids", set())
     if anydesk_id and anydesk_id in blocked_ids:
-        log.warning(f"BLOCKED AnyDesk ID {anydesk_id} connected! Add this ID to AnyDesk > Settings > Security > Access Control List to block them.")
+        now = time.time()
+        last_kicks = cfg.setdefault("_last_blocked_kick", {})
+        last_kick = last_kicks.get(anydesk_id, 0)
+        if now - last_kick < 300:  # 5-minute cooldown
+            log.warning(f"BLOCKED {anydesk_id} connected but cooldown active ({int(300 - (now - last_kick))}s remaining), skipping kill")
+            return True
+        log.warning(f"BLOCKED {anydesk_id} detected! Security-killing AnyDesk (no restart). Use 'Restart AnyDesk' in app after adding to AnyDesk ACL.")
+        execute_security_kill()
+        last_kicks[anydesk_id] = now
         return True
     return False
 
