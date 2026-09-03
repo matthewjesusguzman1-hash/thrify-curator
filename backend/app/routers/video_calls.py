@@ -20,6 +20,16 @@ def daily_headers():
     return {"Authorization": f"Bearer {DAILY_API_KEY}", "Content-Type": "application/json"}
 
 
+@router.get("/admins")
+async def get_admin_list(user: dict = Depends(get_current_user)):
+    """Return admin users for worker call-request dropdown."""
+    admins = await db.users.find(
+        {"role": "admin"},
+        {"_id": 0, "id": 1, "name": 1, "email": 1}
+    ).to_list(20)
+    return {"admins": admins}
+
+
 # ─── Models ───────────────────────────────────────────────
 
 class CreateRoomRequest(BaseModel):

@@ -95,12 +95,9 @@ export default function VideoCallsPage() {
         .then(res => setEmployees(res.data.employees || res.data || []))
         .catch(() => {});
     } else {
-      // Workers fetch admin list
-      axios.get(`${API}/admin/employees`, authHeader)
-        .then(res => {
-          const admins = (res.data.employees || res.data || []).filter(e => e.role === "admin");
-          setEmployees(admins);
-        })
+      // Workers fetch admin list from video-calls endpoint
+      axios.get(`${API}/video-calls/admins`, authHeader)
+        .then(res => setEmployees(res.data.admins || []))
         .catch(() => {});
     }
     // Poll every 10s for updates
