@@ -224,7 +224,7 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
         }
         await db.admin_notifications.insert_one(notification)
         
-        # Send push notification to admin devices
+        # Send push notification to admin devices (APNs + Web Push)
         try:
             from app.services.apns_service import send_admin_push_notification
             await send_admin_push_notification(
@@ -234,6 +234,17 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
             )
         except Exception as e:
             print(f"Failed to send admin push: {e}")
+        
+        try:
+            from app.services.web_push_service import get_web_push_service
+            await get_web_push_service().send_to_admins(
+                db=db,
+                title=f"{employee['name']} Clocked Out",
+                body=f"Clocked out by {admin.get('name', 'Admin')} - {total_hours:.2f} hours",
+                url="/admin", notification_type="clock_out"
+            )
+        except Exception as e:
+            print(f"Failed to send admin clock-out web push: {e}")
         
         # Send push notification to the employee
         try:

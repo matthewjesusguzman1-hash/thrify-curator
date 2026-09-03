@@ -879,6 +879,41 @@ export default function AdminDashboard() {
       } catch (e) {
         console.log('Push registration skipped:', e);
       }
+      
+      // Also register for Web Push (browser/PWA notifications)
+      try {
+        if ('Notification' in window && 'serviceWorker' in navigator && Notification.permission === 'granted') {
+          const registration = await navigator.serviceWorker.ready;
+          let subscription = await registration.pushManager.getSubscription();
+          if (!subscription) {
+            // Get VAPID key and subscribe
+            const vapidRes = await axios.get(`${API}/web-push/vapid-public-key`);
+            const vapidKey = vapidRes.data.publicKey;
+            const urlBase64ToUint8Array = (base64String) => {
+              const padding = '='.repeat((4 - base64String.length % 4) % 4);
+              const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+              const rawData = window.atob(base64);
+              const outputArray = new Uint8Array(rawData.length);
+              for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+              return outputArray;
+            };
+            subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(vapidKey)
+            });
+          }
+          // Register/update subscription with backend
+          const subJSON = subscription.toJSON();
+          await axios.post(`${API}/web-push/subscribe`, {
+            endpoint: subJSON.endpoint,
+            keys: subJSON.keys,
+            expirationTime: subJSON.expirationTime || null
+          }, getAuthHeader());
+          console.log('Admin registered for web push notifications');
+        }
+      } catch (e) {
+        console.log('Web push registration skipped:', e);
+      }
     };
     registerPush();
     

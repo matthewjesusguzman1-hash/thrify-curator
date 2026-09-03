@@ -153,7 +153,7 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
         )
         await db.admin_notifications.insert_one(notification.model_dump())
         
-        # Send push notification for clock in
+        # Send push notification for clock in (APNs + Web Push)
         try:
             await send_admin_push_notification(
                 title="Employee Clocked In",
@@ -161,7 +161,17 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
                 notification_type="clock_in"
             )
         except Exception as e:
-            print(f"Failed to send clock-in push notification: {e}")
+            print(f"Failed to send clock-in APNs notification: {e}")
+        
+        try:
+            from app.services.web_push_service import get_web_push_service
+            await get_web_push_service().send_to_admins(
+                db=db, title="Employee Clocked In",
+                body=f"{display_name} clocked in",
+                url="/admin", notification_type="clock_in"
+            )
+        except Exception as e:
+            print(f"Failed to send clock-in web push: {e}")
         
         # Trigger admin Live Activity update
         await trigger_admin_live_activity_update()
@@ -207,12 +217,25 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
         # Trigger admin Live Activity update
         await trigger_admin_live_activity_update()
         
-        # Send push notification for clock out
+        # Send push notification for clock out (APNs + Web Push)
         try:
             from app.services.apns_service import send_clock_out_notification
             await send_clock_out_notification(display_name, total_hours)
         except Exception as e:
-            print(f"Failed to send clock-out push notification: {e}")
+            print(f"Failed to send clock-out APNs notification: {e}")
+        
+        try:
+            from app.services.web_push_service import get_web_push_service
+            hours = int(total_hours)
+            minutes = int((total_hours - hours) * 60)
+            time_str = f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
+            await get_web_push_service().send_to_admins(
+                db=db, title="Employee Clocked Out",
+                body=f"{display_name} clocked out after {time_str}",
+                url="/admin", notification_type="clock_out"
+            )
+        except Exception as e:
+            print(f"Failed to send clock-out web push: {e}")
         
         return TimeEntry(**active)
     
@@ -286,6 +309,27 @@ async def auto_clock_out(user: dict = Depends(get_current_user)):
     active["clock_out"] = clock_out_iso
     active["total_hours"] = total_hours
     active["auto_clocked_out"] = True
+    
+    # Send notifications for auto clock-out (APNs + Web Push)
+    display_name = user.get("name", "Employee")
+    try:
+        await send_admin_push_notification(
+            title="Auto Clock-Out",
+            body=f"{display_name} was auto-clocked out (left work area)",
+            notification_type="clock_out"
+        )
+    except Exception as e:
+        print(f"Failed to send auto clock-out APNs: {e}")
+    
+    try:
+        from app.services.web_push_service import get_web_push_service
+        await get_web_push_service().send_to_admins(
+            db=db, title="Auto Clock-Out",
+            body=f"{display_name} was auto-clocked out (left work area)",
+            url="/admin", notification_type="clock_out"
+        )
+    except Exception as e:
+        print(f"Failed to send auto clock-out web push: {e}")
     
     return {
         "success": True,
