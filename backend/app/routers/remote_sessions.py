@@ -1074,9 +1074,11 @@ async def get_watcher_commands(_: bool = Depends(verify_watcher_key)):
 
 @router.post("/heartbeat")
 async def watcher_heartbeat(data: dict, _: bool = Depends(verify_watcher_key)):
-    """Watcher reports its status. If AnyDesk is not running, auto-close all active sessions for this host."""
+    """Watcher reports its status. Closes open sessions if AnyDesk is not running
+    or if AnyDesk reports no active connections."""
     host = data.get("host", "")
     anydesk_running = data.get("anydesk_running", True)
+    has_active_sessions = data.get("has_active_sessions", True)
 
     # Store heartbeat timestamp
     await db.anydesk_watcher_status.update_one(
@@ -1084,13 +1086,16 @@ async def watcher_heartbeat(data: dict, _: bool = Depends(verify_watcher_key)):
         {"$set": {
             "host": host,
             "last_heartbeat": datetime.now(timezone.utc).isoformat(),
-            "anydesk_running": anydesk_running
+            "anydesk_running": anydesk_running,
+            "has_active_sessions": has_active_sessions
         }},
         upsert=True
     )
 
     closed = 0
-    if not anydesk_running:
+    # Close sessions if AnyDesk is not running OR if running but no active connections
+    should_close = not anydesk_running or (anydesk_running and not has_active_sessions)
+    if should_close:
         # AnyDesk is dead — close all "active" sessions for this host
         staleness_cutoff = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
         result = await db.anydesk_sessions.update_many(

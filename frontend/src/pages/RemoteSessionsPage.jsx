@@ -452,15 +452,7 @@ export default function RemoteSessionsPage() {
     }
   };
 
-  const isActive = (s) => {
-    if (s.ended_at || s.duration_seconds !== null) return false;
-    // If session has been "active" for more than 2 hours with no end, treat as stale
-    if (s.started_at) {
-      const age = (Date.now() - new Date(s.started_at).getTime()) / 1000 / 60;
-      if (age > 120) return false;
-    }
-    return true;
-  };
+  const isActive = (s) => !s.ended_at && s.duration_seconds === null;
   const activeCount = sessions.filter(isActive).length;
 
   // Group sessions by LOCAL day (not UTC)

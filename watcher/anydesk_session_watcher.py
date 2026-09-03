@@ -61,9 +61,14 @@ log = logging.getLogger("anydesk-watcher")
 TRACE_LINE_RE = re.compile(
     r"^\s*(Incoming|Outgoing)\s+(\d{4}-\d{2}-\d{2}),?\s+(\d{2}:\d{2}(?::\d{2})?)\s+(\S+)\s*(\S*)\s*(\S*)\s*$"
 )
-# Session-end detection in trace files (tightened to app.backend_session only)
+# Session-end detection in trace files (multiple patterns)
 SVC_END_RE = re.compile(
-    r"(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}).*?app\.backend_session\s*-\s*[Ss]ession (?:closed|stopped|ended)"
+    r"(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}).*?(?:"
+    r"app\.backend_session\s*-\s*[Ss]ession (?:closed|stopped|ended|removed)"
+    r"|app\.session\s*-\s*(?:[Rr]emoving session|[Ss]ession terminated|[Cc]lient session terminated)"
+    r"|app\.ctrl_tcp\s*-\s*[Cc]lient disconnected"
+    r"|app\.backend_session\s*-\s*[Cc]losing session"
+    r")"
 )
 # macOS /var/log/anydesk.trace session start:
 #   info 2026-09-01 22:42:37.609  back  wrk1 ... app.backend_session - Incoming session request: - (1131282862)
@@ -324,7 +329,8 @@ def ack_command(cfg, command_id, success):
 
 
 def send_heartbeat(cfg):
-    """Report watcher status + whether AnyDesk is actually running to the backend."""
+    """Report watcher status + whether AnyDesk has active connections to the backend.
+    If AnyDesk is running but has no active sessions, backend closes open session records."""
     import subprocess
     try:
         # Check if AnyDesk process is running
@@ -335,10 +341,26 @@ def send_heartbeat(cfg):
             result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq AnyDesk.exe"], capture_output=True, text=True, timeout=5)
             anydesk_running = "AnyDesk.exe" in result.stdout
 
+        # Check if there are active remote sessions by looking at trace file recency
+        # If the service trace was written to in the last 2 minutes, a session may be active
+        has_active_sessions = False
+        if anydesk_running:
+            for path in cfg.get("service_trace_files", []):
+                try:
+                    if os.path.exists(path):
+                        mtime = os.path.getmtime(path)
+                        age = time.time() - mtime
+                        if age < 120:  # trace active in last 2 minutes
+                            has_active_sessions = True
+                            break
+                except OSError:
+                    pass
+
         url = f"{cfg['backend_url']}/api/remote-sessions/heartbeat"
         requests.post(url, json={
             "host": cfg["host_label"],
             "anydesk_running": anydesk_running,
+            "has_active_sessions": has_active_sessions,
         }, headers={"X-Watcher-Key": cfg["watcher_key"]}, timeout=10)
     except Exception as e:
         log.debug(f"Heartbeat failed: {e}")
@@ -553,15 +575,15 @@ def main():
         last_heartbeat = 0
         while True:
             now = time.time()
-            # Full scan + retry every 30 seconds
-            if now - last_scan >= 30:
+            # Full scan every 10 seconds for faster end detection
+            if now - last_scan >= 10:
                 scan_all(cfg, state)
                 retry_failed(cfg)
                 last_scan = now
             # Poll for commands every cycle (every 10s)
             poll_commands(cfg)
-            # Heartbeat every 60 seconds
-            if now - last_heartbeat >= 60:
+            # Heartbeat every 30 seconds (closes stale sessions if no active connections)
+            if now - last_heartbeat >= 30:
                 send_heartbeat(cfg)
                 last_heartbeat = now
             time.sleep(10)
