@@ -75,6 +75,24 @@ export default function VideoCallsPage() {
   const [inviteMessage, setInviteMessage] = useState("");
   const [enableRecording, setEnableRecording] = useState(false);
   const [shareLink, setShareLink] = useState(null);
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
+
+  const buildShareMessage = (url) => {
+    if (scheduledDate && scheduledTime) {
+      const d = new Date(`${scheduledDate}T${scheduledTime}`);
+      const timeStr = d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+      return `Join me for a video call at ${timeStr}\n${url}`;
+    }
+    if (scheduledTime) {
+      const today = new Date();
+      const d = new Date(`${today.toISOString().split("T")[0]}T${scheduledTime}`);
+      const timeStr = d.toLocaleString("en-US", { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+      return `Join me for a video call at ${timeStr}\n${url}`;
+    }
+    return `Join me for a video call:\n${url}`;
+  };
+
 
   const deleteCall = async (roomName) => {
     try {
@@ -167,12 +185,15 @@ export default function VideoCallsPage() {
           participant_names: [user.name || user.email],
         }, authHeader);
         const dailyUrl = res.data.url;
-        await navigator.clipboard.writeText(dailyUrl).catch(() => {});
-        toast.success("Call created! Link copied — share it with anyone to join.");
+        const shareMsg = buildShareMessage(dailyUrl);
+        await navigator.clipboard.writeText(shareMsg).catch(() => {});
+        toast.success("Call created! Invite message copied to clipboard.");
         setShowInvitePanel(false);
         setSelectedInvitees([]);
         setInviteMessage("");
         setEnableRecording(false);
+        setScheduledDate("");
+        setScheduledTime("");
         navigate(`/call/${res.data.room_name}`);
       }
     } catch (err) {
@@ -310,6 +331,27 @@ export default function VideoCallsPage() {
               />
               <Circle className="w-3 h-3 text-red-400" /> Enable recording
             </label>
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={scheduledDate}
+                onChange={e => setScheduledDate(e.target.value)}
+                className="flex-1 bg-white/10 border border-white/20 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#00D4FF]/50"
+                data-testid="scheduled-date-input"
+              />
+              <input
+                type="time"
+                value={scheduledTime}
+                onChange={e => setScheduledTime(e.target.value)}
+                className="flex-1 bg-white/10 border border-white/20 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#00D4FF]/50"
+                data-testid="scheduled-time-input"
+              />
+            </div>
+            {(scheduledDate || scheduledTime) && (
+              <p className="text-[#00D4FF]/60 text-xs">
+                Copied link will include: "Join me at {scheduledTime ? new Date(`2000-01-01T${scheduledTime}`).toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit"}) : "..."}{scheduledDate ? ` on ${new Date(scheduledDate + "T12:00").toLocaleDateString("en-US", {month: "short", day: "numeric"})}` : ""}"
+              </p>
+            )}
             <div className="flex gap-2">
               <Button
                 className="flex-1 bg-[#00D4FF] hover:bg-[#00B8E0] text-black font-medium text-sm"
@@ -482,8 +524,8 @@ export default function VideoCallsPage() {
                       <button
                         onClick={() => {
                           const url = call.daily_url || `https://thrifty-curator.daily.co/${call.room_name}`;
-                          navigator.clipboard.writeText(url);
-                          toast.success("Call link copied! Share it with anyone to join.");
+                          navigator.clipboard.writeText(`Join me for a video call:\n${url}`);
+                          toast.success("Invite message copied!");
                         }}
                         className="text-white/30 hover:text-[#00D4FF] p-1.5 rounded-lg hover:bg-white/10 transition-colors"
                         data-testid={`copy-link-${call.room_name}`}
