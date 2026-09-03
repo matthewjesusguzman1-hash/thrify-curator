@@ -55,10 +55,18 @@ export default function VideoCallPage() {
 
   // Initialize Daily.co call
   useEffect(() => {
-    if (!roomInfo?.daily_url || callFrame) return;
+    if (!roomInfo?.daily_url) return;
+    // Prevent duplicate creation (React StrictMode double-mount)
+    if (callFrameRef.current) return;
 
     const initCall = async () => {
       try {
+        // Destroy any lingering global Daily instance
+        const existing = DailyIframe.getCallInstance();
+        if (existing) {
+          await existing.destroy();
+        }
+
         const frame = DailyIframe.createFrame(containerRef.current, {
           iframeStyle: {
             width: "100%",
@@ -85,6 +93,9 @@ export default function VideoCallPage() {
             },
           },
         });
+
+        // Set ref immediately to prevent duplicate creation
+        callFrameRef.current = frame;
 
         frame.on("joined-meeting", () => {
           setJoined(true);
@@ -139,7 +150,6 @@ export default function VideoCallPage() {
         });
 
         setCallFrame(frame);
-        callFrameRef.current = frame;
       } catch (err) {
         console.error("Failed to join call:", err);
         const msg = err?.message || "";
@@ -158,7 +168,7 @@ export default function VideoCallPage() {
       if (timerRef.current) clearInterval(timerRef.current);
       // Cleanup Daily.co frame on unmount
       if (callFrameRef.current) {
-        callFrameRef.current.destroy();
+        try { callFrameRef.current.destroy(); } catch {}
         callFrameRef.current = null;
       }
     };
