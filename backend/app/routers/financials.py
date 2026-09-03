@@ -687,10 +687,10 @@ async def get_financial_summary(year: int):
     gross_revenue_entries = [e for e in income_entries if e.get("platform") != "profit"]
     profit_entries = [e for e in income_entries if e.get("platform") == "profit"]
     
-    # For Financials section: only include scanned/imported data, not manual 1099s
-    # Scanned entries have "Scanned" in notes
+    # For Financials section: include all revenue except manual 1099s and Tax Prep entries
+    # This captures Vendoo imports, scanned receipts, and any other imported data
     scanned_revenue_entries = [e for e in gross_revenue_entries 
-                               if e.get("notes") and "Scanned" in e.get("notes", "")]
+                               if not e.get("is_1099")]
     scanned_profit_entries = [e for e in profit_entries
                               if e.get("notes") and "Scanned" in e.get("notes", "")]
     
@@ -825,11 +825,11 @@ async def get_year_comparison(year: int):
         total_miles_legacy = sum(e.get("miles", 0) for e in legacy_mileage)
         total_miles = total_miles_gps + total_miles_legacy
         
-        # Separate gross revenue from profit entries
-        # Only include scanned data (entries with "Scanned" in notes) - NOT manual 1099s from Tax Prep
+        # Include all revenue entries except manual 1099s from Tax Prep
+        # Captures Vendoo imports, scanned receipts, and other imported data
         gross_revenue_entries = [e for e in income 
                                  if e.get("platform") != "profit" 
-                                 and e.get("notes") and "Scanned" in e.get("notes", "")]
+                                 and not e.get("is_1099")]
         profit_entries = [e for e in income 
                          if e.get("platform") == "profit"
                          and e.get("notes") and "Scanned" in e.get("notes", "")]
@@ -978,28 +978,15 @@ def parse_currency(value: str) -> float:
         return 0.0
 
 def parse_date(value: str) -> Optional[str]:
-    """Parse date string to ISO format"""
+    """Parse date string to ISO format (YYYY-MM-DD). Uses dateutil for broad format support."""
     if not value or value.strip() == "":
         return None
-    
-    # Try common date formats
-    formats = [
-        "%Y-%m-%d",
-        "%m/%d/%Y",
-        "%m/%d/%y",
-        "%d/%m/%Y",
-        "%Y/%m/%d",
-        "%b %d, %Y",
-        "%B %d, %Y",
-    ]
-    
-    for fmt in formats:
-        try:
-            parsed = datetime.strptime(value.strip(), fmt)
-            return parsed.strftime("%Y-%m-%d")
-        except ValueError:
-            continue
-    return None
+    try:
+        from dateutil.parser import parse as dateutil_parse
+        parsed = dateutil_parse(value.strip(), dayfirst=False)
+        return parsed.strftime("%Y-%m-%d")
+    except (ValueError, OverflowError):
+        return None
 
 def normalize_header(header: str) -> str:
     """Normalize column header for matching"""
@@ -1074,6 +1061,7 @@ async def import_vendoo_csv(
         price_col = find_column(["price_sold", "sale_price", "revenue", "sold_price", "price"])
         cogs_col = find_column(["cost_of_goods", "cog", "cogs", "cost", "purchase_price"])
         fees_col = find_column(["marketplace_fees", "fees", "platform_fees", "selling_fees"])
+        profit_col = find_column(["profit", "net_profit", "net"])
         shipping_col = find_column(["shipping_fees", "shipping_cost", "shipping"])
         title_col = find_column(["title", "item_name", "name", "description"])
         
@@ -1085,17 +1073,20 @@ async def import_vendoo_csv(
         
         # Process rows
         sales_by_platform_month = {}  # { "ebay_2025-01": { total: 0, count: 0 } }
+        profit_by_platform_month = {}  # Track Vendoo-reported profit if column exists
         cogs_entries = []
         fee_total = 0.0
         
         rows_processed = 0
-        rows_skipped = 0
+        rows_skipped_no_price = 0
+        rows_skipped_no_date = 0
+        rows_skipped_wrong_period = 0
         
         for row in reader:
             # Get sale price
             price = parse_currency(row.get(price_col, ""))
             if price <= 0:
-                rows_skipped += 1
+                rows_skipped_no_price += 1
                 continue
             
             # Get date and check if it matches our filter
@@ -1105,12 +1096,12 @@ async def import_vendoo_csv(
             if parsed_date:
                 # Check if date matches our filter (year and optionally month)
                 if not parsed_date.startswith(date_prefix):
-                    rows_skipped += 1
+                    rows_skipped_wrong_period += 1
                     continue
                 sale_month = parsed_date[:7]  # YYYY-MM
             else:
                 # If no date, skip (we need a date to filter properly)
-                rows_skipped += 1
+                rows_skipped_no_date += 1
                 continue
             
             # Get platform
@@ -1220,7 +1211,12 @@ async def import_vendoo_csv(
             "message": f"Successfully imported {rows_processed} sales",
             "details": {
                 "rows_processed": rows_processed,
-                "rows_skipped": rows_skipped,
+                "rows_skipped": rows_skipped_no_price + rows_skipped_no_date + rows_skipped_wrong_period,
+                "skip_detail": {
+                    "no_price": rows_skipped_no_price,
+                    "no_date": rows_skipped_no_date,
+                    "wrong_period": rows_skipped_wrong_period
+                },
                 "income_entries_created": income_created,
                 "cogs_entries_created": cogs_created,
                 "fee_expenses_created": fees_created,
