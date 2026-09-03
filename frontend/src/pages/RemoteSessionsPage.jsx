@@ -44,9 +44,13 @@ function MonthPicker({ value, onChange }) {
   );
 }
 
+function localDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function DayPills({ month, selectedDate, onSelect }) {
   const daysInMonth = new Date(parseInt(month.split("-")[0]), parseInt(month.split("-")[1]), 0).getDate();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateStr(new Date());
   const pills = [];
   for (let i = 1; i <= daysInMonth; i++) {
     const dateStr = `${month}-${String(i).padStart(2, "0")}`;
@@ -251,7 +255,7 @@ export default function RemoteSessionsPage() {
   const navigate = useNavigate();
   const now = new Date();
   const [tab, setTab] = useState("sessions");
-  const [month, setMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const [month, setMonth] = useState(localDateStr(now).slice(0, 7));
   const [selectedDate, setSelectedDate] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -448,10 +452,18 @@ export default function RemoteSessionsPage() {
     }
   };
 
-  const isActive = (s) => !s.ended_at && s.duration_seconds === null;
+  const isActive = (s) => {
+    if (s.ended_at || s.duration_seconds !== null) return false;
+    // If session has been "active" for more than 2 hours with no end, treat as stale
+    if (s.started_at) {
+      const age = (Date.now() - new Date(s.started_at).getTime()) / 1000 / 60;
+      if (age > 120) return false;
+    }
+    return true;
+  };
   const activeCount = sessions.filter(isActive).length;
 
-  // Group sessions by day
+  // Group sessions by LOCAL day (not UTC)
   const grouped = useMemo(() => {
     const filtered = sessions.filter((s) => {
       if (!search.trim()) return true;
@@ -460,7 +472,7 @@ export default function RemoteSessionsPage() {
     });
     const groups = {};
     for (const s of filtered) {
-      const day = (s.started_at || "").slice(0, 10);
+      const day = s.started_at ? localDateStr(new Date(s.started_at)) : "";
       if (!groups[day]) groups[day] = [];
       groups[day].push(s);
     }
@@ -473,47 +485,53 @@ export default function RemoteSessionsPage() {
     <div className="min-h-screen bg-[#0F0F23]" data-testid="remote-sessions-page">
       {/* Header */}
       <div className="sticky top-0 z-20 bg-[#0F0F23]/95 backdrop-blur-md border-b border-white/10 px-4 py-3" style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}>
-        <div className="max-w-3xl mx-auto flex items-center gap-3">
-          <button onClick={() => navigate("/admin")} className="text-white/70 hover:text-white p-2 -ml-2 rounded-lg hover:bg-white/10 transition-colors" data-testid="remote-sessions-back-btn">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="w-9 h-9 bg-gradient-to-br from-[#6366F1] to-[#4F46E5] rounded-lg flex items-center justify-center">
-            <Monitor className="w-5 h-5 text-white" />
+        <div className="max-w-3xl mx-auto space-y-2">
+          {/* Top row: nav + title + utility icons */}
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate("/admin")} className="text-white/70 hover:text-white p-1.5 -ml-1.5 rounded-lg hover:bg-white/10 transition-colors" data-testid="remote-sessions-back-btn">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="w-8 h-8 bg-gradient-to-br from-[#6366F1] to-[#4F46E5] rounded-lg flex items-center justify-center shrink-0">
+              <Monitor className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-white font-bold text-base leading-tight">Remote Sessions</h1>
+              <p className="text-white/50 text-[11px]">
+                {activeCount > 0 && <span className="text-emerald-400 font-medium">{activeCount} active now</span>}
+                {activeCount === 0 && "AnyDesk session history"}
+              </p>
+            </div>
+            <button
+              onClick={toggleSilence}
+              className={`p-1.5 rounded-lg transition-colors ${
+                silenced
+                  ? "bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"
+                  : "text-white/50 hover:text-white hover:bg-white/10"
+              }`}
+              title={silenced ? "Notifications silenced — tap to resume" : "Silence notifications"}
+              data-testid="silence-notifications-btn"
+            >
+              {silenced ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+            </button>
+            <button onClick={handleMergeHistorical} className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/10 transition-colors" title="Merge fragmented sessions" data-testid="merge-sessions-btn">
+              <Merge className="w-4 h-4" />
+            </button>
+            <button onClick={handleExport} className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/10 transition-colors" title="Export CSV" data-testid="export-csv-btn">
+              <Download className="w-4 h-4" />
+            </button>
+            <button onClick={() => { fetchData(); fetchAlerts(); }} disabled={loading} className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors" data-testid="remote-sessions-refresh">
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            </button>
           </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-white font-bold text-lg leading-tight">Remote Sessions</h1>
-            <p className="text-white/50 text-xs">
-              {activeCount > 0 && <span className="text-emerald-400 font-medium">{activeCount} active now</span>}
-              {activeCount === 0 && "AnyDesk session history"}
-            </p>
+          {/* Second row: Shutdown + Restart buttons */}
+          <div className="flex items-center gap-2">
+            <button onClick={handleShutdown} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-semibold hover:bg-red-500/25 transition-colors" data-testid="shutdown-anydesk-btn">
+              <ShieldBan className="w-3.5 h-3.5" /> Shutdown AnyDesk
+            </button>
+            <button onClick={handleRestartAnyDesk} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/25 transition-colors" data-testid="restart-anydesk-btn">
+              <RotateCcw className="w-3.5 h-3.5" /> Restart AnyDesk
+            </button>
           </div>
-          <button
-            onClick={toggleSilence}
-            className={`p-2 rounded-lg transition-colors ${
-              silenced
-                ? "bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"
-                : "text-white/50 hover:text-white hover:bg-white/10"
-            }`}
-            title={silenced ? "Notifications silenced — tap to resume" : "Silence notifications"}
-            data-testid="silence-notifications-btn"
-          >
-            {silenced ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
-          </button>
-          <button onClick={handleShutdown} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-semibold hover:bg-red-500/25 transition-colors" data-testid="shutdown-anydesk-btn">
-            <ShieldBan className="w-3.5 h-3.5" /> Shutdown
-          </button>
-          <button onClick={handleRestartAnyDesk} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/25 transition-colors" data-testid="restart-anydesk-btn">
-            <RotateCcw className="w-3.5 h-3.5" /> Restart
-          </button>
-          <button onClick={handleMergeHistorical} className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors" title="Merge fragmented sessions" data-testid="merge-sessions-btn">
-            <Merge className="w-4 h-4" />
-          </button>
-          <button onClick={handleExport} className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors" title="Export CSV" data-testid="export-csv-btn">
-            <Download className="w-4 h-4" />
-          </button>
-          <button onClick={() => { fetchData(); fetchAlerts(); }} disabled={loading} className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors" data-testid="remote-sessions-refresh">
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
         </div>
       </div>
 
