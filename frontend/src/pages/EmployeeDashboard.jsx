@@ -50,6 +50,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import axios from "axios";
 import { formatHoursToHMS, roundHoursToMinute } from "@/lib/utils";
@@ -316,6 +317,8 @@ export default function EmployeeDashboard({
   // Push notification state
   const [pushPermission, setPushPermission] = useState('default');
   const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushChecked, setPushChecked] = useState(false);
 
   // Check if PWA is installed and set up install prompt
   useEffect(() => {
@@ -376,44 +379,145 @@ export default function EmployeeDashboard({
     setShowInstallBanner(false);
   };
 
-  // Request push notification permission and subscribe
+  // Request push notification permission and subscribe to Web Push
   const requestPushPermission = async () => {
+    setPushLoading(true);
     try {
-      if (!('Notification' in window)) {
-        toast.error('Push notifications not supported', { description: 'Your browser does not support push notifications' });
+      // Check browser support
+      if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        toast.error('Notifications not supported', { description: 'Your browser does not support push notifications' });
         return;
       }
       
+      // Request browser permission
       const permission = await Notification.requestPermission();
       setPushPermission(permission);
       
-      if (permission === 'granted') {
-        // Register service worker and subscribe to push
-        const registration = await navigator.serviceWorker.ready;
-        
-        // Get VAPID public key from backend (or use a configured one)
-        // For now, we'll just show success - actual push subscription would need VAPID keys
-        setPushSubscribed(true);
-        toast.success('Notifications enabled!', { description: 'You will receive push notifications for new messages' });
-        
-        // Store preference
-        localStorage.setItem('push_notifications_enabled', 'true');
-      } else if (permission === 'denied') {
-        toast.error('Notifications blocked', { description: 'Please enable notifications in your browser settings' });
+      if (permission !== 'granted') {
+        if (permission === 'denied') {
+          toast.error('Notifications blocked', { description: 'Please enable notifications in your browser/device settings' });
+        }
+        return;
       }
+      
+      // Get VAPID public key from backend
+      const vapidRes = await axios.get(`${API}/web-push/vapid-public-key`);
+      const vapidPublicKey = vapidRes.data.publicKey;
+      
+      // Convert VAPID key to Uint8Array
+      const urlBase64ToUint8Array = (base64String) => {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+          outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+      };
+      
+      // Subscribe via service worker push manager
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+      });
+      
+      const subJSON = subscription.toJSON();
+      
+      // Send subscription to backend
+      await axios.post(`${API}/web-push/subscribe`, {
+        endpoint: subJSON.endpoint,
+        keys: subJSON.keys,
+        expirationTime: subJSON.expirationTime || null
+      }, getAuthHeader());
+      
+      setPushSubscribed(true);
+      localStorage.setItem('push_notifications_enabled', 'true');
+      toast.success('Notifications enabled!', { description: 'You\'ll receive alerts for video calls, messages & more' });
     } catch (error) {
-      console.error('Failed to request push permission:', error);
-      toast.error('Failed to enable notifications');
+      console.error('Failed to enable push notifications:', error);
+      toast.error('Failed to enable notifications', { description: error?.message || 'Please try again' });
+    } finally {
+      setPushLoading(false);
+    }
+  };
+  
+  // Disable push notifications - unsubscribe from Web Push
+  const disableNotifications = async () => {
+    setPushLoading(true);
+    try {
+      // Unsubscribe from browser push
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          const endpoint = subscription.endpoint;
+          await subscription.unsubscribe();
+          // Remove from backend
+          try {
+            await axios.delete(`${API}/web-push/subscribe?endpoint=${encodeURIComponent(endpoint)}`, getAuthHeader());
+          } catch (e) {
+            console.log('Backend unsubscribe cleanup:', e);
+          }
+        }
+      }
+      
+      setPushSubscribed(false);
+      localStorage.removeItem('push_notifications_enabled');
+      toast.success('Notifications disabled');
+    } catch (error) {
+      console.error('Failed to disable notifications:', error);
+      toast.error('Failed to disable notifications');
+    } finally {
+      setPushLoading(false);
     }
   };
 
-  // Check if push is already subscribed on load
+  // Check actual push subscription status on load
   useEffect(() => {
-    const pushEnabled = localStorage.getItem('push_notifications_enabled');
-    if (pushEnabled === 'true' && Notification.permission === 'granted') {
-      setPushSubscribed(true);
+    const checkPushStatus = async () => {
+      try {
+        // Check browser permission
+        if ('Notification' in window) {
+          setPushPermission(Notification.permission);
+        }
+        
+        // Check if actually subscribed via service worker
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.ready;
+          const subscription = await registration.pushManager.getSubscription();
+          if (subscription && Notification.permission === 'granted') {
+            // Verify with backend too
+            const token = localStorage.getItem("token");
+            if (token) {
+              try {
+                const statusRes = await axios.get(`${API}/web-push/status`, {
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                setPushSubscribed(statusRes.data.subscribed === true);
+              } catch {
+                setPushSubscribed(true); // Assume subscribed if we have browser sub
+              }
+            } else {
+              setPushSubscribed(true);
+            }
+          } else {
+            setPushSubscribed(false);
+            localStorage.removeItem('push_notifications_enabled');
+          }
+        }
+      } catch (e) {
+        console.log('Push status check:', e);
+      } finally {
+        setPushChecked(true);
+      }
+    };
+    
+    if (!isAdminView) {
+      checkPushStatus();
     }
-  }, []);
+  }, [isAdminView]);
 
   // Reset Face ID credentials
   const handleResetFaceId = async () => {
@@ -1718,33 +1822,72 @@ export default function EmployeeDashboard({
             </motion.div>
           )}
           
-          {/* Push Notification Banner - Only show if not subscribed, app is installed or native, and not admin view */}
-          {!isAdminView && !pushSubscribed && pushPermission !== 'denied' && (isStandalone || isNativePlatform()) && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-[#FFE66D]/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Bell className="w-5 h-5 text-[#FFE66D]" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-white font-semibold text-sm">Enable Notifications</h3>
-                  <p className="text-white/60 text-xs mt-0.5">
-                    Get notified when you receive messages from your manager
-                  </p>
-                  <Button 
-                    onClick={requestPushPermission}
-                    size="sm"
-                    className="mt-2 bg-[#FFE66D] text-[#1A1A2E] hover:bg-[#FFE66D]/90 font-medium"
-                  >
-                    <Bell className="w-3 h-3 mr-1.5" />
-                    Turn On Notifications
-                  </Button>
+          {/* Notification Settings Card - Always visible for employees */}
+          {!isAdminView && pushChecked && (
+            <div className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 overflow-hidden" data-testid="notification-settings-card">
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      pushSubscribed ? 'bg-green-500/20' : 'bg-white/10'
+                    }`}>
+                      {pushSubscribed ? (
+                        <Bell className="w-5 h-5 text-green-400" />
+                      ) : (
+                        <BellOff className="w-5 h-5 text-white/40" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold text-sm">Notifications</h3>
+                      <p className="text-white/50 text-xs mt-0.5">
+                        {pushPermission === 'denied' 
+                          ? 'Blocked in browser settings'
+                          : !('Notification' in window) 
+                            ? 'Not supported on this browser'
+                            : pushSubscribed 
+                              ? 'Receiving call & message alerts'
+                              : 'Get alerts for video calls & messages'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Toggle switch - disabled if blocked or unsupported */}
+                  {('Notification' in window) && pushPermission !== 'denied' ? (
+                    <div className="flex items-center gap-2">
+                      {pushLoading && (
+                        <Loader2 className="w-4 h-4 text-white/40 animate-spin" />
+                      )}
+                      <Switch
+                        data-testid="notification-toggle"
+                        checked={pushSubscribed}
+                        disabled={pushLoading}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            requestPushPermission();
+                          } else {
+                            disableNotifications();
+                          }
+                        }}
+                        className="data-[state=checked]:bg-green-500"
+                      />
+                    </div>
+                  ) : pushPermission === 'denied' ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-white/50 hover:text-white text-xs"
+                      onClick={() => {
+                        toast.info('Open your browser or device settings to unblock notifications for this site', { duration: 5000 });
+                      }}
+                      data-testid="notification-blocked-help"
+                    >
+                      <AlertCircle className="w-3.5 h-3.5 mr-1" />
+                      Unblock
+                    </Button>
+                  ) : null}
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
 
           {/* Clock In/Out Card */}

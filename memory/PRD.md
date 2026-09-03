@@ -1,174 +1,98 @@
 # Thrifty Curator - Product Requirements Document
 
-## Original Problem Statement
-Build a "Thrifty Curator" reselling application wrapped for native iOS/Android using Capacitor. The app manages employee time tracking, consignment agreements, job applications, admin workflows, and business operations.
+## Overview
+Resale/consignment operations platform with employee/admin management, time tracking, remote session monitoring, financial reporting, interview scheduling, video calling, and mobile/native support.
 
-## Core Features
+## Core Features (Implemented)
 
-### Employee Portal
-- Clock in/out with GPS tracking
-- Time entry management
-- W-9 document uploads
-- Mileage tracking
-- Password-based authentication
+### Authentication & User Management
+- Employee login (email-based, optional password)
+- Admin login (email + 4-digit code)
+- Face ID / biometric auth (native)
+- Password set/change for employees
+- Consignor magic-link auth
 
-### Consignor Portal
-- Direct consignment agreement submissions via "Sell With Us"
-- Payment history with date filtering
-- My Account overview
-- Custom commission splits for item additions
-- ~~Consignment Inquiry~~ (removed - streamlined flow)
+### Time Tracking
+- Clock in/out with GPS verification
+- Auto clock-out when leaving work area
+- Live Activity widget (iOS)
+- Admin clock in/out for employees
+- Pay period summaries, shift history
+- Location verification every 30 seconds
 
-### Admin Dashboard
-- Team Management (employees)
-- Payroll & Payments tracking
-- Forms & Communications
-- Reports & Operations
-- Interview Scheduler (email-based)
-- Soft Rejection workflow with "Keep on file" tracking
-- Rejection History section
-- Password Management for employees/consignors
+### Video Calling (Daily.co)
+- Admin-to-employee and employee-to-admin calls
+- Shareable call links for external people
+- Scheduled calls with date/time
+- Call reminders before scheduled calls
+- Direct iframe video call UI
+- Role-based tabs: Admin (Active/Upcoming/History/Recordings), Employee (Active/History)
+- Incoming call banner with accept/decline
+- Optional recording (admin-only, off by default)
+- Interview scheduler integration with Daily rooms
 
-### Mobile App (Capacitor)
-- Native iOS and Android builds
-- Push notifications via Firebase
-- Biometric authentication
-- Background GPS tracking
+### Employee Notification Opt-In (Latest - Feb 2026)
+- Persistent Notification Settings card on Employee Dashboard
+- Shows current notification status (enabled/disabled/blocked/unsupported)
+- Toggle switch to enable/disable Web Push notifications
+- Full Web Push integration: VAPID key exchange → browser permission → push subscription → backend registration
+- Unsubscribe flow: browser unsubscribe → backend cleanup
+- Contextual help when notifications are blocked in browser settings
+- Hidden in admin view of employee dashboard
 
-## User Personas
-1. **Admin/Owner**: Matthew & Eunice Guzman - Full access to all features
-2. **Employees**: Clock in/out, track time, submit W-9s
-3. **Consignors**: Submit items, track payments, manage account
+### Remote Session Monitoring (AnyDesk)
+- Watcher service for Mac log monitoring
+- Session events/heartbeats
+- Shutdown/restart commands
+- Simplified model (no per-ID ACL enforcement)
 
-## Tech Stack
-- Frontend: React with Tailwind CSS, Shadcn UI
-- Backend: FastAPI (Python)
-- Database: MongoDB
-- Mobile: Capacitor v8
-- Email: Resend
-- GPS: Transistorsoft Background Geolocation
-- Payments: Stripe (requires user API key)
-- Video Calls: Daily.co
+### Financial Management
+- CSV import (multiple formats including Vendoo)
+- Financial summaries and reporting
+- 1099 document management
+- W-9 / W-8BEN upload and review
 
-## What's Been Implemented
+### Messaging
+- Admin-employee chat
+- Full-screen messaging modal
+- Unread message badges
 
-### Completed Features
-- Full employee time tracking with GPS
-- Consignment agreement/inquiry forms
-- Admin dashboard with all core sections
-- Job application system with interview scheduling
-- Email-based interview invitations and management
-- Soft rejection workflow (pre & post-interview)
-- Rejection history tracking
-- Password reset via magic link emails
-- First-time password setup prompts
-- Payment history for consignors
-- My Account section for consignors
-- Admin password management
-- Push notifications for admin alerts
-- Payroll rounding fix (2026-06-12)
-- GPS Mileage Tracking improvements (2026-06-12)
-- Employee Training Section (2026-06-12)
-- W-8BEN Tax Form Support
-- Collapsible Tax Forms (2026-08-18)
-- Splash Screen Optimization (2026-08-18)
-- Enhanced Timezone Display for Interview Scheduling (2026-08-22)
-- Admin Time Range Filter for Interview Scheduling (2026-08-22)
-- Vendoo CSV Import Fix (2026-08-25)
-- AnyDesk Remote Session Tracking (2026-09-01)
-- Security Remediation (2026-09-01)
-- AnyDesk Simplified to Shutdown/Restart (2026-09-02)
-- Config Tab Removal (2026-09-02)
-- Timekeeping Changes (2026-09-02)
+### Forms & Onboarding
+- Job application forms
+- Consignment agreements
+- Contractor agreements with e-signature
+- Payment info for remote workers (Remitly)
 
-### Daily.co Video Calls Integration (2026-09-03)
-- **Backend**: Full video calls router at `/api/video-calls/` with:
-  - Room creation (POST /rooms) with automatic Daily.co room provisioning
-  - Room info lookup (GET /rooms/{room_name})
-  - Meeting token generation for participant controls (POST /rooms/{room_name}/token)
-  - Room ending with duration tracking (POST /rooms/{room_name}/end)
-  - Worker-to-admin call request flow (POST /call-request)
-  - Pending call request polling (GET /call-requests/pending)
-  - Accept/decline call requests (POST /call-requests/{id}/accept|decline)
-  - Call history (GET /history) and recordings (GET /recordings)
-  - Interview booking auto-creates Daily room (POST /rooms/for-booking/{booking_id})
-  - Graceful recording fallback when Daily.co plan doesn't support cloud recording
-  - **Push notifications** (APNs + Web Push) sent to admins on incoming call requests
-  - **Recording sync** from Daily.co cloud (POST /recordings/sync)
-  - **Recording access links** for secure playback (GET /recordings/{id}/access-link)
-- **Frontend Video Call Room** (`/call/:roomName`):
-  - Embedded Daily.co video with branded dark theme
-  - Controls: mic, camera, screen share, optional recording toggle
-  - Real-time participant count and call timer
-  - Fullscreen toggle
-  - Error handling and loading states
-- **Frontend Video Calls Page** (`/video-calls`):
-  - Active/History/Recordings tabs
-  - Admin: "New Call" button for ad-hoc calls
-  - Worker: "Request a Call" with admin selector and optional message
-  - Active call cards with Join button
-  - Call history with duration and participant info
-  - Recordings tab links to dedicated Recordings page
-- **Frontend Recordings Page** (`/recordings`):
-  - Inline HTML5 video player for recording playback
-  - Sync recordings from Daily.co cloud with one-tap button
-  - Recording cards with play, download actions
-  - Recording metadata: duration, participants, purpose badges
-- **Admin Header Integration**:
-  - Video camera icon in admin dashboard header between Remote Sessions and Messages
-  - Badge shows pending call request count with pulse animation
-  - Polls every 30 seconds for new requests
-- **Employee Dashboard Integration**:
-  - "Calls" button in employee dashboard header navigation
-- **Incoming Call Banner**:
-  - Floating notification banner mounted globally in App.js
-  - Shows caller name, message, and direct Accept/Decline/Dismiss buttons
-  - Polls every 5 seconds for pending requests (admin only)
-  - Animated entrance/exit with glass-morphism design
-- **Interview Scheduler Integration**:
-  - Auto-creates Daily.co room when interview is booked
-  - Attaches video_call_url and video_call_daily_url to booking record
-  - Manage Interview page shows "Join Video Interview" button
-  - Google Meet remains as manual backup (admin can paste URL)
-- **Collections**: `video_call_rooms`, `video_call_requests`
-- **Testing**: Backend 100% (9/9 enhancement tests + 14/15 original), Frontend 100%
+### PWA & Mobile
+- Progressive Web App with install banner
+- Capacitor native wrappers (iOS/Android)
+- Pull-to-refresh
+- Haptic feedback
+- Service worker for push notifications
 
-### Recently Removed
-- AI Reports Assistant (removed 2026-05-12 per user request)
-- AI Training Video Generation (removed 2026-08 per user request)
+## Architecture
+- **Frontend**: React + Tailwind CSS + Shadcn/UI, served on port 3000
+- **Backend**: FastAPI on port 8001, prefixed with /api
+- **Database**: MongoDB
+- **Video**: Daily.co (direct iframe embed)
+- **Push**: Web Push (VAPID) + APNs (native iOS)
+- **Storage**: Emergent Object Storage for files/media
 
-## Technical Debt / Refactoring Needed
-1. **CRITICAL**: `frontend/src/pages/ConsignmentAgreementForm.jsx` (~3850 lines)
-2. **CRITICAL**: `frontend/src/components/admin/sections/ApplicantTestsSection.jsx` (~2500 lines)
-3. **HIGH**: `frontend/src/components/admin/modals/FormSubmissionModal.jsx` (~1200 lines)
+## Key Endpoints
+- `/api/web-push/vapid-public-key` - Get VAPID public key (no auth)
+- `/api/web-push/subscribe` - Register push subscription (POST, auth required)
+- `/api/web-push/subscribe?endpoint=...` - Unsubscribe (DELETE, auth required)
+- `/api/web-push/status` - Check subscription status (GET, auth required)
+- `/api/video-calls/*` - Video call management
+- `/api/time/*` - Time tracking
+- `/api/auth/*` - Authentication
 
-## Pending Verification
-- GPS Tracking reliability on live devices
-- Vendoo CSV import accuracy (requires production re-import)
-- LIVE session status ending immediately on AnyDesk disconnect
-
-## Upcoming Tasks (Priority Order)
-1. Amazon Business Supplies quick links section
-2. Android app submission guidance (`.aab` file)
-3. Fast Shipping Labels with Pirate Ship integration
-4. Auto-calculate 2026+ 1099s
-5. Dynamic QR code update with `onelink.to`
-
-## Known Issues
-- Production vs Preview deployment confusion
-- Modal CSS stacking context issues - use ReactDOM.createPortal for all new modals
-- Daily.co cloud recording may not work depending on account plan
-
-## Credentials
-- Admin codes: `4399` (Matthew), `0826` (Eunice)
-- Production URL: https://thrifty-curator.com
-- Preview URL: https://curator-app-3.preview.emergentagent.com
-
-## 3rd Party Integrations
-- Capacitor v8
-- Transistorsoft Background Geolocation
-- Stripe (Payments) - requires user API key
-- Resend (Emails) - configured
-- Firebase (Push notifications for native apps) - configured
-- Web Push (Safari PWA) - VAPID-based
-- Daily.co (Video Calls) - configured with API key
+## Pending / Backlog
+- P1: Verify Daily call workflows end-to-end in production
+- P1: Recording availability depends on Daily.co account plan
+- P2: Financial/Vendoo import production validation
+- P2: Clean up React hook warnings in VideoCallsPage.jsx
+- P2: Review call deletion authorization scoping
+- P3: GPS route matching (Mapbox)
+- P3: LLM vision for product image/spec workflows
+- P3: eBay Browse API integration
