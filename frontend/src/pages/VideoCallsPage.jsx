@@ -69,6 +69,11 @@ export default function VideoCallsPage() {
   const [requestMessage, setRequestMessage] = useState("");
   const [requesting, setRequesting] = useState(false);
 
+  // For admin invite flow
+  const [showInvitePanel, setShowInvitePanel] = useState(false);
+  const [selectedInvitees, setSelectedInvitees] = useState([]);
+  const [inviteMessage, setInviteMessage] = useState("");
+
   const deleteCall = async (roomName) => {
     try {
       await axios.delete(`${API}/video-calls/calls/${roomName}`, authHeader);
@@ -112,9 +117,17 @@ export default function VideoCallsPage() {
     fetchData();
     // If admin, fetch employee list for call requests
     if (isAdmin) {
-      axios.get(`${API}/admin/employees`, authHeader)
-        .then(res => setEmployees(res.data.employees || res.data || []))
-        .catch(() => {});
+      // Fetch both employees and other admins for invite list
+      Promise.all([
+        axios.get(`${API}/admin/employees`, authHeader),
+        axios.get(`${API}/video-calls/admins`, authHeader),
+      ]).then(([empRes, adminRes]) => {
+        const emps = empRes.data.employees || empRes.data || [];
+        const admins = (adminRes.data.admins || [])
+          .filter(a => a.id !== user.id) // exclude self
+          .map(a => ({ ...a, role: "admin" }));
+        setEmployees([...admins, ...emps]);
+      }).catch(() => {});
     } else {
       // Workers fetch admin list from video-calls endpoint
       axios.get(`${API}/video-calls/admins`, authHeader)
@@ -129,14 +142,27 @@ export default function VideoCallsPage() {
   const startAdHocCall = async (enableRecording = false) => {
     setCreating(true);
     try {
-      const res = await axios.post(`${API}/video-calls/rooms`, {
-        purpose: "ad-hoc",
-        expires_minutes: 120,
-        enable_recording: enableRecording,
-        participant_names: [user.name || user.email],
-      }, authHeader);
-      toast.success("Room created!");
-      navigate(`/call/${res.data.room_name}`);
+      // If invitees selected, create room + send invitations
+      if (selectedInvitees.length > 0) {
+        const res = await axios.post(`${API}/video-calls/invite-to-call`, {
+          invitee_ids: selectedInvitees,
+          message: inviteMessage,
+        }, authHeader);
+        toast.success(`Call started, ${res.data.invited} invite(s) sent!`);
+        setShowInvitePanel(false);
+        setSelectedInvitees([]);
+        setInviteMessage("");
+        navigate(`/call/${res.data.room_name}`);
+      } else {
+        const res = await axios.post(`${API}/video-calls/rooms`, {
+          purpose: "ad-hoc",
+          expires_minutes: 120,
+          enable_recording: enableRecording,
+          participant_names: [user.name || user.email],
+        }, authHeader);
+        toast.success("Room created!");
+        navigate(`/call/${res.data.room_name}`);
+      }
     } catch (err) {
       toast.error("Failed to create room");
     } finally {
@@ -213,7 +239,7 @@ export default function VideoCallsPage() {
           <Button
             size="sm"
             className="bg-[#00D4FF] hover:bg-[#00B8E0] text-black font-medium text-xs px-3"
-            onClick={() => startAdHocCall(false)}
+            onClick={() => setShowInvitePanel(!showInvitePanel)}
             disabled={creating}
             data-testid="start-call-btn"
           >
@@ -224,8 +250,68 @@ export default function VideoCallsPage() {
       </header>
 
       <div className="p-4 max-w-3xl mx-auto">
-        {/* Incoming Call Requests - always visible at top for admins */}
-        {isAdmin && pendingRequests.length > 0 && (
+        {/* Admin: Invite panel for starting a call with selected people */}
+        {isAdmin && showInvitePanel && (
+          <div className="mb-4 bg-white/5 border border-[#00D4FF]/30 rounded-xl p-4 space-y-3" data-testid="invite-panel">
+            <h3 className="text-white font-medium text-sm flex items-center gap-2">
+              <Users className="w-4 h-4 text-[#00D4FF]" />
+              Start a Call — Select Who to Invite
+            </h3>
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {employees.map(emp => (
+                <label
+                  key={emp.id}
+                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                    selectedInvitees.includes(emp.id) ? "bg-[#00D4FF]/15 border border-[#00D4FF]/30" : "bg-white/5 border border-transparent hover:bg-white/10"
+                  }`}
+                  data-testid={`invite-checkbox-${emp.id}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedInvitees.includes(emp.id)}
+                    onChange={e => {
+                      if (e.target.checked) setSelectedInvitees(prev => [...prev, emp.id]);
+                      else setSelectedInvitees(prev => prev.filter(id => id !== emp.id));
+                    }}
+                    className="accent-[#00D4FF]"
+                  />
+                  <span className="text-white text-sm">{emp.name || emp.email}</span>
+                  {emp.role && <span className="text-white/30 text-xs">({emp.role})</span>}
+                </label>
+              ))}
+            </div>
+            <input
+              type="text"
+              value={inviteMessage}
+              onChange={e => setInviteMessage(e.target.value)}
+              placeholder="Optional message..."
+              className="w-full bg-white/10 border border-white/20 text-white text-sm rounded-lg px-3 py-2 placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-[#00D4FF]/50"
+              data-testid="invite-message-input"
+            />
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 bg-[#00D4FF] hover:bg-[#00B8E0] text-black font-medium text-sm"
+                onClick={() => startAdHocCall(false)}
+                disabled={creating}
+                data-testid="start-invite-call-btn"
+              >
+                {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Phone className="w-4 h-4 mr-2" />}
+                {selectedInvitees.length > 0 ? `Call ${selectedInvitees.length} people` : "Start Solo Call"}
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-white/50 hover:text-white text-sm"
+                onClick={() => { setShowInvitePanel(false); setSelectedInvitees([]); }}
+                data-testid="cancel-invite-btn"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Incoming Call Requests - visible for ALL users */}
+        {pendingRequests.length > 0 && (
           <div className="mb-4 space-y-2" data-testid="pending-requests-section">
             {pendingRequests.map(req => (
               <div

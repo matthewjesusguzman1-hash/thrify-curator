@@ -16,7 +16,7 @@ export function IncomingCallBanner() {
   const isAdmin = user.role === "admin";
 
   const fetchPending = useCallback(async () => {
-    if (!token || !isAdmin) return;
+    if (!token) return;
     try {
       const res = await axios.get(`${API}/video-calls/call-requests/pending`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -26,7 +26,7 @@ export function IncomingCallBanner() {
     } catch {
       // Silently fail
     }
-  }, [token, isAdmin, dismissed]);
+  }, [token, dismissed]);
 
   useEffect(() => {
     fetchPending();

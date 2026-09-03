@@ -295,15 +295,118 @@ async def create_call_request(req: CallRequestModel, user: dict = Depends(get_cu
     }
 
 
+@router.post("/invite-to-call")
+async def invite_to_call(data: dict, user: dict = Depends(get_current_user)):
+    """Invite one or more users to an existing or new call room."""
+    room_name = data.get("room_name")
+    invitee_ids = data.get("invitee_ids", [])
+    message = data.get("message", "")
+
+    if not invitee_ids:
+        raise HTTPException(status_code=400, detail="No invitees specified")
+
+    caller_name = user.get("name", user.get("email", "User"))
+    caller_id = str(user.get("_id", user.get("id", "")))
+
+    # Create a new room if none provided
+    if not room_name:
+        room_name = f"tc-call-{uuid.uuid4().hex[:8]}"
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=120)
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{DAILY_API_URL}/rooms",
+                json={
+                    "name": room_name,
+                    "privacy": "public",
+                    "properties": {
+                        "exp": int(expires_at.timestamp()),
+                        "max_participants": 10,
+                        "enable_chat": True,
+                        "enable_screenshare": True,
+                    }
+                },
+                headers=daily_headers(),
+                timeout=15
+            )
+            if resp.status_code not in (200, 201):
+                raise HTTPException(status_code=502, detail=f"Daily.co error: {resp.text}")
+            daily_room = resp.json()
+
+        await db.video_call_rooms.insert_one({
+            "id": str(uuid.uuid4()),
+            "room_name": room_name,
+            "daily_url": daily_room.get("url"),
+            "purpose": "ad-hoc",
+            "created_by": caller_name,
+            "created_by_id": caller_id,
+            "participant_names": [caller_name],
+            "enable_recording": False,
+            "status": "active",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "expires_at": expires_at.isoformat(),
+            "ended_at": None, "duration_seconds": None, "recording_urls": []
+        })
+    else:
+        room_doc = await db.video_call_rooms.find_one({"room_name": room_name})
+        if not room_doc:
+            raise HTTPException(status_code=404, detail="Room not found")
+
+    # Create a call request for each invitee
+    created = []
+    for inv_id in invitee_ids:
+        request_doc = {
+            "id": str(uuid.uuid4()),
+            "room_name": room_name,
+            "caller_id": caller_id,
+            "caller_name": caller_name,
+            "target_id": inv_id,
+            "admin_id": inv_id,  # backwards compat with pending query
+            "message": message,
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
+        }
+        await db.video_call_requests.insert_one(request_doc)
+        created.append(request_doc["id"])
+
+    # Push notifications
+    try:
+        from app.services.apns_service import send_admin_push_notification
+        from app.services.web_push_service import get_web_push_service
+
+        title = "Incoming Video Call"
+        body = f"{caller_name} is inviting you to a video call"
+        if message:
+            body += f": {message}"
+
+        await send_admin_push_notification(
+            title=title, body=body,
+            notification_type="video_call_invite",
+            data={"room_name": room_name, "url": "/video-calls"}
+        )
+        await get_web_push_service().send_to_admins(
+            db=db, title=title, body=body,
+            url="/video-calls", notification_type="video_call_invite"
+        )
+    except Exception:
+        pass
+
+    return {"room_name": room_name, "app_url": f"/call/{room_name}", "invited": len(created)}
+
+
 @router.get("/call-requests/pending")
 async def get_pending_requests(user: dict = Depends(get_current_user)):
-    """Get pending call requests for the current user (as admin)."""
+    """Get pending call requests/invitations for the current user."""
     user_id = str(user.get("_id", user.get("id", "")))
     five_min_ago = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
 
+    # Find requests where user is the target (admin_id or target_id)
     requests = await db.video_call_requests.find(
         {
-            "admin_id": user_id,
+            "$or": [
+                {"admin_id": user_id},
+                {"target_id": user_id}
+            ],
             "status": "pending",
             "created_at": {"$gte": five_min_ago}
         },
