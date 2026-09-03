@@ -324,20 +324,11 @@ export default function VideoCallPage() {
         </div>
       </div>
 
-      {/* Video area */}
-      <div className="flex-1 relative" ref={containerRef} data-testid="call-video-container">
-        {joining && (
-          <div className="absolute inset-0 flex items-center justify-center z-10" style={{ background: "#0F0F23" }}>
-            <div className="text-center space-y-3">
-              <Loader2 className="w-10 h-10 text-[#00D4FF] animate-spin mx-auto" />
-              <p className="text-white/80 text-sm">Joining call...</p>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Video area — Daily.co's pre-built UI handles loading/joining */}
+      <div className="flex-1 relative" ref={containerRef} data-testid="call-video-container" />
 
-      {/* Bottom controls */}
-      {joined && (
+      {/* Bottom controls — show once Daily frame is loaded */}
+      {(joined || !joining) && callFrame && (
         <div
           className="flex items-center justify-center gap-3 px-4 py-3 border-t border-white/10"
           style={{ background: "linear-gradient(90deg, #1A1A2E, #16213E)" }}
