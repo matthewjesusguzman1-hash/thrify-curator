@@ -301,6 +301,7 @@ async def invite_to_call(data: dict, user: dict = Depends(get_current_user)):
     room_name = data.get("room_name")
     invitee_ids = data.get("invitee_ids", [])
     message = data.get("message", "")
+    enable_recording = data.get("enable_recording", False)
 
     if not invitee_ids:
         raise HTTPException(status_code=400, detail="No invitees specified")
@@ -312,22 +313,33 @@ async def invite_to_call(data: dict, user: dict = Depends(get_current_user)):
     if not room_name:
         room_name = f"tc-call-{uuid.uuid4().hex[:8]}"
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=120)
+
+        room_props = {
+            "exp": int(expires_at.timestamp()),
+            "max_participants": 10,
+            "enable_chat": True,
+            "enable_screenshare": True,
+        }
+        if enable_recording:
+            room_props["enable_recording"] = "cloud"
+
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"{DAILY_API_URL}/rooms",
-                json={
-                    "name": room_name,
-                    "privacy": "public",
-                    "properties": {
-                        "exp": int(expires_at.timestamp()),
-                        "max_participants": 10,
-                        "enable_chat": True,
-                        "enable_screenshare": True,
-                    }
-                },
+                json={"name": room_name, "privacy": "public", "properties": room_props},
                 headers=daily_headers(),
                 timeout=15
             )
+            # If recording fails, retry without
+            if resp.status_code not in (200, 201) and enable_recording:
+                room_props.pop("enable_recording", None)
+                enable_recording = False
+                resp = await client.post(
+                    f"{DAILY_API_URL}/rooms",
+                    json={"name": room_name, "privacy": "public", "properties": room_props},
+                    headers=daily_headers(),
+                    timeout=15
+                )
             if resp.status_code not in (200, 201):
                 raise HTTPException(status_code=502, detail=f"Daily.co error: {resp.text}")
             daily_room = resp.json()
@@ -340,7 +352,7 @@ async def invite_to_call(data: dict, user: dict = Depends(get_current_user)):
             "created_by": caller_name,
             "created_by_id": caller_id,
             "participant_names": [caller_name],
-            "enable_recording": False,
+            "enable_recording": enable_recording,
             "status": "active",
             "created_at": datetime.now(timezone.utc).isoformat(),
             "expires_at": expires_at.isoformat(),
@@ -391,7 +403,7 @@ async def invite_to_call(data: dict, user: dict = Depends(get_current_user)):
     except Exception:
         pass
 
-    return {"room_name": room_name, "app_url": f"/call/{room_name}", "invited": len(created)}
+    return {"room_name": room_name, "app_url": f"/call/{room_name}", "daily_url": f"https://thrifty-curator.daily.co/{room_name}", "invited": len(created)}
 
 
 @router.get("/call-requests/pending")
@@ -453,7 +465,13 @@ async def decline_call_request(request_id: str, user: dict = Depends(get_current
 
 @router.get("/history")
 async def get_call_history(user: dict = Depends(get_current_user), limit: int = 50):
-    """Get call history."""
+    """Get call history. Auto-marks expired rooms as ended."""
+    now = datetime.now(timezone.utc).isoformat()
+    # Auto-close expired active rooms
+    await db.video_call_rooms.update_many(
+        {"status": {"$in": ["active", "pending"]}, "expires_at": {"$lt": now}},
+        {"$set": {"status": "ended", "ended_at": now}}
+    )
     rooms = await db.video_call_rooms.find(
         {"status": {"$in": ["ended", "active", "pending"]}},
         {"_id": 0}

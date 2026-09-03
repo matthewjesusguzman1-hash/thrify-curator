@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   Video, Phone, PhoneIncoming, PhoneOff, Clock, 
   ArrowLeft, Plus, Users, Circle, Loader2,
-  Play, CheckCircle, XCircle, Trash2
+  Play, CheckCircle, XCircle, Trash2, Copy, Link2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -73,6 +73,8 @@ export default function VideoCallsPage() {
   const [showInvitePanel, setShowInvitePanel] = useState(false);
   const [selectedInvitees, setSelectedInvitees] = useState([]);
   const [inviteMessage, setInviteMessage] = useState("");
+  const [enableRecording, setEnableRecording] = useState(false);
+  const [shareLink, setShareLink] = useState(null);
 
   const deleteCall = async (roomName) => {
     try {
@@ -139,30 +141,26 @@ export default function VideoCallsPage() {
     return () => clearInterval(interval);
   }, [fetchData, isAdmin]);
 
-  const startAdHocCall = async (enableRecording = false) => {
+  const startAdHocCall = async () => {
+    if (selectedInvitees.length === 0) {
+      toast.error("Select at least one person to call");
+      return;
+    }
     setCreating(true);
     try {
-      // If invitees selected, create room + send invitations
-      if (selectedInvitees.length > 0) {
-        const res = await axios.post(`${API}/video-calls/invite-to-call`, {
-          invitee_ids: selectedInvitees,
-          message: inviteMessage,
-        }, authHeader);
-        toast.success(`Call started, ${res.data.invited} invite(s) sent!`);
-        setShowInvitePanel(false);
-        setSelectedInvitees([]);
-        setInviteMessage("");
-        navigate(`/call/${res.data.room_name}`);
-      } else {
-        const res = await axios.post(`${API}/video-calls/rooms`, {
-          purpose: "ad-hoc",
-          expires_minutes: 120,
-          enable_recording: enableRecording,
-          participant_names: [user.name || user.email],
-        }, authHeader);
-        toast.success("Room created!");
-        navigate(`/call/${res.data.room_name}`);
-      }
+      const res = await axios.post(`${API}/video-calls/invite-to-call`, {
+        invitee_ids: selectedInvitees,
+        message: inviteMessage,
+        enable_recording: enableRecording,
+      }, authHeader);
+      const dailyUrl = res.data.daily_url;
+      setShareLink(dailyUrl);
+      toast.success(`Call started! ${res.data.invited} invite(s) sent`);
+      setShowInvitePanel(false);
+      setSelectedInvitees([]);
+      setInviteMessage("");
+      setEnableRecording(false);
+      navigate(`/call/${res.data.room_name}`);
     } catch (err) {
       toast.error("Failed to create room");
     } finally {
@@ -255,7 +253,7 @@ export default function VideoCallsPage() {
           <div className="mb-4 bg-white/5 border border-[#00D4FF]/30 rounded-xl p-4 space-y-3" data-testid="invite-panel">
             <h3 className="text-white font-medium text-sm flex items-center gap-2">
               <Users className="w-4 h-4 text-[#00D4FF]" />
-              Start a Call — Select Who to Invite
+              Start a Call — Who's Joining?
             </h3>
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {employees.map(emp => (
@@ -288,15 +286,25 @@ export default function VideoCallsPage() {
               className="w-full bg-white/10 border border-white/20 text-white text-sm rounded-lg px-3 py-2 placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-[#00D4FF]/50"
               data-testid="invite-message-input"
             />
+            <label className="flex items-center gap-2 text-white/60 text-xs cursor-pointer">
+              <input
+                type="checkbox"
+                checked={enableRecording}
+                onChange={e => setEnableRecording(e.target.checked)}
+                className="accent-red-400"
+                data-testid="enable-recording-checkbox"
+              />
+              <Circle className="w-3 h-3 text-red-400" /> Enable recording
+            </label>
             <div className="flex gap-2">
               <Button
                 className="flex-1 bg-[#00D4FF] hover:bg-[#00B8E0] text-black font-medium text-sm"
-                onClick={() => startAdHocCall(false)}
-                disabled={creating}
+                onClick={startAdHocCall}
+                disabled={creating || selectedInvitees.length === 0}
                 data-testid="start-invite-call-btn"
               >
                 {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Phone className="w-4 h-4 mr-2" />}
-                {selectedInvitees.length > 0 ? `Call ${selectedInvitees.length} people` : "Start Solo Call"}
+                Call {selectedInvitees.length} {selectedInvitees.length === 1 ? "person" : "people"}
               </Button>
               <Button
                 variant="ghost"
@@ -443,7 +451,7 @@ export default function VideoCallsPage() {
                         <p className="text-white/40 text-xs">{formatDate(call.created_at)}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
                       <Button
                         size="sm"
                         className="bg-green-500 hover:bg-green-600 text-white text-xs px-3"
@@ -452,16 +460,26 @@ export default function VideoCallsPage() {
                       >
                         <Phone className="w-3 h-3 mr-1" /> Join
                       </Button>
-                      {isAdmin && (
-                        <button
-                          onClick={() => deleteCall(call.room_name)}
-                          className="text-white/20 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
-                          data-testid={`delete-active-call-${call.room_name}`}
-                          title="Delete"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => {
+                          const url = call.daily_url || `https://thrifty-curator.daily.co/${call.room_name}`;
+                          navigator.clipboard.writeText(url);
+                          toast.success("Call link copied! Share it with anyone to join.");
+                        }}
+                        className="text-white/30 hover:text-[#00D4FF] p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                        data-testid={`copy-link-${call.room_name}`}
+                        title="Copy invite link"
+                      >
+                        <Link2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => deleteCall(call.room_name)}
+                        className="text-white/20 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
+                        data-testid={`delete-active-call-${call.room_name}`}
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 ))}
