@@ -136,9 +136,9 @@ name to each AnyDesk ID so sessions show "Maria" instead of "123456789".
 ## What happens automatically
 - **Session Alerts**: Admins get a push notification when a remote worker connects
   or when a connection is rejected.
-- **Auto Clock-Out**: When an AnyDesk session ends (worker disconnects), the system
-  automatically clocks out any employee still clocked in who is mapped to that
-  AnyDesk ID. The time entry shows "Auto-closed by AnyDesk disconnect".
+- **Shutdown & Restart**: Use the Shutdown button in the app to kill AnyDesk, and
+  the Restart button to bring it back. The Shutdown modal shows who was connected
+  and instructions for denying access via AnyDesk's Access Control List.
 - **Cross-Check Flags**: If a worker has been on AnyDesk for 3+ minutes without
   clocking in, or is clocked in with no active AnyDesk session, admins get a push
   notification (once per hour per flag). Admin-initiated clock-ins are excluded.
