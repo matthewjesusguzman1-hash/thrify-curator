@@ -313,6 +313,18 @@ async def invite_to_call(data: dict, user: dict = Depends(get_current_user)):
     caller_name = user.get("name", user.get("email", "User"))
     caller_id = str(user.get("_id", user.get("id", "")))
 
+    # Look up invitee names for display
+    invitee_names = []
+    for inv_id in invitee_ids:
+        inv_user = await db.users.find_one(
+            {"$or": [{"id": inv_id}, {"_id": inv_id}]},
+            {"name": 1, "email": 1}
+        )
+        if inv_user:
+            invitee_names.append(inv_user.get("name", inv_user.get("email", "Unknown")))
+        else:
+            invitee_names.append("Unknown")
+
     # Create a new room if none provided
     if not room_name:
         room_name = f"tc-call-{uuid.uuid4().hex[:8]}"
@@ -348,6 +360,7 @@ async def invite_to_call(data: dict, user: dict = Depends(get_current_user)):
                 raise HTTPException(status_code=502, detail=f"Daily.co error: {resp.text}")
             daily_room = resp.json()
 
+        all_participants = [caller_name] + invitee_names
         status = "scheduled" if scheduled_at else "active"
         await db.video_call_rooms.insert_one({
             "id": str(uuid.uuid4()),
@@ -356,7 +369,8 @@ async def invite_to_call(data: dict, user: dict = Depends(get_current_user)):
             "purpose": "ad-hoc",
             "created_by": caller_name,
             "created_by_id": caller_id,
-            "participant_names": [caller_name],
+            "invitee_names": invitee_names,
+            "participant_names": all_participants,
             "enable_recording": enable_recording,
             "status": status,
             "scheduled_at": scheduled_at,
@@ -368,16 +382,27 @@ async def invite_to_call(data: dict, user: dict = Depends(get_current_user)):
         room_doc = await db.video_call_rooms.find_one({"room_name": room_name})
         if not room_doc:
             raise HTTPException(status_code=404, detail="Room not found")
+        # Update existing room with invitee names
+        existing_names = room_doc.get("participant_names", [])
+        for name in invitee_names:
+            if name not in existing_names:
+                existing_names.append(name)
+        await db.video_call_rooms.update_one(
+            {"room_name": room_name},
+            {"$set": {"participant_names": existing_names, "invitee_names": invitee_names}}
+        )
 
     # Create a call request for each invitee
     created = []
-    for inv_id in invitee_ids:
+    for i, inv_id in enumerate(invitee_ids):
+        inv_name = invitee_names[i] if i < len(invitee_names) else "Unknown"
         request_doc = {
             "id": str(uuid.uuid4()),
             "room_name": room_name,
             "caller_id": caller_id,
             "caller_name": caller_name,
             "target_id": inv_id,
+            "target_name": inv_name,
             "admin_id": inv_id,  # backwards compat with pending query
             "message": message,
             "status": "pending",
@@ -387,29 +412,36 @@ async def invite_to_call(data: dict, user: dict = Depends(get_current_user)):
         await db.video_call_requests.insert_one(request_doc)
         created.append(request_doc["id"])
 
-    # Push notifications
+    # Push notifications (separate try blocks so one failure doesn't block the other)
+    invitee_display = ", ".join(invitee_names) if invitee_names else "a video call"
     try:
         from app.services.apns_service import send_admin_push_notification
-        from app.services.web_push_service import get_web_push_service
-
         title = "Incoming Video Call"
         body = f"{caller_name} is inviting you to a video call"
         if message:
             body += f": {message}"
-
         await send_admin_push_notification(
             title=title, body=body,
             notification_type="video_call_invite",
             data={"room_name": room_name, "url": "/video-calls"}
         )
+    except Exception as e:
+        print(f"[VideoCall] APNs invite notification failed: {e}")
+    
+    try:
+        from app.services.web_push_service import get_web_push_service
+        title = "Incoming Video Call"
+        body = f"{caller_name} is inviting you to a video call"
+        if message:
+            body += f": {message}"
         await get_web_push_service().send_to_admins(
             db=db, title=title, body=body,
             url="/video-calls", notification_type="video_call_invite"
         )
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[VideoCall] Web Push invite notification failed: {e}")
 
-    return {"room_name": room_name, "app_url": f"/call/{room_name}", "daily_url": f"https://thrifty-curator.daily.co/{room_name}", "invited": len(created)}
+    return {"room_name": room_name, "app_url": f"/call/{room_name}", "daily_url": f"https://thrifty-curator.daily.co/{room_name}", "invited": len(created), "invitee_names": invitee_names}
 
 
 @router.get("/call-requests/pending")

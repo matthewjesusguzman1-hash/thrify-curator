@@ -29,6 +29,28 @@ function formatDate(isoStr) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
+function getCallLabel(call, currentUserName) {
+  // Show who the call is WITH, not who created it
+  const invitees = call.invitee_names || [];
+  const creator = call.created_by || "Unknown";
+  
+  if (invitees.length > 0) {
+    // If current user created the call, show invitee names
+    if (creator === currentUserName || call.created_by_id === currentUserName) {
+      return `Call with ${invitees.join(", ")}`;
+    }
+    // If current user is an invitee, show creator
+    return `Call from ${creator}`;
+  }
+  
+  // Fallback: show all participant names minus self, or creator
+  const participants = call.participant_names || [];
+  const others = participants.filter(n => n !== currentUserName);
+  if (others.length > 0) return `Call with ${others.join(", ")}`;
+  
+  return creator;
+}
+
 function PurposeBadge({ purpose }) {
   const styles = {
     interview: "bg-purple-500/20 text-purple-300 border-purple-500/30",
@@ -170,7 +192,7 @@ export default function VideoCallsPage() {
           ? new Date(`${new Date().toISOString().split("T")[0]}T${scheduledTime}`).toISOString()
           : null;
 
-      let roomName, dailyUrl;
+      let roomName, dailyUrl, inviteeNames = [];
 
       if (selectedInvitees.length > 0) {
         const res = await axios.post(`${API}/video-calls/invite-to-call`, {
@@ -181,6 +203,7 @@ export default function VideoCallsPage() {
         }, authHeader);
         roomName = res.data.room_name;
         dailyUrl = res.data.daily_url;
+        inviteeNames = res.data.invitee_names || [];
         toast.success(`${res.data.invited} invite(s) sent!`);
       } else {
         const res = await axios.post(`${API}/video-calls/rooms`, {
@@ -194,7 +217,7 @@ export default function VideoCallsPage() {
       }
 
       const shareMsg = buildShareMessage(dailyUrl);
-      setJustCreated({ room_name: roomName, daily_url: dailyUrl, shareMsg });
+      setJustCreated({ room_name: roomName, daily_url: dailyUrl, shareMsg, inviteeNames });
       setShowInvitePanel(false);
       setSelectedInvitees([]);
       setInviteMessage("");
@@ -398,7 +421,10 @@ export default function VideoCallsPage() {
           <div className="mb-4 bg-gradient-to-r from-emerald-500/10 to-[#00D4FF]/10 border border-emerald-500/30 rounded-xl p-4 space-y-3" data-testid="just-created-card">
             <div className="flex items-center justify-between">
               <h3 className="text-white font-medium text-sm flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-400" /> Call Created
+                <CheckCircle className="w-4 h-4 text-emerald-400" /> 
+                {justCreated.inviteeNames?.length > 0 
+                  ? `Call with ${justCreated.inviteeNames.join(", ")}` 
+                  : "Call Created"}
               </h3>
               <button onClick={() => setJustCreated(null)} className="text-white/30 hover:text-white/60 p-1">
                 <XCircle className="w-4 h-4" />
@@ -588,7 +614,7 @@ export default function VideoCallsPage() {
                       <StatusDot status={call.status} />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-white font-medium text-sm truncate">{call.created_by || "Unknown"}</p>
+                          <p className="text-white font-medium text-sm truncate">{getCallLabel(call, user.name)}</p>
                           <PurposeBadge purpose={call.purpose} />
                         </div>
                         <p className="text-white/40 text-xs">{formatDate(call.created_at)}</p>
@@ -659,7 +685,7 @@ export default function VideoCallsPage() {
                             <Clock className={`w-4 h-4 flex-shrink-0 ${isNow ? "text-amber-400 animate-pulse" : "text-white/40"}`} />
                             <p className="text-white font-medium text-sm">{scheduledTime}</p>
                           </div>
-                          <p className="text-white/40 text-xs mt-1">Created by {call.created_by}</p>
+                          <p className="text-white/40 text-xs mt-1">{getCallLabel(call, user.name)}</p>
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                           <Button
@@ -735,7 +761,7 @@ export default function VideoCallsPage() {
                         <StatusDot status={call.status} />
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="text-white font-medium text-sm truncate">{call.created_by || "Unknown"}</p>
+                            <p className="text-white font-medium text-sm truncate">{getCallLabel(call, user.name)}</p>
                             <PurposeBadge purpose={call.purpose} />
                           </div>
                           <p className="text-white/40 text-xs">{formatDate(call.created_at)}</p>

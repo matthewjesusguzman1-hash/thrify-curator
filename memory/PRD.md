@@ -23,9 +23,9 @@ Resale/consignment operations platform with employee/admin management, time trac
 ### Push Notifications
 - **APNs (iOS native)**: Clock in/out, messages, remote sessions, video calls
 - **Web Push (browser/PWA)**: Clock in/out, messages, remote sessions, video calls
-- Admin: WebPushSettings component in notification bell dropdown (enable/disable/test)
+- Admin: WebPushSettings component in notification bell dropdown
 - Employee: Notification Settings card on dashboard with toggle switch
-- Both channels now fire for ALL notification-worthy events
+- All notification paths now use separate try/except for APNs and Web Push
 
 ### Video Calling (Daily.co)
 - Admin-to-employee and employee-to-admin calls
@@ -34,12 +34,14 @@ Resale/consignment operations platform with employee/admin management, time trac
 - Direct iframe video call UI
 - Role-based tabs: Admin (Active/Upcoming/History/Recordings), Employee (Active/History)
 - Incoming call banner, optional recording (admin-only, off by default)
+- **Invitee names stored and displayed** - calls show "Call with [name]" not just creator
+- Room docs store invitee_names and full participant_names
 
 ### Remote Session Monitoring (AnyDesk)
 - Watcher service for Mac log monitoring
 - Session events/heartbeats, shutdown/restart commands
 - Auto clock-out on AnyDesk disconnect
-- Notification silencing toggle (affects remote session + auto-clock-out push only)
+- Notification silencing toggle (remote session notifications only)
 
 ### Financial Management
 - CSV import (multiple formats including Vendoo)
@@ -59,14 +61,16 @@ Resale/consignment operations platform with employee/admin management, time trac
 - **Storage**: Emergent Object Storage
 
 ## Recent Changes (Feb 2026)
-- Added Web Push notifications to ALL clock-in/out code paths (employee self, admin-initiated, auto GPS)
-- Added admin Web Push auto-re-registration on dashboard load
-- Added Employee Notification Settings card with toggle switch
-- Fixed: Clock-out and auto-clock-out notifications now send both APNs AND Web Push
+- Fixed: Video call invites now store and display invitee names correctly
+- Fixed: "Call with [name]" shown instead of just creator name in all call lists
+- Fixed: Web Push added to ALL clock-in/out paths (was missing, only APNs sent before)
+- Fixed: Remote session notification APNs/Web Push split into independent try/except blocks
+- Fixed: Admin clock-in of employee now sends notifications (had none before)
+- Added: Employee notification opt-in toggle on dashboard
 
 ## Pending / Backlog
+- P1: Verify push notification fixes in production after redeploy
 - P1: Verify Daily call workflows end-to-end in production
-- P1: Check remote session notification silencing in production
 - P2: Financial/Vendoo import production validation
 - P2: Clean up React hook warnings in VideoCallsPage.jsx
 - P3: GPS route matching (Mapbox)
