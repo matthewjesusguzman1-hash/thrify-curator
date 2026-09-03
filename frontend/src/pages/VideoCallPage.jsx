@@ -122,7 +122,13 @@ export default function VideoCallPage() {
             );
             meetingToken = tokenRes.data?.token;
           }
-        } catch {
+        } catch (tokenErr) {
+          const detail = tokenErr.response?.data?.detail || "";
+          if (tokenErr.response?.status === 402 || detail.toLowerCase().includes("payment")) {
+            setError("Daily.co account needs a payment method. Go to dashboard.daily.co/billing to add one, then try again.");
+            setJoining(false);
+            return;
+          }
           // Continue without token — public room
         }
 
@@ -136,7 +142,12 @@ export default function VideoCallPage() {
         callFrameRef.current = frame;
       } catch (err) {
         console.error("Failed to join call:", err);
-        setError("Failed to join the call. Please try again.");
+        const msg = err?.message || "";
+        if (msg.toLowerCase().includes("payment") || msg.toLowerCase().includes("billing")) {
+          setError("Daily.co account needs a payment method. Go to dashboard.daily.co/billing to add one.");
+        } else {
+          setError("Failed to join the call. Check your connection and try again.");
+        }
         setJoining(false);
       }
     };

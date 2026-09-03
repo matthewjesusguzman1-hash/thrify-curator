@@ -146,7 +146,6 @@ async def get_join_token(room_name: str, data: dict):
             "room_name": room_name,
             "user_name": participant_name,
             "is_owner": is_owner,
-            "enable_recording": "cloud" if is_owner else False,
         }
     }
 
@@ -158,7 +157,10 @@ async def get_join_token(room_name: str, data: dict):
             timeout=15
         )
         if resp.status_code not in (200, 201):
-            raise HTTPException(status_code=502, detail=f"Token error: {resp.text}")
+            error_text = resp.text
+            if "payment" in error_text.lower() or "billing" in error_text.lower():
+                raise HTTPException(status_code=402, detail="Daily.co account requires a payment method. Add one at dashboard.daily.co/billing")
+            raise HTTPException(status_code=502, detail=f"Token error: {error_text}")
         return resp.json()
 
 
@@ -350,10 +352,30 @@ async def decline_call_request(request_id: str, user: dict = Depends(get_current
 async def get_call_history(user: dict = Depends(get_current_user), limit: int = 50):
     """Get call history."""
     rooms = await db.video_call_rooms.find(
-        {"status": {"$in": ["ended", "active"]}},
+        {"status": {"$in": ["ended", "active", "pending"]}},
         {"_id": 0}
     ).sort("created_at", -1).to_list(limit)
     return {"calls": rooms}
+
+
+@router.delete("/calls/{room_name}")
+async def delete_call(room_name: str, user: dict = Depends(get_admin_user)):
+    """Delete a single call from history."""
+    result = await db.video_call_rooms.delete_one({"room_name": room_name})
+    # Also clean up any associated call requests
+    await db.video_call_requests.delete_many({"room_name": room_name})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Call not found")
+    return {"success": True, "deleted": room_name}
+
+
+@router.delete("/calls")
+async def delete_all_calls(user: dict = Depends(get_admin_user)):
+    """Delete all ended calls from history. Active/pending calls are preserved."""
+    result = await db.video_call_rooms.delete_many({"status": "ended"})
+    # Clean up declined/accepted requests
+    await db.video_call_requests.delete_many({"status": {"$in": ["declined", "accepted"]}})
+    return {"success": True, "deleted_count": result.deleted_count}
 
 
 @router.get("/recordings")

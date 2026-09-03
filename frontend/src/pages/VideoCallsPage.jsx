@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   Video, Phone, PhoneIncoming, PhoneOff, Clock, 
   ArrowLeft, Plus, Users, Circle, Loader2,
-  Play, CheckCircle, XCircle
+  Play, CheckCircle, XCircle, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -68,6 +68,27 @@ export default function VideoCallsPage() {
   const [selectedAdmin, setSelectedAdmin] = useState("");
   const [requestMessage, setRequestMessage] = useState("");
   const [requesting, setRequesting] = useState(false);
+
+  const deleteCall = async (roomName) => {
+    try {
+      await axios.delete(`${API}/video-calls/calls/${roomName}`, authHeader);
+      toast.success("Call deleted");
+      fetchData();
+    } catch {
+      toast.error("Failed to delete call");
+    }
+  };
+
+  const clearAllEnded = async () => {
+    if (!window.confirm("Delete all ended calls from history?")) return;
+    try {
+      const res = await axios.delete(`${API}/video-calls/calls`, authHeader);
+      toast.success(`Cleared ${res.data.deleted_count} call(s)`);
+      fetchData();
+    } catch {
+      toast.error("Failed to clear history");
+    }
+  };
 
   const fetchData = useCallback(async () => {
     if (!token) return;
@@ -336,14 +357,26 @@ export default function VideoCallsPage() {
                         <p className="text-white/40 text-xs">{formatDate(call.created_at)}</p>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      className="bg-green-500 hover:bg-green-600 text-white text-xs px-3"
-                      onClick={() => navigate(`/call/${call.room_name}`)}
-                      data-testid={`join-call-${call.room_name}`}
-                    >
-                      <Phone className="w-3 h-3 mr-1" /> Join
-                    </Button>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Button
+                        size="sm"
+                        className="bg-green-500 hover:bg-green-600 text-white text-xs px-3"
+                        onClick={() => navigate(`/call/${call.room_name}`)}
+                        data-testid={`join-call-${call.room_name}`}
+                      >
+                        <Phone className="w-3 h-3 mr-1" /> Join
+                      </Button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => deleteCall(call.room_name)}
+                          className="text-white/20 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
+                          data-testid={`delete-active-call-${call.room_name}`}
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -363,6 +396,19 @@ export default function VideoCallsPage() {
               </div>
             ) : (
               <div className="space-y-2">
+                {isAdmin && pastCalls.length > 0 && (
+                  <div className="flex justify-end mb-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-400/60 hover:text-red-400 hover:bg-red-500/10 text-xs"
+                      onClick={clearAllEnded}
+                      data-testid="clear-all-history-btn"
+                    >
+                      <Trash2 className="w-3 h-3 mr-1" /> Clear All Ended
+                    </Button>
+                  </div>
+                )}
                 {pastCalls.map(call => (
                   <div
                     key={call.id || call.room_name}
@@ -380,12 +426,24 @@ export default function VideoCallsPage() {
                           <p className="text-white/40 text-xs">{formatDate(call.created_at)}</p>
                         </div>
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-white/60 text-xs">{formatDuration(call.duration_seconds)}</p>
-                        {call.participant_names?.length > 0 && (
-                          <p className="text-white/30 text-xs flex items-center gap-1 justify-end">
-                            <Users className="w-3 h-3" /> {call.participant_names.length}
-                          </p>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="text-right">
+                          <p className="text-white/60 text-xs">{formatDuration(call.duration_seconds)}</p>
+                          {call.participant_names?.length > 0 && (
+                            <p className="text-white/30 text-xs flex items-center gap-1 justify-end">
+                              <Users className="w-3 h-3" /> {call.participant_names.length}
+                            </p>
+                          )}
+                        </div>
+                        {isAdmin && (
+                          <button
+                            onClick={() => deleteCall(call.room_name)}
+                            className="text-white/20 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
+                            data-testid={`delete-call-${call.room_name}`}
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         )}
                       </div>
                     </div>
