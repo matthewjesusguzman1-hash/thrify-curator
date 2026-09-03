@@ -513,13 +513,15 @@ export default function VideoCallsPage() {
 
         {/* Tabs */}
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className={`grid w-full ${isAdmin ? "grid-cols-4" : "grid-cols-3"} bg-white/5 border border-white/10 rounded-lg mb-4`} data-testid="video-calls-tabs">
+          <TabsList className={`grid w-full ${isAdmin ? "grid-cols-4" : "grid-cols-2"} bg-white/5 border border-white/10 rounded-lg mb-4`} data-testid="video-calls-tabs">
             <TabsTrigger value="active" className="data-[state=active]:bg-[#00D4FF]/20 data-[state=active]:text-[#00D4FF] text-white/60 text-xs" data-testid="active-calls-tab">
               Active {activeCalls.length > 0 && `(${activeCalls.length})`}
             </TabsTrigger>
+            {isAdmin && (
             <TabsTrigger value="upcoming" className="data-[state=active]:bg-[#00D4FF]/20 data-[state=active]:text-[#00D4FF] text-white/60 text-xs" data-testid="upcoming-tab">
               Upcoming {scheduledCalls.length > 0 && `(${scheduledCalls.length})`}
             </TabsTrigger>
+            )}
             <TabsTrigger value="history" className="data-[state=active]:bg-[#00D4FF]/20 data-[state=active]:text-[#00D4FF] text-white/60 text-xs" data-testid="history-tab">
               History
             </TabsTrigger>
