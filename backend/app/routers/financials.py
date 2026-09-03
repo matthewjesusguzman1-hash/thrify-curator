@@ -1057,13 +1057,16 @@ async def import_vendoo_csv(
             return None
         
         platform_col = find_column(["sold_platform", "platform_sold", "platform", "marketplace", "sold_on"])
-        date_col = find_column(["sold_date", "date_sold", "sale_date", "date"])
+        date_col = find_column(["sold_date", "date_sold", "sale_date"])
+        listed_date_col = find_column(["date_listed", "listed_date", "date_added", "date_created", "created_date", "date_purchased", "purchase_date", "date"])
+        status_col = find_column(["status", "item_status", "listing_status"])
         price_col = find_column(["price_sold", "sale_price", "revenue", "sold_price", "price"])
         cogs_col = find_column(["cost_of_goods", "cog", "cogs", "cost", "purchase_price"])
         fees_col = find_column(["marketplace_fees", "fees", "platform_fees", "selling_fees"])
         profit_col = find_column(["profit", "net_profit", "net"])
         shipping_col = find_column(["shipping_fees", "shipping_cost", "shipping"])
         title_col = find_column(["title", "item_name", "name", "description"])
+        listed_price_col = find_column(["listed_price", "listing_price", "asking_price"])
         
         if not price_col:
             raise HTTPException(
@@ -1071,36 +1074,76 @@ async def import_vendoo_csv(
                 detail="CSV must have a price/revenue column (e.g., 'Price Sold', 'Revenue', 'Sale Price')"
             )
         
-        # Process rows
+        # Process rows — track both sold items (revenue) and unsold inventory (cost)
         sales_by_platform_month = {}  # { "ebay_2025-01": { total: 0, count: 0 } }
         profit_by_platform_month = {}  # Track Vendoo-reported profit if column exists
         cogs_entries = []
         fee_total = 0.0
         
+        # Inventory tracking: ALL items by listing month
+        inventory_by_month = {}  # { "2026-08": { total_cost: 0, sold_cost: 0, unsold_cost: 0, total: 0, sold: 0, unsold: 0 } }
+        
         rows_processed = 0
+        rows_unsold_tracked = 0
         rows_skipped_no_price = 0
         rows_skipped_no_date = 0
         rows_skipped_wrong_period = 0
         
         for row in reader:
-            # Get sale price
+            # Determine if item is sold
+            sold_date_str = row.get(date_col, "") if date_col else ""
+            parsed_sold_date = parse_date(sold_date_str) if sold_date_str else None
+            
+            # Check status column for sold/unsold
+            status = row.get(status_col, "").strip().lower() if status_col else ""
+            is_sold = parsed_sold_date is not None or status in ("sold", "completed", "shipped")
+            
+            # Get cost of goods for inventory tracking
+            item_cost = parse_currency(row.get(cogs_col, "")) if cogs_col else 0
+            
+            # Get listing date (for inventory period tracking)
+            listed_date_str = row.get(listed_date_col, "") if listed_date_col else ""
+            parsed_listed_date = parse_date(listed_date_str) if listed_date_str else None
+            
+            # Use sold date for sold items, listed date for all items' inventory period
+            inventory_date = parsed_listed_date or parsed_sold_date
+            
+            # Track inventory cost if we have a date and cost
+            if item_cost > 0 and inventory_date:
+                inv_month = inventory_date[:7]
+                if inv_month.startswith(str(year)):
+                    if inv_month not in inventory_by_month:
+                        inventory_by_month[inv_month] = {
+                            "total_cost": 0, "sold_cost": 0, "unsold_cost": 0,
+                            "total_items": 0, "sold_items": 0, "unsold_items": 0
+                        }
+                    inventory_by_month[inv_month]["total_cost"] += item_cost
+                    inventory_by_month[inv_month]["total_items"] += 1
+                    if is_sold:
+                        inventory_by_month[inv_month]["sold_cost"] += item_cost
+                        inventory_by_month[inv_month]["sold_items"] += 1
+                    else:
+                        inventory_by_month[inv_month]["unsold_cost"] += item_cost
+                        inventory_by_month[inv_month]["unsold_items"] += 1
+            
+            # For unsold items, just track inventory — don't need a price
+            if not is_sold:
+                if item_cost > 0:
+                    rows_unsold_tracked += 1
+                continue
+            
+            # ---- Below here: sold items only (revenue tracking) ----
             price = parse_currency(row.get(price_col, ""))
             if price <= 0:
                 rows_skipped_no_price += 1
                 continue
             
-            # Get date and check if it matches our filter
-            date_str = row.get(date_col, "") if date_col else None
-            parsed_date = parse_date(date_str) if date_str else None
-            
-            if parsed_date:
-                # Check if date matches our filter (year and optionally month)
-                if not parsed_date.startswith(date_prefix):
+            if parsed_sold_date:
+                if not parsed_sold_date.startswith(date_prefix):
                     rows_skipped_wrong_period += 1
                     continue
-                sale_month = parsed_date[:7]  # YYYY-MM
+                sale_month = parsed_sold_date[:7]
             else:
-                # If no date, skip (we need a date to filter properly)
                 rows_skipped_no_date += 1
                 continue
             
@@ -1120,7 +1163,7 @@ async def import_vendoo_csv(
                 cogs = parse_currency(row.get(cogs_col, ""))
                 if cogs > 0:
                     cogs_entries.append({
-                        "date": parsed_date or f"{year}-01-01",
+                        "date": parsed_sold_date or f"{year}-01-01",
                         "source": "Vendoo Import",
                         "description": row.get(title_col, "Imported item") if title_col else "Imported item",
                         "amount": cogs
@@ -1206,11 +1249,42 @@ async def import_vendoo_csv(
             await db.expense_entries.insert_one(expense_entry.model_dump())
             fees_created = 1
         
+        # Store inventory tracking data
+        inventory_stored = 0
+        if inventory_by_month:
+            for inv_month, inv_data in inventory_by_month.items():
+                await db.inventory_tracking.update_one(
+                    {"year": year, "month": inv_month, "source": "Vendoo Import"},
+                    {"$set": {
+                        "year": year,
+                        "month": inv_month,
+                        "source": "Vendoo Import",
+                        "total_cost": round(inv_data["total_cost"], 2),
+                        "sold_cost": round(inv_data["sold_cost"], 2),
+                        "unsold_cost": round(inv_data["unsold_cost"], 2),
+                        "total_items": inv_data["total_items"],
+                        "sold_items": inv_data["sold_items"],
+                        "unsold_items": inv_data["unsold_items"],
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }},
+                    upsert=True
+                )
+                inventory_stored += 1
+        
+        # Build inventory summary for response
+        inv_total_cost = sum(d["total_cost"] for d in inventory_by_month.values())
+        inv_sold_cost = sum(d["sold_cost"] for d in inventory_by_month.values())
+        inv_unsold_cost = sum(d["unsold_cost"] for d in inventory_by_month.values())
+        inv_total_items = sum(d["total_items"] for d in inventory_by_month.values())
+        inv_sold_items = sum(d["sold_items"] for d in inventory_by_month.values())
+        inv_unsold_items = sum(d["unsold_items"] for d in inventory_by_month.values())
+        
         return {
             "success": True,
-            "message": f"Successfully imported {rows_processed} sales",
+            "message": f"Successfully imported {rows_processed} sales + tracked {rows_unsold_tracked} unsold items",
             "details": {
                 "rows_processed": rows_processed,
+                "unsold_items_tracked": rows_unsold_tracked,
                 "rows_skipped": rows_skipped_no_price + rows_skipped_no_date + rows_skipped_wrong_period,
                 "skip_detail": {
                     "no_price": rows_skipped_no_price,
@@ -1220,7 +1294,16 @@ async def import_vendoo_csv(
                 "income_entries_created": income_created,
                 "cogs_entries_created": cogs_created,
                 "fee_expenses_created": fees_created,
-                "total_sales": round(sum(d["total"] for d in sales_by_platform_month.values()), 2)
+                "total_sales": round(sum(d["total"] for d in sales_by_platform_month.values()), 2),
+                "inventory": {
+                    "total_cost": round(inv_total_cost, 2),
+                    "sold_cost": round(inv_sold_cost, 2),
+                    "unsold_cost": round(inv_unsold_cost, 2),
+                    "total_items": inv_total_items,
+                    "sold_items": inv_sold_items,
+                    "unsold_items": inv_unsold_items,
+                    "months_tracked": inventory_stored
+                }
             }
         }
         
@@ -1239,19 +1322,52 @@ async def get_vendoo_template():
         "instructions": [
             "1. In Vendoo, go to Inventory and click the multi-action button",
             "2. Select 'Export to CSV'",
-            "3. Choose your date range (filter by sold date)",
-            "4. Select these columns: Platform Sold, Sold Date, Price Sold, Cost of Goods (optional)",
+            "3. Export ALL inventory (sold + unsold) for complete tracking",
+            "4. Include columns: Platform, Sold Date, Date Listed, Price Sold, Cost of Goods, Status",
             "5. Download and upload the CSV here"
         ],
         "required_columns": ["Price Sold (or Revenue, Sale Price)"],
         "optional_columns": [
             "Platform Sold - to categorize by marketplace",
-            "Sold Date - to filter by year",
-            "Cost of Goods - to import COGS",
+            "Sold Date - to filter sold items by period",
+            "Date Listed / Date Added - to track when inventory was acquired",
+            "Status - to identify sold vs unsold items",
+            "Cost of Goods - to import COGS and track inventory spend",
             "Marketplace Fees - to import as expenses",
             "Shipping Fees - to import as expenses"
         ],
         "supported_platforms": list(VENDOO_PLATFORM_MAP.keys())
+    }
+
+
+
+@router.get("/inventory-tracking/{year}")
+async def get_inventory_tracking(year: int):
+    """Get inventory cost tracking by month — total spend, sold cost, unsold cost."""
+    entries = await db.inventory_tracking.find(
+        {"year": year},
+        {"_id": 0}
+    ).sort("month", 1).to_list(24)
+    
+    total_cost = sum(e.get("total_cost", 0) for e in entries)
+    sold_cost = sum(e.get("sold_cost", 0) for e in entries)
+    unsold_cost = sum(e.get("unsold_cost", 0) for e in entries)
+    total_items = sum(e.get("total_items", 0) for e in entries)
+    sold_items = sum(e.get("sold_items", 0) for e in entries)
+    unsold_items = sum(e.get("unsold_items", 0) for e in entries)
+    
+    return {
+        "year": year,
+        "months": entries,
+        "totals": {
+            "total_cost": round(total_cost, 2),
+            "sold_cost": round(sold_cost, 2),
+            "unsold_cost": round(unsold_cost, 2),
+            "total_items": total_items,
+            "sold_items": sold_items,
+            "unsold_items": unsold_items,
+            "sell_through_rate": round(sold_items / total_items * 100, 1) if total_items > 0 else 0
+        }
     }
 
 
