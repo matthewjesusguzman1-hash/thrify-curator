@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { Calendar, Clock, CheckCircle, AlertCircle, XCircle, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, AlertCircle, XCircle, RefreshCw, Video } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
@@ -220,6 +220,19 @@ export default function ManageInterviewPage() {
             <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-600">
               <p><strong>Location:</strong> Thrifty Curator Store</p>
               <p className="mt-1"><strong>Contact Preference:</strong> {booking.preferred_contact === 'text' ? 'Text Message' : 'Email'}</p>
+              {booking.video_call_url && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <a
+                    href={booking.video_call_daily_url || `${window.location.origin}${booking.video_call_url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"
+                    data-testid="join-interview-call-btn"
+                  >
+                    <Video className="w-4 h-4" /> Join Video Interview
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </div>

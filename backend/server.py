@@ -37,6 +37,7 @@ from app.routers.applicant_tests import router as applicant_tests_router, public
 from app.routers.web_push import router as web_push_router
 from app.routers.employee_terminations import router as employee_terminations_router
 from app.routers.contractor_agreement import router as contractor_agreement_router
+from app.routers.video_calls import router as video_calls_router
 
 # Configure logging
 logging.basicConfig(
@@ -171,6 +172,7 @@ app.include_router(applicant_tests_public_router)  # Public routes, already has 
 app.include_router(web_push_router, prefix="/api")  # Web Push for Safari PWA
 app.include_router(employee_terminations_router)  # Already has /api prefix
 app.include_router(contractor_agreement_router, prefix="/api")  # Contractor agreements
+app.include_router(video_calls_router, prefix="/api")  # Daily.co video calls
 
 
 @app.get("/api/")

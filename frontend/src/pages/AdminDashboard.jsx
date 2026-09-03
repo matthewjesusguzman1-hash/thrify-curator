@@ -63,7 +63,8 @@ import {
   Sun,
   Moon,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Video
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -172,6 +173,7 @@ export default function AdminDashboard() {
   // Remote session alert badge
   const [remoteAlertCount, setRemoteAlertCount] = useState(0);
   const [remoteActiveCount, setRemoteActiveCount] = useState(0);
+  const [pendingVideoCallCount, setPendingVideoCallCount] = useState(0);
   
   // Payroll quick view state
   const [showPayrollQuickView, setShowPayrollQuickView] = useState(false);
@@ -889,10 +891,18 @@ export default function AdminDashboard() {
       axios.get(`${API}/remote-sessions/unread-count`, getAuthHeader())
         .then(res => { setRemoteAlertCount(res.data.alert_count || 0); setRemoteActiveCount(res.data.active_sessions || 0); })
         .catch(() => {});
+      // Fetch pending video call count
+      axios.get(`${API}/video-calls/call-requests/pending`, getAuthHeader())
+        .then(res => setPendingVideoCallCount((res.data.requests || []).length))
+        .catch(() => {});
     }, 30000);
     // Initial remote badge fetch
     axios.get(`${API}/remote-sessions/unread-count`, getAuthHeader())
       .then(res => { setRemoteAlertCount(res.data.alert_count || 0); setRemoteActiveCount(res.data.active_sessions || 0); })
+      .catch(() => {});
+    // Initial video call badge fetch
+    axios.get(`${API}/video-calls/call-requests/pending`, getAuthHeader())
+      .then(res => setPendingVideoCallCount((res.data.requests || []).length))
       .catch(() => {});
     return () => clearInterval(pollInterval);
   }, [navigate, fetchNotifications, fetchMessageUnreadCount, fetchPayrollSettings, fetchPayrollSummary, fetchFormSubmissions]);
@@ -3272,6 +3282,23 @@ export default function AdminDashboard() {
                 remoteAlertCount > 0 ? "bg-red-500 text-white animate-pulse" : "bg-emerald-500 text-white"
               }`} data-testid="remote-sessions-badge">
                 {remoteAlertCount > 0 ? remoteAlertCount : remoteActiveCount}
+              </span>
+            )}
+          </Button>
+          {/* Video Calls */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-white/70 hover:text-white hover:bg-white/10 p-3 sm:px-3 sm:py-2 relative"
+            onClick={() => { lightTap(); navigate("/video-calls"); }}
+            data-testid="video-calls-header-btn"
+            title="Video Calls"
+          >
+            <Video className="w-6 h-6 sm:w-4 sm:h-4 sm:mr-1" />
+            <span className="hidden sm:inline">Calls</span>
+            {pendingVideoCallCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold bg-green-500 text-white animate-pulse" data-testid="video-calls-badge">
+                {pendingVideoCallCount}
               </span>
             )}
           </Button>

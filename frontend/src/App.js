@@ -28,6 +28,9 @@ import ApplicantTestPage from "@/pages/ApplicantTestPage";
 import InterviewResponsePage from "@/pages/InterviewResponsePage";
 import SubmitAvailabilityPage from "@/pages/SubmitAvailabilityPage";
 import InvitedApplicationPage from "@/pages/InvitedApplicationPage";
+import VideoCallsPage from "@/pages/VideoCallsPage";
+import VideoCallPage from "@/pages/VideoCallPage";
+import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { initShortcutHandler } from "@/utils/shortcutHandler";
 
@@ -288,6 +291,14 @@ function AnimatedRoutes() {
             <InvitedApplicationPage />
           </PageTransition>
         } />
+        <Route path="/video-calls" element={
+          <PageTransition>
+            <VideoCallsPage />
+          </PageTransition>
+        } />
+        <Route path="/call/:roomName" element={
+          <VideoCallPage />
+        } />
         </Routes>
       </AnimatePresence>
     </ErrorBoundary>
@@ -511,6 +522,7 @@ function App() {
       <BrowserRouter>
         {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
         <ShortcutBiometricHandler />
+        <IncomingCallBanner />
         <AnimatedRoutes />
       </BrowserRouter>
       <Toaster 

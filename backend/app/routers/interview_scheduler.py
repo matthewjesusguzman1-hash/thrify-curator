@@ -25,6 +25,76 @@ from app.services.apns_service import send_admin_push_notification
 router = APIRouter(prefix="/interview-scheduler", tags=["Interview Scheduler"])
 
 
+# Helper to auto-create a Daily.co video call room for an interview booking
+async def create_daily_room_for_booking(booking_id: str, booking: dict):
+    """Auto-create a Daily.co room and attach it to the booking."""
+    import os
+    import httpx
+    
+    daily_api_key = os.environ.get("DAILY_API_KEY", "")
+    if not daily_api_key:
+        return  # Daily.co not configured, skip
+    
+    try:
+        room_name = f"tc-int-{uuid.uuid4().hex[:8]}"
+        # Room expires in 48 hours to cover any schedule
+        from datetime import timedelta
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=48)
+        
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.daily.co/v1/rooms",
+                json={
+                    "name": room_name,
+                    "privacy": "public",
+                    "properties": {
+                        "exp": int(expires_at.timestamp()),
+                        "max_participants": 4,
+                        "enable_chat": True,
+                        "enable_screenshare": True,
+                    }
+                },
+                headers={"Authorization": f"Bearer {daily_api_key}", "Content-Type": "application/json"},
+                timeout=15,
+            )
+            if resp.status_code not in (200, 201):
+                return  # Silently skip if Daily API fails
+            daily_room = resp.json()
+        
+        # Store room record
+        room_doc = {
+            "id": str(uuid.uuid4()),
+            "room_name": room_name,
+            "daily_url": daily_room.get("url"),
+            "purpose": "interview",
+            "booking_id": booking_id,
+            "created_by": "system",
+            "created_by_id": "system",
+            "participant_names": [booking.get("applicant_name", "Applicant")],
+            "enable_recording": False,
+            "status": "active",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "expires_at": expires_at.isoformat(),
+            "ended_at": None,
+            "duration_seconds": None,
+            "recording_urls": [],
+        }
+        await db.video_call_rooms.insert_one(room_doc)
+        
+        # Attach video call link to the booking
+        await db.interview_bookings.update_one(
+            {"id": booking_id},
+            {"$set": {
+                "video_call_room": room_name,
+                "video_call_url": f"/call/{room_name}",
+                "video_call_daily_url": daily_room.get("url"),
+            }}
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to create Daily room for booking {booking_id}: {e}")
+
+
 # Helper to create admin notification
 async def create_admin_notification(
     notification_type: str,
@@ -387,6 +457,9 @@ async def book_slot(token: str, request: BookSlotRequest, background_tasks: Back
         "booked_at": datetime.now(timezone.utc).isoformat()
     }
     await db.interview_bookings.insert_one(booking)
+    
+    # Auto-create Daily.co video call room for this interview
+    await create_daily_room_for_booking(booking_id, booking)
     
     # Mark slot as booked
     await db.interview_slots.update_one(

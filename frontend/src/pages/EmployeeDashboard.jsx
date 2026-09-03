@@ -43,7 +43,8 @@ import {
   Maximize2,
   Minimize2,
   Sun,
-  Moon
+  Moon,
+  Video
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1514,6 +1515,18 @@ export default function EmployeeDashboard({
                     </span>
                   )}
                 </Button>
+                {/* Video Calls shortcut */}
+                <Link to="/video-calls" onClick={() => lightTap()}>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-white/70 hover:text-white hover:bg-white/10 px-2"
+                    data-testid="video-calls-btn"
+                  >
+                    <Video className="w-4 h-4 mr-1" />
+                    Calls
+                  </Button>
+                </Link>
                 <Button 
                   variant="ghost" 
                   size="sm" 

@@ -48,6 +48,7 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - Email: Resend
 - GPS: Transistorsoft Background Geolocation
 - Payments: Stripe (requires user API key)
+- Video Calls: Daily.co
 
 ## What's Been Implemented
 
@@ -65,162 +66,96 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - My Account section for consignors
 - Admin password management
 - Push notifications for admin alerts
-- **Payroll rounding fix (2026-06-12)**: Updated payroll calculation to always round UP to the nearest minute (benefits employee). Fixed floating-point precision bug that caused 1-minute discrepancies. Admin payroll, Employee Dashboard, and Employee Portal View now all match.
-- **GPS Mileage Tracking improvements (2026-06-12)**:
-  - Added Kalman filter for GPS smoothing (reduces noise)
-  - Dynamic accuracy thresholds based on movement speed and conditions
-  - Better bounce-back detection (less aggressive, smarter)
-  - Speed-based validation to catch GPS jumps
-  - GPS quality indicator in UI (Excellent/Good/Fair/Poor)
-  - Backend improvements with multi-pass filtering
-- **Employee Training Section (2026-06-12)**:
-  - 6-module training system based on resale photo instructions
-  - AI video generation via Sora 2 (admin can generate videos)
-  - Progress tracking per employee
-  - Key points summary for each module
-  - Videos auto-mark completion when watched
-  - Available in Employee Dashboard
-- **W-8BEN Tax Form Support**: Added W-8BEN form upload/management for foreign employees in both Employee Dashboard and Admin EditEmployeeModal
-- **Collapsible Tax Forms (2026-08-18)**: W-9 and W-8BEN sections in Employee Dashboard now collapse/expand with chevron animation to save vertical space
-- **Splash Screen Optimization (2026-08-18)**: Restored original animated blob design with GPU optimization hints (willChange, translateZ, backfaceVisibility) for smoother performance
-- **Applicant Skills Tests Portrait Layout Fix (2026-08-18)**: Fixed responsive layout bug where View, Invite, and Delete buttons were cut off in portrait mode. TestCard component now stacks content vertically with action buttons in their own row below the card content. Header also made responsive with Create Test button going full-width on mobile.
-- **Enhanced Timezone Display for Interview Scheduling (2026-08-22)**
-- **Admin Time Range Filter for Interview Scheduling (2026-08-22)**
-- **Next Interview Highlight in View Schedule (2026-08-22)**
-- **In-Person Interview Onboarding Exclusion (2026-08-22)**
-- **Onboarding Email Simplification (2026-08-23)**
-- **Vendoo CSV Import Fix (2026-08-25)**
+- Payroll rounding fix (2026-06-12)
+- GPS Mileage Tracking improvements (2026-06-12)
+- Employee Training Section (2026-06-12)
+- W-8BEN Tax Form Support
+- Collapsible Tax Forms (2026-08-18)
+- Splash Screen Optimization (2026-08-18)
+- Enhanced Timezone Display for Interview Scheduling (2026-08-22)
+- Admin Time Range Filter for Interview Scheduling (2026-08-22)
+- Vendoo CSV Import Fix (2026-08-25)
+- AnyDesk Remote Session Tracking (2026-09-01)
+- Security Remediation (2026-09-01)
+- AnyDesk Simplified to Shutdown/Restart (2026-09-02)
+- Config Tab Removal (2026-09-02)
+- Timekeeping Changes (2026-09-02)
+
+### Daily.co Video Calls Integration (2026-09-03)
+- **Backend**: Full video calls router at `/api/video-calls/` with:
+  - Room creation (POST /rooms) with automatic Daily.co room provisioning
+  - Room info lookup (GET /rooms/{room_name})
+  - Meeting token generation for participant controls (POST /rooms/{room_name}/token)
+  - Room ending with duration tracking (POST /rooms/{room_name}/end)
+  - Worker-to-admin call request flow (POST /call-request)
+  - Pending call request polling (GET /call-requests/pending)
+  - Accept/decline call requests (POST /call-requests/{id}/accept|decline)
+  - Call history (GET /history) and recordings (GET /recordings)
+  - Interview booking auto-creates Daily room (POST /rooms/for-booking/{booking_id})
+  - Graceful recording fallback when Daily.co plan doesn't support cloud recording
+- **Frontend Video Call Room** (`/call/:roomName`):
+  - Embedded Daily.co video with branded dark theme
+  - Controls: mic, camera, screen share, optional recording toggle
+  - Real-time participant count and call timer
+  - Fullscreen toggle
+  - Error handling and loading states
+- **Frontend Video Calls Page** (`/video-calls`):
+  - Active/History/Recordings tabs
+  - Admin: "New Call" button for ad-hoc calls
+  - Worker: "Request a Call" with admin selector and optional message
+  - Active call cards with Join button
+  - Call history with duration and participant info
+- **Admin Header Integration**:
+  - Video camera icon in admin dashboard header between Remote Sessions and Messages
+  - Badge shows pending call request count with pulse animation
+  - Polls every 30 seconds for new requests
+- **Employee Dashboard Integration**:
+  - "Calls" button in employee dashboard header navigation
+- **Incoming Call Banner**:
+  - Floating notification banner mounted globally in App.js
+  - Shows caller name, message, and direct Accept/Decline/Dismiss buttons
+  - Polls every 5 seconds for pending requests (admin only)
+  - Animated entrance/exit with glass-morphism design
+- **Interview Scheduler Integration**:
+  - Auto-creates Daily.co room when interview is booked
+  - Attaches video_call_url and video_call_daily_url to booking record
+  - Manage Interview page shows "Join Video Interview" button
+  - Google Meet remains as manual backup (admin can paste URL)
+- **Collections**: `video_call_rooms`, `video_call_requests`
+- **Testing**: 14/15 backend tests passed (93%), 100% frontend. Only failure: cloud recording API returns 400 (Daily.co account limitation, handled with graceful fallback)
 
 ### Recently Removed
 - AI Reports Assistant (removed 2026-05-12 per user request)
-- AI Training Video Generation (removed 2026-08 per user request - results were unsatisfactory)
+- AI Training Video Generation (removed 2026-08 per user request)
 
 ## Technical Debt / Refactoring Needed
-1. **CRITICAL**: `frontend/src/pages/ConsignmentAgreementForm.jsx` (~3850 lines) - Must be broken into smaller components
-2. **CRITICAL**: `frontend/src/components/admin/sections/ApplicantTestsSection.jsx` (~2500 lines) - Needs decomposition into smaller components
-3. **HIGH**: `frontend/src/components/admin/modals/FormSubmissionModal.jsx` (~1200 lines) - Needs refactoring
+1. **CRITICAL**: `frontend/src/pages/ConsignmentAgreementForm.jsx` (~3850 lines)
+2. **CRITICAL**: `frontend/src/components/admin/sections/ApplicantTestsSection.jsx` (~2500 lines)
+3. **HIGH**: `frontend/src/components/admin/modals/FormSubmissionModal.jsx` (~1200 lines)
 
 ## Pending Verification
 - GPS Tracking reliability on live devices
-- Custom commission splits for item additions
+- Vendoo CSV import accuracy (requires production re-import)
+- LIVE session status ending immediately on AnyDesk disconnect
 
 ## Upcoming Tasks (Priority Order)
-1. Amazon Business Supplies quick links section
-2. Android app submission guidance (`.aab` file)
-3. Fast Shipping Labels with Pirate Ship integration
-4. Auto-calculate 2026+ 1099s
-5. Dynamic QR code update with `onelink.to`
+1. Push notifications for incoming video call requests (FCM/APNs/Web Push)
+2. Recording playback/download from Daily.co cloud (if account supports it)
+3. Amazon Business Supplies quick links section
+4. Android app submission guidance (`.aab` file)
+5. Fast Shipping Labels with Pirate Ship integration
+6. Auto-calculate 2026+ 1099s
+7. Dynamic QR code update with `onelink.to`
 
 ## Known Issues
-- Production vs Preview deployment confusion - user often tests live app without redeploying
+- Production vs Preview deployment confusion
 - Modal CSS stacking context issues - use ReactDOM.createPortal for all new modals
+- Daily.co cloud recording may not work depending on account plan
 
 ## Credentials
 - Admin codes: `4399` (Matthew), `0826` (Eunice)
 - Production URL: https://thrifty-curator.com
 - Preview URL: https://curator-app-3.preview.emergentagent.com
-
-### Hours by Employee Modal Stacking Fixes (2026-09-01)
-- **Bug 1**: Edit-shift modal opened BEHIND the View Shifts modal. Root cause: `TimeEntryModal` was not portaled and used `z-50`, while the shifts modal portals to `document.body` at `z-[9999]`. Fix: `TimeEntryModal` now portals to `document.body` at `z-[10050]` (its employee Select at `z-[10060]`), plus `max-h-[90vh] overflow-y-auto`.
-- **Bug 2**: "Previous Pay Period" hard to select — the shadcn Select dropdown (default `z-50`) opened BEHIND the shifts modal. Fix: all `SelectContent` in `HoursByEmployeeSection` now use `z-[10000]`.
-- Verified via Playwright: dropdown on top, previous period (Aug 17-30) displays shifts, edit modal on top.
-- **Rule reminder**: any dropdown/modal opened from inside a `z-[9999]` portaled modal needs an explicit higher z-index.
-
-### AnyDesk Remote Session Tracking (2026-09-01) — UPDATED 2026-09-02
-- **No AnyDesk API needed** (works on Solo tier): a Python watcher on the Mac host reads AnyDesk's local trace files (session starts/ends) and posts events to the backend.
-- **Watcher** `/app/watcher/anydesk_session_watcher.py`: watchdog PollingObserver + 30s safety scan, macOS support (reads `/var/log/anydesk.trace`), fingerprint dedup, failed posts queued and retried. Config: `watcher_config.json` (backend_url, watcher_key, host_label). Setup: macOS Launch Agent.
-- **Backend** `/app/backend/app/routers/remote_sessions.py`:
-  - `POST /api/remote-sessions/log` — watcher auth via `X-Watcher-Key` header; batch events; dedup; end events matched to open sessions for duration. **Historical flood protection**: events >5min old are stored but skip notifications/auto-clock-out.
-  - `GET /api/remote-sessions` — sessions with date/month/employee filtering, grouped by day, with clock-in/out time entry cross-reference for mapped employees.
-  - `GET /api/remote-sessions/alerts` — historical cross-check flag notification history with date filtering.
-  - `GET /api/remote-sessions/export` — CSV export of sessions with time entry data.
-  - `GET /api/remote-sessions/cross-check` — live mismatch flags.
-  - `POST /api/remote-sessions/map` — map AnyDesk ID to employee.
-  - Collections: `anydesk_sessions`, `anydesk_session_events`, `anydesk_id_mappings`, `anydesk_flag_notifications`
-- **Push Notifications**: Connect ("🖥️ Remote worker connected"), disconnect ("📴 Remote worker disconnected" with duration), rejected ("🚫 REJECTED"), auto clock-out ("⏹️ Auto clock-out"), cross-check flags. All skip for historical events.
-- **Periodic cross-check**: Background task runs every 3 minutes (server.py) to catch "AnyDesk active ≥3min but not clocked in" and "clocked in but no session" flags. Deduped per hour per employee.
-- **Auto Clock-Out**: When AnyDesk disconnects, mapped employee's open time entry is auto-closed with disconnect timestamp and badge.
-- **Frontend** `/remote-sessions` page: Sessions + Alerts tabs, month/day navigation, sessions grouped by day with clock-in/out cross-reference, search, CSV export, worker assignment. Tested 21/21 backend + 100% frontend (iteration_56).
-
-### Security Remediation (2026-09-01)
-Full audit remediation, backend 28/28 tests passing (testing agent iteration_54):
-1. **Brute-force lockout** (`app/services/security.py`): 5 failed attempts per identity per 15 min → 429 lockout.
-2. **Admin codes moved to env** `ADMIN_OWNER_CODES` in backend .env (still 4 digits per user choice); constant-time comparison.
-3. **Consignor magic-link auth**: 30-min single-use token, 7-day consignor JWT.
-4. **Protected consignor endpoints** (previously public by email).
-5. **Debug endpoints admin-only**.
-6. **Regex injection fixed**.
-7. **bcrypt migration**: employee passwords rehash transparently from legacy sha256.
-8. **CORS restricted** to explicit origins.
-
-### AnyDesk Cross-Check + Session Alerts (2026-09-01) - UPDATED 2026-09-02
-- **Session Alerts**: Connect + disconnect notifications for admins. Historical events (>5min old) skip notifications to prevent floods during log rescans.
-- **Periodic background cross-check** (every 3 min via asyncio task in server.py): catches "AnyDesk active ≥3min but not clocked in" and "clocked in but no session" with 1-hour dedup.
-- **Auto Clock-Out on AnyDesk Disconnect**: Open time entries auto-closed on disconnect (recent events only). Badge shown in Hours by Employee and Employee Dashboard.
-- **Remote Sessions Reference Page (2026-09-02)**: Complete redesign with Sessions + Alerts tabs, month/day date navigation, sessions grouped by day with clock-in/out cross-reference, employee search, CSV export. Backend: date/month/employee filtering on all endpoints. Tested 21/21 backend + 100% frontend (iteration_56).
-- **Block/Disconnect/Alerts (2026-09-02)**:
-  - **Disconnect**: Red button on active sessions → queues command → watcher polls and kills AnyDesk via CLI (no auto-restart). Endpoints: POST /disconnect, GET/POST /watcher-commands, /watcher-commands/ack.
-  - **Blocklist**: Block/unblock AnyDesk IDs. Blocked ID connecting → auto-disconnect command queued + critical alert in Alerts tab + urgent push. Reminder modal shows AnyDesk ACL instructions. Endpoints: POST /block, DELETE /block/{id}, GET /blocklist.
-  - **Unmapped alerts**: Unknown AnyDesk IDs connecting stored as alert records in Alerts tab (1-hour dedup).
-  - **Header badge**: Monitor icon shows red badge with 24h alert count or green badge with active session count.
-  - Watcher updated: polls for commands every 10s, executes disconnect (pkill AnyDesk, no restart), checks blocked IDs on session detection.
-  - Tested 13/13 backend + 100% frontend (iteration_57).
-- **Alert Clearing + Mapping Management + ID Visibility (2026-09-02)**:
-  - **Clear All Alerts**: Button on Alerts tab with confirmation, calls DELETE /api/remote-sessions/alerts with date/month params.
-  - **Individual Alert Delete**: X button on each alert, calls DELETE /api/remote-sessions/alert/{dedup_key}.
-  - **AnyDesk ID Always Visible**: Mono font badge shows AnyDesk ID on every session card, even when mapped to an employee name.
-  - **Edit Mapping**: Clicking "edit" on a mapped session pre-fills the inline form with current worker name and employee.
-  - **Remove Mapping**: Unlink icon + "Remove" button in form, calls DELETE /api/remote-sessions/map/{anydesk_id} to unassign employee.
-  - **Watcher Command Ack**: Fixed empty endpoint body — now updates command status to completed/failed in DB.
-  - Tested 16/16 backend + 100% frontend (iteration_58).
-- **Silence Notifications Toggle (2026-09-02)**:
-  - Bell icon in header toggles all AnyDesk push notifications on/off.
-  - Stays silenced until manually resumed (no auto-expire).
-  - Amber banner shown when silenced with quick "Resume" button.
-  - Backend: `_is_silenced()` check in both `notify_admins_session_event` and `notify_admins_flag`.
-  - Endpoints: GET /notification-status, POST /silence-notifications.
-  - Stored in `anydesk_settings` collection.
-  - Tested 7/7 backend + 100% frontend (iteration_59).
-- **Disconnect + Auto-Block (2026-09-02)**:
-  - **Disconnect** = emergency kick. Auto-blocks the user, kills AnyDesk (brief blip for all users), AnyDesk auto-restarts, blocked user can't reconnect. Confirmation warns: "ALL connections drop briefly."
-  - **Block** = soft block. Adds to blocklist only. Current session stays active, no disruption to others. They can't reconnect once they disconnect. Confirmation warns: "Use Disconnect if you need them off immediately."
-  - Both show AnyDesk ACL reminder modal after action.
-  - Watcher simplified: just kills AnyDesk on disconnect, lets system service restart it; blocked IDs caught by `check_blocked_session` on reconnect.
-
-### AnyDesk Phase 1 — Server Lockdown & UI (2026-09-02)
-- **Server-side lockdown**: `_set_lockdown()`/`_is_lockdown()` stored in `anydesk_settings` collection. Survives watcher restarts.
-- **Block** → renamed to "Shut Down & Block". Confirmation explicitly explains AnyDesk shuts down for ALL users until Restart. Issues `security_kill` command + sets server lockdown.
-- **Unblock logic**: If blocklist becomes empty after unblock → auto-queues `restart_anydesk` + clears lockdown. If other IDs still blocked → lockdown stays, response lists remaining blocked IDs.
-- **Manual Restart** → clears lockdown + queues `restart_anydesk` command.
-- **Persistent lockdown banner**: Red banner shown when lockdown active, includes Restart AnyDesk button + blocked count.
-- **Lockdown state in polling**: `GET /watcher-commands` returns `lockdown: true/false` for watcher.
-- **Notification status**: `GET /notification-status` returns silenced + lockdown + blocked_count.
-- **Allowlist wording fix**: Restart confirmation and block reminder modal updated to correctly describe AnyDesk ACL as an allowlist (listed IDs are ALLOWED; to block, remove from list).
-
-### AnyDesk Phase 2 — Watcher Hardening & Config Report (2026-09-02)
-- **Local LOCKDOWN_ACTIVE removed**: No global/module-level lockdown variable in watcher. Lockdown state sourced from server via `cfg["_server_lockdown"]` set during `poll_commands()`. Survives watcher restarts.
-- **`enforce_lockdown(cfg)`**: Runs every 10s in main loop. Reads `cfg["_server_lockdown"]`; if true + AnyDesk running → kills it.
-- **30-second cooldown**: `check_blocked_session()` uses 30s cooldown (was 5min). Still calls `execute_security_kill()` on first detection. During cooldown, returns True but `enforce_lockdown` keeps AnyDesk dead every 10s regardless.
-- **Config metadata report**: `report_anydesk_config(cfg)` called once at watcher startup. Backend endpoints still exist but UI tab removed.
-
-### AnyDesk Simplified to Shutdown/Restart (2026-09-02)
-- **Removed all block/unblock/lockdown/enforce logic** — AnyDesk Solo plan has no API or unlocked config to selectively block IDs programmatically.
-- Replaced with two clean buttons: **Shutdown** (kills AnyDesk + shows instructions modal) and **Restart** (restarts AnyDesk).
-- Shutdown modal lists connected users' names/IDs and step-by-step ACL instructions for denying access.
-- Actual per-user access denial is handled via AnyDesk's own ACL (Settings -> Security -> Access Control List).
-- Backend: `POST /shutdown-anydesk`, simplified `/restart-anydesk`. Removed lockdown state, block/unblock enforcement.
-- Watcher: removed enforce_lockdown, check_blocked_session, ACL write code. Only handles shutdown and restart commands.
-- Frontend: removed block/unblock buttons, lockdown banner. Added Shutdown/Restart buttons + shutdown instructions modal.
-
-### Config Tab Removal (2026-09-02)
-- Removed Config tab from Remote Sessions page per user request.
-
-### Timekeeping Changes (2026-09-02)
-- Removed auto-clock-out on AnyDesk disconnect per user request (was causing payroll issues).
-- Added grace-period alert: if employee remains clocked in 3 minutes after AnyDesk disconnect, an alert is created.
-
-#### Watcher re-download needed:
-- User's installed watcher needs re-download after redeploy to get the simplified version.
 
 ## 3rd Party Integrations
 - Capacitor v8
@@ -228,61 +163,5 @@ Full audit remediation, backend 28/28 tests passing (testing agent iteration_54)
 - Stripe (Payments) - requires user API key
 - Resend (Emails) - configured
 - Firebase (Push notifications for native apps) - configured
-- **Web Push (Safari PWA)** - VAPID-based push notifications for iOS home screen web apps (iOS 16.4+)
-
-## Recent Updates (2026-08-19)
-
-### Employee Terminations Section
-- Added dedicated "Employee Terminations" section in Team Management group of Admin Dashboard
-- Backend: `/app/backend/app/routers/employee_terminations.py`
-- Frontend: `/app/frontend/src/components/admin/sections/EmployeeTerminationsSection.jsx`
-
-### Interview In-App Response Workflow (COMPLETED)
-- Fixed API route ordering bug
-- Applicants can submit availability via web form link
-- Admin sees responses in "Interview Inbox" modal
-
-### Interview Scheduling Preselect/Review Workflow (2026-08-20)
-- Schedule (Review Later), Review Scheduled Summary, Individual Send, Bulk Send All
-
-### Safari Web Push Notifications
-- VAPID-based Web Push for Safari PWA (home screen bookmarked web app)
-
-### In-Person Interview Scheduler Alignment with Video Call Flow (2026-08-21)
-- Full Feature Parity with video call interview workflow
-
-### Send Application Link Feature (2026-08-21)
-- Send job application links directly from the app with customizable forms
-
-### Contractor Agreement & W-8BEN Updates (2026-08-23)
-- Simplified Payment Information, W-8BEN Viewing Fix
-
-### Message Deletion Feature (2026-08-24)
-- Thread Deletion (Admin Only), Individual Message Deletion
-
-### Read Receipts Feature (2026-08-24)
-- Read Status Tracking with checkmarks
-
-### Messaging UX Improvements (2026-08-24)
-- Explicit "Read" Labels, Notification Bell vs Messages Icon Separation
-
-### AnyDesk Remote Worker Setup (2026-08-27)
-- Quick-Connect Button, Password Security, Remote Work Setup Section
-
-### Admin-to-Admin Message Notifications (2026-08-29) - UPDATED 2026-08-30
-- Cross-Admin Notifications, Per-Admin Unread Count
-
-### Payment Records Auto-fill (2026-08-31)
-- Auto-fill amount field with owed amount when selecting employee
-
-### Pay Period Date Fix & Remote Worker Timezone Toggle (2026-08-31)
-- Fixed timezone conversion, Added CT/PHT toggle for remote workers
-
-### Message Attachment Display Fix (2026-08-31)
-- Fixed CSS rule hiding attachment URLs containing "emergent"
-
-### Admin-to-Admin Push Notification Fix (2026-09-01)
-- Fixed web-push query field (role vs user_type), removed early return
-
-### Durable Object Storage Migration (2026-09-01)
-- All file uploads migrated from pod-local disk to Emergent Object Storage
+- Web Push (Safari PWA) - VAPID-based
+- Daily.co (Video Calls) - configured with API key
