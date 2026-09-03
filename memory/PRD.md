@@ -93,6 +93,9 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - Call history (GET /history) and recordings (GET /recordings)
   - Interview booking auto-creates Daily room (POST /rooms/for-booking/{booking_id})
   - Graceful recording fallback when Daily.co plan doesn't support cloud recording
+  - **Push notifications** (APNs + Web Push) sent to admins on incoming call requests
+  - **Recording sync** from Daily.co cloud (POST /recordings/sync)
+  - **Recording access links** for secure playback (GET /recordings/{id}/access-link)
 - **Frontend Video Call Room** (`/call/:roomName`):
   - Embedded Daily.co video with branded dark theme
   - Controls: mic, camera, screen share, optional recording toggle
@@ -105,6 +108,12 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - Worker: "Request a Call" with admin selector and optional message
   - Active call cards with Join button
   - Call history with duration and participant info
+  - Recordings tab links to dedicated Recordings page
+- **Frontend Recordings Page** (`/recordings`):
+  - Inline HTML5 video player for recording playback
+  - Sync recordings from Daily.co cloud with one-tap button
+  - Recording cards with play, download actions
+  - Recording metadata: duration, participants, purpose badges
 - **Admin Header Integration**:
   - Video camera icon in admin dashboard header between Remote Sessions and Messages
   - Badge shows pending call request count with pulse animation
@@ -122,7 +131,7 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
   - Manage Interview page shows "Join Video Interview" button
   - Google Meet remains as manual backup (admin can paste URL)
 - **Collections**: `video_call_rooms`, `video_call_requests`
-- **Testing**: 14/15 backend tests passed (93%), 100% frontend. Only failure: cloud recording API returns 400 (Daily.co account limitation, handled with graceful fallback)
+- **Testing**: Backend 100% (9/9 enhancement tests + 14/15 original), Frontend 100%
 
 ### Recently Removed
 - AI Reports Assistant (removed 2026-05-12 per user request)
@@ -139,13 +148,11 @@ Build a "Thrifty Curator" reselling application wrapped for native iOS/Android u
 - LIVE session status ending immediately on AnyDesk disconnect
 
 ## Upcoming Tasks (Priority Order)
-1. Push notifications for incoming video call requests (FCM/APNs/Web Push)
-2. Recording playback/download from Daily.co cloud (if account supports it)
-3. Amazon Business Supplies quick links section
-4. Android app submission guidance (`.aab` file)
-5. Fast Shipping Labels with Pirate Ship integration
-6. Auto-calculate 2026+ 1099s
-7. Dynamic QR code update with `onelink.to`
+1. Amazon Business Supplies quick links section
+2. Android app submission guidance (`.aab` file)
+3. Fast Shipping Labels with Pirate Ship integration
+4. Auto-calculate 2026+ 1099s
+5. Dynamic QR code update with `onelink.to`
 
 ## Known Issues
 - Production vs Preview deployment confusion

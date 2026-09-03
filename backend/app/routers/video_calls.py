@@ -248,6 +248,33 @@ async def create_call_request(req: CallRequestModel, user: dict = Depends(get_cu
 
     # TODO: Send push notification to the target admin
 
+    # Send push notifications to the target admin
+    try:
+        from app.services.apns_service import send_admin_push_notification
+        from app.services.web_push_service import get_web_push_service
+
+        title = "📹 Incoming Video Call"
+        body = f"{caller_name} is requesting a video call"
+        if req.message:
+            body += f": {req.message}"
+
+        await send_admin_push_notification(
+            title=title,
+            body=body,
+            notification_type="video_call_request",
+            data={"room_name": room_name, "request_id": request_doc["id"], "url": f"/video-calls"}
+        )
+        await get_web_push_service().send_to_admins(
+            db=db,
+            title=title,
+            body=body,
+            url="/video-calls",
+            notification_type="video_call_request"
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to send call request push: {e}")
+
     return {
         "id": request_doc["id"],
         "room_name": room_name,
@@ -327,6 +354,67 @@ async def get_recordings(user: dict = Depends(get_current_user)):
         {"_id": 0}
     ).sort("created_at", -1).to_list(50)
     return {"recordings": rooms}
+
+
+@router.post("/recordings/sync")
+async def sync_recordings(user: dict = Depends(get_admin_user)):
+    """Fetch recordings from Daily.co API and update local room records."""
+    if not DAILY_API_KEY:
+        raise HTTPException(status_code=400, detail="Daily.co not configured")
+
+    synced = 0
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{DAILY_API_URL}/recordings",
+            headers=daily_headers(),
+            timeout=20
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail=f"Daily.co error: {resp.text}")
+
+        daily_recordings = resp.json().get("data", [])
+
+        for rec in daily_recordings:
+            room_name = rec.get("room_name", "")
+            recording_id = rec.get("id", "")
+            download_link = rec.get("download_link")
+            duration = rec.get("duration")
+
+            if not room_name or not recording_id:
+                continue
+
+            # Update the room with recording info
+            result = await db.video_call_rooms.update_one(
+                {"room_name": room_name},
+                {"$addToSet": {"recording_urls": {
+                    "recording_id": recording_id,
+                    "download_link": download_link,
+                    "duration": duration,
+                    "started_at": rec.get("started_at"),
+                    "status": rec.get("status", "unknown"),
+                }}}
+            )
+            if result.modified_count > 0:
+                synced += 1
+
+    return {"synced": synced, "total_daily_recordings": len(daily_recordings)}
+
+
+@router.get("/recordings/{recording_id}/access-link")
+async def get_recording_access_link(recording_id: str, user: dict = Depends(get_admin_user)):
+    """Get a temporary access link for a Daily.co recording."""
+    if not DAILY_API_KEY:
+        raise HTTPException(status_code=400, detail="Daily.co not configured")
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{DAILY_API_URL}/recordings/{recording_id}/access-link",
+            headers=daily_headers(),
+            timeout=15
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail=f"Daily.co error: {resp.text}")
+        return resp.json()
 
 
 # ─── Interview Integration ───────────────────────────────

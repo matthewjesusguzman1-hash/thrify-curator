@@ -400,49 +400,26 @@ export default function VideoCallsPage() {
 
           {/* Recordings */}
           <TabsContent value="recordings">
-            {loading ? (
-              <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-[#00D4FF] animate-spin" /></div>
-            ) : recordings.length === 0 ? (
-              <div className="text-center py-12" data-testid="no-recordings">
-                <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Circle className="w-8 h-8 text-white/20" />
-                </div>
-                <p className="text-white/40 text-sm">No recordings yet</p>
-                <p className="text-white/30 text-xs mt-1">Enable recording when starting a call</p>
+            <div className="text-center py-8" data-testid="recordings-redirect">
+              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Circle className="w-8 h-8 text-red-400 fill-red-400" />
               </div>
-            ) : (
-              <div className="space-y-2">
-                {recordings.map(rec => (
-                  <div
-                    key={rec.id || rec.room_name}
-                    className="bg-white/5 border border-white/10 rounded-xl p-4"
-                    data-testid={`recording-${rec.room_name}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <Circle className="w-3 h-3 text-red-400 fill-red-400 flex-shrink-0" />
-                          <p className="text-white font-medium text-sm truncate">{rec.created_by}</p>
-                          <PurposeBadge purpose={rec.purpose} />
-                        </div>
-                        <p className="text-white/40 text-xs mt-1">{formatDate(rec.created_at)} - {formatDuration(rec.duration_seconds)}</p>
-                      </div>
-                      {rec.recording_urls?.length > 0 && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-[#00D4FF] hover:text-[#00B8E0] text-xs"
-                          onClick={() => window.open(rec.recording_urls[0], "_blank")}
-                          data-testid={`play-recording-${rec.room_name}`}
-                        >
-                          <Play className="w-3 h-3 mr-1" /> Play
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+              <p className="text-white/60 text-sm mb-1">
+                {recordings.length > 0 ? `${recordings.length} recording${recordings.length !== 1 ? "s" : ""} available` : "No recordings yet"}
+              </p>
+              <p className="text-white/30 text-xs mb-4">
+                {recordings.length > 0 ? "View, play, and download recordings" : "Enable recording when starting a call"}
+              </p>
+              <Button
+                size="sm"
+                className="bg-[#00D4FF] hover:bg-[#00B8E0] text-black text-xs px-4"
+                onClick={() => navigate("/recordings")}
+                data-testid="open-recordings-page-btn"
+              >
+                <Play className="w-3 h-3 mr-1" />
+                {recordings.length > 0 ? "Open Recordings" : "Check Recordings"}
+              </Button>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

@@ -30,6 +30,7 @@ import SubmitAvailabilityPage from "@/pages/SubmitAvailabilityPage";
 import InvitedApplicationPage from "@/pages/InvitedApplicationPage";
 import VideoCallsPage from "@/pages/VideoCallsPage";
 import VideoCallPage from "@/pages/VideoCallPage";
+import RecordingsPage from "@/pages/RecordingsPage";
 import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { initShortcutHandler } from "@/utils/shortcutHandler";
@@ -298,6 +299,11 @@ function AnimatedRoutes() {
         } />
         <Route path="/call/:roomName" element={
           <VideoCallPage />
+        } />
+        <Route path="/recordings" element={
+          <PageTransition>
+            <RecordingsPage />
+          </PageTransition>
         } />
         </Routes>
       </AnimatePresence>
