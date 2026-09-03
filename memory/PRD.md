@@ -203,32 +203,24 @@ Full audit remediation, backend 28/28 tests passing (testing agent iteration_54)
 - **30-second cooldown**: `check_blocked_session()` uses 30s cooldown (was 5min). Still calls `execute_security_kill()` on first detection. During cooldown, returns True but `enforce_lockdown` keeps AnyDesk dead every 10s regardless.
 - **Config metadata report**: `report_anydesk_config(cfg)` called once at watcher startup. Backend endpoints still exist but UI tab removed.
 
-### AnyDesk Phase 3 — Native Allowlist (ATTEMPTED & REVERTED 2026-09-02)
-- Attempted to write AnyDesk ACL allowlist via `/etc/anydesk/system.conf` from watcher.
-- **Failed**: AnyDesk's `.lock` file blocked writes. Stop/write/restart workaround also did not work on user's Mac.
-- **Reverted**: Restored Phase 1/2 host-wide "Shut Down & Block" / red lockdown banner / Restart AnyDesk behavior.
-- **Do not retry** native config writes unless user explicitly requests a new approach.
+### AnyDesk Simplified to Shutdown/Restart (2026-09-02)
+- **Removed all block/unblock/lockdown/enforce logic** — AnyDesk Solo plan has no API or unlocked config to selectively block IDs programmatically.
+- Replaced with two clean buttons: **Shutdown** (kills AnyDesk + shows instructions modal) and **Restart** (restarts AnyDesk).
+- Shutdown modal lists connected users' names/IDs and step-by-step ACL instructions for denying access.
+- Actual per-user access denial is handled via AnyDesk's own ACL (Settings -> Security -> Access Control List).
+- Backend: `POST /shutdown-anydesk`, simplified `/restart-anydesk`. Removed lockdown state, block/unblock enforcement.
+- Watcher: removed enforce_lockdown, check_blocked_session, ACL write code. Only handles shutdown and restart commands.
+- Frontend: removed block/unblock buttons, lockdown banner. Added Shutdown/Restart buttons + shutdown instructions modal.
 
 ### Config Tab Removal (2026-09-02)
-- User requested Config tab removed from Remote Sessions page — they do not use it.
-- Removed: Config tab button, Config panel JSX, `configReport`/`ownerIds` state, `fetchConfigReport`/`fetchOwnerIds`/`saveOwnerIds` functions.
-- Backend config-report endpoints remain (watcher still reports metadata on startup) but have no UI exposure.
+- Removed Config tab from Remote Sessions page per user request.
 
 ### Timekeeping Changes (2026-09-02)
-- **Removed auto-clock-out on AnyDesk disconnect** per user request (was causing payroll issues).
+- Removed auto-clock-out on AnyDesk disconnect per user request (was causing payroll issues).
 - Added grace-period alert: if employee remains clocked in 3 minutes after AnyDesk disconnect, an alert is created.
-- Admin time-entry edit recalculates accumulated/total hours on save.
-- **Preview-only** — requires user redeploy for production.
-
-### Blocked-ID Reconnect Lockdown Fix (2026-09-02)
-- **Bug**: After admin restarts AnyDesk, blocked users could reconnect because lockdown was cleared and `enforce_lockdown()` was inactive.
-- **Fix**: `check_blocked_session()` in watcher now re-engages lockdown both locally (`cfg._server_lockdown = True`) and on the server (via new `POST /watcher-blocked-reconnect` endpoint).
-- Backend endpoint re-sets lockdown + creates a "blocked_connection" critical alert.
-- `enforce_lockdown()` then continuously keeps AnyDesk dead every 10s until admin unblocks or manually restarts.
-- **Requires watcher re-download** for the fix to take effect on Mac.
 
 #### Watcher re-download needed:
-- User's installed watcher may still be the failed Phase 3 ACL version. After redeploy, one watcher re-download is required to get the reverted Phase 1/2 behavior + blocked-reconnect lockdown fix.
+- User's installed watcher needs re-download after redeploy to get the simplified version.
 
 ## 3rd Party Integrations
 - Capacitor v8

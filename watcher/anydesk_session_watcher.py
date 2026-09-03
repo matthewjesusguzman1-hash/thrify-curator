@@ -227,7 +227,7 @@ def parse_mac_trace_start(line):
 
 
 def poll_commands(cfg):
-    """Poll backend for pending commands (disconnect, etc.) and execute them."""
+    """Poll backend for pending commands and execute them."""
     url = f"{cfg['backend_url']}/api/remote-sessions/watcher-commands"
     try:
         resp = requests.get(url, headers={"X-Watcher-Key": cfg["watcher_key"]}, timeout=10)
@@ -235,18 +235,12 @@ def poll_commands(cfg):
             return
         data = resp.json()
         commands = data.get("commands", [])
-        blocked_ids = set(data.get("blocked_ids", []))
-
-        # Store blocked IDs and server lockdown state
-        cfg["_blocked_ids"] = blocked_ids
-        cfg["_server_lockdown"] = data.get("lockdown", False)
 
         for cmd in commands:
             cmd_id = cmd.get("id")
             cmd_type = cmd.get("command")
-            anydesk_id = cmd.get("anydesk_id")
             reason = cmd.get("reason", "")
-            log.warning(f"Received command: {cmd_type} (ID: {anydesk_id}) — {reason}")
+            log.warning(f"Received command: {cmd_type} — {reason}")
 
             if cmd_type == "disconnect":
                 success = execute_disconnect()
@@ -256,11 +250,6 @@ def poll_commands(cfg):
                 ack_command(cfg, cmd_id, success)
             elif cmd_type == "restart_anydesk":
                 success = execute_restart()
-                ack_command(cfg, cmd_id, success)
-            elif cmd_type == "update_acl":
-                acl_ids = cmd.get("acl_ids", [])
-                success, msg = update_anydesk_acl(cfg, acl_ids)
-                log.info(f"ACL update command: {msg}")
                 ack_command(cfg, cmd_id, success)
             else:
                 log.warning(f"Unknown command type: {cmd_type}")
@@ -291,17 +280,16 @@ def execute_disconnect():
 
 
 def execute_security_kill():
-    """Security kill: Kill AnyDesk. Server-side lockdown keeps it dead via enforce_lockdown.
-    Lockdown is stored on the server, not locally — survives watcher restarts."""
+    """Kill AnyDesk. Admin uses Shutdown button in app."""
     import subprocess
     try:
         if IS_MAC:
-            log.warning("SECURITY KILL: Killing AnyDesk. Server lockdown will keep it dead.")
+            log.warning("SHUTDOWN: Killing AnyDesk.")
             subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True)
             subprocess.run(["killall", "-9", "AnyDesk"], timeout=5, capture_output=True)
         else:
             subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
-        log.info("AnyDesk killed. Lockdown enforced by server — use Restart button in app.")
+        log.info("AnyDesk killed. Use Restart button in app to bring it back.")
         return True
     except Exception as e:
         log.error(f"Security kill failed: {e}")
@@ -309,7 +297,7 @@ def execute_security_kill():
 
 
 def execute_restart():
-    """Restart AnyDesk. Server clears lockdown flag — this just opens the app."""
+    """Restart AnyDesk. Admin uses Restart button in app."""
     import subprocess
     try:
         if IS_MAC:
@@ -317,71 +305,12 @@ def execute_restart():
             subprocess.run(["open", "-a", "AnyDesk"], timeout=10, capture_output=True)
         else:
             subprocess.Popen(["AnyDesk.exe"], shell=True)
-        log.info("AnyDesk restarted. Lockdown is off (server-side).")
+        log.info("AnyDesk restarted.")
         return True
     except Exception as e:
         log.error(f"Restart failed: {e}")
         return False
 
-
-
-def check_blocked_session(cfg, anydesk_id):
-    """If a session start is from a blocked ID, security-kill AnyDesk immediately.
-    Re-engages lockdown so enforce_lockdown keeps AnyDesk dead continuously.
-    Also notifies backend to re-set lockdown and show the red banner."""
-    blocked_ids = cfg.get("_blocked_ids", set())
-    if anydesk_id and anydesk_id in blocked_ids:
-        now = time.time()
-        last_kicks = cfg.setdefault("_last_blocked_kick", {})
-        last_kick = last_kicks.get(anydesk_id, 0)
-        if now - last_kick < 30:
-            log.warning(f"BLOCKED {anydesk_id} detected — cooldown, enforce_lockdown handles it")
-            return True
-        log.warning(f"BLOCKED {anydesk_id} detected! Security-killing AnyDesk and re-engaging lockdown.")
-        execute_security_kill()
-        last_kicks[anydesk_id] = now
-        # Re-engage lockdown locally so enforce_lockdown keeps AnyDesk dead immediately
-        cfg["_server_lockdown"] = True
-        # Notify backend to re-set lockdown + create alert
-        notify_blocked_reconnect(cfg, anydesk_id)
-        return True
-    return False
-
-
-def notify_blocked_reconnect(cfg, anydesk_id):
-    """Tell backend a blocked ID tried to reconnect — re-engages server lockdown."""
-    url = f"{cfg['backend_url']}/api/remote-sessions/watcher-blocked-reconnect"
-    try:
-        resp = requests.post(url, json={
-            "anydesk_id": anydesk_id,
-            "host": cfg.get("host_label", "")
-        }, headers={"X-Watcher-Key": cfg["watcher_key"]}, timeout=10)
-        if resp.status_code == 200:
-            log.info(f"Backend re-engaged lockdown for blocked ID {anydesk_id}")
-        else:
-            log.warning(f"Backend lockdown re-engage failed: {resp.status_code}")
-    except requests.RequestException as e:
-        log.warning(f"Failed to notify backend of blocked reconnect: {e}")
-
-
-def enforce_lockdown(cfg):
-    """If server says lockdown is active, kill AnyDesk if it's running."""
-    import subprocess
-    if not cfg.get("_server_lockdown", False):
-        return
-    try:
-        if IS_MAC:
-            result = subprocess.run(["pgrep", "-x", "AnyDesk"], timeout=5, capture_output=True)
-            if result.returncode == 0:
-                log.warning("LOCKDOWN: AnyDesk restarted itself — killing it again.")
-                subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True)
-                subprocess.run(["killall", "-9", "AnyDesk"], timeout=5, capture_output=True)
-        else:
-            result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq AnyDesk.exe"], timeout=5, capture_output=True, text=True)
-            if "AnyDesk.exe" in result.stdout:
-                subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
-    except Exception as e:
-        log.debug(f"Lockdown check error: {e}")
 
 
 def ack_command(cfg, command_id, success):
@@ -392,109 +321,6 @@ def ack_command(cfg, command_id, success):
                        headers={"X-Watcher-Key": cfg["watcher_key"]}, timeout=10)
     except requests.RequestException:
         pass
-
-
-# ─── ACL management (Phase 3) ───────────────────────────────
-
-ACL_CONFIG_PATH = "/etc/anydesk/system.conf"
-
-
-def format_id_for_config(plain_id):
-    """Format AnyDesk ID for config file: '1131282862' -> '1 131 282 862'"""
-    s = plain_id.replace(" ", "")
-    result = []
-    while len(s) > 3:
-        result.append(s[-3:])
-        s = s[:-3]
-    if s:
-        result.append(s)
-    return " ".join(reversed(result))
-
-
-def update_anydesk_acl(cfg, acl_ids):
-    """Write the ACL allowlist to AnyDesk's config file.
-    If AnyDesk has locked the config, briefly stop it, write, then restart.
-    acl_ids: list of plain AnyDesk IDs (no spaces).
-    Returns (success, message)."""
-    import subprocess
-    config_path = ACL_CONFIG_PATH
-    lock_path = config_path + ".lock"
-
-    # If config is locked by running AnyDesk, stop it briefly to write
-    if os.path.exists(lock_path):
-        log.info("Config locked by AnyDesk — stopping it briefly to update ACL...")
-        try:
-            if IS_MAC:
-                subprocess.run(["pkill", "-x", "AnyDesk"], timeout=5, capture_output=True)
-                subprocess.run(["killall", "AnyDesk"], timeout=5, capture_output=True)
-            else:
-                subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5, capture_output=True)
-        except Exception:
-            pass
-        # Wait for lock to release (up to 5 seconds)
-        for _ in range(10):
-            if not os.path.exists(lock_path):
-                break
-            time.sleep(0.5)
-        if os.path.exists(lock_path):
-            return False, f"Lock file still present after stopping AnyDesk: {lock_path}"
-
-    formatted_entries = [f"{format_id_for_config(aid)}:true" for aid in acl_ids]
-    acl_line = "ad.security.acl_list=" + ";".join(formatted_entries)
-    enabled_line = "ad.security.acl_enabled=true"
-
-    try:
-        # Read current config
-        if os.path.exists(config_path):
-            with open(config_path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
-        else:
-            lines = []
-
-        # Replace or add ACL lines
-        found_acl_list = False
-        found_acl_enabled = False
-        new_lines = []
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith("ad.security.acl_list="):
-                new_lines.append(acl_line + "\n")
-                found_acl_list = True
-            elif stripped.startswith("ad.security.acl_enabled="):
-                new_lines.append(enabled_line + "\n")
-                found_acl_enabled = True
-            else:
-                new_lines.append(line)
-
-        if not found_acl_list:
-            new_lines.append(acl_line + "\n")
-        if not found_acl_enabled:
-            new_lines.append(enabled_line + "\n")
-
-        # Atomic write: temp file then replace
-        tmp_path = config_path + ".tmp"
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            f.writelines(new_lines)
-        os.replace(tmp_path, config_path)
-
-        log.info(f"ACL written to {config_path}: {len(acl_ids)} IDs allowed")
-
-        # Restart AnyDesk so it picks up the new config
-        log.info("Restarting AnyDesk with updated ACL...")
-        try:
-            if IS_MAC:
-                subprocess.Popen(["open", "-a", "AnyDesk"])
-            else:
-                subprocess.Popen(["cmd", "/c", "start", "", "AnyDesk.exe"])
-            time.sleep(1)
-        except Exception as e:
-            log.warning(f"Could not restart AnyDesk: {e}")
-
-        return True, f"ACL updated: {len(acl_ids)} IDs. AnyDesk restarted."
-    except PermissionError:
-        return False, f"Permission denied writing to {config_path}"
-    except Exception as e:
-        return False, f"ACL write failed: {e}"
 
 
 def send_heartbeat(cfg):
@@ -650,7 +476,6 @@ def scan_all(cfg, state):
                     state.mark(fp)
                     events.append(ev)
                     log.info(f"Session start: AnyDesk ID {ev['anydesk_id']} ({ev.get('alias') or 'no alias'}) at {ev['timestamp']}")
-                    check_blocked_session(cfg, ev['anydesk_id'])
 
     # 2. Service trace files → session ends + macOS session starts
     for path in cfg["service_trace_files"]:
@@ -667,7 +492,6 @@ def scan_all(cfg, state):
                 events.append(start_ev)
                 last_start_ev_index = len(events) - 1
                 log.info(f"Session start: AnyDesk ID {start_ev['anydesk_id']} at {start_ev['timestamp']}")
-                check_blocked_session(cfg, start_ev['anydesk_id'])
                 continue
 
             # Auth line comes AFTER the session start — attach to the most recent start
@@ -736,8 +560,6 @@ def main():
                 last_scan = now
             # Poll for commands every cycle (every 10s)
             poll_commands(cfg)
-            # Enforce lockdown — kill AnyDesk if it restarted while blocked
-            enforce_lockdown(cfg)
             # Heartbeat every 60 seconds
             if now - last_heartbeat >= 60:
                 send_heartbeat(cfg)

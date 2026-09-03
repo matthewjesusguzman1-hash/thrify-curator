@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import {
   Monitor, ArrowLeft, RefreshCw, UserPlus, Search, AlertTriangle,
   Info, Clock, ChevronLeft, ChevronRight, Download, CalendarDays,
-  LogIn, LogOut, Wifi, WifiOff, Bell, BellOff, ShieldOff, ShieldBan, ShieldAlert, Merge,
+  LogIn, LogOut, Wifi, WifiOff, Bell, BellOff, ShieldBan, Merge,
   Trash2, X, Unlink, RotateCcw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -95,26 +95,24 @@ function formatDT(iso) {
   return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-function SessionCard({ s, isActive, onAssign, onRemoveMapping, onBlock, onUnblock, onClose, onDelete, blockedIds, employees, mappingId, mappingName, setMappingName, mappingEmployeeId, setMappingEmployeeId, saveMapping, setMappingId }) {
-  const isBlocked = blockedIds.has(s.anydesk_id);
+function SessionCard({ s, isActive, onAssign, onRemoveMapping, onClose, onDelete, employees, mappingId, mappingName, setMappingName, mappingEmployeeId, setMappingEmployeeId, saveMapping, setMappingId }) {
   return (
     <div
       className={`bg-white/[0.04] border rounded-xl p-3.5 ${
-        isBlocked ? "border-red-500/50 bg-red-500/[0.03]" : isActive ? "border-emerald-500/40" : "border-white/[0.08]"
+        isActive ? "border-emerald-500/40" : "border-white/[0.08]"
       }`}
       data-testid={`session-card-${s.id}`}
     >
       {/* Top row: worker + status */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className={`w-2 h-2 rounded-full shrink-0 ${isBlocked ? "bg-red-500" : isActive ? "bg-emerald-400 animate-pulse" : "bg-white/20"}`} />
+        <span className={`w-2 h-2 rounded-full shrink-0 ${isActive ? "bg-emerald-400 animate-pulse" : "bg-white/20"}`} />
         <span className="font-semibold text-white text-sm">
           {s.worker_name || s.alias || `AnyDesk ${s.anydesk_id}`}
         </span>
         {s.anydesk_id && (
           <span className="text-[10px] text-white/40 font-mono bg-white/[0.05] px-1.5 py-0.5 rounded">{s.anydesk_id}</span>
         )}
-        {isBlocked && <span className="text-[10px] font-bold text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full flex items-center gap-0.5"><ShieldBan className="w-2.5 h-2.5" /> BLOCKED</span>}
-        {isActive && !isBlocked && <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full">LIVE</span>}
+        {isActive && <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full">LIVE</span>}
         {s.auth_method === "REJECTED" && <span className="text-[10px] font-bold text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full">REJECTED</span>}
         {!s.worker_name ? (
           <button
@@ -185,7 +183,7 @@ function SessionCard({ s, isActive, onAssign, onRemoveMapping, onBlock, onUnbloc
         </div>
       )}
 
-      {/* Action buttons: Block + Close/Delete */}
+      {/* Action buttons: Close/Delete */}
       {s.anydesk_id && (
         <div className="mt-2.5 ml-4 flex flex-wrap gap-2">
           {isActive && (
@@ -195,23 +193,6 @@ function SessionCard({ s, isActive, onAssign, onRemoveMapping, onBlock, onUnbloc
               data-testid={`close-session-btn-${s.id}`}
             >
               <Clock className="w-3 h-3" /> Mark Ended
-            </button>
-          )}
-          {isBlocked ? (
-            <button
-              onClick={() => onUnblock(s.anydesk_id)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white/60 text-xs font-medium hover:bg-white/20 transition-colors"
-              data-testid={`unblock-btn-${s.anydesk_id}`}
-            >
-              <ShieldOff className="w-3 h-3" /> Unblock
-            </button>
-          ) : (
-            <button
-              onClick={() => onBlock(s.anydesk_id)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-white/40 text-xs font-medium hover:bg-red-500/15 hover:border-red-500/30 hover:text-red-300 transition-colors"
-              data-testid={`block-btn-${s.anydesk_id}`}
-            >
-              <ShieldBan className="w-3 h-3" /> Shut Down & Block
             </button>
           )}
           <button
@@ -281,11 +262,8 @@ export default function RemoteSessionsPage() {
   const [mappingName, setMappingName] = useState("");
   const [mappingEmployeeId, setMappingEmployeeId] = useState("");
   const [employees, setEmployees] = useState([]);
-  const [blockedIds, setBlockedIds] = useState(new Set());
-  const [showBlockReminder, setShowBlockReminder] = useState(null);
   const [silenced, setSilenced] = useState(false);
-  const [lockdown, setLockdown] = useState(false);
-  const [blockedCount, setBlockedCount] = useState(0);
+  const [showShutdownModal, setShowShutdownModal] = useState(false);
 
 
   const fetchData = useCallback(async (silent = false) => {
@@ -316,7 +294,6 @@ export default function RemoteSessionsPage() {
     if (!localStorage.getItem("token")) { navigate("/login"); return; }
     fetchData();
     fetchAlerts();
-    fetchBlocklist();
     fetchSilenceStatus();
 
     axios.get(`${API}/admin/employees`, getAuthHeader())
@@ -331,19 +308,10 @@ export default function RemoteSessionsPage() {
     return () => clearInterval(poll);
   }, [fetchData, fetchAlerts, navigate]);
 
-  const fetchBlocklist = async () => {
-    try {
-      const res = await axios.get(`${API}/remote-sessions/blocklist`, getAuthHeader());
-      setBlockedIds(new Set((res.data.blocked || []).map(b => b.anydesk_id)));
-    } catch { /* ignore */ }
-  };
-
   const fetchSilenceStatus = async () => {
     try {
       const res = await axios.get(`${API}/remote-sessions/notification-status`, getAuthHeader());
       setSilenced(res.data.silenced);
-      setLockdown(res.data.lockdown);
-      setBlockedCount(res.data.blocked_count || 0);
     } catch { /* ignore */ }
   };
 
@@ -357,50 +325,21 @@ export default function RemoteSessionsPage() {
     } catch { toast.error("Failed to toggle notifications"); }
   };
 
-  const handleBlock = async (anydeskId) => {
-    const session = sessions.find(s => s.anydesk_id === anydeskId);
-    const who = session?.worker_name || anydeskId;
-    const msg = `Shut down AnyDesk & block ${who}?\n\nThis will:\n• SHUT DOWN AnyDesk on the Mac (everyone loses access)\n• AnyDesk stays off until you tap Restart\n• ${who} is blocklisted\n\nYou'll see a red banner at the top when lockdown is active.`;
-    if (!confirm(msg)) return;
+  const handleShutdown = async () => {
+    if (!confirm("Shut down AnyDesk on the Mac?\n\nThis kills AnyDesk for everyone until you restart it.")) return;
     try {
-      await axios.post(`${API}/remote-sessions/block`, { anydesk_id: anydeskId }, getAuthHeader());
-      toast.success(`${who} blocked — AnyDesk shutting down. Tap Restart when ready.`);
-      setBlockedIds(prev => new Set([...prev, anydeskId]));
-      setLockdown(true);
-      setBlockedCount(c => c + 1);
+      await axios.post(`${API}/remote-sessions/shutdown-anydesk`, {}, getAuthHeader());
+      toast.success("AnyDesk shutting down");
+      setShowShutdownModal(true);
       fetchData();
-      setShowBlockReminder(anydeskId);
-    } catch (err) {
-      toast.error(err.response?.data?.detail || "Failed to block");
-    }
-  };
-
-  const handleUnblock = async (anydeskId) => {
-    const code = prompt("Enter your admin code to unblock:");
-    if (!code) return;
-    try {
-      const res = await axios.post(`${API}/remote-sessions/unblock/${anydeskId}`, { admin_code: code }, getAuthHeader());
-      setBlockedIds(prev => { const n = new Set(prev); n.delete(anydeskId); return n; });
-      if (res.data.restarted) {
-        toast.success("Unblocked — AnyDesk restarting");
-        setLockdown(false);
-      } else {
-        toast.success(res.data.message);
-      }
-      setBlockedCount(res.data.still_blocked?.length || 0);
-      fetchBlocklist();
-    } catch (err) {
-      const msg = err.response?.data?.detail || "Failed to unblock";
-      toast.error(msg === "Invalid admin code" ? "Wrong admin code" : msg);
-    }
+    } catch { toast.error("Failed to send shutdown command"); }
   };
 
   const handleRestartAnyDesk = async () => {
-    if (!confirm("Restart AnyDesk on the Mac?\n\nThis clears lockdown and AnyDesk will accept connections again.\n\nIf AnyDesk's allowlist is on, make sure blocked IDs are NOT on it (the allowlist permits listed IDs).")) return;
+    if (!confirm("Restart AnyDesk on the Mac?")) return;
     try {
       await axios.post(`${API}/remote-sessions/restart-anydesk`, {}, getAuthHeader());
-      toast.success("Lockdown cleared. AnyDesk restarting.");
-      setLockdown(false);
+      toast.success("AnyDesk restarting");
     } catch { toast.error("Failed to send restart command"); }
   };
 
@@ -560,8 +499,11 @@ export default function RemoteSessionsPage() {
           >
             {silenced ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
           </button>
-          <button onClick={handleRestartAnyDesk} className="p-2 rounded-lg text-emerald-400/70 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors" title="Restart AnyDesk on Mac" data-testid="restart-anydesk-btn">
-            <RotateCcw className="w-4 h-4" />
+          <button onClick={handleShutdown} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-semibold hover:bg-red-500/25 transition-colors" data-testid="shutdown-anydesk-btn">
+            <ShieldBan className="w-3.5 h-3.5" /> Shutdown
+          </button>
+          <button onClick={handleRestartAnyDesk} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/25 transition-colors" data-testid="restart-anydesk-btn">
+            <RotateCcw className="w-3.5 h-3.5" /> Restart
           </button>
           <button onClick={handleMergeHistorical} className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors" title="Merge fragmented sessions" data-testid="merge-sessions-btn">
             <Merge className="w-4 h-4" />
@@ -576,23 +518,6 @@ export default function RemoteSessionsPage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-3 space-y-3">
-        {/* Lockdown banner */}
-        {lockdown && (
-          <div className="flex items-center gap-2.5 rounded-xl px-4 py-3 bg-red-500/15 border border-red-500/40" data-testid="lockdown-banner">
-            <ShieldAlert className="w-5 h-5 text-red-400 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <span className="text-red-200 text-sm font-semibold">AnyDesk is shut down</span>
-              <p className="text-red-200/70 text-xs mt-0.5">{blockedCount > 0 ? `${blockedCount} ID(s) blocked. ` : ""}All remote access is off until you restart.</p>
-            </div>
-            <button
-              onClick={handleRestartAnyDesk}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-colors shrink-0"
-              data-testid="lockdown-restart-btn"
-            >
-              <RotateCcw className="w-3.5 h-3.5" /> Restart AnyDesk
-            </button>
-          </div>
-        )}
         {/* Silenced banner */}
         {silenced && (
           <div className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 bg-amber-500/10 border border-amber-500/30" data-testid="silenced-banner">
@@ -708,11 +633,8 @@ export default function RemoteSessionsPage() {
                             isActive={isActive(s)}
                             onAssign={handleAssign}
                             onRemoveMapping={handleRemoveMapping}
-                            onBlock={handleBlock}
-                            onUnblock={handleUnblock}
                             onClose={handleCloseSession}
                             onDelete={handleDeleteSession}
-                            blockedIds={blockedIds}
                             employees={employees}
                             mappingId={mappingId}
                             mappingName={mappingName}
@@ -799,37 +721,53 @@ export default function RemoteSessionsPage() {
         )}
       </div>
 
-      {/* Block reminder overlay */}
-      {showBlockReminder && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowBlockReminder(null)}>
-          <div className="bg-[#1a1a3a] border border-amber-500/30 rounded-2xl p-5 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()} data-testid="block-reminder-modal">
+      {/* Shutdown instructions modal */}
+      {showShutdownModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowShutdownModal(false)}>
+          <div className="bg-[#1a1a3a] border border-red-500/30 rounded-2xl p-5 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()} data-testid="shutdown-instructions-modal">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
-                <ShieldAlert className="w-5 h-5 text-amber-400" />
+              <div className="w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center shrink-0">
+                <ShieldBan className="w-5 h-5 text-red-400" />
               </div>
-              <div>
-                <h3 className="text-white font-bold text-base">AnyDesk is shut down & ID blocked</h3>
+              <div className="flex-1">
+                <h3 className="text-white font-bold text-base">AnyDesk Shut Down</h3>
                 <p className="text-white/60 text-sm mt-1.5 leading-relaxed">
-                  AnyDesk ID <span className="text-amber-300 font-mono font-bold">{showBlockReminder}</span> is blocked in the app and AnyDesk has been killed. <span className="text-amber-200 font-semibold">It stays off until you tap Restart.</span>
+                  AnyDesk has been killed. <span className="text-red-200 font-semibold">All remote access is off.</span>
                 </p>
-                <p className="text-amber-300/90 text-sm mt-2 leading-relaxed font-medium">
-                  When you do restart, this ID can still connect unless AnyDesk's own allowlist excludes them:
+
+                {/* Show who was connected */}
+                {sessions.filter(s => !s.ended_at && s.duration_seconds === null).length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-white/70 text-xs font-semibold mb-1.5">Users who were connected:</p>
+                    <div className="space-y-1">
+                      {sessions.filter(s => !s.ended_at && s.duration_seconds === null).map((s, i) => (
+                        <div key={i} className="flex items-center gap-2 bg-white/[0.06] rounded-lg px-3 py-2">
+                          <span className="text-white text-sm font-medium">{s.worker_name || s.alias || "Unknown"}</span>
+                          {s.anydesk_id && <span className="text-white/40 font-mono text-xs">{s.anydesk_id}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-amber-300/90 text-sm mt-3 leading-relaxed font-semibold">
+                  To deny a user access before restarting:
                 </p>
-                <div className="mt-2 bg-white/[0.06] rounded-lg px-3 py-2 text-xs text-white/80 space-y-1">
+                <div className="mt-2 bg-white/[0.06] rounded-lg px-3 py-2.5 text-xs text-white/80 space-y-1.5">
                   <p>1. Open <span className="text-indigo-300 font-semibold">AnyDesk → Settings → Security</span></p>
-                  <p>2. Turn on <span className="text-indigo-300 font-semibold">Access Control List</span> (it's an <span className="text-amber-300 font-semibold">allowlist</span> — only listed IDs can connect)</p>
-                  <p>3. Make sure <span className="font-mono text-amber-300">{showBlockReminder}</span> is <span className="text-red-300 font-semibold">NOT on the list</span></p>
-                  <p>4. Make sure <span className="text-emerald-300 font-semibold">your own ID IS on the list</span> so you don't lock yourself out</p>
+                  <p>2. Turn on <span className="text-indigo-300 font-semibold">Access Control List</span></p>
+                  <p>3. Add <span className="text-emerald-300 font-semibold">your own AnyDesk ID</span> to the list (so you don't lock yourself out)</p>
+                  <p>4. <span className="text-red-300 font-semibold">Do NOT add</span> the person you want to deny — only IDs on the list can connect</p>
                 </div>
-                <p className="text-amber-300/80 text-xs mt-2">
-                  Also consider changing your unattended access password if this person had it.
+                <p className="text-white/40 text-xs mt-2">
+                  Also consider changing your unattended access password if the denied person had it.
                 </p>
               </div>
             </div>
             <Button
-              onClick={() => setShowBlockReminder(null)}
-              className="w-full mt-4 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30"
-              data-testid="block-reminder-dismiss"
+              onClick={() => setShowShutdownModal(false)}
+              className="w-full mt-4 bg-white/10 hover:bg-white/15 text-white border border-white/20"
+              data-testid="shutdown-modal-dismiss"
             >
               Got it
             </Button>
