@@ -166,6 +166,29 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
             "admin_name": admin_display_name
         }
         await db.time_entries.insert_one(entry)
+        
+        # Notify other admins about clock-in (APNs + Web Push)
+        try:
+            from app.services.apns_service import send_admin_push_notification
+            await send_admin_push_notification(
+                title=f"{employee_display_name} Clocked In",
+                body=f"Clocked in by {admin_display_name}",
+                notification_type="clock_in"
+            )
+        except Exception as e:
+            print(f"Failed to send admin clock-in APNs: {e}")
+        
+        try:
+            from app.services.web_push_service import get_web_push_service
+            await get_web_push_service().send_to_admins(
+                db=db,
+                title=f"{employee_display_name} Clocked In",
+                body=f"Clocked in by {admin_display_name}",
+                url="/admin", notification_type="clock_in"
+            )
+        except Exception as e:
+            print(f"Failed to send admin clock-in web push: {e}")
+        
         return {
             "message": f"Clocked in {employee_display_name}",
             "action": "in",

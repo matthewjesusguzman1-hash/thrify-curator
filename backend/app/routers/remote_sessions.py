@@ -136,33 +136,39 @@ async def notify_admins_session_event(event: SessionEvent, host: str, duration_s
     if await _is_silenced():
         print(f"[RemoteSessions] Notifications silenced — skipping push for {event.event_type}")
         return
-    try:
-        mapping = await db.anydesk_id_mappings.find_one({"anydesk_id": event.anydesk_id}) if event.anydesk_id else None
-        who = (mapping and mapping.get("worker_name")) or event.alias or f"AnyDesk {event.anydesk_id}"
-        
-        if event.auth_method == "REJECTED":
-            title = "🚫 Remote connection REJECTED"
-            body = f"{who} was rejected connecting to {host}"
-        elif event.event_type == "session_end":
-            title = "📴 Remote worker disconnected"
-            if duration_seconds and duration_seconds > 0:
-                mins = duration_seconds // 60
-                body = f"{who} disconnected from {host} (session: {mins}min)"
-            else:
-                body = f"{who} disconnected from {host}"
+    
+    mapping = await db.anydesk_id_mappings.find_one({"anydesk_id": event.anydesk_id}) if event.anydesk_id else None
+    who = (mapping and mapping.get("worker_name")) or event.alias or f"AnyDesk {event.anydesk_id}"
+    
+    if event.auth_method == "REJECTED":
+        title = "Remote connection REJECTED"
+        body = f"{who} was rejected connecting to {host}"
+    elif event.event_type == "session_end":
+        title = "Remote worker disconnected"
+        if duration_seconds and duration_seconds > 0:
+            mins = duration_seconds // 60
+            body = f"{who} disconnected from {host} (session: {mins}min)"
         else:
-            title = "🖥️ Remote worker connected"
-            body = f"{who} connected to {host} via AnyDesk"
-        
+            body = f"{who} disconnected from {host}"
+    else:
+        title = "Remote worker connected"
+        body = f"{who} connected to {host} via AnyDesk"
+    
+    # Send APNs and Web Push independently so one failure doesn't block the other
+    try:
         from app.services.apns_service import send_admin_push_notification
-        from app.services.web_push_service import get_web_push_service
-        
         await send_admin_push_notification(title=title, body=body, notification_type="remote_session")
-        await get_web_push_service().send_to_admins(
+    except Exception as e:
+        print(f"[RemoteSessions] APNs notification failed: {e}")
+    
+    try:
+        from app.services.web_push_service import get_web_push_service
+        result = await get_web_push_service().send_to_admins(
             db=db, title=title, body=body, url="/remote-sessions", notification_type="remote_session"
         )
+        print(f"[RemoteSessions] Web Push result: {result}")
     except Exception as e:
-        print(f"[RemoteSessions] Failed to notify admins: {e}")
+        print(f"[RemoteSessions] Web Push notification failed: {e}")
 
 
 async def notify_admins_flag(title: str, body: str):
@@ -170,16 +176,22 @@ async def notify_admins_flag(title: str, body: str):
     if await _is_silenced():
         print(f"[RemoteSessions] Notifications silenced — skipping flag push: {title}")
         return
+    
+    # Send APNs and Web Push independently
     try:
         from app.services.apns_service import send_admin_push_notification
-        from app.services.web_push_service import get_web_push_service
-
         await send_admin_push_notification(title=title, body=body, notification_type="remote_session_flag")
-        await get_web_push_service().send_to_admins(
+    except Exception as e:
+        print(f"[RemoteSessions] Flag APNs failed: {e}")
+    
+    try:
+        from app.services.web_push_service import get_web_push_service
+        result = await get_web_push_service().send_to_admins(
             db=db, title=title, body=body, url="/remote-sessions", notification_type="remote_session_flag"
         )
+        print(f"[RemoteSessions] Flag Web Push result: {result}")
     except Exception as e:
-        print(f"[RemoteSessions] Failed to send flag notification: {e}")
+        print(f"[RemoteSessions] Flag Web Push failed: {e}")
 
 
 def _round_up_to_minute(seconds: float) -> float:
