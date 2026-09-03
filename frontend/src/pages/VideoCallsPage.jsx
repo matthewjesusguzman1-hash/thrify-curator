@@ -142,25 +142,39 @@ export default function VideoCallsPage() {
   }, [fetchData, isAdmin]);
 
   const startAdHocCall = async () => {
-    if (selectedInvitees.length === 0) {
-      toast.error("Select at least one person to call");
-      return;
-    }
     setCreating(true);
     try {
-      const res = await axios.post(`${API}/video-calls/invite-to-call`, {
-        invitee_ids: selectedInvitees,
-        message: inviteMessage,
-        enable_recording: enableRecording,
-      }, authHeader);
-      const dailyUrl = res.data.daily_url;
-      setShareLink(dailyUrl);
-      toast.success(`Call started! ${res.data.invited} invite(s) sent`);
-      setShowInvitePanel(false);
-      setSelectedInvitees([]);
-      setInviteMessage("");
-      setEnableRecording(false);
-      navigate(`/call/${res.data.room_name}`);
+      if (selectedInvitees.length > 0) {
+        // Invite in-app users + create room
+        const res = await axios.post(`${API}/video-calls/invite-to-call`, {
+          invitee_ids: selectedInvitees,
+          message: inviteMessage,
+          enable_recording: enableRecording,
+        }, authHeader);
+        setShareLink(res.data.daily_url);
+        toast.success(`Call started! ${res.data.invited} invite(s) sent`);
+        setShowInvitePanel(false);
+        setSelectedInvitees([]);
+        setInviteMessage("");
+        setEnableRecording(false);
+        navigate(`/call/${res.data.room_name}`);
+      } else {
+        // Create room with no in-app invitees — for sharing link externally
+        const res = await axios.post(`${API}/video-calls/rooms`, {
+          purpose: "ad-hoc",
+          expires_minutes: 120,
+          enable_recording: enableRecording,
+          participant_names: [user.name || user.email],
+        }, authHeader);
+        const dailyUrl = res.data.url;
+        await navigator.clipboard.writeText(dailyUrl).catch(() => {});
+        toast.success("Call created! Link copied — share it with anyone to join.");
+        setShowInvitePanel(false);
+        setSelectedInvitees([]);
+        setInviteMessage("");
+        setEnableRecording(false);
+        navigate(`/call/${res.data.room_name}`);
+      }
     } catch (err) {
       toast.error("Failed to create room");
     } finally {
@@ -300,11 +314,11 @@ export default function VideoCallsPage() {
               <Button
                 className="flex-1 bg-[#00D4FF] hover:bg-[#00B8E0] text-black font-medium text-sm"
                 onClick={startAdHocCall}
-                disabled={creating || selectedInvitees.length === 0}
+                disabled={creating}
                 data-testid="start-invite-call-btn"
               >
                 {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Phone className="w-4 h-4 mr-2" />}
-                Call {selectedInvitees.length} {selectedInvitees.length === 1 ? "person" : "people"}
+                {selectedInvitees.length > 0 ? `Call ${selectedInvitees.length} ${selectedInvitees.length === 1 ? "person" : "people"}` : "Create & Copy Link"}
               </Button>
               <Button
                 variant="ghost"
@@ -315,6 +329,11 @@ export default function VideoCallsPage() {
                 Cancel
               </Button>
             </div>
+            <p className="text-white/30 text-xs">
+              {selectedInvitees.length > 0
+                ? "Selected people will get an in-app notification to join."
+                : "Skip selecting people to create a call link you can share with anyone."}
+            </p>
           </div>
         )}
 
