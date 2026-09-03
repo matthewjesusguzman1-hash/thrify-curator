@@ -504,7 +504,7 @@ async def delete_all_calls(user: dict = Depends(get_current_user)):
 
 
 @router.get("/recordings")
-async def get_recordings(user: dict = Depends(get_current_user)):
+async def get_recordings(user: dict = Depends(get_admin_user)):
     """Get rooms that have recordings."""
     rooms = await db.video_call_rooms.find(
         {"recording_urls": {"$ne": []}, "status": {"$in": ["ended", "active"]}},
