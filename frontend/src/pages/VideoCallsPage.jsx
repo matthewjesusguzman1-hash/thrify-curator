@@ -159,45 +159,51 @@ export default function VideoCallsPage() {
     return () => clearInterval(interval);
   }, [fetchData, isAdmin]);
 
+  const [justCreated, setJustCreated] = useState(null); // { room_name, daily_url, shareMsg }
+
   const startAdHocCall = async () => {
     setCreating(true);
     try {
+      const scheduledIso = (scheduledDate && scheduledTime)
+        ? new Date(`${scheduledDate}T${scheduledTime}`).toISOString()
+        : scheduledTime
+          ? new Date(`${new Date().toISOString().split("T")[0]}T${scheduledTime}`).toISOString()
+          : null;
+
+      let roomName, dailyUrl;
+
       if (selectedInvitees.length > 0) {
-        // Invite in-app users + create room
         const res = await axios.post(`${API}/video-calls/invite-to-call`, {
           invitee_ids: selectedInvitees,
           message: inviteMessage,
           enable_recording: enableRecording,
+          scheduled_at: scheduledIso,
         }, authHeader);
-        setShareLink(res.data.daily_url);
-        toast.success(`Call started! ${res.data.invited} invite(s) sent`);
-        setShowInvitePanel(false);
-        setSelectedInvitees([]);
-        setInviteMessage("");
-        setEnableRecording(false);
-        navigate(`/call/${res.data.room_name}`);
+        roomName = res.data.room_name;
+        dailyUrl = res.data.daily_url;
+        toast.success(`${res.data.invited} invite(s) sent!`);
       } else {
-        // Create room with no in-app invitees — for sharing link externally
         const res = await axios.post(`${API}/video-calls/rooms`, {
           purpose: "ad-hoc",
           expires_minutes: 120,
           enable_recording: enableRecording,
-          participant_names: [user.name || user.email],
+          scheduled_at: scheduledIso,
         }, authHeader);
-        const dailyUrl = res.data.url;
-        const shareMsg = buildShareMessage(dailyUrl);
-        await navigator.clipboard.writeText(shareMsg).catch(() => {});
-        toast.success("Call created! Invite message copied to clipboard.");
-        setShowInvitePanel(false);
-        setSelectedInvitees([]);
-        setInviteMessage("");
-        setEnableRecording(false);
-        setScheduledDate("");
-        setScheduledTime("");
-        navigate(`/call/${res.data.room_name}`);
+        roomName = res.data.room_name;
+        dailyUrl = res.data.url;
       }
+
+      const shareMsg = buildShareMessage(dailyUrl);
+      setJustCreated({ room_name: roomName, daily_url: dailyUrl, shareMsg });
+      setShowInvitePanel(false);
+      setSelectedInvitees([]);
+      setInviteMessage("");
+      setEnableRecording(false);
+      setScheduledDate("");
+      setScheduledTime("");
+      fetchData();
     } catch (err) {
-      toast.error("Failed to create room");
+      toast.error("Failed to create call");
     } finally {
       setCreating(false);
     }
@@ -241,7 +247,15 @@ export default function VideoCallsPage() {
   };
 
   const activeCalls = calls.filter(c => c.status === "active" || c.status === "pending");
+  const scheduledCalls = calls.filter(c => c.status === "scheduled");
   const pastCalls = calls.filter(c => c.status === "ended");
+
+  // Check for upcoming calls within 5 minutes for reminder
+  const upcomingReminder = scheduledCalls.find(c => {
+    if (!c.scheduled_at) return false;
+    const diff = new Date(c.scheduled_at) - new Date();
+    return diff > 0 && diff < 5 * 60 * 1000; // within 5 minutes
+  });
 
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%)" }} data-testid="video-calls-page">
@@ -379,6 +393,44 @@ export default function VideoCallsPage() {
           </div>
         )}
 
+        {/* Just Created — share/join card */}
+        {justCreated && (
+          <div className="mb-4 bg-gradient-to-r from-emerald-500/10 to-[#00D4FF]/10 border border-emerald-500/30 rounded-xl p-4 space-y-3" data-testid="just-created-card">
+            <div className="flex items-center justify-between">
+              <h3 className="text-white font-medium text-sm flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-400" /> Call Created
+              </h3>
+              <button onClick={() => setJustCreated(null)} className="text-white/30 hover:text-white/60 p-1">
+                <XCircle className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="bg-black/20 rounded-lg p-3 text-xs text-white/70 font-mono break-all" data-testid="share-message-preview">
+              {justCreated.shareMsg}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white text-xs"
+                onClick={() => {
+                  navigator.clipboard.writeText(justCreated.shareMsg);
+                  toast.success("Copied! Paste into a text or email.");
+                }}
+                data-testid="copy-share-msg-btn"
+              >
+                <Copy className="w-3 h-3 mr-1" /> Copy Invite
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs"
+                onClick={() => navigate(`/call/${justCreated.room_name}`)}
+                data-testid="join-created-call-btn"
+              >
+                <Phone className="w-3 h-3 mr-1" /> Join Now
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Incoming Call Requests - visible for ALL users */}
         {pendingRequests.length > 0 && (
           <div className="mb-4 space-y-2" data-testid="pending-requests-section">
@@ -461,17 +513,43 @@ export default function VideoCallsPage() {
 
         {/* Tabs */}
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-white/5 border border-white/10 rounded-lg mb-4" data-testid="video-calls-tabs">
+          <TabsList className="grid w-full grid-cols-4 bg-white/5 border border-white/10 rounded-lg mb-4" data-testid="video-calls-tabs">
             <TabsTrigger value="active" className="data-[state=active]:bg-[#00D4FF]/20 data-[state=active]:text-[#00D4FF] text-white/60 text-xs" data-testid="active-calls-tab">
               Active {activeCalls.length > 0 && `(${activeCalls.length})`}
+            </TabsTrigger>
+            <TabsTrigger value="upcoming" className="data-[state=active]:bg-[#00D4FF]/20 data-[state=active]:text-[#00D4FF] text-white/60 text-xs" data-testid="upcoming-tab">
+              Upcoming {scheduledCalls.length > 0 && `(${scheduledCalls.length})`}
             </TabsTrigger>
             <TabsTrigger value="history" className="data-[state=active]:bg-[#00D4FF]/20 data-[state=active]:text-[#00D4FF] text-white/60 text-xs" data-testid="history-tab">
               History
             </TabsTrigger>
             <TabsTrigger value="recordings" className="data-[state=active]:bg-[#00D4FF]/20 data-[state=active]:text-[#00D4FF] text-white/60 text-xs" data-testid="recordings-tab">
-              Recordings {recordings.length > 0 && `(${recordings.length})`}
+              Rec
             </TabsTrigger>
           </TabsList>
+
+          {/* Upcoming call reminder */}
+          {upcomingReminder && (
+            <div className="mb-3 bg-gradient-to-r from-amber-500/15 to-orange-500/15 border border-amber-500/30 rounded-xl p-3 flex items-center justify-between gap-3" data-testid="upcoming-reminder">
+              <div className="flex items-center gap-2 min-w-0">
+                <Clock className="w-5 h-5 text-amber-400 flex-shrink-0 animate-pulse" />
+                <div className="min-w-0">
+                  <p className="text-white text-sm font-medium truncate">Call starting soon</p>
+                  <p className="text-amber-300/70 text-xs">
+                    {new Date(upcomingReminder.scheduled_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} — {upcomingReminder.created_by}
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                className="bg-green-500 hover:bg-green-600 text-white text-xs px-3 flex-shrink-0"
+                onClick={() => navigate(`/call/${upcomingReminder.room_name}`)}
+                data-testid="join-reminder-btn"
+              >
+                <Phone className="w-3 h-3 mr-1" /> Join
+              </Button>
+            </div>
+          )}
 
           {/* Active Calls */}
           <TabsContent value="active">
@@ -544,6 +622,74 @@ export default function VideoCallsPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Upcoming / Scheduled */}
+          <TabsContent value="upcoming">
+            {scheduledCalls.length === 0 ? (
+              <div className="text-center py-12" data-testid="no-upcoming">
+                <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Clock className="w-8 h-8 text-white/20" />
+                </div>
+                <p className="text-white/40 text-sm">No upcoming calls</p>
+                <p className="text-white/25 text-xs mt-1">Schedule a call using the New Call button</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {scheduledCalls.map(call => {
+                  const scheduledTime = call.scheduled_at
+                    ? new Date(call.scheduled_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" })
+                    : "TBD";
+                  const isNow = call.scheduled_at && (new Date(call.scheduled_at) - new Date()) < 5 * 60 * 1000;
+                  return (
+                    <div
+                      key={call.id || call.room_name}
+                      className={`border rounded-xl p-4 ${isNow ? "bg-amber-500/10 border-amber-500/30" : "bg-white/5 border-white/10"}`}
+                      data-testid={`upcoming-call-${call.room_name}`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Clock className={`w-4 h-4 flex-shrink-0 ${isNow ? "text-amber-400 animate-pulse" : "text-white/40"}`} />
+                            <p className="text-white font-medium text-sm">{scheduledTime}</p>
+                          </div>
+                          <p className="text-white/40 text-xs mt-1">Created by {call.created_by}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <Button
+                            size="sm"
+                            className={`text-xs px-3 ${isNow ? "bg-green-500 hover:bg-green-600 text-white" : "bg-white/10 hover:bg-white/20 text-white"}`}
+                            onClick={() => navigate(`/call/${call.room_name}`)}
+                            data-testid={`join-upcoming-${call.room_name}`}
+                          >
+                            <Phone className="w-3 h-3 mr-1" /> {isNow ? "Join Now" : "Join"}
+                          </Button>
+                          <button
+                            onClick={() => {
+                              const url = call.daily_url || `https://thrifty-curator.daily.co/${call.room_name}`;
+                              const msg = `Join me for a video call at ${scheduledTime}\n${url}`;
+                              navigator.clipboard.writeText(msg);
+                              toast.success("Invite copied!");
+                            }}
+                            className="text-white/30 hover:text-[#00D4FF] p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                            title="Copy invite"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteCall(call.room_name)}
+                            className="text-white/20 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
+                            title="Cancel"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </TabsContent>

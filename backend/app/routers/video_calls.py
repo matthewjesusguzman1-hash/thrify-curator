@@ -39,6 +39,7 @@ class CreateRoomRequest(BaseModel):
     enable_recording: bool = False
     booking_id: Optional[str] = None
     participant_names: Optional[list] = None
+    scheduled_at: Optional[str] = None  # ISO datetime for scheduled calls
 
 class CallRequestModel(BaseModel):
     admin_id: str
@@ -95,6 +96,7 @@ async def create_room(req: CreateRoomRequest, user: dict = Depends(get_current_u
         daily_room = resp.json()
 
     # Store room metadata
+    status = "scheduled" if req.scheduled_at else "active"
     room_doc = {
         "id": str(uuid.uuid4()),
         "room_name": room_name,
@@ -105,7 +107,8 @@ async def create_room(req: CreateRoomRequest, user: dict = Depends(get_current_u
         "created_by_id": str(user.get("_id", user.get("id", ""))),
         "participant_names": req.participant_names or [],
         "enable_recording": req.enable_recording,
-        "status": "active",
+        "status": status,
+        "scheduled_at": req.scheduled_at,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "expires_at": expires_at.isoformat(),
         "ended_at": None,
@@ -302,6 +305,7 @@ async def invite_to_call(data: dict, user: dict = Depends(get_current_user)):
     invitee_ids = data.get("invitee_ids", [])
     message = data.get("message", "")
     enable_recording = data.get("enable_recording", False)
+    scheduled_at = data.get("scheduled_at")
 
     if not invitee_ids:
         raise HTTPException(status_code=400, detail="No invitees specified")
@@ -344,6 +348,7 @@ async def invite_to_call(data: dict, user: dict = Depends(get_current_user)):
                 raise HTTPException(status_code=502, detail=f"Daily.co error: {resp.text}")
             daily_room = resp.json()
 
+        status = "scheduled" if scheduled_at else "active"
         await db.video_call_rooms.insert_one({
             "id": str(uuid.uuid4()),
             "room_name": room_name,
@@ -353,7 +358,8 @@ async def invite_to_call(data: dict, user: dict = Depends(get_current_user)):
             "created_by_id": caller_id,
             "participant_names": [caller_name],
             "enable_recording": enable_recording,
-            "status": "active",
+            "status": status,
+            "scheduled_at": scheduled_at,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "expires_at": expires_at.isoformat(),
             "ended_at": None, "duration_seconds": None, "recording_urls": []
@@ -473,7 +479,7 @@ async def get_call_history(user: dict = Depends(get_current_user), limit: int = 
         {"$set": {"status": "ended", "ended_at": now}}
     )
     rooms = await db.video_call_rooms.find(
-        {"status": {"$in": ["ended", "active", "pending"]}},
+        {"status": {"$in": ["ended", "active", "pending", "scheduled"]}},
         {"_id": 0}
     ).sort("created_at", -1).to_list(limit)
     return {"calls": rooms}
