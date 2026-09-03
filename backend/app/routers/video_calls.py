@@ -359,10 +359,9 @@ async def get_call_history(user: dict = Depends(get_current_user), limit: int = 
 
 
 @router.delete("/calls/{room_name}")
-async def delete_call(room_name: str, user: dict = Depends(get_admin_user)):
+async def delete_call(room_name: str, user: dict = Depends(get_current_user)):
     """Delete a single call from history."""
     result = await db.video_call_rooms.delete_one({"room_name": room_name})
-    # Also clean up any associated call requests
     await db.video_call_requests.delete_many({"room_name": room_name})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Call not found")
@@ -370,10 +369,9 @@ async def delete_call(room_name: str, user: dict = Depends(get_admin_user)):
 
 
 @router.delete("/calls")
-async def delete_all_calls(user: dict = Depends(get_admin_user)):
+async def delete_all_calls(user: dict = Depends(get_current_user)):
     """Delete all ended calls from history. Active/pending calls are preserved."""
     result = await db.video_call_rooms.delete_many({"status": "ended"})
-    # Clean up declined/accepted requests
     await db.video_call_requests.delete_many({"status": {"$in": ["declined", "accepted"]}})
     return {"success": True, "deleted_count": result.deleted_count}
 

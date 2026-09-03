@@ -396,7 +396,7 @@ export default function VideoCallsPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {isAdmin && pastCalls.length > 0 && (
+                {pastCalls.length > 0 && (
                   <div className="flex justify-end mb-1">
                     <Button
                       variant="ghost"
@@ -435,16 +435,14 @@ export default function VideoCallsPage() {
                             </p>
                           )}
                         </div>
-                        {isAdmin && (
-                          <button
-                            onClick={() => deleteCall(call.room_name)}
-                            className="text-white/20 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
-                            data-testid={`delete-call-${call.room_name}`}
-                            title="Delete"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => deleteCall(call.room_name)}
+                          className="text-white/20 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
+                          data-testid={`delete-call-${call.room_name}`}
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   </div>
