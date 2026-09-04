@@ -1170,10 +1170,10 @@ async def watcher_heartbeat(data: dict, _: bool = Depends(verify_watcher_key)):
     )
 
     closed = 0
-    # Close sessions if AnyDesk is not running OR if running but no active connections
-    should_close = not anydesk_running or (anydesk_running and not has_active_sessions)
-    if should_close:
-        # AnyDesk is dead — close all "active" sessions for this host
+    # Only close sessions if AnyDesk process is NOT running.
+    # Do NOT close sessions just because trace file is stale —
+    # AnyDesk only writes to trace on events, not continuously during active sessions.
+    if not anydesk_running:
         staleness_cutoff = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
         result = await db.anydesk_sessions.update_many(
             {"host": host, "ended_at": None, "started_at": {"$gte": staleness_cutoff}},
