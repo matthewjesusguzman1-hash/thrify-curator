@@ -285,6 +285,7 @@ export default function RemoteSessionsPage() {
   const [silenced, setSilenced] = useState(false);
   const [showShutdownModal, setShowShutdownModal] = useState(false);
   const [blockedIds, setBlockedIds] = useState(new Set());
+  const [lastUpdated, setLastUpdated] = useState(null);
 
 
   const fetchData = useCallback(async (silent = false) => {
@@ -297,6 +298,7 @@ export default function RemoteSessionsPage() {
       ]);
       setSessions(sessRes.data.sessions || []);
       setFlags(flagRes.data.flags || []);
+      setLastUpdated(new Date());
     } catch (e) {
       if (e.response?.status === 401 || e.response?.status === 403) { navigate("/login"); return; }
       if (!silent) toast.error("Failed to load remote sessions");
@@ -321,12 +323,12 @@ export default function RemoteSessionsPage() {
     axios.get(`${API}/admin/employees`, getAuthHeader())
       .then((res) => setEmployees((Array.isArray(res.data) ? res.data : res.data.employees || []).filter((e) => e.role !== "admin")))
       .catch(() => {});
-    // Auto-refresh every 10 seconds
+    // Auto-refresh every 5 seconds for responsive monitoring
     const poll = setInterval(() => {
       fetchData(true);
       fetchAlerts();
       fetchSilenceStatus();
-    }, 10000);
+    }, 5000);
     return () => clearInterval(poll);
   }, [fetchData, fetchAlerts, navigate]);
 
@@ -546,6 +548,11 @@ export default function RemoteSessionsPage() {
               <p className="text-white/50 text-[11px]">
                 {activeCount > 0 && <span className="text-emerald-400 font-medium">{activeCount} active now</span>}
                 {activeCount === 0 && "AnyDesk session history"}
+                {lastUpdated && (
+                  <span className="text-white/30 ml-2">
+                    updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                )}
               </p>
             </div>
             <button

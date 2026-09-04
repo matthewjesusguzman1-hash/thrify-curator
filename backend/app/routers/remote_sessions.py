@@ -133,6 +133,7 @@ async def _queue_acl_update(admin_name: str):
 
 async def notify_admins_session_event(event: SessionEvent, host: str, duration_seconds: int = None):
     """Push notify admins when a remote worker connects, disconnects, or is rejected"""
+    print(f"[RemoteSessions] notify_admins_session_event called: {event.event_type} | {event.anydesk_id} | {host}")
     if await _is_silenced():
         print(f"[RemoteSessions] Notifications silenced — skipping push for {event.event_type}")
         return
@@ -154,10 +155,13 @@ async def notify_admins_session_event(event: SessionEvent, host: str, duration_s
         title = "Remote worker connected"
         body = f"{who} connected to {host} via AnyDesk"
     
+    print(f"[RemoteSessions] Sending push: '{title}' - '{body}'")
+    
     # Send APNs and Web Push independently so one failure doesn't block the other
     try:
         from app.services.apns_service import send_admin_push_notification
         await send_admin_push_notification(title=title, body=body, notification_type="remote_session")
+        print(f"[RemoteSessions] APNs sent successfully")
     except Exception as e:
         print(f"[RemoteSessions] APNs notification failed: {e}")
     
@@ -166,7 +170,7 @@ async def notify_admins_session_event(event: SessionEvent, host: str, duration_s
         result = await get_web_push_service().send_to_admins(
             db=db, title=title, body=body, url="/remote-sessions", notification_type="remote_session"
         )
-        print(f"[RemoteSessions] Web Push result: {result}")
+        print(f"[RemoteSessions] Web Push sent: {result}")
     except Exception as e:
         print(f"[RemoteSessions] Web Push notification failed: {e}")
 
@@ -470,6 +474,7 @@ async def log_sessions(batch: SessionLogBatch, _: bool = Depends(verify_watcher_
             except (ValueError, TypeError):
                 event_age_minutes = 0
             if event_age_minutes <= 5:
+                print(f"[RemoteSessions] Event is recent ({int(event_age_minutes)}min old) — sending notification for {event.anydesk_id}")
                 await notify_admins_session_event(event, batch.host)
                 # Check blocklist — if blocked, create alert (enforcement is via AnyDesk ACL)
                 if event.anydesk_id:

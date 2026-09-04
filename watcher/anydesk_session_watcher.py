@@ -575,18 +575,18 @@ def main():
         last_heartbeat = 0
         while True:
             now = time.time()
-            # Full scan every 10 seconds for faster end detection
-            if now - last_scan >= 10:
+            # Full scan every 5 seconds for faster detection
+            if now - last_scan >= 5:
                 scan_all(cfg, state)
                 retry_failed(cfg)
                 last_scan = now
-            # Poll for commands every cycle (every 10s)
+            # Poll for commands every cycle
             poll_commands(cfg)
             # Heartbeat every 30 seconds (closes stale sessions if no active connections)
             if now - last_heartbeat >= 30:
                 send_heartbeat(cfg)
                 last_heartbeat = now
-            time.sleep(10)
+            time.sleep(5)
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
