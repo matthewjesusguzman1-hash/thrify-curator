@@ -916,27 +916,26 @@ async def block_anydesk_id(req: BlockRequest, admin: dict = Depends(get_admin_us
 
 
 class UnblockRequest(BaseModel):
-    admin_code: str
+    pass
 
 
 @router.post("/unblock/{anydesk_id}")
-async def unblock_anydesk_id(anydesk_id: str, req: UnblockRequest, admin: dict = Depends(get_admin_user)):
+async def unblock_anydesk_id(anydesk_id: str, admin: dict = Depends(get_admin_user)):
     """Remove an AnyDesk ID from the blocklist."""
-    codes_str = os.environ.get("ADMIN_OWNER_CODES", "")
-    valid_codes = [entry.split(":")[0] for entry in codes_str.split("|") if entry.strip()]
-    if req.admin_code not in valid_codes:
-        raise HTTPException(status_code=403, detail="Invalid admin code")
-
     normalized = anydesk_id.replace(" ", "")
     result = await db.anydesk_blocklist.delete_one({"anydesk_id": normalized})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="ID not in blocklist")
 
+    mapping = await db.anydesk_id_mappings.find_one({"anydesk_id": normalized})
+    worker_name = mapping["worker_name"] if mapping else None
+
     remaining = await db.anydesk_blocklist.count_documents({})
     return {
         "success": True,
         "remaining": remaining,
-        "message": f"Unblocked {normalized}. {remaining} ID(s) still on blocklist." if remaining > 0 else f"Unblocked {normalized}. Blocklist is now empty."
+        "worker_name": worker_name,
+        "message": f"Unblocked {worker_name or normalized}. They can now connect — you will receive alerts for their sessions."
     }
 
 

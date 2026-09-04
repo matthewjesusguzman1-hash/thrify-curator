@@ -99,7 +99,7 @@ function formatDT(iso) {
   return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-function SessionCard({ s, isActive, onAssign, onRemoveMapping, onClose, onDelete, employees, mappingId, mappingName, setMappingName, mappingEmployeeId, setMappingEmployeeId, saveMapping, setMappingId }) {
+function SessionCard({ s, isActive, onAssign, onRemoveMapping, onClose, onDelete, employees, mappingId, mappingName, setMappingName, mappingEmployeeId, setMappingEmployeeId, saveMapping, setMappingId, isBlocked, onToggleBlock }) {
   return (
     <div
       className={`bg-white/[0.04] border rounded-xl p-3.5 ${
@@ -110,7 +110,7 @@ function SessionCard({ s, isActive, onAssign, onRemoveMapping, onClose, onDelete
       {/* Top row: worker + status */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className={`w-2 h-2 rounded-full shrink-0 ${isActive ? "bg-emerald-400 animate-pulse" : "bg-white/20"}`} />
-        <span className="font-semibold text-white text-sm">
+        <span className={`font-semibold text-sm ${isBlocked ? "text-red-300 line-through" : "text-white"}`}>
           {s.worker_name || s.alias || `AnyDesk ${s.anydesk_id}`}
         </span>
         {s.anydesk_id && (
@@ -118,6 +118,22 @@ function SessionCard({ s, isActive, onAssign, onRemoveMapping, onClose, onDelete
         )}
         {isActive && <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full">LIVE</span>}
         {s.auth_method === "REJECTED" && <span className="text-[10px] font-bold text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full">REJECTED</span>}
+        {isBlocked && <span className="text-[10px] font-bold text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full">BLOCKED</span>}
+        {/* Block/Unblock toggle */}
+        {s.anydesk_id && (
+          <button
+            onClick={() => onToggleBlock(s.anydesk_id, s.worker_name || s.alias || s.anydesk_id)}
+            className={`p-1 rounded-lg transition-colors ${
+              isBlocked
+                ? "text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20"
+                : "text-white/20 hover:text-amber-300 hover:bg-amber-500/10"
+            }`}
+            data-testid={`block-toggle-${s.anydesk_id}`}
+            title={isBlocked ? "Unblock this user" : "Block this user"}
+          >
+            <ShieldBan className="w-3.5 h-3.5" />
+          </button>
+        )}
         {!s.worker_name ? (
           <button
             onClick={() => onAssign(s.anydesk_id)}
@@ -268,6 +284,7 @@ export default function RemoteSessionsPage() {
   const [employees, setEmployees] = useState([]);
   const [silenced, setSilenced] = useState(false);
   const [showShutdownModal, setShowShutdownModal] = useState(false);
+  const [blockedIds, setBlockedIds] = useState(new Set());
 
 
   const fetchData = useCallback(async (silent = false) => {
@@ -299,6 +316,7 @@ export default function RemoteSessionsPage() {
     fetchData();
     fetchAlerts();
     fetchSilenceStatus();
+    fetchBlocklist();
 
     axios.get(`${API}/admin/employees`, getAuthHeader())
       .then((res) => setEmployees((Array.isArray(res.data) ? res.data : res.data.employees || []).filter((e) => e.role !== "admin")))
@@ -317,6 +335,43 @@ export default function RemoteSessionsPage() {
       const res = await axios.get(`${API}/remote-sessions/notification-status`, getAuthHeader());
       setSilenced(res.data.silenced);
     } catch { /* ignore */ }
+  };
+
+  const fetchBlocklist = async () => {
+    try {
+      const res = await axios.get(`${API}/remote-sessions/blocklist`, getAuthHeader());
+      const ids = new Set((res.data.blocklist || []).map(b => b.anydesk_id));
+      setBlockedIds(ids);
+    } catch { /* ignore */ }
+  };
+
+  const toggleBlock = async (anydeskId, workerName) => {
+    const isBlocked = blockedIds.has(anydeskId);
+    try {
+      if (isBlocked) {
+        await axios.post(`${API}/remote-sessions/unblock/${anydeskId}`, {}, getAuthHeader());
+        setBlockedIds(prev => { const next = new Set(prev); next.delete(anydeskId); return next; });
+        toast.success(`${workerName || anydeskId} unblocked`, {
+          description: "You'll receive alerts when they connect."
+        });
+      } else {
+        await axios.post(`${API}/remote-sessions/block`, { anydesk_id: anydeskId }, getAuthHeader());
+        setBlockedIds(prev => new Set(prev).add(anydeskId));
+        toast.success(`${workerName || anydeskId} blocked`, {
+          description: "To fully prevent reconnection, deny them in AnyDesk:",
+          duration: 12000,
+        });
+        // Show AnyDesk instructions after a short delay
+        setTimeout(() => {
+          toast.info(
+            "AnyDesk blocking steps:\n1. Open AnyDesk on the Mac\n2. Go to Settings → Security\n3. Under Access Control, find the blocked user's ID\n4. Click the ✕ or set to 'Deny'\n5. Click Apply",
+            { duration: 15000 }
+          );
+        }, 500);
+      }
+    } catch (e) {
+      toast.error(`Failed to ${isBlocked ? "unblock" : "block"}: ${e.response?.data?.detail || e.message}`);
+    }
   };
 
 
@@ -653,6 +708,8 @@ export default function RemoteSessionsPage() {
                             setMappingEmployeeId={setMappingEmployeeId}
                             saveMapping={saveMapping}
                             setMappingId={setMappingId}
+                            isBlocked={s.anydesk_id ? blockedIds.has(s.anydesk_id) : false}
+                            onToggleBlock={toggleBlock}
                           />
                         </motion.div>
                       ))}
