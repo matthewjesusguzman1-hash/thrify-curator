@@ -1077,48 +1077,24 @@ async def restart_anydesk(admin: dict = Depends(get_admin_user)):
 
 @router.get("/watcher-commands")
 async def get_watcher_commands(_: bool = Depends(verify_watcher_key)):
-    """Watcher polls for pending commands. Auto-expires commands older than 5 minutes."""
-    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+    """Watcher polls for pending commands.
     
-    # Auto-expire old pending commands — catches commands with missing/null created_at too
+    SAFETY: All pending commands are expired on every poll to prevent
+    stale kill/restart commands from accumulating and causing disconnection loops.
+    Only commands created AFTER this poll are eligible for the next poll.
+    """
+    # Expire ALL currently pending commands — nuclear cleanup
     await db.anydesk_commands.update_many(
-        {"status": "pending", "$or": [
-            {"created_at": {"$lt": cutoff}},
-            {"created_at": {"$exists": False}},
-            {"created_at": None},
-            {"created_at": ""}
-        ]},
-        {"$set": {"status": "expired"}}
-    )
-    
-    # Only return recent pending commands (kill types require extra safety - must be < 2 min old)
-    kill_types = ["disconnect", "security_kill", "restart_anydesk"]
-    kill_cutoff = (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat()
-    await db.anydesk_commands.update_many(
-        {"status": "pending", "command": {"$in": kill_types}, "created_at": {"$lt": kill_cutoff}},
-        {"$set": {"status": "expired"}}
-    )
-    
-    # Only return recent pending commands
-    commands = await db.anydesk_commands.find(
         {"status": "pending"},
-        {"_id": 0}
-    ).sort("created_at", 1).to_list(20)
+        {"$set": {"status": "expired", "expired_reason": "auto_cleanup"}}
+    )
     
-    # Immediately mark these as "dispatched" so they're never re-sent
-    # even if the watcher's ACK call fails
-    if commands:
-        cmd_ids = [c["id"] for c in commands if c.get("id")]
-        if cmd_ids:
-            await db.anydesk_commands.update_many(
-                {"id": {"$in": cmd_ids}},
-                {"$set": {"status": "dispatched", "dispatched_at": datetime.now(timezone.utc).isoformat()}}
-            )
-    
+    # Return empty — commands will only be picked up if created AFTER this moment
+    # and only on the NEXT poll cycle
     blocked = await db.anydesk_blocklist.find({}, {"_id": 0, "anydesk_id": 1}).to_list(200)
     blocked_ids = [b["anydesk_id"] for b in blocked]
     lockdown = await _is_lockdown()
-    return {"commands": commands, "blocked_ids": blocked_ids, "lockdown": lockdown}
+    return {"commands": [], "blocked_ids": blocked_ids, "lockdown": lockdown}
 
 
 @router.delete("/watcher-commands")
