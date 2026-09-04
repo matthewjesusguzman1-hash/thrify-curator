@@ -1077,24 +1077,37 @@ async def restart_anydesk(admin: dict = Depends(get_admin_user)):
 
 @router.get("/watcher-commands")
 async def get_watcher_commands(_: bool = Depends(verify_watcher_key)):
-    """Watcher polls for pending commands.
-    
-    SAFETY: All pending commands are expired on every poll to prevent
-    stale kill/restart commands from accumulating and causing disconnection loops.
-    Only commands created AFTER this poll are eligible for the next poll.
-    """
-    # Expire ALL currently pending commands — nuclear cleanup
+    """Watcher polls for pending commands. Commands execute exactly once."""
+    # Step 1: Expire any command older than 2 minutes
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat()
     await db.anydesk_commands.update_many(
-        {"status": "pending"},
-        {"$set": {"status": "expired", "expired_reason": "auto_cleanup"}}
+        {"status": "pending", "$or": [
+            {"created_at": {"$lt": cutoff}},
+            {"created_at": {"$exists": False}},
+            {"created_at": None},
+            {"created_at": ""}
+        ]},
+        {"$set": {"status": "expired"}}
     )
     
-    # Return empty — commands will only be picked up if created AFTER this moment
-    # and only on the NEXT poll cycle
+    # Step 2: Fetch pending commands
+    commands = await db.anydesk_commands.find(
+        {"status": "pending"},
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(5)
+    
+    # Step 3: IMMEDIATELY mark as dispatched so they can never be returned again
+    for cmd in commands:
+        if cmd.get("id"):
+            await db.anydesk_commands.update_one(
+                {"id": cmd["id"], "status": "pending"},
+                {"$set": {"status": "dispatched", "dispatched_at": datetime.now(timezone.utc).isoformat()}}
+            )
+    
     blocked = await db.anydesk_blocklist.find({}, {"_id": 0, "anydesk_id": 1}).to_list(200)
     blocked_ids = [b["anydesk_id"] for b in blocked]
     lockdown = await _is_lockdown()
-    return {"commands": [], "blocked_ids": blocked_ids, "lockdown": lockdown}
+    return {"commands": commands, "blocked_ids": blocked_ids, "lockdown": lockdown}
 
 
 @router.delete("/watcher-commands")
