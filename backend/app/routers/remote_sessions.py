@@ -1088,6 +1088,35 @@ async def get_watcher_commands(_: bool = Depends(verify_watcher_key)):
     return {"commands": commands, "blocked_ids": blocked_ids, "lockdown": lockdown}
 
 
+@router.get("/watcher-health")
+async def get_watcher_health(admin: dict = Depends(get_admin_user)):
+    """Admin: check if the watcher is alive and when it last reported."""
+    statuses = await db.anydesk_watcher_status.find().to_list(None)
+    result = []
+    now = datetime.now(timezone.utc)
+    for s in statuses:
+        last_hb = s.get("last_heartbeat")
+        seconds_ago = None
+        if last_hb:
+            try:
+                hb_time = datetime.fromisoformat(last_hb)
+                if hb_time.tzinfo is None:
+                    hb_time = hb_time.replace(tzinfo=timezone.utc)
+                seconds_ago = int((now - hb_time).total_seconds())
+            except (ValueError, TypeError):
+                pass
+        result.append({
+            "host": s.get("host"),
+            "last_heartbeat": last_hb,
+            "seconds_ago": seconds_ago,
+            "online": seconds_ago is not None and seconds_ago < 120,
+            "anydesk_running": s.get("anydesk_running"),
+            "has_active_sessions": s.get("has_active_sessions")
+        })
+    return {"watchers": result}
+
+
+
 @router.post("/heartbeat")
 async def watcher_heartbeat(data: dict, _: bool = Depends(verify_watcher_key)):
     """Watcher reports its status. Closes open sessions if AnyDesk is not running

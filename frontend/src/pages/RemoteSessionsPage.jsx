@@ -286,6 +286,7 @@ export default function RemoteSessionsPage() {
   const [showShutdownModal, setShowShutdownModal] = useState(false);
   const [blockedIds, setBlockedIds] = useState(new Set());
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [watcherHealth, setWatcherHealth] = useState(null);
 
 
   const fetchData = useCallback(async (silent = false) => {
@@ -319,6 +320,7 @@ export default function RemoteSessionsPage() {
     fetchAlerts();
     fetchSilenceStatus();
     fetchBlocklist();
+    fetchWatcherHealth();
 
     axios.get(`${API}/admin/employees`, getAuthHeader())
       .then((res) => setEmployees((Array.isArray(res.data) ? res.data : res.data.employees || []).filter((e) => e.role !== "admin")))
@@ -328,6 +330,7 @@ export default function RemoteSessionsPage() {
       fetchData(true);
       fetchAlerts();
       fetchSilenceStatus();
+      fetchWatcherHealth();
     }, 5000);
     return () => clearInterval(poll);
   }, [fetchData, fetchAlerts, navigate]);
@@ -344,6 +347,14 @@ export default function RemoteSessionsPage() {
       const res = await axios.get(`${API}/remote-sessions/blocklist`, getAuthHeader());
       const ids = new Set((res.data.blocklist || []).map(b => b.anydesk_id));
       setBlockedIds(ids);
+    } catch { /* ignore */ }
+  };
+
+  const fetchWatcherHealth = async () => {
+    try {
+      const res = await axios.get(`${API}/remote-sessions/watcher-health`, getAuthHeader());
+      const watchers = res.data.watchers || [];
+      setWatcherHealth(watchers.length > 0 ? watchers[0] : null);
     } catch { /* ignore */ }
   };
 
@@ -555,6 +566,24 @@ export default function RemoteSessionsPage() {
                 )}
               </p>
             </div>
+            {/* Watcher health indicator */}
+            {watcherHealth !== null && (
+              <div
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-medium ${
+                  watcherHealth.online
+                    ? "bg-emerald-500/15 text-emerald-400"
+                    : "bg-red-500/15 text-red-400 animate-pulse"
+                }`}
+                title={watcherHealth.online
+                  ? `Watcher online (${watcherHealth.host}) — last heartbeat ${watcherHealth.seconds_ago}s ago`
+                  : `Watcher OFFLINE (${watcherHealth.host || 'unknown'}) — ${watcherHealth.seconds_ago ? `last seen ${Math.round(watcherHealth.seconds_ago / 60)}min ago` : 'no heartbeat received'}`
+                }
+                data-testid="watcher-health-indicator"
+              >
+                {watcherHealth.online ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                {watcherHealth.online ? "Watcher Online" : "Watcher Offline"}
+              </div>
+            )}
             <button
               onClick={toggleSilence}
               className={`p-1.5 rounded-lg transition-colors ${
