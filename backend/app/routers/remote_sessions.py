@@ -1077,7 +1077,16 @@ async def restart_anydesk(admin: dict = Depends(get_admin_user)):
 
 @router.get("/watcher-commands")
 async def get_watcher_commands(_: bool = Depends(verify_watcher_key)):
-    """Watcher polls for pending commands."""
+    """Watcher polls for pending commands. Auto-expires commands older than 5 minutes."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+    
+    # Auto-expire old pending commands
+    await db.anydesk_commands.update_many(
+        {"status": "pending", "created_at": {"$lt": cutoff}},
+        {"$set": {"status": "expired"}}
+    )
+    
+    # Only return recent pending commands
     commands = await db.anydesk_commands.find(
         {"status": "pending"},
         {"_id": 0}
@@ -1086,6 +1095,16 @@ async def get_watcher_commands(_: bool = Depends(verify_watcher_key)):
     blocked_ids = [b["anydesk_id"] for b in blocked]
     lockdown = await _is_lockdown()
     return {"commands": commands, "blocked_ids": blocked_ids, "lockdown": lockdown}
+
+
+@router.delete("/watcher-commands")
+async def clear_pending_commands(admin: dict = Depends(get_admin_user)):
+    """Admin: clear all pending watcher commands."""
+    result = await db.anydesk_commands.update_many(
+        {"status": "pending"},
+        {"$set": {"status": "cancelled"}}
+    )
+    return {"success": True, "cleared": result.modified_count}
 
 
 @router.get("/watcher-health")
