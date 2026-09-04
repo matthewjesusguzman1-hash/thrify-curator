@@ -1080,9 +1080,22 @@ async def get_watcher_commands(_: bool = Depends(verify_watcher_key)):
     """Watcher polls for pending commands. Auto-expires commands older than 5 minutes."""
     cutoff = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
     
-    # Auto-expire old pending commands
+    # Auto-expire old pending commands — catches commands with missing/null created_at too
     await db.anydesk_commands.update_many(
-        {"status": "pending", "created_at": {"$lt": cutoff}},
+        {"status": "pending", "$or": [
+            {"created_at": {"$lt": cutoff}},
+            {"created_at": {"$exists": False}},
+            {"created_at": None},
+            {"created_at": ""}
+        ]},
+        {"$set": {"status": "expired"}}
+    )
+    
+    # Only return recent pending commands (kill types require extra safety - must be < 2 min old)
+    kill_types = ["disconnect", "security_kill", "restart_anydesk"]
+    kill_cutoff = (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat()
+    await db.anydesk_commands.update_many(
+        {"status": "pending", "command": {"$in": kill_types}, "created_at": {"$lt": kill_cutoff}},
         {"$set": {"status": "expired"}}
     )
     
@@ -1091,6 +1104,17 @@ async def get_watcher_commands(_: bool = Depends(verify_watcher_key)):
         {"status": "pending"},
         {"_id": 0}
     ).sort("created_at", 1).to_list(20)
+    
+    # Immediately mark these as "dispatched" so they're never re-sent
+    # even if the watcher's ACK call fails
+    if commands:
+        cmd_ids = [c["id"] for c in commands if c.get("id")]
+        if cmd_ids:
+            await db.anydesk_commands.update_many(
+                {"id": {"$in": cmd_ids}},
+                {"$set": {"status": "dispatched", "dispatched_at": datetime.now(timezone.utc).isoformat()}}
+            )
+    
     blocked = await db.anydesk_blocklist.find({}, {"_id": 0, "anydesk_id": 1}).to_list(200)
     blocked_ids = [b["anydesk_id"] for b in blocked]
     lockdown = await _is_lockdown()
