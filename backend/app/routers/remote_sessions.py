@@ -1148,6 +1148,38 @@ async def get_watcher_health(admin: dict = Depends(get_admin_user)):
     return {"watchers": result}
 
 
+# ─── Host AnyDesk Address (for deep-link connect) ───
+
+@router.get("/host-addresses")
+async def get_host_addresses(admin: dict = Depends(get_admin_user)):
+    """Get stored AnyDesk addresses for host machines (used for deep-link connect)."""
+    doc = await db.anydesk_settings.find_one({"key": "host_addresses"})
+    addresses = doc.get("addresses", []) if doc else []
+    return {"addresses": addresses}
+
+
+class HostAddressEntry(BaseModel):
+    label: str
+    anydesk_address: str
+
+
+@router.post("/host-addresses")
+async def set_host_addresses(entries: List[HostAddressEntry], admin: dict = Depends(get_admin_user)):
+    """Save AnyDesk addresses for host machines."""
+    addresses = [{"label": e.label.strip(), "anydesk_address": e.anydesk_address.strip()} for e in entries if e.anydesk_address.strip()]
+    await db.anydesk_settings.update_one(
+        {"key": "host_addresses"},
+        {"$set": {
+            "key": "host_addresses",
+            "addresses": addresses,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    return {"success": True, "addresses": addresses}
+
+
+
 
 @router.post("/heartbeat")
 async def watcher_heartbeat(data: dict, _: bool = Depends(verify_watcher_key)):

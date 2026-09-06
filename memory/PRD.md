@@ -61,6 +61,8 @@ Resale/consignment operations platform with employee/admin management, time trac
 - **Storage**: Emergent Object Storage
 
 ## Recent Changes (Feb 2026)
+- Added: Quick Connect deep link button on Remote Sessions page - one tap opens AnyDesk and connects to work computer
+- Admin configures work computer's AnyDesk address once via Quick Connect Setup modal
 - Fixed: Video call invites now store and display invitee names correctly
 - Fixed: "Call with [name]" shown instead of just creator name in all call lists
 - Fixed: Web Push added to ALL clock-in/out paths (was missing, only APNs sent before)

@@ -7,7 +7,7 @@ import {
   Monitor, ArrowLeft, RefreshCw, UserPlus, Search, AlertTriangle,
   Info, Clock, ChevronLeft, ChevronRight, Download, CalendarDays,
   LogIn, LogOut, Wifi, WifiOff, Bell, BellOff, ShieldBan, Merge,
-  Trash2, X, Unlink, RotateCcw
+  Trash2, X, Unlink, RotateCcw, ExternalLink, Settings, Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -287,6 +287,10 @@ export default function RemoteSessionsPage() {
   const [blockedIds, setBlockedIds] = useState(new Set());
   const [lastUpdated, setLastUpdated] = useState(null);
   const [watcherHealth, setWatcherHealth] = useState(null);
+  const [hostAddresses, setHostAddresses] = useState([]);
+  const [showConnectSetup, setShowConnectSetup] = useState(false);
+  const [editAddress, setEditAddress] = useState("");
+  const [editLabel, setEditLabel] = useState("");
 
 
   const fetchData = useCallback(async (silent = false) => {
@@ -321,6 +325,7 @@ export default function RemoteSessionsPage() {
     fetchSilenceStatus();
     fetchBlocklist();
     fetchWatcherHealth();
+    fetchHostAddresses();
 
     axios.get(`${API}/admin/employees`, getAuthHeader())
       .then((res) => setEmployees((Array.isArray(res.data) ? res.data : res.data.employees || []).filter((e) => e.role !== "admin")))
@@ -356,6 +361,29 @@ export default function RemoteSessionsPage() {
       const watchers = res.data.watchers || [];
       setWatcherHealth(watchers.length > 0 ? watchers[0] : null);
     } catch { /* ignore */ }
+  };
+
+  const fetchHostAddresses = async () => {
+    try {
+      const res = await axios.get(`${API}/remote-sessions/host-addresses`, getAuthHeader());
+      setHostAddresses(res.data.addresses || []);
+    } catch { /* ignore */ }
+  };
+
+  const saveHostAddress = async () => {
+    if (!editAddress.trim()) return;
+    const entry = { label: editLabel.trim() || "Work Computer", anydesk_address: editAddress.trim() };
+    try {
+      const res = await axios.post(`${API}/remote-sessions/host-addresses`, [entry], getAuthHeader());
+      setHostAddresses(res.data.addresses || []);
+      setShowConnectSetup(false);
+      toast.success("AnyDesk address saved");
+    } catch { toast.error("Failed to save address"); }
+  };
+
+  const openAnyDesk = (address) => {
+    const cleaned = address.replace(/\s/g, "");
+    window.open(`anydesk:${cleaned}`, "_self");
   };
 
   const toggleBlock = async (anydeskId, workerName) => {
@@ -606,13 +634,40 @@ export default function RemoteSessionsPage() {
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
             </button>
           </div>
-          {/* Second row: Shutdown + Restart buttons */}
+          {/* Second row: Connect + Shutdown + Restart buttons */}
           <div className="flex items-center gap-2">
+            {hostAddresses.length > 0 ? (
+              <button
+                onClick={() => openAnyDesk(hostAddresses[0].anydesk_address)}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-xs font-semibold hover:bg-indigo-500/30 transition-colors"
+                data-testid="connect-anydesk-btn"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Connect to {hostAddresses[0].label}
+              </button>
+            ) : (
+              <button
+                onClick={() => { setEditLabel("Work Computer"); setEditAddress(""); setShowConnectSetup(true); }}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.05] border border-white/10 text-white/40 text-xs font-semibold hover:bg-white/10 hover:text-white/60 transition-colors"
+                data-testid="setup-connect-btn"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Set Up Quick Connect
+              </button>
+            )}
+            {hostAddresses.length > 0 && (
+              <button
+                onClick={() => { setEditLabel(hostAddresses[0].label); setEditAddress(hostAddresses[0].anydesk_address); setShowConnectSetup(true); }}
+                className="p-2 rounded-lg text-white/20 hover:text-white/60 hover:bg-white/10 transition-colors"
+                data-testid="edit-connect-btn"
+                title="Edit AnyDesk address"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button onClick={handleShutdown} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-semibold hover:bg-red-500/25 transition-colors" data-testid="shutdown-anydesk-btn">
-              <ShieldBan className="w-3.5 h-3.5" /> Shutdown AnyDesk
+              <ShieldBan className="w-3.5 h-3.5" /> Shutdown
             </button>
             <button onClick={handleRestartAnyDesk} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/25 transition-colors" data-testid="restart-anydesk-btn">
-              <RotateCcw className="w-3.5 h-3.5" /> Restart AnyDesk
+              <RotateCcw className="w-3.5 h-3.5" /> Restart
             </button>
           </div>
         </div>
@@ -823,6 +878,68 @@ export default function RemoteSessionsPage() {
           )
         )}
       </div>
+
+      {/* Quick Connect setup/edit modal */}
+      {showConnectSetup && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowConnectSetup(false)}>
+          <div className="bg-[#1a1a3a] border border-indigo-500/30 rounded-2xl p-5 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()} data-testid="connect-setup-modal">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-indigo-500/15 flex items-center justify-center shrink-0">
+                <ExternalLink className="w-5 h-5 text-indigo-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-white font-bold text-base">Quick Connect Setup</h3>
+                <p className="text-white/50 text-sm mt-1">
+                  Enter your work computer's AnyDesk address so you can connect with one tap.
+                </p>
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <label className="text-white/60 text-xs font-medium mb-1 block">AnyDesk Address</label>
+                    <Input
+                      value={editAddress}
+                      onChange={(e) => setEditAddress(e.target.value)}
+                      placeholder="e.g. 123 456 789"
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
+                      data-testid="connect-address-input"
+                      onKeyDown={(e) => e.key === "Enter" && saveHostAddress()}
+                      autoFocus
+                    />
+                    <p className="text-white/30 text-[11px] mt-1">Find this in AnyDesk → "This Desk" on your work computer</p>
+                  </div>
+                  <div>
+                    <label className="text-white/60 text-xs font-medium mb-1 block">Label (optional)</label>
+                    <Input
+                      value={editLabel}
+                      onChange={(e) => setEditLabel(e.target.value)}
+                      placeholder="Work Computer"
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
+                      data-testid="connect-label-input"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <Button
+                onClick={saveHostAddress}
+                disabled={!editAddress.trim()}
+                className="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white disabled:opacity-40"
+                data-testid="connect-save-btn"
+              >
+                <Check className="w-4 h-4 mr-1.5" /> Save
+              </Button>
+              <Button
+                onClick={() => setShowConnectSetup(false)}
+                variant="ghost"
+                className="text-white/60 hover:text-white"
+                data-testid="connect-cancel-btn"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Shutdown instructions modal */}
       {showShutdownModal && (
