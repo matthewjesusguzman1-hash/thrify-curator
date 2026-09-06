@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.thriftycurator.watcher</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>anydesk_session_watcher.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>WATCHER_DIR_PLACEHOLDER</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>WATCHER_DIR_PLACEHOLDER/watcher.log</string>
+    <key>StandardErrorPath</key>
+    <string>WATCHER_DIR_PLACEHOLDER/watcher_error.log</string>
+</dict>
+</plist>

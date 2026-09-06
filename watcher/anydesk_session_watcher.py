@@ -357,13 +357,15 @@ def send_heartbeat(cfg):
                     pass
 
         url = f"{cfg['backend_url']}/api/remote-sessions/heartbeat"
-        requests.post(url, json={
+        resp = requests.post(url, json={
             "host": cfg["host_label"],
             "anydesk_running": anydesk_running,
             "has_active_sessions": has_active_sessions,
         }, headers={"X-Watcher-Key": cfg["watcher_key"]}, timeout=10)
+        resp.raise_for_status()
+        log.info(f"Heartbeat OK (AnyDesk running={anydesk_running}, active={has_active_sessions})")
     except Exception as e:
-        log.debug(f"Heartbeat failed: {e}")
+        log.warning(f"Heartbeat FAILED: {e}")
 
 
 # ─── FORBIDDEN setting names — NEVER upload values for these ───

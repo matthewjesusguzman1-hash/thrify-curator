@@ -1202,9 +1202,7 @@ async def watcher_heartbeat(data: dict, _: bool = Depends(verify_watcher_key)):
     )
 
     closed = 0
-    # Only close sessions if AnyDesk process is NOT running.
-    # Do NOT close sessions just because trace file is stale —
-    # AnyDesk only writes to trace on events, not continuously during active sessions.
+    # Close sessions if AnyDesk process is NOT running
     if not anydesk_running:
         staleness_cutoff = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
         result = await db.anydesk_sessions.update_many(
@@ -1230,6 +1228,66 @@ async def watcher_heartbeat(data: dict, _: bool = Depends(verify_watcher_key)):
                 except (ValueError, TypeError):
                     pass
             print(f"[Heartbeat] AnyDesk not running on {host} — closed {closed} active session(s)")
+
+    # Also close stuck sessions if AnyDesk IS running but has no active connections
+    # Use a grace period: only close if no_active_since > 2 minutes ago
+    elif anydesk_running and not has_active_sessions:
+        watcher_doc = await db.anydesk_watcher_status.find_one({"host": host})
+        no_active_since = watcher_doc.get("no_active_since") if watcher_doc else None
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        if not no_active_since:
+            # First heartbeat with no active sessions — record the timestamp
+            await db.anydesk_watcher_status.update_one(
+                {"host": host},
+                {"$set": {"no_active_since": now_iso}}
+            )
+        else:
+            # Check how long it's been inactive
+            try:
+                since = datetime.fromisoformat(no_active_since)
+                if since.tzinfo is None:
+                    since = since.replace(tzinfo=timezone.utc)
+                inactive_seconds = (datetime.now(timezone.utc) - since).total_seconds()
+            except (ValueError, TypeError):
+                inactive_seconds = 0
+
+            if inactive_seconds >= 120:  # 2 minutes of no active sessions
+                staleness_cutoff = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
+                result = await db.anydesk_sessions.update_many(
+                    {"host": host, "ended_at": None, "started_at": {"$gte": staleness_cutoff}},
+                    {"$set": {"ended_at": now_iso}}
+                )
+                closed = result.modified_count
+                if closed:
+                    updated = await db.anydesk_sessions.find(
+                        {"host": host, "duration_seconds": None, "ended_at": {"$ne": None}}
+                    ).to_list(50)
+                    for s in updated:
+                        try:
+                            start_dt = datetime.fromisoformat(s["started_at"])
+                            end_dt = datetime.fromisoformat(s["ended_at"])
+                            if start_dt.tzinfo is None:
+                                start_dt = start_dt.replace(tzinfo=timezone.utc)
+                            if end_dt.tzinfo is None:
+                                end_dt = end_dt.replace(tzinfo=timezone.utc)
+                            dur = max(0, int((end_dt - start_dt).total_seconds()))
+                            await db.anydesk_sessions.update_one({"id": s["id"]}, {"$set": {"duration_seconds": dur}})
+                        except (ValueError, TypeError):
+                            pass
+                    print(f"[Heartbeat] No active sessions on {host} for {inactive_seconds:.0f}s — closed {closed} stuck session(s)")
+                # Reset the timer
+                await db.anydesk_watcher_status.update_one(
+                    {"host": host},
+                    {"$unset": {"no_active_since": ""}}
+                )
+
+    # Clear no_active_since when sessions are active
+    if has_active_sessions:
+        await db.anydesk_watcher_status.update_one(
+            {"host": host},
+            {"$unset": {"no_active_since": ""}}
+        )
 
     return {"success": True, "sessions_closed": closed}
 
@@ -1558,3 +1616,5 @@ async def merge_historical_sessions(admin: dict = Depends(get_admin_user)):
         "sessions_removed": total_deleted,
         "message": f"Merged {total_merged} fragmented sessions into their parent sessions ({total_deleted} records removed)"
     }
+
+
