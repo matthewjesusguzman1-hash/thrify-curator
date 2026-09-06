@@ -272,7 +272,7 @@ export default function RemoteSessionsPage() {
   const now = new Date();
   const [tab, setTab] = useState("sessions");
   const [month, setMonth] = useState(localDateStr(now).slice(0, 7));
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(localDateStr(new Date()));
   const [sessions, setSessions] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [flags, setFlags] = useState([]);
