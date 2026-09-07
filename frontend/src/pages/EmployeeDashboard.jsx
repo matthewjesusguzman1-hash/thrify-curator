@@ -1315,7 +1315,7 @@ export default function EmployeeDashboard({
     
     // Only check location for clock IN - allow clock out from anywhere
     // Admins bypass location check entirely
-    // Remote workers still need location check on clock-in (to verify remote computer is at work)
+    // Remote workers MUST pass geofence (their remote computer is at the work location)
     if (action === "in" && user?.role !== 'admin') {
       setLocationStatus({ checking: true, withinRange: null, distance: null, denied: false });
       
