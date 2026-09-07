@@ -3,12 +3,14 @@ import uuid
 import base64
 import logging
 import json
+import io
 from datetime import datetime, timezone
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from PIL import Image
 
 import requests as sync_requests
 
@@ -100,6 +102,31 @@ _chat_sessions: dict = {}
 # Max image size: 5MB
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+# Gemini image compression settings
+GEMINI_MAX_DIMENSION = 1024  # px on longest side
+GEMINI_JPEG_QUALITY = 80
+
+
+def compress_image_for_gemini(data: bytes, content_type: str) -> bytes:
+    """Resize and compress an image for efficient Gemini context.
+    Returns JPEG bytes, typically 50-200KB instead of 1-5MB."""
+    try:
+        img = Image.open(io.BytesIO(data))
+        # Convert to RGB (handles PNG transparency, WEBP, etc.)
+        if img.mode in ("RGBA", "P", "LA"):
+            img = img.convert("RGB")
+        # Resize if larger than threshold
+        w, h = img.size
+        if max(w, h) > GEMINI_MAX_DIMENSION:
+            ratio = GEMINI_MAX_DIMENSION / max(w, h)
+            img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=GEMINI_JPEG_QUALITY, optimize=True)
+        return buf.getvalue()
+    except Exception:
+        # If compression fails, return original
+        return data
 
 
 # --- Helpers ---
@@ -270,8 +297,10 @@ async def upload_image(
     }
     await db.ai_images.insert_one(image_doc)
 
-    # Also store base64 for sending to Gemini later
-    b64 = base64.b64encode(data).decode("utf-8")
+    # Compress image for Gemini context (much smaller than original)
+    compressed = compress_image_for_gemini(data, file.content_type)
+    b64 = base64.b64encode(compressed).decode("utf-8")
+    logger.info(f"Image {image_id}: original {len(data)//1024}KB -> compressed {len(compressed)//1024}KB for Gemini")
     await db.ai_images.update_one(
         {"id": image_id},
         {"$set": {"base64_data": b64}},
