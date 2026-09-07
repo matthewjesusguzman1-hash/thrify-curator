@@ -1374,22 +1374,16 @@ export default function EmployeeDashboard({
         console.log('Location error:', error);
         if (error.code === 1) {
           // Permission denied
-          const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-          if (isStandalone || isNativePlatform()) {
-            toast.error("Please enable location for this app in Settings → Privacy → Location Services", { duration: 5000 });
-          } else {
-            toast.error("Location permission denied. Please allow location access.");
-          }
-          setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true });
+          setLocationStatus({ checking: false, withinRange: false, distance: null, denied: true, gpsError: null });
         } else if (error.code === 2) {
-          toast.error("GPS is turned off. Please enable Location Services in your device settings.");
-          setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false });
+          // GPS/Location Services turned off
+          setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false, gpsError: 'disabled' });
         } else if (error.code === 0) {
-          toast.error("Geolocation is not supported");
-          setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false });
+          // Geolocation not supported
+          setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false, gpsError: 'unsupported' });
         } else {
-          toast.error("Location request failed. Please try again.");
-          setLocationStatus({ checking: false, withinRange: false, error: "timeout", denied: false });
+          // Timeout or unknown
+          setLocationStatus({ checking: false, withinRange: false, distance: null, denied: false, gpsError: 'timeout' });
         }
       }
       return; // Exit here - the async code handles the rest
@@ -1982,6 +1976,59 @@ export default function EmployeeDashboard({
                         </div>
                       </details>
                     )}
+                  </div>
+                </div>
+              ) : !isAdminView && locationStatus.gpsError ? (
+                <div className="mb-4 p-4 bg-amber-50 border border-amber-300 rounded-xl" data-testid="gps-error-prompt">
+                  <div className="flex items-center justify-center gap-2 text-amber-700 mb-3">
+                    <MapPin className="w-5 h-5" />
+                    <span className="font-medium">
+                      {locationStatus.gpsError === 'disabled' ? 'Location Services Off' :
+                       locationStatus.gpsError === 'unsupported' ? 'Location Not Available' :
+                       'Location Request Failed'}
+                    </span>
+                  </div>
+
+                  {locationStatus.gpsError === 'disabled' ? (
+                    <div className="text-sm text-gray-700 text-center mb-4 space-y-3">
+                      <p>Location Services must be turned on to verify you're at the work location.</p>
+                      <p className="font-medium text-gray-900">Enable GPS on this computer:</p>
+                      <div className="bg-white/80 rounded-lg p-3 text-left space-y-2 text-xs">
+                        <p className="font-semibold text-gray-800">Mac:</p>
+                        <p><strong>1.</strong> Open <strong>System Settings</strong> (Apple menu → System Settings)</p>
+                        <p><strong>2.</strong> Click <strong>Privacy & Security</strong> → <strong>Location Services</strong></p>
+                        <p><strong>3.</strong> Turn <strong>Location Services ON</strong></p>
+                        <p><strong>4.</strong> Enable location for your browser (Safari / Chrome / Firefox)</p>
+                        <p className="font-semibold text-gray-800 mt-2">Windows:</p>
+                        <p><strong>1.</strong> Open <strong>Settings</strong> → <strong>Privacy</strong> → <strong>Location</strong></p>
+                        <p><strong>2.</strong> Turn <strong>Location</strong> ON</p>
+                        <p><strong>3.</strong> Allow your browser to access location</p>
+                      </div>
+                    </div>
+                  ) : locationStatus.gpsError === 'unsupported' ? (
+                    <div className="text-sm text-gray-700 text-center mb-4">
+                      <p>This browser or device does not support location services.</p>
+                      <p className="mt-2">Try using <strong>Safari</strong> or <strong>Chrome</strong> instead.</p>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-700 text-center mb-4">
+                      <p>Could not get your location. This might be a temporary issue.</p>
+                      <p className="mt-1">Make sure you have an internet connection and GPS is enabled.</p>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col items-center gap-2">
+                    <Button
+                      onClick={() => {
+                        setLocationStatus({ checking: false, withinRange: null, distance: null, denied: false, gpsError: null });
+                        handleClock("in");
+                      }}
+                      className="w-full max-w-xs bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
+                      data-testid="retry-location-btn"
+                    >
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Try Again
+                    </Button>
                   </div>
                 </div>
               ) : locationStatus.checking ? (
