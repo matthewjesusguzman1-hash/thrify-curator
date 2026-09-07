@@ -113,6 +113,18 @@ export default function AIAssistant({ token }) {
     if (lastMsgText) scrollToBottom();
   }, [lastMsgText, scrollToBottom]);
 
+  // Scroll when panel opens or re-opens
+  useEffect(() => {
+    if (isOpen && messages.length > 0) {
+      // Double rAF to wait for panel mount + layout
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          scrollToBottom();
+        });
+      });
+    }
+  }, [isOpen, scrollToBottom]); // eslint-disable-line
+
   // Load conversations
   const loadConversations = useCallback(async () => {
     try {
@@ -148,6 +160,7 @@ export default function AIAssistant({ token }) {
       toast.error("Failed to load conversation");
     } finally {
       setIsLoading(false);
+      requestAnimationFrame(() => requestAnimationFrame(() => scrollToBottom()));
     }
   }, [token]);  
 
