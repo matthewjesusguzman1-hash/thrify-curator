@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timezone
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -245,12 +245,37 @@ async def upload_image(
 
 
 @router.get("/images/{image_id}")
-async def get_image(image_id: str, user: dict = Depends(get_current_user)):
-    """Serve an uploaded image back to the frontend."""
+async def get_image(
+    image_id: str,
+    token: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+):
+    """Serve an uploaded image. Accepts auth via Authorization header or ?token= query param."""
     from fastapi.responses import Response
+    import jwt as pyjwt
+
+    # Resolve token from header or query param
+    auth_token = None
+    if authorization and authorization.startswith("Bearer "):
+        auth_token = authorization[7:]
+    elif token:
+        auth_token = token
+
+    if not auth_token:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    from app.config import JWT_SECRET, JWT_ALGORITHM
+    try:
+        payload = pyjwt.decode(auth_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = payload.get("sub")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
     img = await db.ai_images.find_one(
-        {"id": image_id, "user_id": user["id"], "is_deleted": False}, {"_id": 0}
+        {"id": image_id, "user_id": user_id, "is_deleted": False}, {"_id": 0}
     )
     if not img:
         raise HTTPException(status_code=404, detail="Image not found")

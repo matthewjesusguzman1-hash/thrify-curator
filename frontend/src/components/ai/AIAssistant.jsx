@@ -420,12 +420,17 @@ export default function AIAssistant({ token }) {
   // --- Render helpers ---
   const renderMessage = (msg, idx) => {
     const isUser = msg.role === "user";
+    // Use local previews if available, otherwise build API URLs from stored image_ids
+    const imageSrcs = msg._previews?.length > 0
+      ? msg._previews
+      : (msg.image_ids || []).map((id) => `${API}/api/ai/images/${id}?token=${token}`);
+
     return (
       <div key={idx} className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3 group/msg`} data-testid={`chat-message-${idx}`}>
         <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${isUser ? t.userBubble + " rounded-br-md" : t.aiBubble + " rounded-bl-md"}`}>
-          {isUser && msg._previews?.length > 0 && (
+          {isUser && imageSrcs.length > 0 && (
             <div className="flex gap-1.5 mb-2 flex-wrap">
-              {msg._previews.map((src, i) => (
+              {imageSrcs.map((src, i) => (
                 <img key={i} src={src} alt="attached" className="w-10 h-10 object-cover rounded-lg border border-white/20" />
               ))}
             </div>
