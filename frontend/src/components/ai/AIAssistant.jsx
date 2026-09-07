@@ -73,6 +73,7 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
   const [showHistory, setShowHistory] = useState(false);
   const [showPrompts, setShowPrompts] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState(null);
 
   // Saved prompts state
   const [savedPrompts, setSavedPrompts] = useState([]);
@@ -433,7 +434,7 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
           {isUser && imageSrcs.length > 0 && (
             <div className="flex gap-1.5 mb-2 flex-wrap">
               {imageSrcs.map((src, i) => (
-                <img key={i} src={src} alt="attached" className="w-10 h-10 object-cover rounded-lg border border-white/20" />
+                <img key={i} src={src} alt="attached" onClick={() => setLightboxSrc(src)} className="w-10 h-10 object-cover rounded-lg border border-white/20 cursor-pointer hover:opacity-80 transition-opacity" />
               ))}
             </div>
           )}
@@ -891,6 +892,37 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
             )}
           </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Image lightbox */}
+      <AnimatePresence>
+        {lightboxSrc && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 cursor-pointer"
+            onClick={() => setLightboxSrc(null)}
+            data-testid="image-lightbox"
+          >
+            <motion.img
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              src={lightboxSrc}
+              alt="Full size"
+              className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setLightboxSrc(null)}
+              className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors"
+              data-testid="lightbox-close"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
     </>
