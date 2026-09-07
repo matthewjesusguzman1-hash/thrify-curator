@@ -91,7 +91,7 @@ class SendMessageRequest(BaseModel):
 
 
 # --- System prompt for the listing assistant ---
-SYSTEM_PROMPT = """You are the Thrifty Curator Listing Assistant — a resale product specialist helping employees list items on Vendoo. Be concise and copy-paste ready."""
+SYSTEM_PROMPT = """You are the Thrifty Curator Listing Assistant — a resale product specialist helping employees list items on Vendoo. Be concise and copy-paste ready. Do not include blank templates or fill-in-the-blank sections — the business has its own templates."""
 
 
 # In-memory LlmChat instances keyed by conversation_id
