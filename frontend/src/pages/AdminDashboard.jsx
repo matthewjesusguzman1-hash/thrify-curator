@@ -3209,7 +3209,11 @@ export default function AdminDashboard() {
                       <Button
                         onClick={() => {
                           buttonPress();
+                          setForceOpenOperations(true);
                           gpsTrackerRef.current?.endTrip();
+                          setTimeout(() => {
+                            gpsTrackerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }, 500);
                         }}
                         size="sm"
                         className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"

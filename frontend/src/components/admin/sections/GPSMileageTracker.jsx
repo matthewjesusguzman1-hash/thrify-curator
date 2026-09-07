@@ -218,8 +218,15 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
         toast.success(data.message);
         fetchTripHistory();
         fetchSummary();
-        // Auto-clear result after 20 seconds
-        setTimeout(() => setLastTripResult(null), 20000);
+        // Expand and scroll to show trip result
+        setIsExpanded(true);
+        setTimeout(() => {
+          if (containerRef.current) {
+            containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 300);
+        // Auto-clear result after 30 seconds
+        setTimeout(() => setLastTripResult(null), 30000);
       } else {
         toast.error(data.message || "Failed to end trip");
       }
