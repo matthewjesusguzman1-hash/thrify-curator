@@ -65,7 +65,8 @@ Resale/consignment operations platform with employee/admin management, time trac
 - **Copy button** on every assistant response for easy clipboard copy to Vendoo
 - **Concise responses**: System prompt tuned to give only what's asked — no unsolicited tips, pricing, or extras
 - Streaming responses via SSE (real-time token delivery)
-- **Expandable panel**: Desktop expand/collapse button (75vw expanded, 440px normal)
+- **Expandable panel**: Desktop expand/collapse button — centered, 85vw × 85vh (1100×800 max) for easy reading and copying
+- **Light/dark theme toggle**: Sun/Moon button in both Admin and Employee dashboard headers, persisted in localStorage
 - Conversation history: list, view, delete previous chats
 - Backend: `/api/ai/conversations` CRUD + `/api/ai/upload-image` + `/api/ai/conversations/{id}/messages` (SSE) + `/api/ai/prompts` CRUD
 - User-scoped: employees only see their own conversations and prompts

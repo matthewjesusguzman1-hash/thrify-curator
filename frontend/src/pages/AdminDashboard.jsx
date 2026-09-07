@@ -78,6 +78,7 @@ import { useHaptics } from "@/hooks/useHaptics";
 import LiveActivityService from "@/services/LiveActivityService";
 import GPSMileageTracker from "@/components/admin/sections/GPSMileageTracker";
 import useGPSTracking from "@/hooks/useGPSTracking";
+import { useDashboardTheme } from "@/hooks/useDashboardTheme";
 import PaymentRecordsSection from "@/components/admin/sections/PaymentRecordsSection";
 import PayrollHistorySection from "@/components/admin/sections/PayrollHistorySection";
 import FormSubmissionsSection from "@/components/admin/sections/FormSubmissionsSection";
@@ -281,6 +282,7 @@ export default function AdminDashboard() {
   const [messagesTheme, setMessagesTheme] = useState(() => {
     return localStorage.getItem('thrifty_curator_messages_theme') || 'light';
   });
+  const { isDark, toggleTheme } = useDashboardTheme();
   const [showEmailSettings, setShowEmailSettings] = useState(false);
   const [showSubmissionDetails, setShowSubmissionDetails] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
@@ -2814,7 +2816,7 @@ export default function AdminDashboard() {
   if (!user) return null;
 
   return (
-    <div className="dashboard-container" data-testid="admin-dashboard">
+    <div className="dashboard-container" data-testid="admin-dashboard" data-theme={isDark ? "dark" : "light"}>
       {/* Header - Sticky */}
       <header 
         className="dashboard-header sticky top-0 z-40" 
@@ -3356,6 +3358,19 @@ export default function AdminDashboard() {
                 {adminUnreadMessageCount > 9 ? '9+' : adminUnreadMessageCount}
               </span>
             )}
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => {
+              lightTap();
+              toggleTheme();
+            }}
+            className="text-white/70 hover:text-white hover:bg-white/10 p-3 sm:px-3 sm:py-2"
+            data-testid="dashboard-theme-toggle"
+            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDark ? <Sun className="w-6 h-6 sm:w-4 sm:h-4" /> : <Moon className="w-6 h-6 sm:w-4 sm:h-4" />}
           </Button>
           <Button 
             variant="ghost" 

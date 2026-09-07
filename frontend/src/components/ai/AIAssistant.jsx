@@ -54,13 +54,16 @@ export default function AIAssistant({ token }) {
   const dragCounter = useRef(0);
 
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
 
   const headers = { Authorization: `Bearer ${token}` };
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   }, []);
 
   useEffect(() => {
@@ -271,6 +274,7 @@ export default function AIAssistant({ token }) {
                 }
                 return updated;
               });
+              scrollToBottom();
             }
           } catch { /* partial chunk */ }
         }
@@ -444,10 +448,10 @@ export default function AIAssistant({ token }) {
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className={`fixed z-50 flex flex-col bg-[#0F1A2E] rounded-2xl shadow-2xl border border-white/10 overflow-hidden transition-all duration-300 ${
                 isExpanded
-                  ? "bottom-2 right-2 left-2 sm:left-auto sm:bottom-4 sm:right-4 sm:w-[75vw] sm:max-w-[900px]"
+                  ? "inset-2 sm:inset-auto sm:top-[7vh] sm:left-0 sm:right-0 sm:mx-auto sm:w-[85vw] sm:max-w-[1100px] sm:h-[85vh] sm:max-h-[800px]"
                   : "bottom-2 right-2 left-2 sm:left-auto sm:bottom-4 sm:right-4 sm:w-[440px]"
               }`}
-              style={{ maxHeight: isExpanded ? "min(90vh, 800px)" : "min(85vh, 640px)" }}
+              style={isExpanded ? {} : { maxHeight: "min(85vh, 640px)" }}
               data-testid="ai-assistant-panel"
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
@@ -509,7 +513,7 @@ export default function AIAssistant({ token }) {
             </div>
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto px-3 py-4 relative">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-3 py-4 relative">
               {/* Drag overlay */}
               {isDragging && (
                 <div className="absolute inset-0 z-10 bg-emerald-600/20 border-2 border-dashed border-emerald-400 rounded-xl flex flex-col items-center justify-center backdrop-blur-sm">

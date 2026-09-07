@@ -62,6 +62,7 @@ import FullScreenMessaging from "@/components/FullScreenMessaging";
 import PullToRefresh from "@/components/PullToRefresh";
 import EmployeeWalkthrough, { useEmployeeWalkthrough } from "@/components/employee/EmployeeWalkthrough";
 import AIAssistant from "@/components/ai/AIAssistant";
+import { useDashboardTheme } from "@/hooks/useDashboardTheme";
 
 // Check if running in Capacitor native app
 const isNativePlatform = () => {
@@ -258,6 +259,9 @@ export default function EmployeeDashboard({
   const [messagesTheme, setMessagesTheme] = useState(() => {
     return localStorage.getItem('thrifty_curator_messages_theme') || 'light';
   });
+
+  // Dashboard theme (light/dark)
+  const { isDark, toggleTheme } = useDashboardTheme();
   
   // Check if desktop (for showing company AnyDesk number)
   const [isDesktop, setIsDesktop] = useState(false);
@@ -1558,7 +1562,7 @@ export default function EmployeeDashboard({
   if (!user) return null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="employee-dashboard">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="employee-dashboard" data-theme={isDark ? "dark" : "light"}>
       {/* Header */}
       <header 
         className="bg-[#1A1A2E] border-b border-white/20 px-4 pb-3 flex-shrink-0" 
@@ -1670,6 +1674,19 @@ export default function EmployeeDashboard({
                   title="Show walkthrough"
                 >
                   <HelpCircle className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    lightTap();
+                    toggleTheme();
+                  }}
+                  className="text-white/70 hover:text-white hover:bg-white/10 px-2"
+                  data-testid="dashboard-theme-toggle"
+                  title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+                >
+                  {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </Button>
               </>
             )}
