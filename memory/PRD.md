@@ -24,7 +24,7 @@ Build a resale/consignment operations platform ("Thrifty Curator") with employee
 - AnyDesk remote work monitoring (watcher-based)
 - Mobile wrappers (Capacitor iOS/Android)
 - Night shift / dark mode theme
-- Employee walkthrough/onboarding
+- Employee walkthrough/onboarding (includes AI, Video, Notifications, Timezone steps)
 
 ### AI Listing Assistant (Sep 2026)
 - Gemini 3.7 Flash model (upgraded from 3-flash-preview)
@@ -35,19 +35,21 @@ Build a resale/consignment operations platform ("Thrifty Curator") with employee
 - Gemini-style left sidebar with recent conversations
 - Full-page expanded panel (96vh)
 - Image lightbox (click thumbnail → full size)
-- Voice input via Web Speech API (mic button)
+- Voice input via Web Speech API (mic button) with audio confirmation
 - Simplified system prompt (no over-restrictive rules)
 - Light/dark theme sync
 - Message-level copy
 
 ### GPS Mileage Tracker (Sep 2026)
-- Start/End Trip with browser GPS
+- Start/End Trip buttons with browser GPS
 - OSRM road routing for accurate driving distance
 - Nominatim reverse geocoding for street addresses
 - Business/Personal trip classification toggle
+- Full trip editing: date, miles, purpose, start/end addresses, classification, notes
 - Customizable purpose categories (seeded defaults + CRUD)
-- IRS-compliant CSV export (Date, Start Address, End Address, Miles, Purpose, Classification, Tax Deduction)
-- Voice commands: "start trip" / "end trip"
+- IRS-compliant CSV export (Date, Start Address, End Address, Miles, Purpose, Classification, Tax Deduction, Notes)
+- Voice commands: "start trip" / "end trip" with audio confirmation beep
+- Siri Shortcuts setup guide (collapsible section in mileage tracker)
 - Manual trip entry (kept from original)
 - Trip history with hierarchical views (today/month/year)
 - Mileage adjustments and summaries
@@ -61,8 +63,7 @@ Build a resale/consignment operations platform ("Thrifty Curator") with employee
 - Mileage tracker GPS accuracy on real device
 
 ### P1
-- Trip purpose edit after logging
-- Category manager settings panel
+- Category manager settings panel (add/edit/delete in UI)
 - Response latency optimization
 - AnyDesk production validation
 - Daily.co cross-device calls/recordings

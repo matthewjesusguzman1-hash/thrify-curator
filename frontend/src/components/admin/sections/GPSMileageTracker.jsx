@@ -286,12 +286,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     setQuickTripLoading(true);
     try {
       const pos = await getGPSPosition();
-      const headers = getAuthHeader();
       const { data } = await axios.post(`${API}/admin/gps-trips/log-drive`, {
         latitude: pos.latitude,
         longitude: pos.longitude,
         event: "start",
-      }, { headers });
+      }, getAuthHeader());
       if (data.success) {
         setQuickTripActive(true);
         setQuickTripId(data.trip_id);
@@ -313,12 +312,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     setQuickTripLoading(true);
     try {
       const pos = await getGPSPosition();
-      const headers = getAuthHeader();
       const { data } = await axios.post(`${API}/admin/gps-trips/log-drive`, {
         latitude: pos.latitude,
         longitude: pos.longitude,
         event: "end",
-      }, { headers });
+      }, getAuthHeader());
       if (data.success) {
         setQuickTripActive(false);
         setQuickTripId(null);
@@ -338,16 +336,14 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
 
   const fetchCategories = useCallback(async () => {
     try {
-      const headers = getAuthHeader();
-      const { data } = await axios.get(`${API}/admin/gps-trips/categories`, { headers });
+      const { data } = await axios.get(`${API}/admin/gps-trips/categories`, getAuthHeader());
       setCategories(data.categories || []);
     } catch {}
   }, [getAuthHeader]);
 
   const handleExportCSV = async () => {
     try {
-      const headers = getAuthHeader();
-      const resp = await axios.get(`${API}/admin/gps-trips/export-csv`, { headers, responseType: "blob" });
+      const resp = await axios.get(`${API}/admin/gps-trips/export-csv`, { ...getAuthHeader(), responseType: "blob" });
       const url = URL.createObjectURL(resp.data);
       const a = document.createElement("a");
       a.href = url;
@@ -362,8 +358,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
 
   const handleClassifyTrip = async (tripId, classification) => {
     try {
-      const headers = getAuthHeader();
-      await axios.put(`${API}/admin/gps-trips/${tripId}/classify?classification=${classification}`, {}, { headers });
+      await axios.put(`${API}/admin/gps-trips/${tripId}/classify?classification=${classification}`, {}, getAuthHeader());
       fetchTripHistory();
       toast.success(`Trip marked as ${classification}`);
     } catch {
@@ -375,8 +370,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   useEffect(() => {
     const checkPending = async () => {
       try {
-        const headers = getAuthHeader();
-        const { data } = await axios.get(`${API}/admin/gps-trips/active`, { headers });
+        const { data } = await axios.get(`${API}/admin/gps-trips/active`, getAuthHeader());
         if (data && data.is_bluetooth && data.status === "active") {
           setQuickTripActive(true);
           setQuickTripId(data.id);
@@ -1188,7 +1182,10 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       date: trip.start_time ? trip.start_time.split('T')[0] : new Date().toISOString().split('T')[0],
       miles: trip.total_miles?.toString() || "",
       purpose: trip.purpose || "",
-      notes: trip.notes || ""
+      notes: trip.notes || "",
+      start_address: trip.start_address || "",
+      end_address: trip.end_address || "",
+      classification: trip.classification || "business",
     });
   };
 
@@ -1214,7 +1211,10 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
           date: editTripData.date,
           total_miles: parseFloat(editTripData.miles),
           purpose: editTripData.purpose,
-          notes: editTripData.purpose === "other" ? editTripData.notes : null
+          notes: editTripData.notes || null,
+          start_address: editTripData.start_address || null,
+          end_address: editTripData.end_address || null,
+          classification: editTripData.classification || "business",
         },
         getAuthHeader()
       );
@@ -1222,7 +1222,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       if (response.data.success) {
         toast.success("Trip updated successfully");
         setEditingTrip(null);
-        setEditTripData({ date: "", miles: "", purpose: "", notes: "" });
+        setEditTripData({ date: "", miles: "", purpose: "", notes: "", start_address: "", end_address: "", classification: "business" });
         
         // Refresh data
         await fetchTripHistory();
@@ -1239,7 +1239,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   // Cancel editing
   const handleCancelEdit = () => {
     setEditingTrip(null);
-    setEditTripData({ date: "", miles: "", purpose: "", notes: "" });
+    setEditTripData({ date: "", miles: "", purpose: "", notes: "", start_address: "", end_address: "", classification: "business" });
   };
 
   // Handle mileage adjustment
@@ -1471,6 +1471,50 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                   </button>
                 )}
               </div>
+
+              {/* Siri Shortcuts Guide */}
+              <details className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <summary className="p-3 cursor-pointer text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2 select-none" data-testid="siri-shortcuts-guide">
+                  <Mic className="w-4 h-4 text-purple-500" />
+                  Hands-free: Set up Siri Shortcuts
+                  <ChevronDown className="w-4 h-4 ml-auto text-gray-400" />
+                </summary>
+                <div className="p-4 pt-0 text-sm text-gray-600 space-y-3 border-t border-gray-100">
+                  <p className="text-xs text-gray-500">Track trips automatically with "Hey Siri, start trip" — no need to open the app.</p>
+                  
+                  <div className="space-y-2">
+                    <p className="font-medium text-gray-800">Setup (one time):</p>
+                    <ol className="list-decimal list-inside space-y-1.5 text-xs">
+                      <li>Open the <strong>Shortcuts</strong> app on your iPhone</li>
+                      <li>Tap <strong>+</strong> to create a new shortcut</li>
+                      <li>Add action: <strong>Get Current Location</strong></li>
+                      <li>Add action: <strong>Get Contents of URL</strong>
+                        <ul className="list-disc list-inside ml-4 mt-1 text-gray-500 space-y-0.5">
+                          <li>URL: <code className="bg-gray-100 px-1 rounded text-xs break-all">{window.location.origin}/api/admin/gps-trips/log-drive</code></li>
+                          <li>Method: <strong>POST</strong></li>
+                          <li>Headers: <code className="bg-gray-100 px-1 rounded">Authorization</code> = <code className="bg-gray-100 px-1 rounded">Bearer [your token]</code></li>
+                          <li>Body (JSON): <code className="bg-gray-100 px-1 rounded">latitude</code>, <code className="bg-gray-100 px-1 rounded">longitude</code>, <code className="bg-gray-100 px-1 rounded">event</code> = "start"</li>
+                        </ul>
+                      </li>
+                      <li>Name it <strong>"Start Trip"</strong></li>
+                      <li>Duplicate and change event to <strong>"end"</strong>, name it <strong>"End Trip"</strong></li>
+                    </ol>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="font-medium text-gray-800">Optional: Auto-trigger on Bluetooth</p>
+                    <ol className="list-decimal list-inside space-y-1 text-xs">
+                      <li>Go to Shortcuts → <strong>Automation</strong> tab</li>
+                      <li>Tap <strong>+</strong> → <strong>Bluetooth</strong></li>
+                      <li>Select your car's Bluetooth → <strong>When I Connect</strong></li>
+                      <li>Run the "Start Trip" shortcut</li>
+                      <li>Repeat for <strong>When I Disconnect</strong> → "End Trip"</li>
+                    </ol>
+                  </div>
+
+                  <p className="text-xs text-gray-400">Tip: Say "Hey Siri, start trip" from your lock screen, CarPlay, or AirPods.</p>
+                </div>
+              </details>
 
               {/* Active Trip Panel (old GPS tracking) */}
               {(activeTrip || showCompletionForm) && (
@@ -2395,20 +2439,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       {editingTrip && ReactDOM.createPortal(
         <div
           style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 999999,
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'center',
-            padding: '16px',
-            paddingTop: '60px',
-            overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch'
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 999999, backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+            padding: '16px', paddingTop: '40px',
+            overflowY: 'auto', WebkitOverflowScrolling: 'touch'
           }}
           onClick={handleCancelEdit}
         >
@@ -2416,13 +2451,10 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
             initial={{ scale: 0.95, opacity: 0, y: -10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             style={{
-              backgroundColor: 'white',
-              borderRadius: '16px',
+              backgroundColor: 'white', borderRadius: '16px',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-              maxWidth: '400px',
-              width: '100%',
-              maxHeight: 'calc(100vh - 100px)',
-              overflowY: 'auto',
+              maxWidth: '440px', width: '100%',
+              maxHeight: 'calc(100vh - 80px)', overflowY: 'auto',
               WebkitOverflowScrolling: 'touch'
             }}
             onClick={(e) => e.stopPropagation()}
@@ -2432,10 +2464,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                 <Pencil className="w-5 h-5 text-blue-600" />
                 Edit Trip
               </h3>
-              <button
-                onClick={handleCancelEdit}
-                className="text-gray-400 hover:text-gray-600"
-              >
+              <button onClick={handleCancelEdit} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -2444,46 +2473,56 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                 {/* Date */}
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Trip Date</Label>
-                  <Input
-                    type="date"
-                    value={editTripData.date}
-                    onChange={(e) => setEditTripData(prev => ({ ...prev, date: e.target.value }))}
-                    max={new Date().toISOString().split('T')[0]}
-                    className="mt-1"
-                    data-testid="edit-trip-date"
-                  />
+                  <Input type="date" value={editTripData.date} onChange={(e) => setEditTripData(prev => ({ ...prev, date: e.target.value }))} max={new Date().toISOString().split('T')[0]} className="mt-1" data-testid="edit-trip-date" />
+                </div>
+
+                {/* Start Address */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-green-500" /> Start Address
+                  </Label>
+                  <Input value={editTripData.start_address || ""} onChange={(e) => setEditTripData(prev => ({ ...prev, start_address: e.target.value }))} placeholder="e.g. 123 Main St, City, State" className="mt-1" data-testid="edit-trip-start-address" />
+                </div>
+
+                {/* End Address */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-red-500" /> End Address
+                  </Label>
+                  <Input value={editTripData.end_address || ""} onChange={(e) => setEditTripData(prev => ({ ...prev, end_address: e.target.value }))} placeholder="e.g. 456 Oak Ave, City, State" className="mt-1" data-testid="edit-trip-end-address" />
                 </div>
                 
                 {/* Miles */}
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Miles Driven</Label>
                   <div className="relative mt-1">
-                    <Input
-                      type="number"
-                      step="0.1"
-                      min="0.1"
-                      max="1000"
-                      value={editTripData.miles}
-                      onChange={(e) => setEditTripData(prev => ({ ...prev, miles: e.target.value }))}
-                      className="pr-16"
-                      data-testid="edit-trip-miles"
-                    />
+                    <Input type="number" step="0.1" min="0.1" max="1000" value={editTripData.miles} onChange={(e) => setEditTripData(prev => ({ ...prev, miles: e.target.value }))} className="pr-16" data-testid="edit-trip-miles" />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">miles</span>
                   </div>
                   {editTripData.miles && parseFloat(editTripData.miles) > 0 && (
-                    <p className="text-xs text-green-600 mt-1">
-                      Tax Deduction: ${(parseFloat(editTripData.miles) * IRS_RATE_2026).toFixed(2)}
+                    <p className={`text-xs mt-1 ${(editTripData.classification || "business") === "business" ? "text-green-600" : "text-gray-400"}`}>
+                      Tax Deduction: ${((editTripData.classification || "business") === "business" ? (parseFloat(editTripData.miles) * IRS_RATE_2026).toFixed(2) : "0.00")}
                     </p>
                   )}
+                </div>
+
+                {/* Classification */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Classification</Label>
+                  <div className="flex gap-2 mt-1">
+                    <button type="button" onClick={() => setEditTripData(prev => ({ ...prev, classification: "business" }))} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${(editTripData.classification || "business") === "business" ? "bg-green-100 text-green-700 border-2 border-green-300" : "bg-gray-50 text-gray-500 border border-gray-200"}`} data-testid="edit-trip-business-btn">
+                      Business
+                    </button>
+                    <button type="button" onClick={() => setEditTripData(prev => ({ ...prev, classification: "personal" }))} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${(editTripData.classification || "business") !== "business" ? "bg-gray-200 text-gray-700 border-2 border-gray-400" : "bg-gray-50 text-gray-500 border border-gray-200"}`} data-testid="edit-trip-personal-btn">
+                      Personal
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Purpose */}
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Trip Purpose</Label>
-                  <Select
-                    value={editTripData.purpose}
-                    onValueChange={(value) => setEditTripData(prev => ({ ...prev, purpose: value }))}
-                  >
+                  <Select value={editTripData.purpose} onValueChange={(value) => setEditTripData(prev => ({ ...prev, purpose: value }))}>
                     <SelectTrigger className="mt-1" data-testid="edit-trip-purpose">
                       <SelectValue placeholder="Select purpose..." />
                     </SelectTrigger>
@@ -2500,54 +2539,20 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                   </Select>
                 </div>
                 
-                {/* Notes (for "Other" purpose) */}
-                {editTripData.purpose === "other" && (
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">Trip Notes</Label>
-                    <Textarea
-                      value={editTripData.notes}
-                      onChange={(e) => setEditTripData(prev => ({ ...prev, notes: e.target.value }))}
-                      placeholder="Describe the purpose of this trip..."
-                      className="mt-1"
-                      rows={2}
-                      data-testid="edit-trip-notes"
-                    />
-                  </div>
-                )}
-                
-                {/* GPS Info */}
-                {editingTrip.location_count > 0 && (
-                  <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
-                    <p>This trip has {editingTrip.location_count} GPS points recorded.</p>
-                    <p className="text-xs text-gray-400 mt-1">GPS data cannot be edited.</p>
-                  </div>
-                )}
+                {/* Notes (always visible) */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Notes</Label>
+                  <Textarea value={editTripData.notes || ""} onChange={(e) => setEditTripData(prev => ({ ...prev, notes: e.target.value }))} placeholder="Optional trip notes..." className="mt-1" rows={2} data-testid="edit-trip-notes" />
+                </div>
                 
                 {/* Buttons */}
                 <div className="flex gap-2 pt-2">
-                  <Button
-                    onClick={handleCancelEdit}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSaveEditTrip}
-                    disabled={savingEdit || !editTripData.miles || !editTripData.purpose}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                    data-testid="save-edit-trip-btn"
-                  >
+                  <Button onClick={handleCancelEdit} variant="outline" className="flex-1">Cancel</Button>
+                  <Button onClick={handleSaveEditTrip} disabled={savingEdit || !editTripData.miles || !editTripData.purpose} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" data-testid="save-edit-trip-btn">
                     {savingEdit ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Saving...
-                      </>
+                      <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>Saving...</>
                     ) : (
-                      <>
-                        <Check className="w-4 h-4 mr-2" />
-                        Save Changes
-                      </>
+                      <><Check className="w-4 h-4 mr-2" />Save Changes</>
                     )}
                   </Button>
                 </div>
