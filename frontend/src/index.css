@@ -524,6 +524,7 @@ table tbody tr:hover {
     padding: 3.5rem 0.75rem 0.75rem 0.75rem;
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     gap: 0.5rem;
     justify-content: space-between;
     align-items: center;

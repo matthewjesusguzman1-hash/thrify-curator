@@ -3003,8 +3003,8 @@ export default function AdminDashboard() {
         </div>
 
         {/* Right side: Navigation icons */}
-        <div className="flex items-center gap-0.5 sm:gap-2">
-          <Link to="/" onClick={() => lightTap()} className="hidden sm:block">
+        <div className="flex items-center gap-0.5 sm:gap-2 w-full sm:w-auto justify-center sm:justify-end">
+          <Link to="/" onClick={() => lightTap()}>
             <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 p-2 sm:px-3 sm:py-2" data-testid="home-btn" title="Home">
               <Home className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-1" />
               <span className="hidden sm:inline">Home</span>
@@ -3014,7 +3014,7 @@ export default function AdminDashboard() {
           <Button
             variant="ghost"
             size="sm"
-            className="hidden sm:flex text-white/70 hover:text-white hover:bg-white/10 p-2 sm:px-3 sm:py-2 relative"
+            className="text-white/70 hover:text-white hover:bg-white/10 p-2 sm:px-3 sm:py-2 relative"
             onClick={() => { lightTap(); navigate("/remote-sessions"); }}
             data-testid="remote-sessions-header-btn"
             title="Remote Sessions"
@@ -3033,7 +3033,7 @@ export default function AdminDashboard() {
           <Button
             variant="ghost"
             size="sm"
-            className="hidden sm:flex text-white/70 hover:text-white hover:bg-white/10 p-2 sm:px-3 sm:py-2 relative"
+            className="text-white/70 hover:text-white hover:bg-white/10 p-2 sm:px-3 sm:py-2 relative"
             onClick={() => { lightTap(); navigate("/video-calls"); }}
             data-testid="video-calls-header-btn"
             title="Video Calls"
