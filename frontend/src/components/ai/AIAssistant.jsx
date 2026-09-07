@@ -16,6 +16,8 @@ import {
   Upload,
   Copy,
   CheckCheck,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -47,6 +49,8 @@ export default function AIAssistant({ token }) {
   // Drag-and-drop state
   const [isDragging, setIsDragging] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [uploadingCount, setUploadingCount] = useState(0);
   const dragCounter = useRef(0);
 
   const messagesEndRef = useRef(null);
@@ -125,6 +129,7 @@ export default function AIAssistant({ token }) {
 
   // --- Image handling (file picker + drag-and-drop) ---
   const processFiles = async (files) => {
+    const validFiles = [];
     for (const file of files) {
       if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
         toast.error(`${file.name}: Only JPEG, PNG, WEBP allowed`);
@@ -134,20 +139,34 @@ export default function AIAssistant({ token }) {
         toast.error(`${file.name}: Must be under 5MB`);
         continue;
       }
+      validFiles.push(file);
+    }
+    if (!validFiles.length) return;
+
+    setUploadingCount(validFiles.length);
+
+    // Upload all valid files in parallel
+    const uploads = validFiles.map(async (file) => {
       const formData = new FormData();
       formData.append("file", file);
       try {
         const { data } = await axios.post(`${API}/api/ai/upload-image`, formData, {
           headers: { ...headers, "Content-Type": "multipart/form-data" },
         });
-        setPendingImages((prev) => [
-          ...prev,
-          { id: data.id, name: file.name, preview: URL.createObjectURL(file) },
-        ]);
+        return { id: data.id, name: file.name, preview: URL.createObjectURL(file) };
       } catch {
         toast.error(`Failed to upload ${file.name}`);
+        return null;
       }
+    });
+
+    const results = await Promise.all(uploads);
+    const successful = results.filter(Boolean);
+    if (successful.length) {
+      setPendingImages((prev) => [...prev, ...successful]);
+      if (successful.length > 1) toast.success(`${successful.length} images uploaded`);
     }
+    setUploadingCount(0);
   };
 
   const handleImageUpload = async (e) => {
@@ -345,9 +364,9 @@ export default function AIAssistant({ token }) {
       <div key={idx} className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3 group/msg`} data-testid={`chat-message-${idx}`}>
         <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${isUser ? "bg-emerald-600 text-white rounded-br-md" : "bg-white/10 text-white/90 rounded-bl-md"}`}>
           {isUser && msg._previews?.length > 0 && (
-            <div className="flex gap-2 mb-2 flex-wrap">
+            <div className={`grid gap-1.5 mb-2 ${msg._previews.length === 1 ? "grid-cols-1" : msg._previews.length <= 4 ? "grid-cols-2" : "grid-cols-3"}`}>
               {msg._previews.map((src, i) => (
-                <img key={i} src={src} alt="attached" className="w-16 h-16 object-cover rounded-lg border border-white/20" />
+                <img key={i} src={src} alt="attached" className="w-full aspect-square object-cover rounded-lg border border-white/20" />
               ))}
             </div>
           )}
@@ -423,8 +442,12 @@ export default function AIAssistant({ token }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 40, scale: 0.95 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed bottom-2 right-2 left-2 sm:left-auto sm:bottom-4 sm:right-4 sm:w-[440px] z-50 flex flex-col bg-[#0F1A2E] rounded-2xl shadow-2xl border border-white/10 overflow-hidden"
-              style={{ maxHeight: "min(85vh, 640px)" }}
+              className={`fixed z-50 flex flex-col bg-[#0F1A2E] rounded-2xl shadow-2xl border border-white/10 overflow-hidden transition-all duration-300 ${
+                isExpanded
+                  ? "bottom-2 right-2 left-2 sm:left-auto sm:bottom-4 sm:right-4 sm:w-[75vw] sm:max-w-[900px]"
+                  : "bottom-2 right-2 left-2 sm:left-auto sm:bottom-4 sm:right-4 sm:w-[440px]"
+              }`}
+              style={{ maxHeight: isExpanded ? "min(90vh, 800px)" : "min(85vh, 640px)" }}
               data-testid="ai-assistant-panel"
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
@@ -470,6 +493,14 @@ export default function AIAssistant({ token }) {
                 </button>
                 <button onClick={startNewChat} className="text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/5" title="New chat" data-testid="ai-new-chat-btn">
                   <Plus className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setIsExpanded((v) => !v)}
+                  className="hidden sm:flex text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/5"
+                  title={isExpanded ? "Collapse" : "Expand"}
+                  data-testid="ai-expand-btn"
+                >
+                  {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </button>
                 <button onClick={() => setIsOpen(false)} className="text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/5" data-testid="ai-close-btn">
                   <X className="w-4 h-4" />
@@ -626,16 +657,41 @@ export default function AIAssistant({ token }) {
             </div>
 
             {/* Pending images strip */}
-            {pendingImages.length > 0 && (
-              <div className="px-3 py-2 border-t border-white/5 flex gap-2 overflow-x-auto shrink-0">
-                {pendingImages.map((img) => (
-                  <div key={img.id} className="relative shrink-0">
-                    <img src={img.preview} alt={img.name} className="w-14 h-14 object-cover rounded-lg border border-white/10" />
-                    <button onClick={() => removePendingImage(img.id)} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                      <X className="w-2.5 h-2.5 text-white" />
-                    </button>
-                  </div>
-                ))}
+            {(pendingImages.length > 0 || uploadingCount > 0) && (
+              <div className="px-3 py-2 border-t border-white/5 shrink-0">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <ImageIcon className="w-3.5 h-3.5 text-white/30" />
+                  <span className="text-white/40 text-[11px]">
+                    {pendingImages.length} image{pendingImages.length !== 1 ? "s" : ""} attached
+                    {uploadingCount > 0 && ` · uploading ${uploadingCount}...`}
+                  </span>
+                </div>
+                <div className="flex gap-2 flex-wrap max-h-28 overflow-y-auto">
+                  {pendingImages.map((img) => (
+                    <div key={img.id} className="relative shrink-0 group/img">
+                      <img src={img.preview} alt={img.name} className="w-14 h-14 object-cover rounded-lg border border-white/10" />
+                      <button
+                        onClick={() => removePendingImage(img.id)}
+                        className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover/img:opacity-100 sm:opacity-100 transition-opacity"
+                      >
+                        <X className="w-2.5 h-2.5 text-white" />
+                      </button>
+                    </div>
+                  ))}
+                  {uploadingCount > 0 && (
+                    <div className="w-14 h-14 rounded-lg border border-dashed border-white/20 flex items-center justify-center">
+                      <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-14 h-14 rounded-lg border border-dashed border-white/15 flex items-center justify-center text-white/25 hover:text-emerald-400 hover:border-emerald-500/30 transition-colors"
+                    title="Add more images"
+                    data-testid="ai-add-more-images"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             )}
 
