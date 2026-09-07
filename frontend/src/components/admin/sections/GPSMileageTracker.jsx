@@ -1364,17 +1364,15 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 bg-gradient-to-r from-[#10B981] to-[#059669] rounded-xl flex items-center justify-center ${trackingStatus === "tracking" ? "animate-pulse" : ""}`}>
+          <div className={`w-10 h-10 bg-gradient-to-r from-[#10B981] to-[#059669] rounded-xl flex items-center justify-center ${quickTripActive ? "animate-pulse" : ""}`}>
             <Navigation className="w-5 h-5 text-white" />
           </div>
           <div>
             <h3 className="font-semibold text-[#333]">GPS Mileage Tracker</h3>
             <p className="text-xs text-[#888]">
-              {activeTrip ? (
-                <span className={`font-medium ${trackingStatus === "completing" ? "text-amber-600" : "text-green-600"}`}>
-                  {trackingStatus === "paused" ? "Trip paused" : 
-                   trackingStatus === "completing" ? "Complete your trip below" :
-                   "Tracking active"} • {activeTrip.total_miles?.toFixed(2) || "0.00"} mi
+              {quickTripActive ? (
+                <span className="font-medium text-green-600">
+                  Trip in progress • {quickTripStartAddr || "Getting location..."}
                 </span>
               ) : summary ? (
                 <span>
@@ -1390,7 +1388,27 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
         </div>
         
         <div className="flex items-center gap-2">
-          {/* Hide quick action buttons since we have header buttons */}
+          {/* Quick Start/End button in header */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className={quickTripActive ? "text-red-500 hover:text-red-600 hover:bg-red-50" : "text-green-600 hover:text-green-700 hover:bg-green-50"}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (quickTripActive) handleQuickEnd();
+              else handleQuickStart();
+            }}
+            disabled={quickTripLoading}
+            data-testid="header-trip-btn"
+          >
+            {quickTripLoading ? (
+              <Loader className="w-4 h-4 animate-spin" />
+            ) : quickTripActive ? (
+              <><Square className="w-4 h-4 mr-1" /> End</>
+            ) : (
+              <><Play className="w-4 h-4 mr-1" /> Start</>
+            )}
+          </Button>
           <Button variant="ghost" size="sm" className="text-[#888]">
             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </Button>
