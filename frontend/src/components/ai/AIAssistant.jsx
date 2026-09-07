@@ -575,70 +575,129 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
               </div>
             </div>
 
-            {/* Body */}
-            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-3 py-4 relative">
-              {/* Drag overlay */}
-              {isDragging && (
-                <div className={`absolute inset-0 z-10 ${t.dragOverlay} border-2 border-dashed rounded-xl flex flex-col items-center justify-center backdrop-blur-sm`}>
-                  <Upload className="w-10 h-10 text-emerald-400 mb-2" />
-                  <p className="text-emerald-300 font-medium text-sm">Drop images here</p>
-                  <p className="text-emerald-300/60 text-xs mt-1">JPEG, PNG, WEBP up to 5MB</p>
+            {/* Body — flex row when expanded (sidebar + chat), single col when compact */}
+            <div className={`flex-1 flex ${isExpanded ? "flex-row" : "flex-col"} overflow-hidden`}>
+              {/* Left sidebar — recent conversations (expanded mode only) */}
+              {isExpanded && (
+                <div className={`w-[220px] shrink-0 border-r ${isDark ? "border-white/10" : "border-gray-200"} overflow-y-auto`} data-testid="ai-sidebar">
+                  <div className="p-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className={`${t.textMuted} text-xs font-semibold uppercase tracking-wider`}>Recent</p>
+                      <button onClick={startNewChat} className={`${t.iconBtn} p-1 rounded`} title="New chat" data-testid="sidebar-new-chat">
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      {conversations.length === 0 ? (
+                        <p className={`${t.textDim} text-xs text-center py-4`}>No chats yet</p>
+                      ) : conversations.map((c) => (
+                        <div
+                          key={c.id}
+                          onClick={() => openConversation(c.id)}
+                          className={`flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-colors group ${
+                            activeConvId === c.id
+                              ? isDark ? "bg-emerald-600/20 text-emerald-300" : "bg-emerald-50 text-emerald-700"
+                              : `${t.cardHover}`
+                          }`}
+                          data-testid={`sidebar-conv-${c.id}`}
+                        >
+                          <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${activeConvId === c.id ? "" : t.textDim}`} />
+                          <div className="min-w-0 flex-1">
+                            <p className={`text-xs font-medium truncate ${activeConvId === c.id ? "" : t.text}`}>{c.title}</p>
+                          </div>
+                          <button
+                            onClick={(e) => deleteConversation(c.id, e)}
+                            className={`${t.textFaint} hover:text-red-400 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0`}
+                            data-testid={`sidebar-delete-${c.id}`}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    {conversations.length > 0 && (
+                      <button
+                        onClick={async () => {
+                          if (!window.confirm("Delete all conversations?")) return;
+                          for (const c of conversations) {
+                            try { await axios.delete(`${API}/api/ai/conversations/${c.id}`, { headers }); } catch {}
+                          }
+                          setActiveConvId(null);
+                          setMessages([]);
+                          loadConversations();
+                          toast.success("All chats cleared");
+                        }}
+                        className={`w-full text-center py-2 mt-3 text-[10px] text-red-400/60 hover:text-red-400 transition-colors`}
+                        data-testid="sidebar-clear-all"
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
+              {/* Main content area */}
+              <div ref={messagesContainerRef} className={`flex-1 overflow-y-auto px-3 py-4 relative ${isExpanded ? "min-w-0" : ""}`}>
+                {/* Drag overlay */}
+                {isDragging && (
+                  <div className={`absolute inset-0 z-10 ${t.dragOverlay} border-2 border-dashed rounded-xl flex flex-col items-center justify-center backdrop-blur-sm`}>
+                    <Upload className="w-10 h-10 text-emerald-400 mb-2" />
+                    <p className="text-emerald-300 font-medium text-sm">Drop images here</p>
+                    <p className="text-emerald-300/60 text-xs mt-1">JPEG, PNG, WEBP up to 5MB</p>
+                  </div>
+                )}
 
-              {showPrompts ? (
-                /* ---- Saved Prompts Manager ---- */
-                <div className="space-y-3">
-                  {/* Add new prompt */}
-                  {isAddingPrompt ? (
-                    <div className={`p-3 rounded-xl ${t.card} space-y-2`}>
-                      <input
-                        value={newPromptLabel}
-                        onChange={(e) => setNewPromptLabel(e.target.value)}
-                        placeholder="Prompt name (e.g. 'Vintage Denim')"
-                        className={`w-full ${t.input} rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500/40`}
-                        data-testid="new-prompt-label-input"
-                      />
-                      <textarea
-                        value={newPromptText}
-                        onChange={(e) => setNewPromptText(e.target.value)}
-                        placeholder="Prompt text that will be sent to the assistant..."
-                        rows={3}
-                        className={`w-full ${t.input} rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-emerald-500/40`}
-                        data-testid="new-prompt-text-input"
-                      />
-                      <div className="flex gap-2 justify-end">
-                        <button onClick={() => { setIsAddingPrompt(false); setNewPromptLabel(""); setNewPromptText(""); }} className={`px-3 py-1.5 rounded-lg ${t.textDim} text-xs ${t.cardHover}`}>Cancel</button>
-                        <button onClick={saveNewPrompt} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs hover:bg-emerald-500" data-testid="save-new-prompt-btn">Save</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setIsAddingPrompt(true)}
-                      className={`w-full p-3 rounded-xl border border-dashed ${isDark ? "border-white/20 text-white/50" : "border-gray-300 text-gray-400"} text-sm hover:border-emerald-500/40 hover:text-emerald-300 transition-colors flex items-center justify-center gap-2`}
-                      data-testid="add-prompt-btn"
-                    >
-                      <Plus className="w-4 h-4" /> Create New Prompt
-                    </button>
-                  )}
-
-                  {savedPrompts.length === 0 && !isAddingPrompt && (
-                    <p className={`${t.textFaint} text-sm text-center mt-6`}>No saved prompts yet. Create one to use it with a single tap.</p>
-                  )}
-
-                  {savedPrompts.map((p) => (
-                    <div key={p.id} className={`p-3 rounded-xl ${t.card} ${t.cardHover} transition-colors group`} data-testid={`prompt-item-${p.id}`}>
-                      {editingPromptId === p.id ? (
-                        <div className="space-y-2">
-                          <input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} className={`w-full ${t.input} rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-emerald-500/40`} data-testid="edit-prompt-label-input" />
-                          <textarea value={editText} onChange={(e) => setEditText(e.target.value)} rows={3} className={`w-full ${t.input} rounded-lg px-3 py-1.5 text-sm resize-none focus:outline-none focus:border-emerald-500/40`} data-testid="edit-prompt-text-input" />
-                          <div className="flex gap-2 justify-end">
-                            <button onClick={() => setEditingPromptId(null)} className={`px-2 py-1 ${t.textDim} text-xs ${t.cardHover} rounded`}>Cancel</button>
-                            <button onClick={() => updatePrompt(p.id)} className="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-500" data-testid="confirm-edit-prompt-btn"><Check className="w-3 h-3" /></button>
-                          </div>
+                {showPrompts && !isExpanded ? (
+                  /* ---- Saved Prompts Manager (compact mode only — expanded shows inline) ---- */
+                  <div className="space-y-3">
+                    {isAddingPrompt ? (
+                      <div className={`p-3 rounded-xl ${t.card} space-y-2`}>
+                        <input
+                          value={newPromptLabel}
+                          onChange={(e) => setNewPromptLabel(e.target.value)}
+                          placeholder="Prompt name (e.g. 'Vintage Denim')"
+                          className={`w-full ${t.input} rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500/40`}
+                          data-testid="new-prompt-label-input"
+                        />
+                        <textarea
+                          value={newPromptText}
+                          onChange={(e) => setNewPromptText(e.target.value)}
+                          placeholder="Prompt text that will be sent to the assistant..."
+                          rows={3}
+                          className={`w-full ${t.input} rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-emerald-500/40`}
+                          data-testid="new-prompt-text-input"
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={() => { setIsAddingPrompt(false); setNewPromptLabel(""); setNewPromptText(""); }} className={`px-3 py-1.5 rounded-lg ${t.textDim} text-xs ${t.cardHover}`}>Cancel</button>
+                          <button onClick={saveNewPrompt} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs hover:bg-emerald-500" data-testid="save-new-prompt-btn">Save</button>
                         </div>
-                      ) : (
-                        <>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setIsAddingPrompt(true)}
+                        className={`w-full p-3 rounded-xl border border-dashed ${isDark ? "border-white/20 text-white/50" : "border-gray-300 text-gray-400"} text-sm hover:border-emerald-500/40 hover:text-emerald-300 transition-colors flex items-center justify-center gap-2`}
+                        data-testid="add-prompt-btn"
+                      >
+                        <Plus className="w-4 h-4" /> Create New Prompt
+                      </button>
+                    )}
+
+                    {savedPrompts.length === 0 && !isAddingPrompt && (
+                      <p className={`${t.textFaint} text-sm text-center mt-6`}>No saved prompts yet. Create one to use it with a single tap.</p>
+                    )}
+
+                    {savedPrompts.map((p) => (
+                      <div key={p.id} className={`p-3 rounded-xl ${t.card} ${t.cardHover} transition-colors group`} data-testid={`prompt-item-${p.id}`}>
+                        {editingPromptId === p.id ? (
+                          <div className="space-y-2">
+                            <input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} className={`w-full ${t.input} rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-emerald-500/40`} data-testid="edit-prompt-label-input" />
+                            <textarea value={editText} onChange={(e) => setEditText(e.target.value)} rows={3} className={`w-full ${t.input} rounded-lg px-3 py-1.5 text-sm resize-none focus:outline-none focus:border-emerald-500/40`} data-testid="edit-prompt-text-input" />
+                            <div className="flex gap-2 justify-end">
+                              <button onClick={() => setEditingPromptId(null)} className={`px-2 py-1 ${t.textDim} text-xs ${t.cardHover} rounded`}>Cancel</button>
+                              <button onClick={() => updatePrompt(p.id)} className="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-500" data-testid="confirm-edit-prompt-btn"><Check className="w-3 h-3" /></button>
+                            </div>
+                          </div>
+                        ) : (
                           <div className="flex items-start justify-between gap-2">
                             <button onClick={() => applyPrompt(p.text)} className="text-left flex-1 min-w-0">
                               <p className={`${t.text} font-medium text-sm truncate`}>{p.label}</p>
@@ -653,92 +712,91 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
                               </button>
                             </div>
                           </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : showHistory ? (
-                /* ---- Conversation list ---- */
-                <div className="space-y-2">
-                  {conversations.length > 0 && (
-                    <button
-                      onClick={async () => {
-                        if (!window.confirm("Delete all conversations?")) return;
-                        for (const c of conversations) {
-                          try { await axios.delete(`${API}/api/ai/conversations/${c.id}`, { headers }); } catch {}
-                        }
-                        setActiveConvId(null);
-                        setMessages([]);
-                        loadConversations();
-                        toast.success("All chats cleared");
-                      }}
-                      className="w-full text-center py-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
-                      data-testid="clear-all-chats-btn"
-                    >
-                      Clear all chats
-                    </button>
-                  )}
-                  {conversations.length === 0 ? (
-                    <p className={`${t.textDim} text-sm text-center mt-8`}>No conversations yet</p>
-                  ) : conversations.map((c) => (
-                    <div key={c.id} onClick={() => openConversation(c.id)} className={`flex items-center justify-between p-3 rounded-xl ${t.card} ${t.cardHover} cursor-pointer transition-colors group`} data-testid={`conv-item-${c.id}`}>
-                      <div className="min-w-0 flex-1">
-                        <p className={`${t.text} text-sm font-medium truncate`}>{c.title}</p>
-                        <p className={`${t.textDim} text-xs mt-0.5`}>{new Date(c.updated_at).toLocaleDateString()}</p>
+                        )}
                       </div>
-                      <button onClick={(e) => deleteConversation(c.id, e)} className={`${t.textFaint} hover:text-red-400 p-1 transition-opacity`} data-testid={`conv-delete-${c.id}`}>
-                        <Trash2 className="w-4 h-4" />
+                    ))}
+                  </div>
+                ) : showHistory && !isExpanded ? (
+                  /* ---- Conversation list (compact mode only — expanded shows in sidebar) ---- */
+                  <div className="space-y-2">
+                    {conversations.length > 0 && (
+                      <button
+                        onClick={async () => {
+                          if (!window.confirm("Delete all conversations?")) return;
+                          for (const c of conversations) {
+                            try { await axios.delete(`${API}/api/ai/conversations/${c.id}`, { headers }); } catch {}
+                          }
+                          setActiveConvId(null);
+                          setMessages([]);
+                          loadConversations();
+                          toast.success("All chats cleared");
+                        }}
+                        className="w-full text-center py-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+                        data-testid="clear-all-chats-btn"
+                      >
+                        Clear all chats
                       </button>
-                    </div>
-                  ))}
-                </div>
-              ) : isLoading ? (
-                <div className="flex items-center justify-center h-full">
-                  <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
-                </div>
-              ) : messages.length === 0 && !activeConvId ? (
-                /* ---- Welcome ---- */
-                <div className="flex flex-col items-center justify-center h-full text-center px-4">
-                  <div className="w-14 h-14 rounded-full bg-emerald-600/20 flex items-center justify-center mb-4">
-                    <Sparkles className="w-7 h-7 text-emerald-400" />
-                  </div>
-                  <h3 className={`${t.text} font-semibold text-base mb-1`}>Listing Assistant</h3>
-                  <p className={`${t.textDim} text-sm mb-5 max-w-[300px]`}>
-                    Drop a screenshot or describe an item. I'll write a Vendoo listing for you.
-                  </p>
-
-                  {/* Saved prompts shortcuts */}
-                  {savedPrompts.length > 0 && (
-                    <div className="w-full max-w-[320px] mb-4">
-                      <p className={`${t.textFaint} text-xs uppercase tracking-wider mb-2`}>Your prompts</p>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        {savedPrompts.slice(0, 6).map((p) => (
-                          <button
-                            key={p.id}
-                            onClick={() => applyPrompt(p.text)}
-                            className={`px-3 py-1.5 rounded-full ${t.card} ${isDark ? "text-white/70" : "text-gray-600"} text-xs hover:bg-emerald-600/20 hover:text-emerald-300 hover:border-emerald-500/30 transition-colors truncate max-w-[140px]`}
-                            data-testid={`welcome-prompt-${p.id}`}
-                          >
-                            {p.label}
-                          </button>
-                        ))}
+                    )}
+                    {conversations.length === 0 ? (
+                      <p className={`${t.textDim} text-sm text-center mt-8`}>No conversations yet</p>
+                    ) : conversations.map((c) => (
+                      <div key={c.id} onClick={() => openConversation(c.id)} className={`flex items-center justify-between p-3 rounded-xl ${t.card} ${t.cardHover} cursor-pointer transition-colors group`} data-testid={`conv-item-${c.id}`}>
+                        <div className="min-w-0 flex-1">
+                          <p className={`${t.text} text-sm font-medium truncate`}>{c.title}</p>
+                          <p className={`${t.textDim} text-xs mt-0.5`}>{new Date(c.updated_at).toLocaleDateString()}</p>
+                        </div>
+                        <button onClick={(e) => deleteConversation(c.id, e)} className={`${t.textFaint} hover:text-red-400 p-1 transition-opacity`} data-testid={`conv-delete-${c.id}`}>
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Drop zone hint */}
-                  <div className={`w-full max-w-[300px] p-4 rounded-xl border border-dashed ${isDark ? "border-white/15 text-white/30" : "border-gray-300 text-gray-400"} text-xs flex flex-col items-center gap-1.5`}>
-                    <Upload className={`w-5 h-5 ${isDark ? "text-white/20" : "text-gray-300"}`} />
-                    Drag & drop screenshots here
+                    ))}
                   </div>
-                </div>
-              ) : (
-                <>
-                  {messages.map(renderMessage)}
-                  <div ref={messagesEndRef} />
-                </>
-              )}
+                ) : isLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+                  </div>
+                ) : messages.length === 0 && !activeConvId ? (
+                  /* ---- Welcome ---- */
+                  <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                    <div className="w-14 h-14 rounded-full bg-emerald-600/20 flex items-center justify-center mb-4">
+                      <Sparkles className="w-7 h-7 text-emerald-400" />
+                    </div>
+                    <h3 className={`${t.text} font-semibold text-base mb-1`}>Listing Assistant</h3>
+                    <p className={`${t.textDim} text-sm mb-5 max-w-[300px]`}>
+                      Drop a screenshot or describe an item. I'll write a Vendoo listing for you.
+                    </p>
+
+                    {savedPrompts.length > 0 && (
+                      <div className="w-full max-w-[320px] mb-4">
+                        <p className={`${t.textFaint} text-xs uppercase tracking-wider mb-2`}>Your prompts</p>
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          {savedPrompts.slice(0, 6).map((p) => (
+                            <button
+                              key={p.id}
+                              onClick={() => applyPrompt(p.text)}
+                              className={`px-3 py-1.5 rounded-full ${t.card} ${isDark ? "text-white/70" : "text-gray-600"} text-xs hover:bg-emerald-600/20 hover:text-emerald-300 hover:border-emerald-500/30 transition-colors truncate max-w-[140px]`}
+                              data-testid={`welcome-prompt-${p.id}`}
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className={`w-full max-w-[300px] p-4 rounded-xl border border-dashed ${isDark ? "border-white/15 text-white/30" : "border-gray-300 text-gray-400"} text-xs flex flex-col items-center gap-1.5`}>
+                      <Upload className={`w-5 h-5 ${isDark ? "text-white/20" : "text-gray-300"}`} />
+                      Drag & drop screenshots here
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {messages.map(renderMessage)}
+                    <div ref={messagesEndRef} />
+                  </>
+                )}
+              </div>
+
             </div>
 
             {/* Pending images strip */}
