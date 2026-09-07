@@ -55,6 +55,7 @@ import {
   Key,
   Navigation,
   Play,
+  Pause,
   Square,
   ClipboardCheck,
   Inbox,
@@ -378,7 +379,7 @@ export default function AdminDashboard() {
   // GPS Trip tracking
   const [forceOpenOperations, setForceOpenOperations] = useState(false); // Force open Operations group
   const gpsTrackerRef = useRef(null); // Reference to scroll to GPS section
-  const [isTripActive, setIsTripActive] = useState(false); // Synced from GPSMileageTracker
+  const [tripState, setTripState] = useState({ active: false, paused: false }); // Synced from GPSMileageTracker
   const [tripStarting, setTripStarting] = useState(false); // Loading state for header button
   
   // Hidden email settings trigger - triple click on title
@@ -3180,20 +3181,50 @@ export default function AdminDashboard() {
                 </div>
                 {/* GPS Trip Controls Row - Unified quick trip */}
                 <div className="flex gap-1 items-center">
-                  {isTripActive ? (
-                    <Button
-                      onClick={() => {
-                        buttonPress();
-                        gpsTrackerRef.current?.endTrip();
-                      }}
-                      size="sm"
-                      className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md hover:shadow-lg transition-all border-0 text-xs sm:text-sm h-9 flex-1"
-                      data-testid="end-trip-header-btn"
-                    >
-                      <Square className="w-4 h-4" />
-                      <span className="hidden sm:inline">End Trip</span>
-                      <span className="sm:hidden">End</span>
-                    </Button>
+                  {tripState.active ? (
+                    <>
+                      {/* Pause or Resume */}
+                      {tripState.paused ? (
+                        <Button
+                          onClick={() => {
+                            buttonPress();
+                            gpsTrackerRef.current?.resumeTrip();
+                          }}
+                          size="sm"
+                          className="flex items-center gap-1 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9"
+                          data-testid="resume-trip-header-btn"
+                        >
+                          <Play className="w-4 h-4" />
+                          <span className="hidden sm:inline">Resume</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => {
+                            buttonPress();
+                            gpsTrackerRef.current?.pauseTrip();
+                          }}
+                          size="sm"
+                          className="flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9"
+                          data-testid="pause-trip-header-btn"
+                        >
+                          <Pause className="w-4 h-4" />
+                          <span className="hidden sm:inline">Pause</span>
+                        </Button>
+                      )}
+                      {/* End Trip */}
+                      <Button
+                        onClick={() => {
+                          buttonPress();
+                          gpsTrackerRef.current?.endTrip();
+                        }}
+                        size="sm"
+                        className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9"
+                        data-testid="end-trip-header-btn"
+                      >
+                        <Square className="w-4 h-4" />
+                        <span className="hidden sm:inline">End</span>
+                      </Button>
+                    </>
                   ) : (
                     <Button
                       onClick={() => {
@@ -3810,7 +3841,7 @@ export default function AdminDashboard() {
               <GPSMileageTracker 
                 ref={gpsTrackerRef}
                 getAuthHeader={getAuthHeader}
-                onTripStateChange={setIsTripActive}
+                onTripStateChange={setTripState}
               />
 
               {/* Sales Data Section - CSV Import, Reports, Analytics */}

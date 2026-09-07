@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Navigation,
   Play,
+  Pause,
   Square,
   MapPin,
   DollarSign,
@@ -62,8 +63,9 @@ import {
   TripRow
 } from "./gps-tracker";
 
-// Lazy load the map component
+// Lazy load map components
 const TripMap = lazy(() => import("@/components/TripMap"));
+const TripReplayMap = lazy(() => import("@/components/TripReplayMap"));
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -116,10 +118,12 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
 
   const containerRef = useRef(null);
 
-  // ========== Quick Trip (Start/End with GPS + voice) ==========
+  // ========== Quick Trip (Start/End/Pause/Resume with GPS + voice) ==========
   const [quickTripActive, setQuickTripActive] = useState(false);
+  const [quickTripPaused, setQuickTripPaused] = useState(false);
   const [quickTripId, setQuickTripId] = useState(null);
   const [quickTripStartAddr, setQuickTripStartAddr] = useState("");
+  const [quickTripMiles, setQuickTripMiles] = useState(0);
   const [quickTripLoading, setQuickTripLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const [lastTripResult, setLastTripResult] = useState(null);
@@ -127,10 +131,12 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
   // Siri API Key state
   const [siriKey, setSiriKey] = useState({ has_key: false, key_prefix: null, newKey: null, loading: false });
 
-  // Notify parent of trip state changes
+  // Notify parent of trip state changes (active, paused, or idle)
   useEffect(() => {
-    if (onTripStateChange) onTripStateChange(quickTripActive);
-  }, [quickTripActive, onTripStateChange]);
+    if (onTripStateChange) {
+      onTripStateChange({ active: quickTripActive, paused: quickTripPaused });
+    }
+  }, [quickTripActive, quickTripPaused, onTripStateChange]);
 
   // Voice commands for trip control
   const voiceHandler = useSpeechRecognition({
@@ -140,8 +146,12 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
         handleQuickStart();
       } else if (lower.includes("end trip") || lower.includes("stop trip") || lower.includes("end drive") || lower.includes("stop drive")) {
         handleQuickEnd();
+      } else if (lower.includes("pause trip") || lower.includes("pause drive")) {
+        handleQuickPause();
+      } else if (lower.includes("resume trip") || lower.includes("resume drive") || lower.includes("continue trip")) {
+        handleQuickResume();
       } else {
-        toast.info(`Heard: "${transcript}" -- say "start trip" or "end trip"`);
+        toast.info(`Heard: "${transcript}" -- say "start/pause/resume/end trip"`);
       }
     },
   });
@@ -194,13 +204,16 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
       }, getAuthHeader());
       if (data.success) {
         setQuickTripActive(false);
+        setQuickTripPaused(false);
         setQuickTripId(null);
         setQuickTripStartAddr("");
+        setQuickTripMiles(0);
         setLastTripResult({
           start_address: data.start_address || "",
           end_address: data.end_address || "",
           total_miles: data.total_miles,
           tax_deduction: data.tax_deduction,
+          legs_count: data.legs_count || 1,
         });
         toast.success(data.message);
         fetchTripHistory();
@@ -209,6 +222,53 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
         setTimeout(() => setLastTripResult(null), 20000);
       } else {
         toast.error(data.message || "Failed to end trip");
+      }
+    } catch (err) {
+      toast.error("Failed to get location");
+    } finally {
+      setQuickTripLoading(false);
+    }
+  };
+
+  const handleQuickPause = async () => {
+    if (!quickTripActive || quickTripPaused) return;
+    setQuickTripLoading(true);
+    try {
+      const pos = await getGPSPosition();
+      const { data } = await axios.post(`${API}/admin/gps-trips/log-drive`, {
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        event: "pause",
+      }, getAuthHeader());
+      if (data.success) {
+        setQuickTripPaused(true);
+        setQuickTripMiles(data.total_miles || 0);
+        toast.success(data.message);
+      } else {
+        toast.error(data.message || "Failed to pause trip");
+      }
+    } catch (err) {
+      toast.error("Failed to get location");
+    } finally {
+      setQuickTripLoading(false);
+    }
+  };
+
+  const handleQuickResume = async () => {
+    if (!quickTripActive || !quickTripPaused) return;
+    setQuickTripLoading(true);
+    try {
+      const pos = await getGPSPosition();
+      const { data } = await axios.post(`${API}/admin/gps-trips/log-drive`, {
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        event: "resume",
+      }, getAuthHeader());
+      if (data.success) {
+        setQuickTripPaused(false);
+        toast.success(data.message);
+      } else {
+        toast.error(data.message || "Failed to resume trip");
       }
     } catch (err) {
       toast.error("Failed to get location");
@@ -490,10 +550,15 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
     const checkPending = async () => {
       try {
         const { data } = await axios.get(`${API}/admin/gps-trips/active`, getAuthHeader());
-        if (data && data.active_trip && data.active_trip.status === "active") {
-          setQuickTripActive(true);
-          setQuickTripId(data.active_trip.id);
-          setQuickTripStartAddr(data.active_trip.start_address || "");
+        if (data && data.active_trip) {
+          const trip = data.active_trip;
+          if (trip.status === "active" || trip.status === "paused") {
+            setQuickTripActive(true);
+            setQuickTripPaused(trip.status === "paused");
+            setQuickTripId(trip.id);
+            setQuickTripStartAddr(trip.start_address || "");
+            setQuickTripMiles(trip.total_miles || 0);
+          }
         }
       } catch {}
     };
@@ -531,6 +596,9 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
     isManualEntryOpen: () => showManualEntry,
     startTrip: () => handleQuickStart(),
     endTrip: () => handleQuickEnd(),
+    pauseTrip: () => handleQuickPause(),
+    resumeTrip: () => handleQuickResume(),
+    getTripState: () => ({ active: quickTripActive, paused: quickTripPaused }),
   }));
 
   // ========== Helpers ==========
@@ -575,8 +643,10 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
             <h3 className="font-semibold text-[#333]">GPS Mileage Tracker</h3>
             <p className="text-xs text-[#888]">
               {quickTripActive ? (
-                <span className="font-medium text-green-600">
-                  Trip in progress {quickTripStartAddr ? `\u2022 ${quickTripStartAddr}` : ""}
+                <span className={`font-medium ${quickTripPaused ? "text-amber-600" : "text-green-600"}`}>
+                  {quickTripPaused ? "Trip paused" : "Trip in progress"}
+                  {quickTripMiles > 0 ? ` \u2022 ${quickTripMiles} mi so far` : ""}
+                  {quickTripStartAddr && !quickTripPaused ? ` \u2022 ${quickTripStartAddr}` : ""}
                 </span>
               ) : summary ? (
                 <span>
@@ -667,19 +737,45 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
 
                 {quickTripActive ? (
                   <div className="space-y-3">
-                    <div className="bg-white/70 rounded-lg p-3">
-                      <p className="text-xs text-emerald-600 font-medium">Trip in progress</p>
+                    <div className={`rounded-lg p-3 ${quickTripPaused ? "bg-amber-50 border border-amber-200" : "bg-white/70"}`}>
+                      <p className={`text-xs font-medium ${quickTripPaused ? "text-amber-600" : "text-emerald-600"}`}>
+                        {quickTripPaused ? "Trip paused" : "Trip in progress"}
+                        {quickTripMiles > 0 ? ` \u2022 ${quickTripMiles} mi` : ""}
+                      </p>
                       <p className="text-sm text-emerald-900 mt-1">{quickTripStartAddr || "Getting address..."}</p>
                     </div>
-                    <button
-                      onClick={handleQuickEnd}
-                      disabled={quickTripLoading}
-                      className="w-full py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
-                      data-testid="end-trip-btn"
-                    >
-                      {quickTripLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Square className="w-4 h-4" />}
-                      End Trip
-                    </button>
+                    <div className="flex gap-2">
+                      {quickTripPaused ? (
+                        <button
+                          onClick={handleQuickResume}
+                          disabled={quickTripLoading}
+                          className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                          data-testid="resume-trip-btn"
+                        >
+                          {quickTripLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                          Resume
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleQuickPause}
+                          disabled={quickTripLoading}
+                          className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                          data-testid="pause-trip-btn"
+                        >
+                          {quickTripLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Pause className="w-4 h-4" />}
+                          Pause
+                        </button>
+                      )}
+                      <button
+                        onClick={handleQuickEnd}
+                        disabled={quickTripLoading}
+                        className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                        data-testid="end-trip-btn"
+                      >
+                        {quickTripLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Square className="w-4 h-4" />}
+                        End Trip
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <button
@@ -1514,7 +1610,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
         document.body
       )}
 
-      {/* Trip Map Modal */}
+      {/* Trip Map / Replay Modal */}
       <AnimatePresence>
         {viewingTripMap && (
           <motion.div
@@ -1528,7 +1624,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden"
+              className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
@@ -1536,9 +1632,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Map className="w-5 h-5 text-green-600" />
-                    <h3 className="font-semibold text-gray-800">Trip Route</h3>
+                    <h3 className="font-semibold text-gray-800">
+                      {viewingTripMap.trip.route_geometry?.length > 1 ? "Trip Route Replay" : "Trip Route"}
+                    </h3>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={closeTripMap} className="text-gray-500">
+                  <Button variant="ghost" size="sm" onClick={closeTripMap} className="text-gray-500" data-testid="close-trip-map">
                     <X className="w-5 h-5" />
                   </Button>
                 </div>
@@ -1558,29 +1656,39 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
                 </div>
               </div>
 
-              {/* Map */}
+              {/* Map / Replay */}
               <div className="p-4">
                 {loadingMap ? (
-                  <div className="h-[300px] bg-gray-100 rounded-lg flex items-center justify-center">
+                  <div className="h-[350px] bg-gray-100 rounded-lg flex items-center justify-center">
                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600"></div>
                   </div>
                 ) : (
                   <Suspense fallback={
-                    <div className="h-[300px] bg-gray-100 rounded-lg flex items-center justify-center">
+                    <div className="h-[350px] bg-gray-100 rounded-lg flex items-center justify-center">
                       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600"></div>
                     </div>
                   }>
-                    <TripMap
-                      locations={viewingTripMap.locations}
-                      height="300px"
-                    />
+                    {viewingTripMap.trip.route_geometry?.length > 1 ? (
+                      <TripReplayMap
+                        routeGeometry={viewingTripMap.trip.route_geometry}
+                        startAddress={viewingTripMap.trip.start_address || ""}
+                        endAddress={viewingTripMap.trip.end_address || ""}
+                        totalMiles={viewingTripMap.trip.total_miles || 0}
+                        height="350px"
+                      />
+                    ) : (
+                      <TripMap
+                        locations={viewingTripMap.locations}
+                        height="300px"
+                      />
+                    )}
                   </Suspense>
                 )}
               </div>
 
               {/* Trip Stats */}
               <div className="p-4 border-t bg-gray-50">
-                <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="grid grid-cols-2 gap-3 text-center">
                   <div>
                     <p className="text-lg font-bold text-green-600">{viewingTripMap.trip.total_miles?.toFixed(2)}</p>
                     <p className="text-xs text-gray-500">Miles</p>
@@ -1589,11 +1697,19 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
                     <p className="text-lg font-bold text-green-600">${viewingTripMap.trip.tax_deduction?.toFixed(2)}</p>
                     <p className="text-xs text-gray-500">IRS Deduction</p>
                   </div>
-                  <div>
-                    <p className="text-lg font-bold text-green-600">{viewingTripMap.locations?.length || 0}</p>
-                    <p className="text-xs text-gray-500">GPS Points</p>
-                  </div>
                 </div>
+
+                {/* Addresses */}
+                {(viewingTripMap.trip.start_address || viewingTripMap.trip.end_address) && (
+                  <div className="mt-3 text-xs text-gray-500 space-y-1 border-t pt-2">
+                    {viewingTripMap.trip.start_address && (
+                      <p><span className="text-green-600 font-medium">From:</span> {viewingTripMap.trip.start_address}</p>
+                    )}
+                    {viewingTripMap.trip.end_address && (
+                      <p><span className="text-red-600 font-medium">To:</span> {viewingTripMap.trip.end_address}</p>
+                    )}
+                  </div>
+                )}
 
                 {viewingTripMap.trip.notes && (
                   <div className="mt-3 p-2 bg-white rounded border">

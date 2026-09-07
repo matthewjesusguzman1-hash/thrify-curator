@@ -46,19 +46,26 @@ NOMINATIM_BASE = "https://nominatim.openstreetmap.org"
 HTTP_HEADERS = {"User-Agent": "ThriftyCurator/1.0"}
 
 
-async def get_road_distance_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> Optional[float]:
-    """Get driving distance in miles between two points using OSRM."""
-    url = f"{OSRM_BASE}/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=false"
+async def get_road_distance_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> tuple[Optional[float], Optional[list]]:
+    """Get driving distance in miles and route geometry between two points using OSRM."""
+    url = f"{OSRM_BASE}/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=full&geometries=geojson"
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(url, headers=HTTP_HEADERS)
             data = resp.json()
             if data.get("code") == "Ok" and data.get("routes"):
-                meters = data["routes"][0]["distance"]
-                return round(meters / 1609.344, 2)
+                route = data["routes"][0]
+                meters = route["distance"]
+                miles = round(meters / 1609.344, 2)
+                # Extract geometry as list of [lat, lng] pairs
+                geometry = route.get("geometry", {})
+                coords = geometry.get("coordinates", [])
+                # OSRM returns [lng, lat], convert to [lat, lng]
+                route_points = [[c[1], c[0]] for c in coords]
+                return miles, route_points
     except Exception as e:
         logger.warning(f"OSRM routing failed: {e}")
-    return None
+    return None, None
 
 
 async def reverse_geocode(lat: float, lon: float) -> str:
@@ -118,6 +125,8 @@ async def log_drive(
     """
     Accept a GPS ping from a phone automation (e.g. iPhone Shortcuts on Bluetooth connect/disconnect).
     - event='start' or first ping: saves start location as pending trip
+    - event='pause': pauses active trip, records current leg distance
+    - event='resume': resumes paused trip from new location
     - event='end' or second ping: completes the trip with OSRM road distance + reverse geocoding
     """
     now = datetime.now(timezone.utc)
@@ -125,10 +134,10 @@ async def log_drive(
     user_id = admin["email"]
     event = payload.event.lower()
 
-    # Check for a pending (active) trip
+    # Check for a pending (active or paused) trip
     pending = await db.gps_trips.find_one({
         "user_id": user_id,
-        "status": "active",
+        "status": {"$in": ["active", "paused"]},
         "is_bluetooth": True,
     })
 
@@ -166,6 +175,8 @@ async def log_drive(
             "end_lng": None,
             "end_address": None,
             "locations": [],
+            "waypoints": [{"type": "start", "lat": payload.latitude, "lng": payload.longitude, "time": ts}],
+            "legs": [],
             "total_miles": 0.0,
             "routing_miles": None,
             "tax_deduction": 0.0,
@@ -183,6 +194,95 @@ async def log_drive(
             "message": f"Trip started at {start_address}",
         }
 
+    elif event == "pause":
+        if not pending or pending.get("status") != "active":
+            return {"success": False, "message": "No active trip to pause."}
+
+        pause_address = await reverse_geocode(payload.latitude, payload.longitude)
+
+        # Get the current leg start (last start/resume waypoint)
+        waypoints = pending.get("waypoints", [])
+        leg_start = None
+        for wp in reversed(waypoints):
+            if wp["type"] in ("start", "resume"):
+                leg_start = wp
+                break
+
+        leg_miles = 0.0
+        leg_geometry = None
+        if leg_start:
+            leg_miles_result, leg_geometry = await get_road_distance_miles(
+                leg_start["lat"], leg_start["lng"],
+                payload.latitude, payload.longitude,
+            )
+            if leg_miles_result is not None:
+                leg_miles = leg_miles_result
+            else:
+                leg_miles = haversine_distance(
+                    leg_start["lat"], leg_start["lng"],
+                    payload.latitude, payload.longitude,
+                )
+
+        # Store leg
+        leg = {
+            "start_lat": leg_start["lat"] if leg_start else pending["start_lat"],
+            "start_lng": leg_start["lng"] if leg_start else pending["start_lng"],
+            "end_lat": payload.latitude,
+            "end_lng": payload.longitude,
+            "miles": leg_miles,
+        }
+        if leg_geometry:
+            leg["geometry"] = leg_geometry
+
+        # Update cumulative miles
+        existing_legs = pending.get("legs", [])
+        cumulative_miles = sum(l.get("miles", 0) for l in existing_legs) + leg_miles
+
+        await db.gps_trips.update_one(
+            {"id": pending["id"]},
+            {
+                "$set": {"status": "paused", "total_miles": round(cumulative_miles, 2)},
+                "$push": {
+                    "waypoints": {"type": "pause", "lat": payload.latitude, "lng": payload.longitude, "address": pause_address, "time": ts},
+                    "legs": leg,
+                },
+            },
+        )
+
+        return {
+            "success": True,
+            "event": "trip_paused",
+            "trip_id": pending["id"],
+            "pause_address": pause_address,
+            "leg_miles": leg_miles,
+            "total_miles": round(cumulative_miles, 2),
+            "message": f"Trip paused at {pause_address} ({leg_miles} mi this leg, {round(cumulative_miles, 2)} mi total)",
+        }
+
+    elif event == "resume":
+        if not pending or pending.get("status") != "paused":
+            return {"success": False, "message": "No paused trip to resume."}
+
+        resume_address = await reverse_geocode(payload.latitude, payload.longitude)
+
+        await db.gps_trips.update_one(
+            {"id": pending["id"]},
+            {
+                "$set": {"status": "active"},
+                "$push": {
+                    "waypoints": {"type": "resume", "lat": payload.latitude, "lng": payload.longitude, "address": resume_address, "time": ts},
+                },
+            },
+        )
+
+        return {
+            "success": True,
+            "event": "trip_resumed",
+            "trip_id": pending["id"],
+            "resume_address": resume_address,
+            "message": f"Trip resumed from {resume_address}",
+        }
+
     elif event == "end" or (event == "ping" and pending):
         if not pending:
             return {"success": False, "message": "No active trip to end. Send event='start' first."}
@@ -190,34 +290,82 @@ async def log_drive(
         # Reverse-geocode end location
         end_address = await reverse_geocode(payload.latitude, payload.longitude)
 
-        # Get road distance via OSRM
-        road_miles = await get_road_distance_miles(
-            pending["start_lat"], pending["start_lng"],
-            payload.latitude, payload.longitude,
-        )
+        # Calculate the final leg distance (from last start/resume to here)
+        waypoints = pending.get("waypoints", [])
+        leg_start = None
+        for wp in reversed(waypoints):
+            if wp["type"] in ("start", "resume"):
+                leg_start = wp
+                break
 
-        # Fallback to haversine if OSRM fails
-        if road_miles is None:
-            road_miles = haversine_distance(
-                pending["start_lat"], pending["start_lng"],
+        final_leg_miles = 0.0
+        final_leg_geometry = None
+
+        # Only calculate final leg if trip is active (not paused → end without resume)
+        if pending.get("status") == "active" and leg_start:
+            road_result, geo_result = await get_road_distance_miles(
+                leg_start["lat"], leg_start["lng"],
                 payload.latitude, payload.longitude,
             )
+            if road_result is not None:
+                final_leg_miles = road_result
+                final_leg_geometry = geo_result
+            else:
+                final_leg_miles = haversine_distance(
+                    leg_start["lat"], leg_start["lng"],
+                    payload.latitude, payload.longitude,
+                )
+
+        # Store final leg
+        final_leg = {
+            "start_lat": leg_start["lat"] if leg_start else pending["start_lat"],
+            "start_lng": leg_start["lng"] if leg_start else pending["start_lng"],
+            "end_lat": payload.latitude,
+            "end_lng": payload.longitude,
+            "miles": final_leg_miles,
+        }
+        if final_leg_geometry:
+            final_leg["geometry"] = final_leg_geometry
+
+        existing_legs = pending.get("legs", [])
+        all_legs = existing_legs + ([final_leg] if final_leg_miles > 0 else [])
+        total_miles = round(sum(l.get("miles", 0) for l in all_legs), 2)
+
+        # Combine all leg geometries into one route
+        combined_geometry = []
+        for leg in all_legs:
+            leg_geo = leg.get("geometry", [])
+            if leg_geo:
+                if combined_geometry:
+                    combined_geometry.extend(leg_geo[1:])  # skip duplicate join point
+                else:
+                    combined_geometry.extend(leg_geo)
 
         irs_rate = get_irs_rate()
-        tax_deduction = round(road_miles * irs_rate, 2)
+        tax_deduction = round(total_miles * irs_rate, 2)
+
+        update_fields = {
+            "status": "completed",
+            "end_time": ts,
+            "end_lat": payload.latitude,
+            "end_lng": payload.longitude,
+            "end_address": end_address,
+            "total_miles": total_miles,
+            "routing_miles": total_miles,
+            "tax_deduction": tax_deduction,
+            "legs": all_legs,
+        }
+        if combined_geometry:
+            update_fields["route_geometry"] = combined_geometry
 
         await db.gps_trips.update_one(
             {"id": pending["id"]},
-            {"$set": {
-                "status": "completed",
-                "end_time": ts,
-                "end_lat": payload.latitude,
-                "end_lng": payload.longitude,
-                "end_address": end_address,
-                "total_miles": road_miles,
-                "routing_miles": road_miles,
-                "tax_deduction": tax_deduction,
-            }},
+            {
+                "$set": update_fields,
+                "$push": {
+                    "waypoints": {"type": "end", "lat": payload.latitude, "lng": payload.longitude, "address": end_address, "time": ts},
+                },
+            },
         )
 
         return {
@@ -226,9 +374,10 @@ async def log_drive(
             "trip_id": pending["id"],
             "start_address": pending.get("start_address", ""),
             "end_address": end_address,
-            "total_miles": road_miles,
+            "total_miles": total_miles,
             "tax_deduction": tax_deduction,
-            "message": f"Trip completed: {road_miles} miles — ${tax_deduction} deduction",
+            "legs_count": len(all_legs),
+            "message": f"Trip completed: {total_miles} miles — ${tax_deduction} deduction",
         }
 
     return {"success": False, "message": f"Unknown event: {event}"}
@@ -849,6 +998,21 @@ async def get_trip_details(
     
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
+    
+    # If trip has start/end coords but no route_geometry, fetch it from OSRM now
+    if (not trip.get("route_geometry")
+        and trip.get("start_lat") and trip.get("end_lat")
+        and trip.get("status") == "completed"):
+        _, route_geometry = await get_road_distance_miles(
+            trip["start_lat"], trip["start_lng"],
+            trip["end_lat"], trip["end_lng"],
+        )
+        if route_geometry:
+            await db.gps_trips.update_one(
+                {"id": trip_id},
+                {"$set": {"route_geometry": route_geometry}}
+            )
+            trip["route_geometry"] = route_geometry
     
     irs_rate = get_irs_rate()
     
