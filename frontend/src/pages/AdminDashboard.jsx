@@ -63,13 +63,15 @@ import {
   Moon,
   ChevronLeft,
   ChevronRight,
-  Video
+  Video,
+  MoreVertical
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { DayPicker } from "react-day-picker";
 import { toast } from "sonner";
 import axios from "axios";
@@ -3003,13 +3005,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Right side: Navigation icons */}
-        <div className="flex items-center gap-0.5 sm:gap-2 w-full sm:w-auto justify-center sm:justify-end">
-          <Link to="/" onClick={() => lightTap()}>
-            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 p-2 sm:px-3 sm:py-2" data-testid="home-btn" title="Home">
-              <Home className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Home</span>
-            </Button>
-          </Link>
+        <div className="flex items-center gap-0.5 sm:gap-2">
           {/* Remote Sessions - opens full review page */}
           <Button
             variant="ghost"
@@ -3066,33 +3062,45 @@ export default function AdminDashboard() {
               </span>
             )}
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => {
-              lightTap();
-              toggleTheme();
-            }}
-            className="text-white/70 hover:text-white hover:bg-white/10 p-2 sm:px-3 sm:py-2"
-            data-testid="dashboard-theme-toggle"
-            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {isDark ? <Sun className="w-5 h-5 sm:w-4 sm:h-4" /> : <Moon className="w-5 h-5 sm:w-4 sm:h-4" />}
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => {
-              lightTap();
-              handleLogout();
-            }}
-            className="text-white/70 hover:text-white hover:bg-white/10 p-2 sm:px-3 sm:py-2"
-            data-testid="logout-btn"
-            title="Logout"
-          >
-            <LogOut className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-1" />
-            <span className="hidden sm:inline">Logout</span>
-          </Button>
+          {/* More dropdown: Home, Theme, Logout */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white/70 hover:text-white hover:bg-white/10 p-2 sm:px-3 sm:py-2"
+                data-testid="more-menu-btn"
+                title="More"
+              >
+                <MoreVertical className="w-5 h-5 sm:w-4 sm:h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem
+                onClick={() => { lightTap(); navigate("/"); }}
+                data-testid="home-btn"
+              >
+                <Home className="w-4 h-4 mr-2" />
+                Home
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => { lightTap(); toggleTheme(); }}
+                data-testid="dashboard-theme-toggle"
+              >
+                {isDark ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
+                {isDark ? "Light Mode" : "Dark Mode"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => { lightTap(); handleLogout(); }}
+                className="text-red-600 focus:text-red-600"
+                data-testid="logout-btn"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
