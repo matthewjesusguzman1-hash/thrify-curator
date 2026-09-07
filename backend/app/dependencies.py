@@ -2,6 +2,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 import bcrypt
+import hashlib
 from datetime import datetime, timezone, timedelta
 
 from app.config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRATION_HOURS
@@ -99,3 +100,35 @@ async def get_admin_user(user: dict = Depends(get_current_user)):
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
+
+
+async def get_admin_or_siri_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Authenticate via JWT (admin) or Siri API key (trip-only)."""
+    token = credentials.credentials
+
+    # First try JWT auth
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0})
+        if user and user.get("role") == "admin":
+            if payload.get("admin_code"):
+                user["admin_code"] = payload["admin_code"]
+            if payload.get("admin_name"):
+                user["admin_name"] = payload["admin_name"]
+            return user
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        pass
+
+    # Fallback: try Siri API key
+    key_hash = hashlib.sha256(token.encode()).hexdigest()
+    key_doc = await db.siri_api_keys.find_one({"key_hash": key_hash})
+    if key_doc:
+        await db.siri_api_keys.update_one(
+            {"key_hash": key_hash},
+            {"$set": {"last_used_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        user = await db.users.find_one({"email": key_doc["user_email"]}, {"_id": 0})
+        if user:
+            return user
+
+    raise HTTPException(status_code=401, detail="Invalid authentication")

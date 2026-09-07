@@ -13,11 +13,13 @@ import math
 import os
 import io
 import csv
+import secrets
+import hashlib
 import httpx
 import logging
 
 from app.database import db
-from app.dependencies import get_admin_user
+from app.dependencies import get_admin_user, get_admin_or_siri_user
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +113,7 @@ class CategoryUpdate(BaseModel):
 @router.post("/log-drive")
 async def log_drive(
     payload: LogDrivePayload,
-    admin: dict = Depends(get_admin_user),
+    admin: dict = Depends(get_admin_or_siri_user),
 ):
     """
     Accept a GPS ping from a phone automation (e.g. iPhone Shortcuts on Bluetooth connect/disconnect).
@@ -230,6 +232,53 @@ async def log_drive(
         }
 
     return {"success": False, "message": f"Unknown event: {event}"}
+
+
+# ========== Siri API Key Management ==========
+
+@router.post("/siri-key")
+async def generate_siri_key(admin: dict = Depends(get_admin_user)):
+    """Generate a long-lived API key for Siri Shortcuts (trip-only scope)."""
+    # Remove any existing key for this admin
+    await db.siri_api_keys.delete_many({"user_email": admin["email"]})
+
+    raw_key = f"siri_{secrets.token_hex(24)}"
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+    key_prefix = raw_key[:12]
+
+    await db.siri_api_keys.insert_one({
+        "user_email": admin["email"],
+        "user_name": admin.get("name", admin["email"]),
+        "key_hash": key_hash,
+        "key_prefix": key_prefix,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "last_used_at": None,
+    })
+
+    return {"success": True, "api_key": raw_key, "key_prefix": key_prefix}
+
+
+@router.get("/siri-key")
+async def get_siri_key_status(admin: dict = Depends(get_admin_user)):
+    """Check if the admin has a Siri API key."""
+    doc = await db.siri_api_keys.find_one(
+        {"user_email": admin["email"]}, {"_id": 0, "key_hash": 0}
+    )
+    if doc:
+        return {
+            "has_key": True,
+            "key_prefix": doc["key_prefix"],
+            "created_at": doc["created_at"],
+            "last_used_at": doc.get("last_used_at"),
+        }
+    return {"has_key": False}
+
+
+@router.delete("/siri-key")
+async def revoke_siri_key(admin: dict = Depends(get_admin_user)):
+    """Revoke the admin's Siri API key."""
+    result = await db.siri_api_keys.delete_many({"user_email": admin["email"]})
+    return {"success": True, "deleted": result.deleted_count}
 
 
 # ========== Trip Classification ==========

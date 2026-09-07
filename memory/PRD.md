@@ -1,78 +1,85 @@
-# Thrifty Curator — Product Requirements Document
+# Thrifty Curator - Product Requirements Document
 
-## Original Problem Statement
-Build a resale/consignment operations platform ("Thrifty Curator") with employee/admin dashboards, remote work monitoring, time tracking, messaging, push notifications, video calls, interviews, reports, and mobile wrappers.
+## Overview
+Thrifty Curator is a React + FastAPI + MongoDB operational dashboard for a resale/consignment business. It includes employee/admin dashboards, AI listing help, time tracking, AnyDesk worker monitoring, messaging, notifications, Daily.co video calls, reports, mobile wrappers, and an admin GPS/mileage tracker.
 
 ## Architecture
-- **Frontend**: React + Tailwind + Shadcn/UI + Framer Motion
-- **Backend**: FastAPI + MongoDB (via Motor)
-- **AI**: Gemini 3.7 Flash via emergentintegrations (Emergent LLM Key)
-- **Storage**: Emergent Object Storage for images
-- **Routing**: OSRM (road distance), Nominatim (reverse geocoding)
-- **Voice**: Browser Web Speech API (no external service needed)
+- **Frontend**: React (CRA + Craco), TailwindCSS, Shadcn/UI, Framer Motion
+- **Backend**: FastAPI, MongoDB (Motor), Python
+- **Auth**: JWT-based with admin code login, employee email login
+- **Integrations**: Gemini AI (Emergent LLM Key), OSRM routing, Nominatim geocoding, Daily.co, AnyDesk watcher, Resend email, Web Push/APNs
 
-## What's Been Implemented
+## Core Features (Implemented)
 
-### Core Platform
-- Admin & Employee dashboards with role-based access
-- Employee clock-in/out with time tracking
-- Pay period management & financial tracking
-- Messaging system (admin ↔ employee)
-- Push notifications (web push, APNs)
+### Admin Dashboard
+- Team management, payroll tracking, hiring/interviews
+- Forms & communications, sales data, taxes
+- Remote sessions (AnyDesk monitoring)
 - Video calls (Daily.co)
-- Interview scheduling
-- AnyDesk remote work monitoring (watcher-based)
-- Mobile wrappers (Capacitor iOS/Android)
-- Night shift / dark mode theme
-- Employee walkthrough/onboarding (includes AI, Video, Notifications, Timezone steps)
+- Messaging & notifications
+- GPS Mileage Tracker (unified quick-trip system)
+- AI Listing Assistant (Gemini-powered)
 
-### AI Listing Assistant (Sep 2026)
-- Gemini 3.7 Flash model (upgraded from 3-flash-preview)
-- Multi-turn chat with image upload (Emergent Object Storage)
-- Image memory across session restarts (fixed: await + user_id)
-- Streaming responses via SSE
-- Saved prompts (CRUD + one-tap use)
-- Gemini-style left sidebar with recent conversations
-- Full-page expanded panel (96vh)
-- Image lightbox (click thumbnail → full size)
-- Voice input via Web Speech API (mic button) with audio confirmation
-- Simplified system prompt (no over-restrictive rules)
-- Light/dark theme sync
-- Message-level copy
+### Employee Dashboard  
+- Clock in/out, hours tracking
+- AI Listing Assistant
+- Video calls, notifications, timezone settings
+- Employee walkthrough
 
-### GPS Mileage Tracker (Sep 2026)
-- Start/End Trip buttons with browser GPS
-- OSRM road routing for accurate driving distance
-- Nominatim reverse geocoding for street addresses
-- Business/Personal trip classification toggle
-- Full trip editing: date, miles, purpose, start/end addresses, classification, notes
-- Customizable purpose categories (seeded defaults + CRUD)
-- IRS-compliant CSV export (Date, Start Address, End Address, Miles, Purpose, Classification, Tax Deduction, Notes)
-- Voice commands: "start trip" / "end trip" with audio confirmation beep
-- Siri Shortcuts setup guide (collapsible section in mileage tracker)
-- Manual trip entry (kept from original)
-- Trip history with hierarchical views (today/month/year)
-- Mileage adjustments and summaries
+### GPS Mileage Tracker (Admin-only)
+- **Unified quick-trip system** — single Start/End flow using OSRM road routing
+- Green header "Start Trip" / "End Trip" button delegates to tracker component
+- Trip result feedback (distance, addresses, deduction) shown after completion
+- Siri API Key for Shortcuts integration (long-lived, trip-only scope)
+- Manual trip entry for retroactive logging
+- Summary tabs: Today / Month / Year with trips, miles, deductions
+- Hierarchical trip history grouped by month/day
+- Trip editing with classification (Business/Personal), purpose categories
+- IRS-oriented CSV export ($0.725/mile rate for 2026)
+- Voice commands via Web Speech API
+- Mileage adjustments
 
-## Pending / Backlog
+### Siri API Key Feature
+- Admin generates a long-lived API key (trip-only scope) 
+- Key is SHA-256 hashed before storage; only prefix shown after generation
+- log-drive endpoint accepts both JWT and Siri key via `get_admin_or_siri_user`
+- In-app setup guide with step-by-step Shortcuts instructions
+- Optional Bluetooth auto-trigger for car connect/disconnect
+- Revoke and regenerate capability
 
-### P0 — User Validation Needed
-- Auto-scroll while streaming / after panel reopen
-- Theme contrast in real employee dashboard use
-- Old chat image display in actual UI
-- Mileage tracker GPS accuracy on real device
+### AI Listing Assistant
+- Gemini-powered via Emergent integrations
+- Multi-turn conversations with image uploads
+- Saved prompts, chat history, message copying
+- Light/dark theme integration
+- Image memory replay for conversation continuity
 
-### P1
-- Category manager settings panel (add/edit/delete in UI)
-- Response latency optimization
+## Recent Changes (Sep 7, 2026)
+
+### GPS Tracker Unification
+- **Removed**: Old continuous GPS tracking system (handleStartTrip, pause, resume, complete, live map, location watching, completion form)
+- **Kept**: Unified quick-trip system (handleQuickStart/handleQuickEnd → /api/admin/gps-trips/log-drive)
+- **Added**: Siri API Key endpoints (generate, status, revoke) with trip-only auth scope
+- **Added**: Trip result feedback after ending a trip (auto-dismisses after 20s)
+- **Simplified**: AdminDashboard removed ~300 lines of old GPS state/functions
+- **Updated**: Header green button now delegates to tracker ref.startTrip()/endTrip()
+- **Updated**: iOS Quick Actions route through tracker ref methods
+
+### Files Changed
+- `/app/backend/app/dependencies.py` — Added `get_admin_or_siri_user` auth function
+- `/app/backend/app/routers/gps_trips.py` — Added Siri key CRUD, modified log-drive auth
+- `/app/frontend/src/components/admin/sections/GPSMileageTracker.jsx` — Full rewrite removing old system
+- `/app/frontend/src/pages/AdminDashboard.jsx` — Removed old GPS state/functions, simplified props
+
+## Pending / Unconfirmed
+- AI assistant auto-scroll (reported by user, claimed fixed, unconfirmed)
+- AI assistant image memory accuracy vs Gemini web
+- Employee walkthrough acceptance
 - AnyDesk production validation
-- Daily.co cross-device calls/recordings
+- Daily.co cross-device real testing
 
-### P2
-- Financial/Vendoo re-import/comparison
-- Mapbox GPS matching (future)
-- eBay Browse API (future)
-
-### Known Issues
-- Platform lint engine failure (persistent, not code-related)
-- Bearer token in image URL query string (security consideration)
+## Backlog
+- Category manager settings panel (add/edit/delete purpose categories)
+- Trip editing/classification UX polish
+- Mapbox GPS matching integration
+- eBay Browse API for listing enrichment

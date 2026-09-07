@@ -55,9 +55,7 @@ import {
   Key,
   Navigation,
   Play,
-  Pause,
   Square,
-  Car,
   ClipboardCheck,
   Inbox,
   Sun,
@@ -77,7 +75,6 @@ import axios from "axios";
 import { useHaptics } from "@/hooks/useHaptics";
 import LiveActivityService from "@/services/LiveActivityService";
 import GPSMileageTracker from "@/components/admin/sections/GPSMileageTracker";
-import useGPSTracking from "@/hooks/useGPSTracking";
 import { useDashboardTheme } from "@/hooks/useDashboardTheme";
 import PaymentRecordsSection from "@/components/admin/sections/PaymentRecordsSection";
 import PayrollHistorySection from "@/components/admin/sections/PayrollHistorySection";
@@ -378,20 +375,11 @@ export default function AdminDashboard() {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   
-  // GPS button loading states
-  const [gpsPauseLoading, setGpsPauseLoading] = useState(false);
-  const [gpsStopLoading, setGpsStopLoading] = useState(false);
-  
-  // GPS Trip tracking state (for header buttons)
-  const [gpsTrip, setGpsTrip] = useState(null); // { id, status, total_miles, start_time }
-  const [gpsTripLoading, setGpsTripLoading] = useState(false);
-  const [gpsTrackingStatus, setGpsTrackingStatus] = useState("idle"); // idle, tracking, paused, completing
+  // GPS Trip tracking
   const [forceOpenOperations, setForceOpenOperations] = useState(false); // Force open Operations group
   const gpsTrackerRef = useRef(null); // Reference to scroll to GPS section
-  const isCompletingRef = useRef(false); // Ref to track completing state (avoids stale closure)
-  
-  // Use the optimized GPS tracking hook
-  const gpsTracker = useGPSTracking();
+  const [isTripActive, setIsTripActive] = useState(false); // Synced from GPSMileageTracker
+  const [tripStarting, setTripStarting] = useState(false); // Loading state for header button
   
   // Hidden email settings trigger - triple click on title
   const titleClickCount = useRef(0);
@@ -440,13 +428,6 @@ export default function AdminDashboard() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  // Keep Operations & Reports group open while GPS tracking is active
-  useEffect(() => {
-    if (gpsTrackingStatus === "tracking" || gpsTrackingStatus === "paused" || gpsTrackingStatus === "completing") {
-      setForceOpenOperations(true);
-    }
-  }, [gpsTrackingStatus]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -988,274 +969,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // ========== GPS TRIP FUNCTIONS (Using optimized hook) ==========
-  
-  // Fetch active GPS trip on mount
-  const fetchActiveGpsTrip = useCallback(async () => {
-    // Skip if we're in "completing" state - use REF to avoid stale closure
-    if (isCompletingRef.current) {
-      console.log("Skipping fetchActiveGpsTrip - isCompletingRef is true");
-      return;
-    }
-    
-    try {
-      const response = await axios.get(`${API}/admin/gps-trips/active`, getAuthHeader());
-      if (response.data.active_trip) {
-        setGpsTrip(response.data.active_trip);
-        // Only update status if not already completing (check ref again)
-        if (!isCompletingRef.current) {
-          setGpsTrackingStatus(response.data.active_trip.status === "paused" ? "paused" : "tracking");
-        }
-        // Only resume tracking if active AND we're not already tracking AND not completing
-        if (response.data.active_trip.status === "active" && !gpsTracker.isTracking && !isCompletingRef.current) {
-          gpsTracker.resumeTracking();
-        }
-      }
-    } catch (error) {
-      console.error("Failed to fetch active GPS trip:", error);
-    }
-  }, [gpsTracker]);
-
-  // Sync GPS locations to backend
-  const syncGpsLocations = async (tripId) => {
-    const locations = gpsTracker.getLocations();
-    if (locations.length === 0) return;
-    
-    try {
-      const response = await axios.post(
-        `${API}/admin/gps-trips/update-locations`,
-        { trip_id: tripId, locations: locations },
-        getAuthHeader()
-      );
-      
-      if (response.data.success) {
-        setGpsTrip(prev => ({
-          ...prev,
-          total_miles: response.data.total_miles
-        }));
-      }
-    } catch (error) {
-      console.error("Failed to sync locations:", error);
-    }
-  };
-
-  // Start a new GPS trip
-  const handleStartGpsTrip = async () => {
-    setGpsTripLoading(true);
-    buttonPress();
-    
-    // Force open Operations & Reports group so user can see the tracker
-    setForceOpenOperations(true);
-    
-    try {
-      // Start GPS tracking first
-      const started = await gpsTracker.startTracking();
-      if (!started) {
-        throw new Error("Failed to start GPS tracking");
-      }
-      
-      // Get current position for backend
-      const position = await gpsTracker.getCurrentPosition();
-      
-      const response = await axios.post(
-        `${API}/admin/gps-trips/start`,
-        {
-          start_latitude: position.latitude,
-          start_longitude: position.longitude
-        },
-        getAuthHeader()
-      );
-      
-      if (response.data.success) {
-        const tripId = response.data.trip_id;
-        setGpsTrip({
-          id: tripId,
-          status: "active",
-          start_time: response.data.start_time,
-          total_miles: 0
-        });
-        setGpsTrackingStatus("tracking");
-        successFeedback();
-        toast.success("Trip started! GPS tracking active.", {
-          description: gpsTracker.isNative ? "Background tracking enabled" : "Keep app open for best results"
-        });
-        
-        // Scroll to GPS tracker section
-        setTimeout(() => {
-          if (gpsTrackerRef.current) {
-            gpsTrackerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-          }
-        }, 400);
-      }
-    } catch (error) {
-      errorFeedback();
-      gpsTracker.stopTracking();
-      gpsTracker.reset();
-      setForceOpenOperations(false);
-      if (error.code === 1 || error.message?.includes("permission")) {
-        toast.error("Location permission denied. Please enable GPS in Settings.");
-      } else {
-        toast.error(error.response?.data?.detail || "Failed to start trip");
-      }
-    } finally {
-      setGpsTripLoading(false);
-    }
-  };
-
-  // Pause GPS trip
-  const handlePauseGpsTrip = async () => {
-    if (!gpsTrip || gpsPauseLoading) return;
-    setGpsPauseLoading(true);
-    buttonPress();
-    
-    // IMMEDIATELY update UI state
-    setGpsTrackingStatus("paused");
-    setGpsTrip(prev => ({ ...prev, status: "paused" }));
-    lightTap();
-    toast.info("Trip paused");
-    
-    // Do the actual pause operations in background
-    (async () => {
-      try {
-        // Sync current locations first
-        await syncGpsLocations(gpsTrip.id);
-      } catch (error) {
-        console.log("Sync error (non-fatal):", error);
-      }
-      
-      try {
-        // Pause the tracker
-        await gpsTracker.pauseTracking();
-      } catch (error) {
-        console.log("Pause tracking error (non-fatal):", error);
-      }
-      
-      try {
-        await axios.post(
-          `${API}/admin/gps-trips/pause/${gpsTrip.id}`,
-          {},
-          getAuthHeader()
-        );
-      } catch (error) {
-        console.log("API pause error (non-fatal):", error);
-      }
-      
-      setGpsPauseLoading(false);
-    })();
-  };
-
-  // Resume GPS trip
-  const handleResumeGpsTrip = async () => {
-    if (!gpsTrip) return;
-    buttonPress();
-    
-    try {
-      const response = await axios.post(
-        `${API}/admin/gps-trips/resume/${gpsTrip.id}`,
-        {},
-        getAuthHeader()
-      );
-      
-      if (response.data.success) {
-        // Resume GPS tracking
-        await gpsTracker.resumeTracking();
-        
-        setGpsTrackingStatus("tracking");
-        setGpsTrip(prev => ({ ...prev, status: "active" }));
-        successFeedback();
-        toast.success("Trip resumed");
-      }
-    } catch (error) {
-      toast.error("Failed to resume trip");
-    }
-  };
-
-  // Stop GPS trip and scroll to completion form
-  const handleStopGpsTrip = async () => {
-    if (!gpsTrip || gpsStopLoading) return;
-    setGpsStopLoading(true);
-    heavyPress();
-    
-    // CRITICAL: Set the ref FIRST to prevent any fetchActiveGpsTrip from running
-    isCompletingRef.current = true;
-    
-    // IMMEDIATELY set status to completing - do this FIRST before any async work
-    setGpsTrackingStatus("completing");
-    
-    // Force open the Operations & Reports group
-    setForceOpenOperations(true);
-    
-    // Scroll to GPS tracker section after a short delay for the group to open
-    setTimeout(() => {
-      if (gpsTrackerRef.current) {
-        gpsTrackerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-      setGpsStopLoading(false);
-    }, 400);
-    
-    toast.info("Complete your trip details below", { duration: 3000 });
-    
-    // Do cleanup in the background (non-blocking)
-    (async () => {
-      try {
-        // Sync final locations
-        await syncGpsLocations(gpsTrip.id);
-      } catch (error) {
-        console.log("Sync error (non-fatal):", error);
-      }
-      
-      try {
-        // Stop GPS tracking
-        await gpsTracker.stopTracking();
-      } catch (error) {
-        console.log("Stop tracking error (non-fatal):", error);
-      }
-    })();
-  };
-
-  // Callback when trip is completed from the GPSMileageTracker component
-  const handleGpsTripCompleted = () => {
-    isCompletingRef.current = false; // Reset the completing flag
-    setGpsTrip(null);
-    setGpsTrackingStatus("idle");
-    gpsTracker.reset();
-  };
-
-  // Cancel/Discard the current trip
-  const handleCancelGpsTrip = async () => {
-    if (!gpsTrip) return;
-    
-    if (!window.confirm("Discard this trip? All tracking data will be lost.")) {
-      return;
-    }
-    
-    heavyPress();
-    isCompletingRef.current = false; // Reset the completing flag
-    
-    try {
-      // Stop GPS tracking
-      await gpsTracker.stopTracking();
-      
-      // Delete the trip from backend
-      await axios.delete(`${API}/admin/gps-trips/${gpsTrip.id}`, getAuthHeader());
-      
-      // Reset state
-      setGpsTrip(null);
-      setGpsTrackingStatus("idle");
-      gpsTracker.reset();
-      
-      toast.info("Trip discarded");
-    } catch (error) {
-      console.error("Failed to discard trip:", error);
-      toast.error("Failed to discard trip");
-    }
-  };
-
-  // Fetch active trip on mount
-  useEffect(() => {
-    fetchActiveGpsTrip();
-  }, [fetchActiveGpsTrip]);
-
   // Handle iOS Quick Actions (long-press shortcuts)
   // Checks for pending action in localStorage when the dashboard mounts
   useEffect(() => {
@@ -1271,18 +984,17 @@ export default function AdminDashboard() {
       setTimeout(() => {
         switch (pendingAction) {
           case 'StartTrip':
-            // Start GPS tracking
-            if (gpsTrackingStatus === 'idle') {
-              toast.info('Starting GPS trip...', { duration: 2000 });
-              handleStartGpsTrip();
-            } else {
-              toast.info('GPS trip already active', { duration: 2000 });
-              // Scroll to the GPS tracker section
-              if (gpsTrackerRef.current) {
-                setForceOpenOperations(true);
+            // Start GPS tracking via the tracker component
+            setForceOpenOperations(true);
+            setTimeout(() => {
+              if (gpsTrackerRef.current?.startTrip) {
+                gpsTrackerRef.current.startTrip();
+                toast.info('Starting GPS trip...', { duration: 2000 });
+              }
+              if (gpsTrackerRef.current?.scrollIntoView) {
                 gpsTrackerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }
-            }
+            }, 400);
             break;
             
           case 'LogMiles':
@@ -1339,7 +1051,7 @@ export default function AdminDashboard() {
       clearTimeout(retryTimer);
       window.removeEventListener('shortcutAction', handleShortcutEvent);
     };
-  }, [gpsTrackingStatus]);
+  }, []);
 
   // Email configuration functions
   const fetchEmailStatus = useCallback(async () => {
@@ -3466,99 +3178,46 @@ export default function AdminDashboard() {
                     <span className="hidden sm:inline">Remove</span>
                   </Button>
                 </div>
-                {/* GPS Trip Controls Row - Enabled for testing */}
+                {/* GPS Trip Controls Row - Unified quick trip */}
                 <div className="flex gap-1 items-center">
-                  {gpsTrackingStatus === "idle" ? (
+                  {isTripActive ? (
                     <Button
-                      onClick={handleStartGpsTrip}
-                      disabled={gpsTripLoading}
+                      onClick={() => {
+                        buttonPress();
+                        gpsTrackerRef.current?.endTrip();
+                      }}
+                      size="sm"
+                      className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md hover:shadow-lg transition-all border-0 text-xs sm:text-sm h-9 flex-1"
+                      data-testid="end-trip-header-btn"
+                    >
+                      <Square className="w-4 h-4" />
+                      <span className="hidden sm:inline">End Trip</span>
+                      <span className="sm:hidden">End</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => {
+                        buttonPress();
+                        setForceOpenOperations(true);
+                        gpsTrackerRef.current?.startTrip();
+                        setTimeout(() => {
+                          gpsTrackerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 400);
+                      }}
+                      disabled={tripStarting}
                       size="sm"
                       className="flex items-center gap-1 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold shadow-md hover:shadow-lg hover:shadow-[#10B981]/30 transition-all border-0 text-xs sm:text-sm h-9 flex-1"
                       data-testid="start-trip-header-btn"
                     >
                       <Navigation className="w-4 h-4" />
-                      {gpsTripLoading ? "Starting..." : (
+                      {tripStarting ? "Starting..." : (
                         <>
                           <span className="hidden sm:inline">Start Trip</span>
                           <span className="sm:hidden">Trip</span>
                         </>
                       )}
                     </Button>
-                  ) : gpsTrackingStatus === "tracking" || gpsTrackingStatus === "paused" ? (
-                    <>
-                      {/* Mileage Display - Always visible when tracking */}
-                      <div className="flex items-center gap-1 px-2 py-1 bg-white/10 rounded-lg border border-white/20">
-                        <Car className={`w-3.5 h-3.5 text-green-400 ${gpsTrackingStatus === "tracking" ? "animate-pulse" : ""}`} />
-                        <span className="text-sm font-bold text-white">
-                          {gpsTracker.totalMiles?.toFixed(2) || "0.00"}
-                        </span>
-                        <span className="text-[10px] text-white/60">mi</span>
-                      </div>
-                      
-                      {gpsTrackingStatus === "tracking" ? (
-                        <Button
-                          onClick={handlePauseGpsTrip}
-                          size="sm"
-                          disabled={gpsPauseLoading}
-                          className="flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 disabled:opacity-50"
-                          data-testid="pause-trip-header-btn"
-                        >
-                          <Pause className="w-4 h-4" />
-                          <span className="hidden sm:inline">{gpsPauseLoading ? "..." : "Pause"}</span>
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={handleResumeGpsTrip}
-                          size="sm"
-                          className="flex items-center gap-1 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9"
-                          data-testid="resume-trip-header-btn"
-                        >
-                          <Play className="w-4 h-4" />
-                          <span className="hidden sm:inline">Resume</span>
-                        </Button>
-                      )}
-                      
-                      <Button
-                        onClick={handleStopGpsTrip}
-                        size="sm"
-                        disabled={gpsStopLoading}
-                        className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 disabled:opacity-50"
-                        data-testid="stop-trip-header-btn"
-                      >
-                        <Square className="w-4 h-4" />
-                        <span className="hidden sm:inline">{gpsStopLoading ? "..." : "Stop"}</span>
-                      </Button>
-                      
-                      {/* Cancel/Discard Button */}
-                      <Button
-                        onClick={handleCancelGpsTrip}
-                        size="sm"
-                        variant="outline"
-                        className="flex items-center gap-1 border-gray-400/50 text-gray-300 hover:bg-gray-500/20 transition-all text-xs sm:text-sm h-9"
-                        data-testid="cancel-trip-header-btn"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </>
-                  ) : gpsTrackingStatus === "completing" ? (
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 border border-green-400/50 rounded-lg text-xs text-green-300">
-                        <Car className="w-4 h-4" />
-                        <span className="font-bold">{gpsTracker.totalMiles?.toFixed(2) || "0.00"} mi</span>
-                        <span className="hidden sm:inline">- Complete below</span>
-                      </div>
-                      {/* Cancel button during completion */}
-                      <Button
-                        onClick={handleCancelGpsTrip}
-                        size="sm"
-                        variant="outline"
-                        className="flex items-center gap-1 border-gray-400/50 text-gray-300 hover:bg-gray-500/20 transition-all text-xs h-9"
-                        data-testid="cancel-completing-btn"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ) : null}
+                  )}
                 </div>
               </div>
             </div>
@@ -4151,12 +3810,7 @@ export default function AdminDashboard() {
               <GPSMileageTracker 
                 ref={gpsTrackerRef}
                 getAuthHeader={getAuthHeader}
-                externalTrip={gpsTrip}
-                externalTrackingStatus={gpsTrackingStatus}
-                onTripCompleted={handleGpsTripCompleted}
-                setExternalTrip={setGpsTrip}
-                setExternalTrackingStatus={setGpsTrackingStatus}
-                gpsTracker={gpsTracker}
+                onTripStateChange={setIsTripActive}
               />
 
               {/* Sales Data Section - CSV Import, Reports, Analytics */}

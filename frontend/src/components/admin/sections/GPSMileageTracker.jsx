@@ -1,8 +1,9 @@
 /**
  * GPS Mileage Tracker Component
- * Real-time GPS tracking for business mileage with IRS deduction calculations
- * 
- * Refactored: Mar 28, 2026 - Extracted sub-components to gps-tracker/ folder
+ * Quick Start/End trip tracking with OSRM road routing, IRS deductions,
+ * Siri Shortcuts integration, manual entry, and trip history.
+ *
+ * Unified: Single quick-trip system — no legacy continuous tracking.
  */
 import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle, lazy, Suspense } from "react";
 import ReactDOM from "react-dom";
@@ -10,7 +11,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Navigation,
   Play,
-  Pause,
   Square,
   MapPin,
   DollarSign,
@@ -38,6 +38,8 @@ import {
   MicOff,
   Navigation2,
   Download,
+  Copy,
+  Key,
   Loader2 as Loader,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -65,11 +67,6 @@ const TripMap = lazy(() => import("@/components/TripMap"));
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// Check if running in Capacitor native app
-const isNativePlatform = () => {
-  return window.Capacitor?.isNativePlatform?.() || window.Capacitor?.isNative;
-};
-
 // Trip purposes
 const TRIP_PURPOSES = [
   { value: "post_office", label: "Post Office", icon: Building2 },
@@ -80,175 +77,43 @@ const TRIP_PURPOSES = [
 // IRS rate for display
 const IRS_RATE_2026 = 0.725;
 
-// Calculate distance between two GPS points in miles (Haversine formula)
-const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 3959; // Earth's radius in miles
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-};
-
-// Max reasonable speed in mph (85 mph - highway speed + buffer)
-const MAX_REASONABLE_SPEED_MPH = 85;
-
-// Check if a new point is a "bounce-back" to an earlier location
-// This happens when GPS reports stale/cached coordinates
-const isBounceBackInternal = (newPoint, recentPoints, startPoint) => {
-  if (!startPoint || recentPoints.length < 5) return false; // Need more points before filtering
-  
-  const distFromStart = calculateDistance(
-    startPoint.latitude, startPoint.longitude,
-    newPoint.latitude, newPoint.longitude
-  );
-  
-  // Get the furthest point from start in recent history
-  let maxDistFromStart = 0;
-  for (const pt of recentPoints.slice(-15)) { // Check last 15 points
-    const dist = calculateDistance(
-      startPoint.latitude, startPoint.longitude,
-      pt.latitude, pt.longitude
-    );
-    if (dist > maxDistFromStart) {
-      maxDistFromStart = dist;
-    }
-  }
-  
-  // If we've traveled at least 0.2 miles from start, and new point
-  // is significantly closer to start (jumped back more than 70% of progress)
-  // Made more lenient: 0.2 mile threshold and 30% (0.3) instead of 50%
-  if (maxDistFromStart > 0.2 && distFromStart < maxDistFromStart * 0.3) {
-    console.log(`[GPS Internal] BOUNCE-BACK detected! New point is ${distFromStart.toFixed(3)}mi from start, but we reached ${maxDistFromStart.toFixed(3)}mi`);
-    return true;
-  }
-  
-  // Check if point is very close to any of the last 8-15 points (excluding last 3)
-  // Reduced threshold to be less aggressive
-  const pointsToCheck = recentPoints.slice(-15, -3);
-  for (const oldPoint of pointsToCheck) {
-    const distToOld = calculateDistance(
-      oldPoint.latitude, oldPoint.longitude,
-      newPoint.latitude, newPoint.longitude
-    );
-    // If new point is within 0.01 miles (50 feet) of an old point AND
-    // that old point is far from current position (actual bounce-back)
-    if (distToOld < 0.01) {
-      const lastPoint = recentPoints[recentPoints.length - 1];
-      const distOldToLast = calculateDistance(
-        oldPoint.latitude, oldPoint.longitude,
-        lastPoint.latitude, lastPoint.longitude
-      );
-      // Only reject if the old point is far from where we are now
-      if (distOldToLast > 0.05) { // Old point is more than 250 feet from current position
-        console.log(`[GPS Internal] BOUNCE-BACK to old point detected! Distance to old point: ${(distToOld * 5280).toFixed(0)} feet`);
-        return true;
-      }
-    }
-  }
-  
-  return false;
-};
-
-const GPSMileageTracker = forwardRef(function GPSMileageTracker({ 
-  getAuthHeader,
-  externalTrip,
-  externalTrackingStatus,
-  onTripCompleted,
-  setExternalTrip,
-  setExternalTrackingStatus,
-  gpsTracker: externalGpsTracker
-}, ref) {
+const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader, onTripStateChange }, ref) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [tripHistory, setTripHistory] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [summaryView, setSummaryView] = useState("year"); // "today", "month", "year"
-  
+  const [summaryView, setSummaryView] = useState("year");
+
   // Collapsible state for hierarchical trip view
   const [expandedMonths, setExpandedMonths] = useState({});
   const [expandedDays, setExpandedDays] = useState({});
-  
-  // Mileage adjustment state (used by MileageAdjustmentModal)
+
+  // Mileage adjustment state
   const [showAdjustModal, setShowAdjustModal] = useState(false);
-  const [adjustmentData, setAdjustmentData] = useState({
-    miles: "",
-    reason: ""
-  });
+  const [adjustmentData, setAdjustmentData] = useState({ miles: "", reason: "" });
   const [savingAdjustment, setSavingAdjustment] = useState(false);
-  
-  // Use external state if provided, otherwise internal
-  const activeTrip = externalTrip;
-  const setActiveTrip = setExternalTrip || (() => {});
-  const trackingStatus = externalTrackingStatus || "idle";
-  const setTrackingStatus = setExternalTrackingStatus || (() => {});
-  
-  // Use external GPS tracker if provided
-  const gpsTracker = externalGpsTracker;
-  
-  // Determine if completion form should show
-  const showCompletionForm = trackingStatus === "completing";
-  
-  // Completion form data
-  const [completionData, setCompletionData] = useState({
-    purpose: "",
-    notes: "",
-    receipt: null
-  });
-  
+
   // Manual trip entry state
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [manualTripData, setManualTripData] = useState({
     date: new Date().toISOString().split('T')[0],
-    miles: "",
-    purpose: "",
-    notes: "",
-    receipt: null
+    miles: "", purpose: "", notes: "", receipt: null
   });
   const [savingManualTrip, setSavingManualTrip] = useState(false);
   const manualEntryRef = useRef(null);
-  
-  // Scroll to manual entry form when it opens
-  useEffect(() => {
-    if (showManualEntry && manualEntryRef.current) {
-      setTimeout(() => {
-        manualEntryRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
-    }
-  }, [showManualEntry]);
-  
-  // Edit trip state (used by EditTripModal)
+
+  // Edit trip state
   const [editingTrip, setEditingTrip] = useState(null);
   const [editTripData, setEditTripData] = useState({
-    date: "",
-    miles: "",
-    purpose: "",
-    notes: ""
+    date: "", miles: "", purpose: "", notes: "",
+    start_address: "", end_address: "", classification: "business"
   });
   const [savingEdit, setSavingEdit] = useState(false);
-  
-  // Location tracking state
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const [locationError, setLocationError] = useState(null);
-  const [locationCount, setLocationCount] = useState(0);
-  const [recordedLocations, setRecordedLocations] = useState([]); // For live map display
-  const watchIdRef = useRef(null);
-  const locationBufferRef = useRef([]);
-  const syncIntervalRef = useRef(null);
-  const completionFormRef = useRef(null);
-  const isCompletingRef = useRef(false); // Ref to prevent stale closure issues
-  const lastValidLocationRef = useRef(null); // Track last valid location for jump detection
-  const startPointInternalRef = useRef(null); // Track start point for bounce-back detection
-  
-  // Map viewing state (used by TripMapModal)
+
+  // Map viewing state
   const [viewingTripMap, setViewingTripMap] = useState(null);
   const [loadingMap, setLoadingMap] = useState(false);
-  
-  // Background geolocation (native only)
-  const backgroundGeoRef = useRef(null);
+
   const containerRef = useRef(null);
 
   // ========== Quick Trip (Start/End with GPS + voice) ==========
@@ -257,6 +122,15 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   const [quickTripStartAddr, setQuickTripStartAddr] = useState("");
   const [quickTripLoading, setQuickTripLoading] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [lastTripResult, setLastTripResult] = useState(null);
+
+  // Siri API Key state
+  const [siriKey, setSiriKey] = useState({ has_key: false, key_prefix: null, newKey: null, loading: false });
+
+  // Notify parent of trip state changes
+  useEffect(() => {
+    if (onTripStateChange) onTripStateChange(quickTripActive);
+  }, [quickTripActive, onTripStateChange]);
 
   // Voice commands for trip control
   const voiceHandler = useSpeechRecognition({
@@ -267,7 +141,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       } else if (lower.includes("end trip") || lower.includes("stop trip") || lower.includes("end drive") || lower.includes("stop drive")) {
         handleQuickEnd();
       } else {
-        toast.info(`Heard: "${transcript}" — say "start trip" or "end trip"`);
+        toast.info(`Heard: "${transcript}" -- say "start trip" or "end trip"`);
       }
     },
   });
@@ -284,6 +158,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   const handleQuickStart = async () => {
     if (quickTripActive) return toast.info("Trip already in progress");
     setQuickTripLoading(true);
+    setLastTripResult(null);
     try {
       const pos = await getGPSPosition();
       const { data } = await axios.post(`${API}/admin/gps-trips/log-drive`, {
@@ -321,9 +196,17 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
         setQuickTripActive(false);
         setQuickTripId(null);
         setQuickTripStartAddr("");
+        setLastTripResult({
+          start_address: data.start_address || "",
+          end_address: data.end_address || "",
+          total_miles: data.total_miles,
+          tax_deduction: data.tax_deduction,
+        });
         toast.success(data.message);
         fetchTripHistory();
         fetchSummary();
+        // Auto-clear result after 20 seconds
+        setTimeout(() => setLastTripResult(null), 20000);
       } else {
         toast.error(data.message || "Failed to end trip");
       }
@@ -334,6 +217,47 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     }
   };
 
+  // ========== Siri API Key ==========
+  const fetchSiriKeyStatus = useCallback(async () => {
+    try {
+      const { data } = await axios.get(`${API}/admin/gps-trips/siri-key`, getAuthHeader());
+      setSiriKey(prev => ({ ...prev, has_key: data.has_key, key_prefix: data.key_prefix || null }));
+    } catch {}
+  }, [getAuthHeader]);
+
+  const handleGenerateSiriKey = async () => {
+    setSiriKey(prev => ({ ...prev, loading: true }));
+    try {
+      const { data } = await axios.post(`${API}/admin/gps-trips/siri-key`, {}, getAuthHeader());
+      if (data.success) {
+        setSiriKey({ has_key: true, key_prefix: data.key_prefix, newKey: data.api_key, loading: false });
+        toast.success("Siri API key generated! Copy it now.");
+      }
+    } catch {
+      toast.error("Failed to generate key");
+      setSiriKey(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleRevokeSiriKey = async () => {
+    if (!window.confirm("Revoke this key? Your Siri Shortcuts will stop working until you set up a new one.")) return;
+    try {
+      await axios.delete(`${API}/admin/gps-trips/siri-key`, getAuthHeader());
+      setSiriKey({ has_key: false, key_prefix: null, newKey: null, loading: false });
+      toast.success("Key revoked");
+    } catch {
+      toast.error("Failed to revoke key");
+    }
+  };
+
+  const handleCopySiriKey = () => {
+    if (siriKey.newKey) {
+      navigator.clipboard.writeText(siriKey.newKey);
+      toast.success("Key copied to clipboard");
+    }
+  };
+
+  // ========== Data Fetching ==========
   const fetchCategories = useCallback(async () => {
     try {
       const { data } = await axios.get(`${API}/admin/gps-trips/categories`, getAuthHeader());
@@ -341,6 +265,29 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     } catch {}
   }, [getAuthHeader]);
 
+  const fetchTripHistory = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/admin/gps-trips/history`, {
+        params: { limit: 20 },
+        ...getAuthHeader()
+      });
+      setTripHistory(response.data.trips || []);
+    } catch (error) {
+      console.error("Failed to fetch trip history:", error);
+    }
+  }, [getAuthHeader]);
+
+  const fetchSummary = useCallback(async () => {
+    try {
+      const tzOffset = new Date().getTimezoneOffset();
+      const response = await axios.get(`${API}/admin/gps-trips/summary?tz_offset=${tzOffset}`, getAuthHeader());
+      setSummary(response.data);
+    } catch (error) {
+      console.error("Failed to fetch summary:", error);
+    }
+  }, [getAuthHeader]);
+
+  // ========== Trip Actions ==========
   const handleExportCSV = async () => {
     try {
       const resp = await axios.get(`${API}/admin/gps-trips/export-csv`, { ...getAuthHeader(), responseType: "blob" });
@@ -366,724 +313,8 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     }
   };
 
-  // Check for pending bluetooth trip on mount
-  useEffect(() => {
-    const checkPending = async () => {
-      try {
-        const { data } = await axios.get(`${API}/admin/gps-trips/active`, getAuthHeader());
-        if (data && data.is_bluetooth && data.status === "active") {
-          setQuickTripActive(true);
-          setQuickTripId(data.id);
-          setQuickTripStartAddr(data.start_address || "");
-        }
-      } catch {}
-    };
-    checkPending();
-    fetchCategories();
-  }, [getAuthHeader, fetchCategories]);
-
-  // Expose methods via ref for external control (e.g., iOS Quick Actions)
-  useImperativeHandle(ref, () => ({
-    scrollIntoView: (options) => {
-      if (containerRef.current) {
-        containerRef.current.scrollIntoView(options);
-      }
-    },
-    // Open the manual trip entry form
-    openManualEntry: () => {
-      setIsExpanded(true);
-      setShowManualEntry(true);
-    },
-    // Check if manual entry form is open
-    isManualEntryOpen: () => showManualEntry
-  }));
-
-  // Auto-expand when tracking is active or completing
-  useEffect(() => {
-    if (trackingStatus === "tracking" || trackingStatus === "paused") {
-      setIsExpanded(true);
-    }
-    if (trackingStatus === "completing") {
-      setIsExpanded(true);
-      // Scroll to completion form after a short delay
-      setTimeout(() => {
-        if (completionFormRef.current) {
-          completionFormRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      }, 300);
-    }
-  }, [trackingStatus]);
-
-  // Fetch active trip on mount (only if no external trip provided)
-  const fetchActiveTrip = useCallback(async () => {
-    // Skip if external state is managing the trip
-    if (externalTrip !== undefined) return;
-    
-    // Skip if we're in "completing" state - use REF to avoid stale closure
-    if (isCompletingRef.current) {
-      console.log("Skipping fetchActiveTrip - isCompletingRef is true");
-      return;
-    }
-    
-    try {
-      const response = await axios.get(`${API}/admin/gps-trips/active`, getAuthHeader());
-      if (response.data.active_trip) {
-        setActiveTrip(response.data.active_trip);
-        // Only update status if not already completing (check ref again)
-        if (!isCompletingRef.current) {
-          setTrackingStatus(response.data.active_trip.status === "paused" ? "paused" : "tracking");
-        }
-        setLocationCount(response.data.active_trip.location_count || 0);
-      } else {
-        // NO ACTIVE TRIP in backend - force stop any orphaned GPS tracking
-        console.log("[GPS] No active trip in backend - ensuring GPS is stopped");
-        if (externalGpsTracker?.forceStop) {
-          await externalGpsTracker.forceStop();
-        }
-        setActiveTrip(null);
-        setTrackingStatus("idle");
-      }
-    } catch (error) {
-      console.error("Failed to fetch active trip:", error);
-    }
-  }, [getAuthHeader, externalTrip, setActiveTrip, setTrackingStatus, externalGpsTracker]);
-
-  // CRITICAL: On component mount, verify GPS state matches backend
-  // This catches cases where app was killed but GPS kept running
-  useEffect(() => {
-    const syncGPSStateWithBackend = async () => {
-      try {
-        const response = await axios.get(`${API}/admin/gps-trips/active`, getAuthHeader());
-        const hasActiveTrip = !!response.data.active_trip;
-        
-        console.log("[GPS] State sync check - Backend has active trip:", hasActiveTrip);
-        
-        if (!hasActiveTrip) {
-          // No active trip in backend, but GPS might be running from a previous session
-          // Force stop to ensure clean state
-          console.log("[GPS] No active trip - forcing GPS stop to ensure clean state");
-          if (externalGpsTracker?.forceStop) {
-            await externalGpsTracker.forceStop();
-          }
-          await stopLocationTracking();
-          setActiveTrip(null);
-          setTrackingStatus("idle");
-        }
-      } catch (error) {
-        console.error("[GPS] State sync check failed:", error);
-      }
-    };
-    
-    // Run on mount
-    syncGPSStateWithBackend();
-    
-    // Also run when app resumes from background (Capacitor App plugin)
-    const setupAppStateListener = async () => {
-      if (window.Capacitor?.isNativePlatform?.()) {
-        try {
-          const { App } = await import('@capacitor/app');
-          App.addListener('appStateChange', async ({ isActive }) => {
-            if (isActive) {
-              console.log("[GPS] App resumed - syncing GPS state with backend");
-              await syncGPSStateWithBackend();
-            }
-          });
-        } catch (err) {
-          console.log("[GPS] Could not set up app state listener:", err);
-        }
-      }
-    };
-    
-    setupAppStateListener();
-  }, [getAuthHeader, externalGpsTracker, setActiveTrip, setTrackingStatus]);
-
-  // Fetch trip history
-  const fetchTripHistory = useCallback(async () => {
-    try {
-      const response = await axios.get(`${API}/admin/gps-trips/history`, {
-        params: { limit: 20 },
-        ...getAuthHeader()
-      });
-      setTripHistory(response.data.trips || []);
-    } catch (error) {
-      console.error("Failed to fetch trip history:", error);
-    }
-  }, [getAuthHeader]);
-
-  // Fetch summary
-  const fetchSummary = useCallback(async () => {
-    try {
-      // Pass timezone offset so backend can calculate "today" in client's local time
-      const tzOffset = new Date().getTimezoneOffset(); // Minutes behind UTC (e.g., -300 for US Central)
-      const response = await axios.get(`${API}/admin/gps-trips/summary?tz_offset=${tzOffset}`, getAuthHeader());
-      setSummary(response.data);
-    } catch (error) {
-      console.error("Failed to fetch summary:", error);
-    }
-  }, [getAuthHeader]);
-
-  // Load data when expanded
-  useEffect(() => {
-    // Only fetch if expanded AND not in completing state
-    // (to prevent overwriting the completing status when scrolling/expanding)
-    if (isExpanded && trackingStatus !== "completing") {
-      fetchActiveTrip();
-      fetchTripHistory();
-      fetchSummary();
-    }
-  }, [isExpanded, trackingStatus, fetchActiveTrip, fetchTripHistory, fetchSummary]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopLocationTracking();
-    };
-  }, []);
-
-  // Get current position
-  const getCurrentPosition = () => {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error("Geolocation not supported"));
-        return;
-      }
-      
-      navigator.geolocation.getCurrentPosition(
-        (position) => resolve(position),
-        (error) => reject(error),
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0
-        }
-      );
-    });
-  };
-
-  // Start location tracking
-  const startLocationTracking = async (tripId) => {
-    try {
-      // Try to use background geolocation on native platforms
-      if (isNativePlatform()) {
-        try {
-          const { BackgroundGeolocation } = await import('@capacitor-community/background-geolocation');
-          backgroundGeoRef.current = BackgroundGeolocation;
-          
-          await BackgroundGeolocation.addWatcher(
-            {
-              backgroundMessage: "Tracking your trip mileage",
-              backgroundTitle: "Thrifty Curator",
-              requestPermissions: true,
-              stale: false,
-              distanceFilter: 1 // 1 meter - update on ANY movement for maximum accuracy
-            },
-            (location, error) => {
-              if (error) {
-                console.error("Background location error:", error);
-                return;
-              }
-              
-              if (location) {
-                // Filter out inaccurate readings (> 20 meters accuracy is unreliable)
-                if (location.accuracy && location.accuracy > 20) {
-                  console.log("Skipping inaccurate GPS reading:", location.accuracy, "m");
-                  return;
-                }
-                
-                const point = {
-                  latitude: location.latitude,
-                  longitude: location.longitude,
-                  timestamp: new Date().toISOString(),
-                  accuracy: location.accuracy,
-                  speed: location.speed
-                };
-                
-                // Track start point for bounce-back detection
-                if (!startPointInternalRef.current) {
-                  startPointInternalRef.current = point;
-                  console.log("[GPS Internal] Start point set:", point.latitude, point.longitude);
-                }
-                
-                // Check for bounce-back to earlier position
-                if (isBounceBackInternal(point, locationBufferRef.current, startPointInternalRef.current)) {
-                  console.log("[GPS Internal] REJECTED bounce-back point");
-                  return;
-                }
-                
-                // Check for impossible speed jumps
-                if (lastValidLocationRef.current) {
-                  const lastLoc = lastValidLocationRef.current;
-                  const timeDiffHours = (new Date(point.timestamp) - new Date(lastLoc.timestamp)) / (1000 * 60 * 60);
-                  if (timeDiffHours > 0) {
-                    const distance = calculateDistance(lastLoc.latitude, lastLoc.longitude, point.latitude, point.longitude);
-                    const impliedSpeed = distance / timeDiffHours;
-                    
-                    if (impliedSpeed > MAX_REASONABLE_SPEED_MPH) {
-                      console.log(`Skipping GPS jump: ${impliedSpeed.toFixed(0)} mph implied (${distance.toFixed(2)} mi in ${(timeDiffHours * 60).toFixed(1)} min)`);
-                      return;
-                    }
-                  }
-                }
-                
-                lastValidLocationRef.current = point;
-                setCurrentLocation(point);
-                setRecordedLocations(prev => [...prev, point]);
-                locationBufferRef.current.push(point);
-                setLocationCount(prev => prev + 1);
-              }
-            }
-          ).then(watcherId => {
-            watchIdRef.current = watcherId;
-          });
-          
-          console.log("Background geolocation started");
-        } catch (bgError) {
-          console.log("Background geolocation not available, using standard:", bgError);
-          startStandardTracking();
-        }
-      } else {
-        startStandardTracking();
-      }
-      
-      // Start sync interval to send locations to server
-      syncIntervalRef.current = setInterval(() => {
-        syncLocations(tripId);
-      }, 30000); // Sync every 30 seconds
-      
-    } catch (error) {
-      console.error("Failed to start location tracking:", error);
-      setLocationError(error.message);
-    }
-  };
-
-  // Standard browser geolocation tracking
-  const startStandardTracking = () => {
-    if (!navigator.geolocation) {
-      setLocationError("Geolocation not supported");
-      return;
-    }
-    
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (position) => {
-        // Filter out inaccurate readings (> 20 meters is unreliable)
-        if (position.coords.accuracy && position.coords.accuracy > 20) {
-          console.log("Skipping inaccurate GPS reading:", position.coords.accuracy, "m");
-          return;
-        }
-        
-        const point = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          timestamp: new Date().toISOString(),
-          accuracy: position.coords.accuracy,
-          speed: position.coords.speed
-        };
-        
-        // Track start point for bounce-back detection
-        if (!startPointInternalRef.current) {
-          startPointInternalRef.current = point;
-          console.log("[GPS Standard] Start point set:", point.latitude, point.longitude);
-        }
-        
-        // Check for bounce-back to earlier position
-        if (isBounceBackInternal(point, locationBufferRef.current, startPointInternalRef.current)) {
-          console.log("[GPS Standard] REJECTED bounce-back point");
-          return;
-        }
-        
-        // Check for impossible speed jumps
-        if (lastValidLocationRef.current) {
-          const lastLoc = lastValidLocationRef.current;
-          const timeDiffHours = (new Date(point.timestamp) - new Date(lastLoc.timestamp)) / (1000 * 60 * 60);
-          if (timeDiffHours > 0) {
-            const distance = calculateDistance(lastLoc.latitude, lastLoc.longitude, point.latitude, point.longitude);
-            const impliedSpeed = distance / timeDiffHours;
-            
-            if (impliedSpeed > MAX_REASONABLE_SPEED_MPH) {
-              console.log(`Skipping GPS jump: ${impliedSpeed.toFixed(0)} mph implied (${distance.toFixed(2)} mi in ${(timeDiffHours * 60).toFixed(1)} min)`);
-              return;
-            }
-          }
-        }
-        
-        lastValidLocationRef.current = point;
-        setCurrentLocation(point);
-        setRecordedLocations(prev => [...prev, point]);
-        locationBufferRef.current.push(point);
-        setLocationCount(prev => prev + 1);
-      },
-      (error) => {
-        console.error("Location error:", error);
-        setLocationError(error.message);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0  // Don't use cached positions
-      }
-    );
-  };
-
-  // Sync buffered locations to server
-  const syncLocations = async (tripId) => {
-    if (locationBufferRef.current.length === 0) return;
-    
-    const locationsToSync = [...locationBufferRef.current];
-    locationBufferRef.current = [];
-    
-    try {
-      const response = await axios.post(
-        `${API}/admin/gps-trips/update-locations`,
-        {
-          trip_id: tripId,
-          locations: locationsToSync
-        },
-        getAuthHeader()
-      );
-      
-      if (response.data.success) {
-        setActiveTrip(prev => ({
-          ...prev,
-          total_miles: response.data.total_miles,
-          location_count: response.data.location_count
-        }));
-      }
-    } catch (error) {
-      // Re-add failed locations to buffer
-      locationBufferRef.current = [...locationsToSync, ...locationBufferRef.current];
-      console.error("Failed to sync locations:", error);
-    }
-  };
-
-  // Stop location tracking
-  const stopLocationTracking = async () => {
-    // Clear sync interval
-    if (syncIntervalRef.current) {
-      clearInterval(syncIntervalRef.current);
-      syncIntervalRef.current = null;
-    }
-    
-    // Stop background geolocation
-    if (backgroundGeoRef.current && watchIdRef.current) {
-      try {
-        await backgroundGeoRef.current.removeWatcher({ id: watchIdRef.current });
-      } catch (error) {
-        console.error("Error stopping background geo:", error);
-      }
-    }
-    
-    // Stop standard geolocation
-    if (watchIdRef.current && !backgroundGeoRef.current) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-    }
-    
-    watchIdRef.current = null;
-  };
-
-  // Start a new trip
-  const handleStartTrip = async () => {
-    setLoading(true);
-    setLocationError(null);
-    
-    // Reset tracking state for new trip
-    lastValidLocationRef.current = null;
-    startPointInternalRef.current = null; // Reset start point for bounce-back detection
-    setRecordedLocations([]);
-    locationBufferRef.current = [];
-    
-    try {
-      // Get current location first
-      const position = await getCurrentPosition();
-      
-      const response = await axios.post(
-        `${API}/admin/gps-trips/start`,
-        {
-          start_latitude: position.coords.latitude,
-          start_longitude: position.coords.longitude
-        },
-        getAuthHeader()
-      );
-      
-      if (response.data.success) {
-        const tripId = response.data.trip_id;
-        setActiveTrip({
-          id: tripId,
-          status: "active",
-          start_time: response.data.start_time,
-          total_miles: 0
-        });
-        setTrackingStatus("tracking");
-        setLocationCount(1);
-        
-        // If external GPS tracker is provided, use ONLY that (avoid duplicate tracking)
-        if (externalGpsTracker?.startTracking) {
-          await externalGpsTracker.startTracking();
-          // Don't start internal tracking - external handles it
-        } else {
-          // Fallback to internal tracking only if no external tracker
-          await startLocationTracking(tripId);
-        }
-        
-        toast.success("Trip started! GPS tracking is active.", {
-          description: "Drive safely. Tracking continues in background."
-        });
-      }
-    } catch (error) {
-      console.error("Failed to start trip:", error);
-      const message = error.response?.data?.detail || error.message || "Failed to start trip";
-      toast.error(message);
-      
-      if (error.code === 1) {
-        setLocationError("Location permission denied. Please enable location services.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Pause trip
-  const handlePauseTrip = async () => {
-    if (!activeTrip) return;
-    
-    try {
-      // Sync any pending locations first
-      await syncLocations(activeTrip.id);
-      
-      // If using external GPS tracker, pause that. Otherwise pause internal.
-      if (externalGpsTracker?.pauseTracking) {
-        await externalGpsTracker.pauseTracking();
-      } else {
-        await stopLocationTracking();
-      }
-      
-      const response = await axios.post(
-        `${API}/admin/gps-trips/pause/${activeTrip.id}`,
-        {},
-        getAuthHeader()
-      );
-      
-      if (response.data.success) {
-        setTrackingStatus("paused");
-        setActiveTrip(prev => ({ ...prev, status: "paused" }));
-        toast.info("Trip paused");
-      }
-    } catch (error) {
-      console.error("Failed to pause trip:", error);
-      toast.error("Failed to pause trip");
-    }
-  };
-
-  // Resume trip
-  const handleResumeTrip = async () => {
-    if (!activeTrip) return;
-    
-    try {
-      const response = await axios.post(
-        `${API}/admin/gps-trips/resume/${activeTrip.id}`,
-        {},
-        getAuthHeader()
-      );
-      
-      if (response.data.success) {
-        setTrackingStatus("tracking");
-        setActiveTrip(prev => ({ ...prev, status: "active" }));
-        
-        // If using external GPS tracker, resume that. Otherwise resume internal.
-        if (externalGpsTracker?.resumeTracking) {
-          await externalGpsTracker.resumeTracking();
-        } else {
-          await startLocationTracking(activeTrip.id);
-        }
-        
-        toast.success("Trip resumed");
-      }
-    } catch (error) {
-      console.error("Failed to resume trip:", error);
-      toast.error("Failed to resume trip");
-    }
-  };
-
-  // Stop trip (show completion form)
-  const handleStopTrip = useCallback(async () => {
-    // Use props directly to avoid stale closure issues
-    const trip = externalTrip;
-    const setStatus = setExternalTrackingStatus;
-    
-    if (!trip) {
-      console.log("No active trip to stop - externalTrip is:", externalTrip);
-      return;
-    }
-    
-    if (!setStatus) {
-      console.log("No setExternalTrackingStatus provided");
-      return;
-    }
-    
-    console.log("Stopping trip, trip id:", trip.id);
-    
-    // CRITICAL: Set the ref FIRST to prevent any fetchActiveTrip from running
-    isCompletingRef.current = true;
-    
-    // IMMEDIATELY set status to completing - this is the most important thing
-    // Do this BEFORE any async operations to prevent race conditions
-    setStatus("completing");
-    console.log("Status set to completing");
-    
-    // Scroll to completion form right away
-    setTimeout(() => {
-      completionFormRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 100);
-    
-    // Now do cleanup in the background (non-blocking)
-    // These are "fire and forget" - we don't wait for them
-    (async () => {
-      try {
-        // Try to sync final locations
-        await syncLocations(trip.id);
-      } catch (syncError) {
-        console.log("Sync locations error (non-fatal):", syncError);
-      }
-      
-      try {
-        // FORCE STOP GPS to ensure it's really stopped
-        if (externalGpsTracker?.forceStop) {
-          console.log("[GPS] Force stopping GPS tracker on complete");
-          await externalGpsTracker.forceStop();
-        } else if (externalGpsTracker?.stopTracking) {
-          await externalGpsTracker.stopTracking();
-        } else {
-          await stopLocationTracking();
-        }
-      } catch (stopError) {
-        console.log("Stop tracking error (non-fatal):", stopError);
-      }
-    })();
-  }, [externalTrip, setExternalTrackingStatus, externalGpsTracker, syncLocations, stopLocationTracking]);
-
-  // Complete trip with details
-  const handleCompleteTrip = async () => {
-    if (!activeTrip || !completionData.purpose) {
-      toast.error("Please select a trip purpose");
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      // Upload receipt if provided
-      if (completionData.receipt) {
-        const formData = new FormData();
-        formData.append("receipt", completionData.receipt);
-        
-        await axios.post(
-          `${API}/admin/gps-trips/upload-receipt/${activeTrip.id}`,
-          formData,
-          {
-            ...getAuthHeader(),
-            headers: {
-              ...getAuthHeader().headers,
-              "Content-Type": "multipart/form-data"
-            }
-          }
-        );
-      }
-      
-      // Complete the trip
-      const response = await axios.post(
-        `${API}/admin/gps-trips/complete`,
-        {
-          trip_id: activeTrip.id,
-          purpose: completionData.purpose,
-          notes: completionData.purpose === "other" ? completionData.notes : null
-        },
-        getAuthHeader()
-      );
-      
-      if (response.data.success) {
-        toast.success(
-          `Trip completed! ${response.data.total_miles} miles tracked.`,
-          { description: `Tax deduction: $${response.data.tax_deduction}` }
-        );
-        
-        // Reset ALL state including start point refs for next trip
-        isCompletingRef.current = false;
-        startPointInternalRef.current = null; // CRITICAL: Reset for next trip
-        lastValidLocationRef.current = null;
-        locationBufferRef.current = [];
-        setActiveTrip(null);
-        setTrackingStatus("idle");
-        setCompletionData({ purpose: "", notes: "", receipt: null });
-        setLocationCount(0);
-        setRecordedLocations([]);
-        
-        // Notify parent
-        if (onTripCompleted) {
-          onTripCompleted();
-        }
-        
-        // Refresh data
-        await fetchTripHistory();
-        await fetchSummary();
-      }
-    } catch (error) {
-      console.error("Failed to complete trip:", error);
-      toast.error("Failed to complete trip");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Cancel trip completion (discard trip)
-  const handleCancelTrip = async () => {
-    if (!activeTrip) return;
-    
-    if (!window.confirm("Discard this trip? All tracking data will be lost.")) {
-      return;
-    }
-    
-    try {
-      // FORCE STOP GPS - use the aggressive stop to ensure it's really stopped
-      if (externalGpsTracker?.forceStop) {
-        console.log("[GPS] Force stopping GPS tracker on cancel");
-        await externalGpsTracker.forceStop();
-      } else if (externalGpsTracker?.stopTracking) {
-        await externalGpsTracker.stopTracking();
-        if (externalGpsTracker?.reset) {
-          await externalGpsTracker.reset();
-        }
-      } else {
-        await stopLocationTracking();
-      }
-      
-      await axios.delete(`${API}/admin/gps-trips/${activeTrip.id}`, getAuthHeader());
-      
-      // Reset ALL state including start point refs
-      isCompletingRef.current = false;
-      startPointInternalRef.current = null; // CRITICAL: Reset start point for next trip
-      lastValidLocationRef.current = null;
-      locationBufferRef.current = [];
-      setActiveTrip(null);
-      setTrackingStatus("idle");
-      setCompletionData({ purpose: "", notes: "", receipt: null });
-      setLocationCount(0);
-      setRecordedLocations([]);
-      
-      // Notify parent
-      if (onTripCompleted) {
-        onTripCompleted();
-      }
-      
-      toast.info("Trip discarded");
-    } catch (error) {
-      console.error("Failed to delete trip:", error);
-      toast.error("Failed to discard trip");
-    }
-  };
-
-  // Delete a completed trip
   const handleDeleteTrip = async (tripId) => {
     if (!window.confirm("Delete this trip record?")) return;
-    
     try {
       await axios.delete(`${API}/admin/gps-trips/${tripId}`, getAuthHeader());
       toast.success("Trip deleted");
@@ -1095,14 +326,9 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     }
   };
 
-  // Save a manually entered trip (can receive form data from ManualTripForm component or use internal state)
   const handleSaveManualTrip = async (formData = null) => {
-    // Use passed formData or fall back to internal state
     const data = formData || manualTripData;
-    
-    // Robust validation - handle both string and number types
     const milesValue = data.miles ? parseFloat(String(data.miles).trim()) : 0;
-    
     if (!milesValue || milesValue <= 0 || isNaN(milesValue)) {
       toast.error("Please enter the miles driven");
       return;
@@ -1111,23 +337,14 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       toast.error("Please select a trip purpose");
       return;
     }
-    
     setSavingManualTrip(true);
-    
     try {
       const response = await axios.post(
         `${API}/admin/gps-trips/manual`,
-        {
-          date: data.date,
-          total_miles: milesValue, // Use the validated numeric value
-          purpose: data.purpose,
-          notes: data.purpose === "other" ? data.notes : null
-        },
+        { date: data.date, total_miles: milesValue, purpose: data.purpose, notes: data.purpose === "other" ? data.notes : null },
         getAuthHeader()
       );
-      
       if (response.data.success) {
-        // Upload receipt if provided
         if (data.receipt && response.data.trip_id) {
           try {
             const receiptFormData = new FormData();
@@ -1135,35 +352,15 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
             await axios.post(
               `${API}/admin/gps-trips/upload-receipt/${response.data.trip_id}`,
               receiptFormData,
-              {
-                ...getAuthHeader(),
-                headers: {
-                  ...getAuthHeader().headers,
-                  "Content-Type": "multipart/form-data"
-                }
-              }
+              { ...getAuthHeader(), headers: { ...getAuthHeader().headers, "Content-Type": "multipart/form-data" } }
             );
           } catch (uploadError) {
             console.log("Receipt upload failed:", uploadError);
           }
         }
-        
-        toast.success(
-          `Trip logged! ${response.data.total_miles} miles.`,
-          { description: `Tax deduction: $${response.data.tax_deduction}` }
-        );
-        
-        // Reset internal state
-        setManualTripData({
-          date: new Date().toISOString().split('T')[0],
-          miles: "",
-          purpose: "",
-          notes: "",
-          receipt: null
-        });
+        toast.success(`Trip logged! ${response.data.total_miles} miles.`, { description: `Tax deduction: $${response.data.tax_deduction}` });
+        setManualTripData({ date: new Date().toISOString().split('T')[0], miles: "", purpose: "", notes: "", receipt: null });
         setShowManualEntry(false);
-        
-        // Refresh data
         await fetchTripHistory();
         await fetchSummary();
       }
@@ -1175,7 +372,6 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     }
   };
 
-  // Open edit modal for a trip
   const handleEditTrip = (trip) => {
     setEditingTrip(trip);
     setEditTripData({
@@ -1189,10 +385,8 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     });
   };
 
-  // Save edited trip
   const handleSaveEditTrip = async () => {
     if (!editingTrip) return;
-    
     if (!editTripData.miles || parseFloat(editTripData.miles) <= 0) {
       toast.error("Please enter valid miles");
       return;
@@ -1201,9 +395,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       toast.error("Please select a trip purpose");
       return;
     }
-    
     setSavingEdit(true);
-    
     try {
       const response = await axios.put(
         `${API}/admin/gps-trips/${editingTrip.id}`,
@@ -1218,13 +410,10 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
         },
         getAuthHeader()
       );
-      
       if (response.data.success) {
         toast.success("Trip updated successfully");
         setEditingTrip(null);
         setEditTripData({ date: "", miles: "", purpose: "", notes: "", start_address: "", end_address: "", classification: "business" });
-        
-        // Refresh data
         await fetchTripHistory();
         await fetchSummary();
       }
@@ -1236,24 +425,19 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     }
   };
 
-  // Cancel editing
   const handleCancelEdit = () => {
     setEditingTrip(null);
     setEditTripData({ date: "", miles: "", purpose: "", notes: "", start_address: "", end_address: "", classification: "business" });
   };
 
-  // Handle mileage adjustment
   const handleSaveAdjustment = async () => {
     const miles = parseFloat(adjustmentData.miles);
     if (isNaN(miles) || miles === 0) {
       toast.error("Please enter a valid adjustment amount");
       return;
     }
-    
     setSavingAdjustment(true);
-    
     try {
-      // Determine the date based on current summary view
       let adjustDate;
       const now = new Date();
       if (summaryView === "today") {
@@ -1263,24 +447,15 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
       } else {
         adjustDate = `${now.getFullYear()}-01-01`;
       }
-      
       const response = await axios.post(
         `${API}/admin/gps-trips/adjust`,
-        {
-          period: summaryView === "today" ? "day" : summaryView,
-          date: adjustDate,
-          adjustment_miles: miles,
-          reason: adjustmentData.reason || null
-        },
+        { period: summaryView === "today" ? "day" : summaryView, date: adjustDate, adjustment_miles: miles, reason: adjustmentData.reason || null },
         getAuthHeader()
       );
-      
       if (response.data.success) {
         toast.success(response.data.message);
         setShowAdjustModal(false);
         setAdjustmentData({ miles: "", reason: "" });
-        
-        // Refresh summary
         await fetchSummary();
       }
     } catch (error) {
@@ -1291,20 +466,12 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     }
   };
 
-  // View trip on map
   const handleViewTripMap = async (tripId) => {
     setLoadingMap(true);
     try {
-      const response = await axios.get(
-        `${API}/admin/gps-trips/trip/${tripId}?include_locations=true`,
-        getAuthHeader()
-      );
-      
+      const response = await axios.get(`${API}/admin/gps-trips/trip/${tripId}?include_locations=true`, getAuthHeader());
       if (response.data.trip) {
-        setViewingTripMap({
-          trip: response.data.trip,
-          locations: response.data.trip.locations || []
-        });
+        setViewingTripMap({ trip: response.data.trip, locations: response.data.trip.locations || [] });
       }
     } catch (error) {
       console.error("Failed to load trip map:", error);
@@ -1314,52 +481,89 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
     }
   };
 
-  // Close trip map modal
-  const closeTripMap = () => {
-    setViewingTripMap(null);
-  };
+  const closeTripMap = () => setViewingTripMap(null);
 
-  // Format duration
+  // ========== Effects ==========
+
+  // Check for pending active trip on mount
+  useEffect(() => {
+    const checkPending = async () => {
+      try {
+        const { data } = await axios.get(`${API}/admin/gps-trips/active`, getAuthHeader());
+        if (data && data.active_trip && data.active_trip.status === "active") {
+          setQuickTripActive(true);
+          setQuickTripId(data.active_trip.id);
+          setQuickTripStartAddr(data.active_trip.start_address || "");
+        }
+      } catch {}
+    };
+    checkPending();
+    fetchCategories();
+    fetchSiriKeyStatus();
+  }, [getAuthHeader, fetchCategories, fetchSiriKeyStatus]);
+
+  // Load data when expanded
+  useEffect(() => {
+    if (isExpanded) {
+      fetchTripHistory();
+      fetchSummary();
+    }
+  }, [isExpanded, fetchTripHistory, fetchSummary]);
+
+  // Scroll to manual entry form when it opens
+  useEffect(() => {
+    if (showManualEntry && manualEntryRef.current) {
+      setTimeout(() => {
+        manualEntryRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [showManualEntry]);
+
+  // Expose methods via ref for external control (e.g., iOS Quick Actions)
+  useImperativeHandle(ref, () => ({
+    scrollIntoView: (options) => {
+      if (containerRef.current) containerRef.current.scrollIntoView(options);
+    },
+    openManualEntry: () => {
+      setIsExpanded(true);
+      setShowManualEntry(true);
+    },
+    isManualEntryOpen: () => showManualEntry,
+    startTrip: () => handleQuickStart(),
+    endTrip: () => handleQuickEnd(),
+  }));
+
+  // ========== Helpers ==========
   const formatDuration = (startTime, endTime) => {
     const start = new Date(startTime);
     const end = endTime ? new Date(endTime) : new Date();
     const diff = Math.floor((end - start) / 1000);
-    
     const hours = Math.floor(diff / 3600);
     const minutes = Math.floor((diff % 3600) / 60);
     const seconds = diff % 60;
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
+    if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m ${seconds}s`;
   };
 
-  // Format date
   const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric"
-    });
+    return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   };
 
-  // Get purpose label
   const getPurposeLabel = (purpose) => {
     const found = TRIP_PURPOSES.find(p => p.value === purpose);
     return found ? found.label : purpose;
   };
 
-  // Get purpose icon
   const getPurposeIcon = (purpose) => {
     const found = TRIP_PURPOSES.find(p => p.value === purpose);
     return found ? found.icon : FileText;
   };
 
+  // ========== Render ==========
   return (
     <div ref={containerRef} className="dashboard-card" data-testid="gps-mileage-tracker">
       {/* Header - Always Visible */}
-      <div 
+      <div
         className="flex items-center justify-between cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
@@ -1372,12 +576,12 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
             <p className="text-xs text-[#888]">
               {quickTripActive ? (
                 <span className="font-medium text-green-600">
-                  Trip in progress • {quickTripStartAddr || "Getting location..."}
+                  Trip in progress {quickTripStartAddr ? `\u2022 ${quickTripStartAddr}` : ""}
                 </span>
               ) : summary ? (
                 <span>
-                  Today: {summary.today?.miles?.toFixed(1) || 0} mi • 
-                  {summary.this_month?.name}: {summary.this_month?.miles?.toFixed(1) || 0} mi • 
+                  Today: {summary.today?.miles?.toFixed(1) || 0} mi {"\u2022 "}
+                  {summary.this_month?.name}: {summary.this_month?.miles?.toFixed(1) || 0} mi {"\u2022 "}
                   YTD: {summary.total_miles?.toFixed(1) || 0} mi
                 </span>
               ) : (
@@ -1386,9 +590,9 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          {/* Quick Start/End button in header */}
+          {/* Quick Start/End button in header (the green button) */}
           <Button
             variant="ghost"
             size="sm"
@@ -1426,7 +630,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
             className="overflow-hidden"
           >
             <div className="pt-4 space-y-4">
-              {/* Quick Trip — Start / End with GPS */}
+              {/* Quick Trip - Start / End with GPS */}
               <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200" data-testid="quick-trip-section">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -1488,20 +692,92 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                     Start Trip
                   </button>
                 )}
+
+                {/* Last Trip Result Feedback */}
+                {lastTripResult && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-3 bg-white/80 rounded-lg p-3 border border-emerald-200"
+                  >
+                    <div className="flex justify-between items-center mb-1">
+                      <p className="text-xs font-semibold text-emerald-700">Trip Completed</p>
+                      <button onClick={() => setLastTripResult(null)} className="text-gray-400 hover:text-gray-600" data-testid="dismiss-trip-result">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      {lastTripResult.start_address} {"\u2192"} {lastTripResult.end_address}
+                    </p>
+                    <div className="flex gap-4 mt-1">
+                      <span className="text-sm font-bold text-emerald-700">{lastTripResult.total_miles} mi</span>
+                      <span className="text-sm font-bold text-emerald-700">${lastTripResult.tax_deduction} deduction</span>
+                    </div>
+                  </motion.div>
+                )}
               </div>
 
-              {/* Siri Shortcuts Guide */}
+              {/* Siri Shortcuts Setup */}
               <details className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <summary className="p-3 cursor-pointer text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2 select-none" data-testid="siri-shortcuts-guide">
                   <Mic className="w-4 h-4 text-purple-500" />
                   Hands-free: Set up Siri Shortcuts
                   <ChevronDown className="w-4 h-4 ml-auto text-gray-400" />
                 </summary>
-                <div className="p-4 pt-0 text-sm text-gray-600 space-y-3 border-t border-gray-100">
-                  <p className="text-xs text-gray-500">Track trips automatically with "Hey Siri, start trip" — no need to open the app.</p>
-                  
+                <div className="p-4 pt-0 text-sm text-gray-600 space-y-4 border-t border-gray-100">
+                  <p className="text-xs text-gray-500">Track trips with "Hey Siri, start trip" - even when the app is closed.</p>
+
+                  {/* Step 1: API Key */}
                   <div className="space-y-2">
-                    <p className="font-medium text-gray-800">Setup (one time):</p>
+                    <p className="font-medium text-gray-800 flex items-center gap-1.5">
+                      <Key className="w-3.5 h-3.5 text-purple-500" />
+                      Step 1: Get your Siri API Key
+                    </p>
+                    {siriKey.newKey ? (
+                      <div className="space-y-2">
+                        <p className="text-xs text-amber-600 font-medium">Copy this key now - it won't be shown again:</p>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 text-xs bg-gray-100 px-2 py-1.5 rounded font-mono break-all select-all" data-testid="siri-key-value">
+                            {siriKey.newKey}
+                          </code>
+                          <button
+                            onClick={handleCopySiriKey}
+                            className="p-2 rounded-lg bg-purple-100 text-purple-600 hover:bg-purple-200 transition-all flex-shrink-0"
+                            data-testid="copy-siri-key-btn"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : siriKey.has_key ? (
+                      <div className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                        <div className="text-xs text-gray-600">
+                          <span className="font-mono">{siriKey.key_prefix}{"*".repeat(20)}</span>
+                        </div>
+                        <button
+                          onClick={handleRevokeSiriKey}
+                          className="text-xs text-red-500 hover:text-red-700 px-2 py-1 hover:bg-red-50 rounded"
+                          data-testid="revoke-siri-key-btn"
+                        >
+                          Revoke & Regenerate
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleGenerateSiriKey}
+                        disabled={siriKey.loading}
+                        className="w-full py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        data-testid="generate-siri-key-btn"
+                      >
+                        {siriKey.loading ? <Loader className="w-3 h-3 animate-spin" /> : <Key className="w-3 h-3" />}
+                        Generate Siri API Key
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Step 2: Create Shortcuts */}
+                  <div className="space-y-2">
+                    <p className="font-medium text-gray-800">Step 2: Create iPhone Shortcuts</p>
                     <ol className="list-decimal list-inside space-y-1.5 text-xs">
                       <li>Open the <strong>Shortcuts</strong> app on your iPhone</li>
                       <li>Tap <strong>+</strong> to create a new shortcut</li>
@@ -1510,8 +786,8 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                         <ul className="list-disc list-inside ml-4 mt-1 text-gray-500 space-y-0.5">
                           <li>URL: <code className="bg-gray-100 px-1 rounded text-xs break-all">{window.location.origin}/api/admin/gps-trips/log-drive</code></li>
                           <li>Method: <strong>POST</strong></li>
-                          <li>Headers: <code className="bg-gray-100 px-1 rounded">Authorization</code> = <code className="bg-gray-100 px-1 rounded">Bearer [your token]</code></li>
-                          <li>Body (JSON): <code className="bg-gray-100 px-1 rounded">latitude</code>, <code className="bg-gray-100 px-1 rounded">longitude</code>, <code className="bg-gray-100 px-1 rounded">event</code> = "start"</li>
+                          <li>Headers: <code className="bg-gray-100 px-1 rounded">Authorization</code> = <code className="bg-gray-100 px-1 rounded">Bearer [paste your Siri API Key]</code></li>
+                          <li>Body (JSON): <code className="bg-gray-100 px-1 rounded">latitude</code>, <code className="bg-gray-100 px-1 rounded">longitude</code> (from step 3), <code className="bg-gray-100 px-1 rounded">event</code> = <strong>"start"</strong></li>
                         </ul>
                       </li>
                       <li>Name it <strong>"Start Trip"</strong></li>
@@ -1519,14 +795,15 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                     </ol>
                   </div>
 
+                  {/* Step 3: Optional Bluetooth auto */}
                   <div className="space-y-2">
-                    <p className="font-medium text-gray-800">Optional: Auto-trigger on Bluetooth</p>
+                    <p className="font-medium text-gray-800">Step 3 (optional): Auto-trigger on car Bluetooth</p>
                     <ol className="list-decimal list-inside space-y-1 text-xs">
-                      <li>Go to Shortcuts → <strong>Automation</strong> tab</li>
-                      <li>Tap <strong>+</strong> → <strong>Bluetooth</strong></li>
-                      <li>Select your car's Bluetooth → <strong>When I Connect</strong></li>
+                      <li>Go to Shortcuts {"\u2192"} <strong>Automation</strong> tab</li>
+                      <li>Tap <strong>+</strong> {"\u2192"} <strong>Bluetooth</strong></li>
+                      <li>Select your car's Bluetooth {"\u2192"} <strong>When I Connect</strong></li>
                       <li>Run the "Start Trip" shortcut</li>
-                      <li>Repeat for <strong>When I Disconnect</strong> → "End Trip"</li>
+                      <li>Repeat for <strong>When I Disconnect</strong> {"\u2192"} "End Trip"</li>
                     </ol>
                   </div>
 
@@ -1534,268 +811,8 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                 </div>
               </details>
 
-              {/* Active Trip Panel (old GPS tracking) */}
-              {(activeTrip || showCompletionForm) && (
-                <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${
-                        trackingStatus === "tracking" ? "bg-green-500 animate-pulse" :
-                        trackingStatus === "paused" ? "bg-amber-500" : "bg-gray-400"
-                      }`} />
-                      <span className="font-medium text-green-800">
-                        {showCompletionForm ? "Complete Your Trip" :
-                         trackingStatus === "paused" ? "Trip Paused" : "Trip in Progress"}
-                      </span>
-                    </div>
-                    {activeTrip && !showCompletionForm && (
-                      <span className="text-sm text-green-600">
-                        {formatDuration(activeTrip.start_time)}
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* Live Stats */}
-                  {!showCompletionForm && (
-                    <>
-                      <div className="grid grid-cols-3 gap-3 mb-4">
-                        <div className="bg-white/60 rounded-lg p-3 text-center">
-                          <Car className={`w-5 h-5 text-green-600 mx-auto mb-1 ${trackingStatus === "tracking" ? "animate-pulse" : ""}`} />
-                          <p className="text-xl font-bold text-green-700">
-                            {gpsTracker?.totalMiles?.toFixed(2) || activeTrip?.total_miles?.toFixed(2) || "0.00"}
-                          </p>
-                          <p className="text-xs text-green-600">Miles</p>
-                        </div>
-                        <div className="bg-white/60 rounded-lg p-3 text-center">
-                          <MapPin className="w-5 h-5 text-green-600 mx-auto mb-1" />
-                          <p className="text-xl font-bold text-green-700">{gpsTracker?.locationCount || locationCount || 0}</p>
-                          <p className="text-xs text-green-600">Points</p>
-                        </div>
-                        <div className="bg-white/60 rounded-lg p-3 text-center">
-                          <DollarSign className="w-5 h-5 text-green-600 mx-auto mb-1" />
-                          <p className="text-xl font-bold text-green-700">
-                            ${((gpsTracker?.totalMiles || activeTrip?.total_miles || 0) * IRS_RATE_2026).toFixed(2)}
-                          </p>
-                          <p className="text-xs text-green-600">Deduction</p>
-                        </div>
-                      </div>
-                      
-                      {/* GPS Quality Indicator */}
-                      {gpsTracker?.gpsQuality && gpsTracker.gpsQuality !== 'unknown' && (
-                        <div className="mb-3 flex items-center justify-center gap-2 text-xs">
-                          <span className="text-gray-500">GPS Signal:</span>
-                          <span className={`font-medium flex items-center gap-1 ${
-                            gpsTracker.gpsQuality === 'excellent' ? 'text-green-600' :
-                            gpsTracker.gpsQuality === 'good' ? 'text-green-500' :
-                            gpsTracker.gpsQuality === 'fair' ? 'text-amber-500' :
-                            'text-red-500'
-                          }`}>
-                            <span className={`w-2 h-2 rounded-full ${
-                              gpsTracker.gpsQuality === 'excellent' ? 'bg-green-500' :
-                              gpsTracker.gpsQuality === 'good' ? 'bg-green-400' :
-                              gpsTracker.gpsQuality === 'fair' ? 'bg-amber-400' :
-                              'bg-red-400'
-                            }`} />
-                            {gpsTracker.gpsQuality.charAt(0).toUpperCase() + gpsTracker.gpsQuality.slice(1)}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {/* Live Map During Tracking */}
-                      {(trackingStatus === "tracking" || trackingStatus === "paused") && (
-                        <div className="mt-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <Label className="text-sm font-medium text-green-700 flex items-center gap-1">
-                              <Map className="w-4 h-4" />
-                              Live Route
-                            </Label>
-                            <span className="text-xs text-green-600 flex items-center gap-1">
-                              <span className={`w-2 h-2 rounded-full ${trackingStatus === "tracking" ? "bg-green-500 animate-pulse" : "bg-amber-500"}`} />
-                              {trackingStatus === "tracking" ? "Tracking" : "Paused"}
-                            </span>
-                          </div>
-                          <Suspense fallback={
-                            <div className="h-[200px] bg-gray-100 rounded-lg flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-                            </div>
-                          }>
-                            {/* Show map if we have locations from GPS tracker or from internal recordedLocations */}
-                            {((gpsTracker?.getLocations && gpsTracker.getLocations().length > 0) || recordedLocations.length > 0) ? (
-                              <TripMap 
-                                locations={gpsTracker?.getLocations ? gpsTracker.getLocations() : recordedLocations} 
-                                height="200px"
-                                showCurrentPosition={true}
-                                showMarkers={true}
-                              />
-                            ) : (
-                              <div className="h-[200px] bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200">
-                                <div className="text-center text-gray-500">
-                                  <Navigation className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                  <p className="text-sm">Waiting for GPS signal...</p>
-                                  <p className="text-xs text-gray-400 mt-1">Map will appear as you move</p>
-                                </div>
-                              </div>
-                            )}
-                          </Suspense>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  
-                  {/* Completion Form */}
-                  {showCompletionForm && (
-                    <div ref={completionFormRef} className="space-y-4">
-                      {/* Trip Summary */}
-                      <div className="bg-white rounded-lg p-3 border border-green-200">
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <span className="text-gray-500">Distance:</span>
-                            <span className="ml-2 font-semibold">{gpsTracker?.totalMiles?.toFixed(2) || activeTrip?.total_miles?.toFixed(2) || "0.00"} miles</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Duration:</span>
-                            <span className="ml-2 font-semibold">{formatDuration(activeTrip?.start_time)}</span>
-                          </div>
-                          <div className="col-span-2">
-                            <span className="text-gray-500">IRS Deduction:</span>
-                            <span className="ml-2 font-semibold text-green-600">
-                              ${((gpsTracker?.totalMiles || activeTrip?.total_miles || 0) * IRS_RATE_2026).toFixed(2)}
-                            </span>
-                            <span className="text-xs text-gray-400 ml-1">@ ${IRS_RATE_2026}/mi</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Trip Route Map */}
-                      {gpsTracker?.getLocations && gpsTracker.getLocations().length > 0 && (
-                        <div>
-                          <Label className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-2">
-                            <Map className="w-4 h-4" />
-                            Your Route
-                          </Label>
-                          <Suspense fallback={
-                            <div className="h-[200px] bg-gray-100 rounded-lg flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-                            </div>
-                          }>
-                            <TripMap 
-                              locations={gpsTracker.getLocations()} 
-                              height="200px"
-                            />
-                          </Suspense>
-                        </div>
-                      )}
-                      
-                      {/* Purpose Selection */}
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">Trip Purpose *</Label>
-                        <Select
-                          value={completionData.purpose}
-                          onValueChange={(value) => setCompletionData(prev => ({ ...prev, purpose: value }))}
-                        >
-                          <SelectTrigger className="mt-1" data-testid="trip-purpose-select">
-                            <SelectValue placeholder="Select purpose..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TRIP_PURPOSES.map(purpose => (
-                              <SelectItem key={purpose.value} value={purpose.value}>
-                                <div className="flex items-center gap-2">
-                                  <purpose.icon className="w-4 h-4" />
-                                  {purpose.label}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      {/* Notes (shown when "Other" is selected) */}
-                      {completionData.purpose === "other" && (
-                        <div>
-                          <Label className="text-sm font-medium text-gray-700">Trip Notes</Label>
-                          <Textarea
-                            value={completionData.notes}
-                            onChange={(e) => setCompletionData(prev => ({ ...prev, notes: e.target.value }))}
-                            placeholder="Describe the purpose of this trip..."
-                            className="mt-1"
-                            rows={2}
-                            data-testid="trip-notes-input"
-                          />
-                        </div>
-                      )}
-                      
-                      {/* Receipt Upload */}
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">Receipt (Optional)</Label>
-                        <div className="mt-1">
-                          {completionData.receipt ? (
-                            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                              <Receipt className="w-5 h-5 text-green-600" />
-                              <span className="text-sm text-gray-700 flex-1 truncate">
-                                {completionData.receipt.name}
-                              </span>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setCompletionData(prev => ({ ...prev, receipt: null }))}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-green-400 hover:bg-green-50 transition-colors">
-                              <Camera className="w-5 h-5 text-gray-400" />
-                              <span className="text-sm text-gray-500">Tap to upload receipt</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => {
-                                  if (e.target.files?.[0]) {
-                                    setCompletionData(prev => ({ ...prev, receipt: e.target.files[0] }));
-                                  }
-                                }}
-                                data-testid="receipt-upload-input"
-                              />
-                            </label>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Action Buttons */}
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          onClick={handleCancelTrip}
-                          variant="outline"
-                          className="flex-1 border-gray-300"
-                          data-testid="discard-trip-btn"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Discard
-                        </Button>
-                        <Button
-                          onClick={handleCompleteTrip}
-                          disabled={loading || !completionData.purpose}
-                          className="flex-1 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white"
-                          data-testid="complete-trip-btn"
-                        >
-                          {loading ? (
-                            "Saving..."
-                          ) : (
-                            <>
-                              <Check className="w-4 h-4 mr-2" />
-                              Complete Trip
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {/* Manual Entry Button - only show when no active trip */}
-              {!activeTrip && !showCompletionForm && !showManualEntry && (
+              {/* Manual Entry Button - only show when no active quick trip */}
+              {!quickTripActive && !showManualEntry && (
                 <div className="space-y-3">
                   <Button
                     onClick={() => setShowManualEntry(true)}
@@ -1806,14 +823,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                     <FileText className="w-4 h-4 mr-2" />
                     Log Trip Manually
                   </Button>
-                  <p className="text-xs text-gray-500 text-center">
-                    Use the GPS controls at the top of the dashboard to start tracking
-                  </p>
                 </div>
               )}
-              
+
               {/* Manual Trip Entry Form */}
-              {!activeTrip && !showCompletionForm && showManualEntry && (
+              {showManualEntry && (
                 <div ref={manualEntryRef} className="p-4 bg-blue-50 rounded-xl border border-blue-200 space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium text-blue-800 flex items-center gap-2">
@@ -1823,24 +837,18 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                     <button
                       onClick={() => {
                         setShowManualEntry(false);
-                        setManualTripData({
-                          date: new Date().toISOString().split('T')[0],
-                          miles: "",
-                          purpose: "",
-                          notes: "",
-                          receipt: null
-                        });
+                        setManualTripData({ date: new Date().toISOString().split('T')[0], miles: "", purpose: "", notes: "", receipt: null });
                       }}
                       className="text-gray-400 hover:text-gray-600"
                     >
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  
+
                   <p className="text-sm text-blue-600">
                     Log a trip you took without GPS tracking
                   </p>
-                  
+
                   {/* Date */}
                   <div>
                     <Label className="text-sm font-medium text-gray-700">Trip Date *</Label>
@@ -1853,7 +861,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                       data-testid="manual-trip-date"
                     />
                   </div>
-                  
+
                   {/* Miles */}
                   <div>
                     <Label className="text-sm font-medium text-gray-700">Miles Driven *</Label>
@@ -1878,7 +886,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                       </p>
                     )}
                   </div>
-                  
+
                   {/* Purpose */}
                   <div>
                     <Label className="text-sm font-medium text-gray-700">Trip Purpose *</Label>
@@ -1901,7 +909,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   {/* Notes (for "Other" purpose) */}
                   {manualTripData.purpose === "other" && (
                     <div>
@@ -1916,39 +924,28 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                       />
                     </div>
                   )}
-                  
+
                   {/* Receipt Upload */}
                   <div>
                     <Label className="text-sm font-medium text-gray-700">Receipt (Optional)</Label>
                     <Input
                       type="file"
                       accept="image/*,.pdf"
-                      onChange={(e) => setManualTripData(prev => ({ 
-                        ...prev, 
-                        receipt: e.target.files?.[0] || null 
-                      }))}
+                      onChange={(e) => setManualTripData(prev => ({ ...prev, receipt: e.target.files?.[0] || null }))}
                       className="mt-1"
                       data-testid="manual-trip-receipt"
                     />
                     {manualTripData.receipt && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        {manualTripData.receipt.name}
-                      </p>
+                      <p className="text-xs text-gray-500 mt-1">{manualTripData.receipt.name}</p>
                     )}
                   </div>
-                  
+
                   {/* Submit Button */}
                   <div className="flex gap-2 pt-2">
                     <Button
                       onClick={() => {
                         setShowManualEntry(false);
-                        setManualTripData({
-                          date: new Date().toISOString().split('T')[0],
-                          miles: "",
-                          purpose: "",
-                          notes: "",
-                          receipt: null
-                        });
+                        setManualTripData({ date: new Date().toISOString().split('T')[0], miles: "", purpose: "", notes: "", receipt: null });
                       }}
                       variant="outline"
                       className="flex-1"
@@ -1962,29 +959,15 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                       data-testid="save-manual-trip-btn"
                     >
                       {savingManualTrip ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Saving...
-                        </>
+                        <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>Saving...</>
                       ) : (
-                        <>
-                          <Check className="w-4 h-4 mr-2" />
-                          Save Trip
-                        </>
+                        <><Check className="w-4 h-4 mr-2" />Save Trip</>
                       )}
                     </Button>
                   </div>
                 </div>
               )}
-              
-              {/* Location Error */}
-              {locationError && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <span>{locationError}</span>
-                </div>
-              )}
-              
+
               {/* Mileage Summary - Day/Month/Year Tabs */}
               {summary && (
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 overflow-hidden">
@@ -2027,7 +1010,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                       {summary.year}
                     </button>
                   </div>
-                  
+
                   {/* Tab Content */}
                   <div className="p-4">
                     {summaryView === "today" && (
@@ -2052,7 +1035,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                         )}
                       </div>
                     )}
-                    
+
                     {summaryView === "month" && (
                       <div className="text-center">
                         <p className="text-xs text-blue-600 mb-2">{summary.this_month?.name} Mileage</p>
@@ -2072,7 +1055,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                         </div>
                       </div>
                     )}
-                    
+
                     {summaryView === "year" && (
                       <div className="text-center">
                         <p className="text-xs text-blue-600 mb-2">{summary.year} Year-to-Date</p>
@@ -2092,7 +1075,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Adjust Button and IRS Rate */}
                     <div className="flex items-center justify-between mt-3 pt-3 border-t border-blue-100">
                       <p className="text-xs text-blue-600">
@@ -2110,7 +1093,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                   </div>
                 </div>
               )}
-              
+
               {/* Adjustment Modal */}
               <AnimatePresence>
                 {showAdjustModal && (
@@ -2137,7 +1120,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                           Add or subtract miles without creating a trip entry
                         </p>
                       </div>
-                      
+
                       <div className="p-4 space-y-4">
                         <div>
                           <Label className="text-sm font-medium text-gray-700">Miles Adjustment</Label>
@@ -2148,8 +1131,8 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                                 miles: prev.miles.startsWith('-') ? prev.miles.slice(1) : `-${prev.miles}`
                               }))}
                               className={`p-2 rounded-lg border ${
-                                adjustmentData.miles.startsWith('-') 
-                                  ? 'bg-red-50 border-red-200 text-red-600' 
+                                adjustmentData.miles.startsWith('-')
+                                  ? 'bg-red-50 border-red-200 text-red-600'
                                   : 'bg-green-50 border-green-200 text-green-600'
                               }`}
                             >
@@ -2165,10 +1148,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                               onChange={(e) => {
                                 const val = e.target.value;
                                 const isNeg = adjustmentData.miles.startsWith('-');
-                                setAdjustmentData(prev => ({
-                                  ...prev,
-                                  miles: isNeg ? `-${val}` : val
-                                }));
+                                setAdjustmentData(prev => ({ ...prev, miles: isNeg ? `-${val}` : val }));
                               }}
                               className="flex-1"
                               data-testid="adjustment-miles-input"
@@ -2181,7 +1161,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                             </p>
                           )}
                         </div>
-                        
+
                         <div>
                           <Label className="text-sm font-medium text-gray-700">Reason (Optional)</Label>
                           <Input
@@ -2193,7 +1173,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                             data-testid="adjustment-reason-input"
                           />
                         </div>
-                        
+
                         <div className="flex gap-2 pt-2">
                           <Button
                             onClick={() => {
@@ -2219,78 +1199,57 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                   </motion.div>
                 )}
               </AnimatePresence>
-              
-              {/* Hierarchical Trip History - Changes based on selected tab */}
+
+              {/* Hierarchical Trip History */}
               {tripHistory.length > 0 && (
                 <div className="border border-gray-200 rounded-xl overflow-hidden">
                   <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
                     <h4 className="font-medium text-gray-700 text-sm">
-                      {summaryView === "today" ? "Today's Trips" : 
+                      {summaryView === "today" ? "Today's Trips" :
                        summaryView === "month" ? `${summary?.this_month?.name || "This Month"}'s Trips` :
                        `${summary?.year || new Date().getFullYear()} Trips`}
                     </h4>
                   </div>
-                  
+
                   <div className="max-h-64 overflow-y-auto">
-                    {/* TODAY VIEW - Simple list of today's trips */}
+                    {/* TODAY VIEW */}
                     {summaryView === "today" && (() => {
-                      // Get today's date in local timezone (YYYY-MM-DD format)
                       const now = new Date();
                       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                      
                       const todayTrips = tripHistory.filter(trip => {
                         if (!trip.start_time) return false;
-                        // Parse the trip's start_time and compare in local timezone
                         const tripDate = new Date(trip.start_time);
                         const tripDateStr = `${tripDate.getFullYear()}-${String(tripDate.getMonth() + 1).padStart(2, '0')}-${String(tripDate.getDate()).padStart(2, '0')}`;
                         return tripDateStr === today;
                       });
-                      
                       if (todayTrips.length === 0) {
-                        return (
-                          <div className="p-4 text-center text-gray-500 text-sm">
-                            No trips recorded today
-                          </div>
-                        );
+                        return <div className="p-4 text-center text-gray-500 text-sm">No trips recorded today</div>;
                       }
-                      
                       return todayTrips.map(trip => (
                         <TripRow key={trip.id} trip={trip} onViewMap={handleViewTripMap} onEdit={handleEditTrip} onDelete={handleDeleteTrip} onClassify={handleClassifyTrip} getPurposeIcon={getPurposeIcon} getPurposeLabel={getPurposeLabel} formatDate={formatDate} API={API} />
                       ));
                     })()}
-                    
-                    {/* MONTH VIEW - Days collapsible, then trips */}
+
+                    {/* MONTH VIEW */}
                     {summaryView === "month" && (() => {
                       const now = new Date();
                       const currentYear = now.getFullYear();
-                      const currentMonth = now.getMonth(); // 0-indexed
-                      
-                      // Group trips by day for current month
+                      const currentMonth = now.getMonth();
                       const tripsByDay = {};
                       tripHistory.forEach(trip => {
                         if (!trip.start_time) return;
                         const tripDate = new Date(trip.start_time);
-                        // Check if trip is in current month (local timezone)
                         if (tripDate.getFullYear() === currentYear && tripDate.getMonth() === currentMonth) {
                           const dateKey = `${tripDate.getFullYear()}-${String(tripDate.getMonth() + 1).padStart(2, '0')}-${String(tripDate.getDate()).padStart(2, '0')}`;
-                          if (!tripsByDay[dateKey]) {
-                            tripsByDay[dateKey] = { trips: [], miles: 0 };
-                          }
+                          if (!tripsByDay[dateKey]) tripsByDay[dateKey] = { trips: [], miles: 0 };
                           tripsByDay[dateKey].trips.push(trip);
                           tripsByDay[dateKey].miles += trip.total_miles || 0;
                         }
                       });
-                      
                       const sortedDays = Object.keys(tripsByDay).sort().reverse();
-                      
                       if (sortedDays.length === 0) {
-                        return (
-                          <div className="p-4 text-center text-gray-500 text-sm">
-                            No trips this month
-                          </div>
-                        );
+                        return <div className="p-4 text-center text-gray-500 text-sm">No trips this month</div>;
                       }
-                      
                       return sortedDays.map(day => (
                         <div key={day} className="border-b border-gray-100 last:border-b-0">
                           <button
@@ -2305,12 +1264,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-gray-500">
-                                {tripsByDay[day].trips.length} trip{tripsByDay[day].trips.length !== 1 ? 's' : ''} • {tripsByDay[day].miles.toFixed(1)} mi
+                                {tripsByDay[day].trips.length} trip{tripsByDay[day].trips.length !== 1 ? 's' : ''} {"\u2022"} {tripsByDay[day].miles.toFixed(1)} mi
                               </span>
                               <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedDays[day] ? 'rotate-180' : ''}`} />
                             </div>
                           </button>
-                          
                           <AnimatePresence>
                             {expandedDays[day] && (
                               <motion.div
@@ -2328,53 +1286,34 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                         </div>
                       ));
                     })()}
-                    
-                    {/* YEAR VIEW - Months collapsible, then days, then trips */}
+
+                    {/* YEAR VIEW */}
                     {summaryView === "year" && (() => {
                       const currentYear = summary?.year || new Date().getFullYear();
-                      
-                      // Group trips by month
                       const tripsByMonth = {};
                       tripHistory.forEach(trip => {
                         if (!trip.start_time) return;
                         const tripDate = new Date(trip.start_time);
-                        // Check if trip is in the current year (local timezone)
                         if (tripDate.getFullYear() === currentYear) {
                           const monthKey = `${tripDate.getFullYear()}-${String(tripDate.getMonth() + 1).padStart(2, '0')}`;
                           const dayKey = `${tripDate.getFullYear()}-${String(tripDate.getMonth() + 1).padStart(2, '0')}-${String(tripDate.getDate()).padStart(2, '0')}`;
-                          
-                          if (!tripsByMonth[monthKey]) {
-                            tripsByMonth[monthKey] = { trips: [], miles: 0, byDay: {} };
-                          }
+                          if (!tripsByMonth[monthKey]) tripsByMonth[monthKey] = { trips: [], miles: 0, byDay: {} };
                           tripsByMonth[monthKey].trips.push(trip);
                           tripsByMonth[monthKey].miles += trip.total_miles || 0;
-                          
-                          // Also group by day within month
-                          if (!tripsByMonth[monthKey].byDay[dayKey]) {
-                            tripsByMonth[monthKey].byDay[dayKey] = { trips: [], miles: 0 };
-                          }
+                          if (!tripsByMonth[monthKey].byDay[dayKey]) tripsByMonth[monthKey].byDay[dayKey] = { trips: [], miles: 0 };
                           tripsByMonth[monthKey].byDay[dayKey].trips.push(trip);
                           tripsByMonth[monthKey].byDay[dayKey].miles += trip.total_miles || 0;
                         }
                       });
-                      
                       const sortedMonths = Object.keys(tripsByMonth).sort().reverse();
-                      
                       if (sortedMonths.length === 0) {
-                        return (
-                          <div className="p-4 text-center text-gray-500 text-sm">
-                            No trips this year
-                          </div>
-                        );
+                        return <div className="p-4 text-center text-gray-500 text-sm">No trips this year</div>;
                       }
-                      
                       return sortedMonths.map(month => {
                         const monthName = new Date(month + '-15').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                         const sortedDays = Object.keys(tripsByMonth[month].byDay).sort().reverse();
-                        
                         return (
                           <div key={month} className="border-b border-gray-100 last:border-b-0">
-                            {/* Month Header */}
                             <button
                               onClick={() => setExpandedMonths(prev => ({ ...prev, [month]: !prev[month] }))}
                               className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
@@ -2385,13 +1324,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-xs text-gray-500">
-                                  {tripsByMonth[month].trips.length} trip{tripsByMonth[month].trips.length !== 1 ? 's' : ''} • {tripsByMonth[month].miles.toFixed(1)} mi
+                                  {tripsByMonth[month].trips.length} trip{tripsByMonth[month].trips.length !== 1 ? 's' : ''} {"\u2022"} {tripsByMonth[month].miles.toFixed(1)} mi
                                 </span>
                                 <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedMonths[month] ? 'rotate-180' : ''}`} />
                               </div>
                             </button>
-                            
-                            {/* Days within Month */}
                             <AnimatePresence>
                               {expandedMonths[month] && (
                                 <motion.div
@@ -2402,7 +1339,6 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                                 >
                                   {sortedDays.map(day => (
                                     <div key={day} className="border-t border-gray-100 bg-gray-50">
-                                      {/* Day Header */}
                                       <button
                                         onClick={() => setExpandedDays(prev => ({ ...prev, [day]: !prev[day] }))}
                                         className="w-full flex items-center justify-between p-2 pl-8 hover:bg-gray-100 transition-colors"
@@ -2415,13 +1351,11 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                                         </div>
                                         <div className="flex items-center gap-2">
                                           <span className="text-xs text-gray-400">
-                                            {tripsByMonth[month].byDay[day].trips.length} • {tripsByMonth[month].byDay[day].miles.toFixed(1)} mi
+                                            {tripsByMonth[month].byDay[day].trips.length} {"\u2022"} {tripsByMonth[month].byDay[day].miles.toFixed(1)} mi
                                           </span>
                                           <ChevronDown className={`w-3 h-3 text-gray-300 transition-transform ${expandedDays[day] ? 'rotate-180' : ''}`} />
                                         </div>
                                       </button>
-                                      
-                                      {/* Trips within Day */}
                                       <AnimatePresence>
                                         {expandedDays[day] && (
                                           <motion.div
@@ -2452,8 +1386,8 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
           </motion.div>
         )}
       </AnimatePresence>
-      
-      {/* Edit Trip Modal - Using Portal to render at body level */}
+
+      {/* Edit Trip Modal - Using Portal */}
       {editingTrip && ReactDOM.createPortal(
         <div
           style={{
@@ -2486,100 +1420,100 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                 <X className="w-5 h-5" />
               </button>
             </div>
-              
-              <div className="p-4 space-y-4">
-                {/* Date */}
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Trip Date</Label>
-                  <Input type="date" value={editTripData.date} onChange={(e) => setEditTripData(prev => ({ ...prev, date: e.target.value }))} max={new Date().toISOString().split('T')[0]} className="mt-1" data-testid="edit-trip-date" />
-                </div>
 
-                {/* Start Address */}
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-green-500" /> Start Address
-                  </Label>
-                  <Input value={editTripData.start_address || ""} onChange={(e) => setEditTripData(prev => ({ ...prev, start_address: e.target.value }))} placeholder="e.g. 123 Main St, City, State" className="mt-1" data-testid="edit-trip-start-address" />
-                </div>
+            <div className="p-4 space-y-4">
+              {/* Date */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Trip Date</Label>
+                <Input type="date" value={editTripData.date} onChange={(e) => setEditTripData(prev => ({ ...prev, date: e.target.value }))} max={new Date().toISOString().split('T')[0]} className="mt-1" data-testid="edit-trip-date" />
+              </div>
 
-                {/* End Address */}
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-red-500" /> End Address
-                  </Label>
-                  <Input value={editTripData.end_address || ""} onChange={(e) => setEditTripData(prev => ({ ...prev, end_address: e.target.value }))} placeholder="e.g. 456 Oak Ave, City, State" className="mt-1" data-testid="edit-trip-end-address" />
-                </div>
-                
-                {/* Miles */}
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Miles Driven</Label>
-                  <div className="relative mt-1">
-                    <Input type="number" step="0.1" min="0.1" max="1000" value={editTripData.miles} onChange={(e) => setEditTripData(prev => ({ ...prev, miles: e.target.value }))} className="pr-16" data-testid="edit-trip-miles" />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">miles</span>
-                  </div>
-                  {editTripData.miles && parseFloat(editTripData.miles) > 0 && (
-                    <p className={`text-xs mt-1 ${(editTripData.classification || "business") === "business" ? "text-green-600" : "text-gray-400"}`}>
-                      Tax Deduction: ${((editTripData.classification || "business") === "business" ? (parseFloat(editTripData.miles) * IRS_RATE_2026).toFixed(2) : "0.00")}
-                    </p>
-                  )}
-                </div>
+              {/* Start Address */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-green-500" /> Start Address
+                </Label>
+                <Input value={editTripData.start_address || ""} onChange={(e) => setEditTripData(prev => ({ ...prev, start_address: e.target.value }))} placeholder="e.g. 123 Main St, City, State" className="mt-1" data-testid="edit-trip-start-address" />
+              </div>
 
-                {/* Classification */}
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Classification</Label>
-                  <div className="flex gap-2 mt-1">
-                    <button type="button" onClick={() => setEditTripData(prev => ({ ...prev, classification: "business" }))} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${(editTripData.classification || "business") === "business" ? "bg-green-100 text-green-700 border-2 border-green-300" : "bg-gray-50 text-gray-500 border border-gray-200"}`} data-testid="edit-trip-business-btn">
-                      Business
-                    </button>
-                    <button type="button" onClick={() => setEditTripData(prev => ({ ...prev, classification: "personal" }))} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${(editTripData.classification || "business") !== "business" ? "bg-gray-200 text-gray-700 border-2 border-gray-400" : "bg-gray-50 text-gray-500 border border-gray-200"}`} data-testid="edit-trip-personal-btn">
-                      Personal
-                    </button>
-                  </div>
+              {/* End Address */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-red-500" /> End Address
+                </Label>
+                <Input value={editTripData.end_address || ""} onChange={(e) => setEditTripData(prev => ({ ...prev, end_address: e.target.value }))} placeholder="e.g. 456 Oak Ave, City, State" className="mt-1" data-testid="edit-trip-end-address" />
+              </div>
+
+              {/* Miles */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Miles Driven</Label>
+                <div className="relative mt-1">
+                  <Input type="number" step="0.1" min="0.1" max="1000" value={editTripData.miles} onChange={(e) => setEditTripData(prev => ({ ...prev, miles: e.target.value }))} className="pr-16" data-testid="edit-trip-miles" />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">miles</span>
                 </div>
-                
-                {/* Purpose */}
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Trip Purpose</Label>
-                  <Select value={editTripData.purpose} onValueChange={(value) => setEditTripData(prev => ({ ...prev, purpose: value }))}>
-                    <SelectTrigger className="mt-1" data-testid="edit-trip-purpose">
-                      <SelectValue placeholder="Select purpose..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TRIP_PURPOSES.map(purpose => (
-                        <SelectItem key={purpose.value} value={purpose.value}>
-                          <div className="flex items-center gap-2">
-                            <purpose.icon className="w-4 h-4" />
-                            {purpose.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Notes (always visible) */}
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Notes</Label>
-                  <Textarea value={editTripData.notes || ""} onChange={(e) => setEditTripData(prev => ({ ...prev, notes: e.target.value }))} placeholder="Optional trip notes..." className="mt-1" rows={2} data-testid="edit-trip-notes" />
-                </div>
-                
-                {/* Buttons */}
-                <div className="flex gap-2 pt-2">
-                  <Button onClick={handleCancelEdit} variant="outline" className="flex-1">Cancel</Button>
-                  <Button onClick={handleSaveEditTrip} disabled={savingEdit || !editTripData.miles || !editTripData.purpose} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" data-testid="save-edit-trip-btn">
-                    {savingEdit ? (
-                      <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>Saving...</>
-                    ) : (
-                      <><Check className="w-4 h-4 mr-2" />Save Changes</>
-                    )}
-                  </Button>
+                {editTripData.miles && parseFloat(editTripData.miles) > 0 && (
+                  <p className={`text-xs mt-1 ${(editTripData.classification || "business") === "business" ? "text-green-600" : "text-gray-400"}`}>
+                    Tax Deduction: ${((editTripData.classification || "business") === "business" ? (parseFloat(editTripData.miles) * IRS_RATE_2026).toFixed(2) : "0.00")}
+                  </p>
+                )}
+              </div>
+
+              {/* Classification */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Classification</Label>
+                <div className="flex gap-2 mt-1">
+                  <button type="button" onClick={() => setEditTripData(prev => ({ ...prev, classification: "business" }))} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${(editTripData.classification || "business") === "business" ? "bg-green-100 text-green-700 border-2 border-green-300" : "bg-gray-50 text-gray-500 border border-gray-200"}`} data-testid="edit-trip-business-btn">
+                    Business
+                  </button>
+                  <button type="button" onClick={() => setEditTripData(prev => ({ ...prev, classification: "personal" }))} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${(editTripData.classification || "business") !== "business" ? "bg-gray-200 text-gray-700 border-2 border-gray-400" : "bg-gray-50 text-gray-500 border border-gray-200"}`} data-testid="edit-trip-personal-btn">
+                    Personal
+                  </button>
                 </div>
               </div>
-            </motion.div>
-          </div>,
-          document.body
-        )}
-      
+
+              {/* Purpose */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Trip Purpose</Label>
+                <Select value={editTripData.purpose} onValueChange={(value) => setEditTripData(prev => ({ ...prev, purpose: value }))}>
+                  <SelectTrigger className="mt-1" data-testid="edit-trip-purpose">
+                    <SelectValue placeholder="Select purpose..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TRIP_PURPOSES.map(purpose => (
+                      <SelectItem key={purpose.value} value={purpose.value}>
+                        <div className="flex items-center gap-2">
+                          <purpose.icon className="w-4 h-4" />
+                          {purpose.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Notes</Label>
+                <Textarea value={editTripData.notes || ""} onChange={(e) => setEditTripData(prev => ({ ...prev, notes: e.target.value }))} placeholder="Optional trip notes..." className="mt-1" rows={2} data-testid="edit-trip-notes" />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-2 pt-2">
+                <Button onClick={handleCancelEdit} variant="outline" className="flex-1">Cancel</Button>
+                <Button onClick={handleSaveEditTrip} disabled={savingEdit || !editTripData.miles || !editTripData.purpose} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" data-testid="save-edit-trip-btn">
+                  {savingEdit ? (
+                    <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>Saving...</>
+                  ) : (
+                    <><Check className="w-4 h-4 mr-2" />Save Changes</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>,
+        document.body
+      )}
+
       {/* Trip Map Modal */}
       <AnimatePresence>
         {viewingTripMap && (
@@ -2604,17 +1538,10 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                     <Map className="w-5 h-5 text-green-600" />
                     <h3 className="font-semibold text-gray-800">Trip Route</h3>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={closeTripMap}
-                    className="text-gray-500"
-                  >
+                  <Button variant="ghost" size="sm" onClick={closeTripMap} className="text-gray-500">
                     <X className="w-5 h-5" />
                   </Button>
                 </div>
-                
-                {/* Trip Info */}
                 <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
                   <div>
                     <span className="text-gray-500">Date:</span>
@@ -2630,7 +1557,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                   </div>
                 </div>
               </div>
-              
+
               {/* Map */}
               <div className="p-4">
                 {loadingMap ? (
@@ -2643,14 +1570,14 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600"></div>
                     </div>
                   }>
-                    <TripMap 
-                      locations={viewingTripMap.locations} 
+                    <TripMap
+                      locations={viewingTripMap.locations}
                       height="300px"
                     />
                   </Suspense>
                 )}
               </div>
-              
+
               {/* Trip Stats */}
               <div className="p-4 border-t bg-gray-50">
                 <div className="grid grid-cols-3 gap-3 text-center">
@@ -2667,7 +1594,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                     <p className="text-xs text-gray-500">GPS Points</p>
                   </div>
                 </div>
-                
+
                 {viewingTripMap.trip.notes && (
                   <div className="mt-3 p-2 bg-white rounded border">
                     <p className="text-xs text-gray-500">Notes:</p>
