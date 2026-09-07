@@ -2534,8 +2534,8 @@ export default function AdminDashboard() {
       >
         {/* Left side: Admin info + Refresh + Notifications */}
         <div className="flex items-center gap-2">
-          <div className="w-11 h-11 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full flex items-center justify-center flex-shrink-0">
-            <Shield className="w-6 h-6 text-white" />
+          <div className="w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-r from-[#00D4FF] to-[#8B5CF6] rounded-full flex items-center justify-center flex-shrink-0">
+            <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
           <div className="min-w-0 hidden sm:block">
             <p className="font-semibold text-white text-sm sm:text-base truncate" data-testid="admin-name">{currentAdminName}</p>
@@ -2545,7 +2545,7 @@ export default function AdminDashboard() {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="p-3 sm:px-3 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+            className="p-2 sm:px-3 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
             onClick={() => {
               lightTap();
               handleMasterRefresh();
@@ -2554,7 +2554,7 @@ export default function AdminDashboard() {
             data-testid="refresh-button"
             title="Refresh dashboard"
           >
-            <RefreshCw className={`w-6 h-6 sm:w-5 sm:h-5 ${masterRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-5 h-5 sm:w-5 sm:h-5 ${masterRefreshing ? 'animate-spin' : ''}`} />
           </Button>
 
           {/* Payroll Quick View */}
@@ -2562,7 +2562,7 @@ export default function AdminDashboard() {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="relative p-3 sm:px-3 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
+              className="relative p-2 sm:px-3 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all duration-300"
               onClick={() => {
                 lightTap();
                 if (!showPayrollQuickView) {
@@ -2573,7 +2573,7 @@ export default function AdminDashboard() {
               }}
               data-testid="payroll-quick-view-btn"
             >
-              <DollarSign className="w-6 h-6 sm:w-5 sm:h-5 text-[#10B981]" />
+              <DollarSign className="w-5 h-5 sm:w-5 sm:h-5 text-[#10B981]" />
               <span className="ml-1 text-sm font-bold text-[#10B981] hidden sm:inline">
                 ${payrollSummary.current_period?.amount?.toFixed(0) || '0'}
               </span>
@@ -2770,7 +2770,7 @@ export default function AdminDashboard() {
             <Button 
               variant="ghost" 
               size="sm" 
-              className={`relative p-3 sm:px-3 sm:py-2 transition-all duration-300 ${
+              className={`relative p-2 sm:px-3 sm:py-2 transition-all duration-300 ${
                 unreadCount > 0 
                   ? 'bg-[#FF1493]/20 border-2 border-[#FF1493] text-white hover:bg-[#FF1493]/30 shadow-lg shadow-[#FF1493]/30 animate-pulse' 
                   : 'bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20'
@@ -2781,7 +2781,7 @@ export default function AdminDashboard() {
               }}
               data-testid="notification-bell"
             >
-              <Bell className={`w-6 h-6 sm:w-5 sm:h-5 ${unreadCount > 0 ? 'text-[#FF1493]' : ''}`} />
+              <Bell className={`w-5 h-5 sm:w-5 sm:h-5 ${unreadCount > 0 ? 'text-[#FF1493]' : ''}`} />
               <span className="ml-1.5 text-sm font-medium hidden sm:inline">Alerts</span>
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FF1493] text-white text-[10px] rounded-full flex items-center justify-center font-bold shadow-lg shadow-[#FF1493]/50" data-testid="notification-badge">
@@ -3003,10 +3003,10 @@ export default function AdminDashboard() {
         </div>
 
         {/* Right side: Navigation icons */}
-        <div className="flex items-center gap-1 sm:gap-2">
-          <Link to="/" onClick={() => lightTap()}>
-            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 p-3 sm:px-3 sm:py-2" data-testid="home-btn" title="Home">
-              <Home className="w-6 h-6 sm:w-4 sm:h-4 sm:mr-1" />
+        <div className="flex items-center gap-0.5 sm:gap-2">
+          <Link to="/" onClick={() => lightTap()} className="hidden sm:block">
+            <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 p-2 sm:px-3 sm:py-2" data-testid="home-btn" title="Home">
+              <Home className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-1" />
               <span className="hidden sm:inline">Home</span>
             </Button>
           </Link>
@@ -3014,12 +3014,12 @@ export default function AdminDashboard() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-white/70 hover:text-white hover:bg-white/10 p-3 sm:px-3 sm:py-2 relative"
+            className="hidden sm:flex text-white/70 hover:text-white hover:bg-white/10 p-2 sm:px-3 sm:py-2 relative"
             onClick={() => { lightTap(); navigate("/remote-sessions"); }}
             data-testid="remote-sessions-header-btn"
             title="Remote Sessions"
           >
-            <Monitor className="w-6 h-6 sm:w-4 sm:h-4 sm:mr-1" />
+            <Monitor className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-1" />
             <span className="hidden sm:inline">Remote Sessions</span>
             {(remoteAlertCount > 0 || remoteActiveCount > 0) && (
               <span className={`absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold ${
@@ -3033,12 +3033,12 @@ export default function AdminDashboard() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-white/70 hover:text-white hover:bg-white/10 p-3 sm:px-3 sm:py-2 relative"
+            className="hidden sm:flex text-white/70 hover:text-white hover:bg-white/10 p-2 sm:px-3 sm:py-2 relative"
             onClick={() => { lightTap(); navigate("/video-calls"); }}
             data-testid="video-calls-header-btn"
             title="Video Calls"
           >
-            <Video className="w-6 h-6 sm:w-4 sm:h-4 sm:mr-1" />
+            <Video className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-1" />
             <span className="hidden sm:inline">Calls</span>
             {pendingVideoCallCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold bg-green-500 text-white animate-pulse" data-testid="video-calls-badge">
@@ -3054,11 +3054,11 @@ export default function AdminDashboard() {
               lightTap();
               setShowFullScreenMessages(true);
             }}
-            className="text-white/70 hover:text-white hover:bg-white/10 relative p-3 sm:px-3 sm:py-2"
+            className="text-white/70 hover:text-white hover:bg-white/10 relative p-2 sm:px-3 sm:py-2"
             data-testid="admin-messages-shortcut-btn"
             title="Messages"
           >
-            <MessageSquare className="w-6 h-6 sm:w-4 sm:h-4 sm:mr-1" />
+            <MessageSquare className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-1" />
             <span className="hidden sm:inline">Messages</span>
             {adminUnreadMessageCount > 0 && (
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
@@ -3073,11 +3073,11 @@ export default function AdminDashboard() {
               lightTap();
               toggleTheme();
             }}
-            className="text-white/70 hover:text-white hover:bg-white/10 p-3 sm:px-3 sm:py-2"
+            className="text-white/70 hover:text-white hover:bg-white/10 p-2 sm:px-3 sm:py-2"
             data-testid="dashboard-theme-toggle"
             title={isDark ? "Switch to light mode" : "Switch to dark mode"}
           >
-            {isDark ? <Sun className="w-6 h-6 sm:w-4 sm:h-4" /> : <Moon className="w-6 h-6 sm:w-4 sm:h-4" />}
+            {isDark ? <Sun className="w-5 h-5 sm:w-4 sm:h-4" /> : <Moon className="w-5 h-5 sm:w-4 sm:h-4" />}
           </Button>
           <Button 
             variant="ghost" 
@@ -3086,11 +3086,11 @@ export default function AdminDashboard() {
               lightTap();
               handleLogout();
             }}
-            className="text-white/70 hover:text-white hover:bg-white/10 p-3 sm:px-3 sm:py-2"
+            className="text-white/70 hover:text-white hover:bg-white/10 p-2 sm:px-3 sm:py-2"
             data-testid="logout-btn"
             title="Logout"
           >
-            <LogOut className="w-6 h-6 sm:w-4 sm:h-4 sm:mr-1" />
+            <LogOut className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-1" />
             <span className="hidden sm:inline">Logout</span>
           </Button>
         </div>
