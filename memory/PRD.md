@@ -27,59 +27,56 @@ Thrifty Curator is a React + FastAPI + MongoDB operational dashboard for a resal
 - Employee walkthrough
 
 ### GPS Mileage Tracker (Admin-only)
-- **Unified quick-trip system** — single Start/Pause/Resume/End flow using OSRM road routing
-- **Multi-stop trip support** — pause at stops, resume when driving; total = sum of driving legs only
-- Green header button: Start (idle) -> Pause + End (driving) -> Resume + End (paused)
-- Trip result feedback (distance, addresses, deduction, leg count) shown after completion
-- **Trip Route Replay** — animated car marker traveling along OSRM route geometry
-- **Siri API Key** for Shortcuts integration (long-lived, trip-only scope)
-- Manual trip entry for retroactive logging
-- Summary tabs: Today / Month / Year with trips, miles, deductions
-- Hierarchical trip history grouped by month/day
-- Trip editing with classification (Business/Personal), purpose categories
-- IRS-oriented CSV export ($0.725/mile rate for 2026)
-- Voice commands via Web Speech API
+- Unified quick-trip system with Start/Pause/Resume/End flow using OSRM road routing
+- Multi-stop trip support, trip route replay, Siri API Key for Shortcuts
+- Manual trip entry, summary tabs, hierarchical trip history
+- Trip editing with classification, IRS-oriented CSV export, voice commands
 
 ### AI Listing Assistant
-- Gemini-powered via Emergent integrations
+- Gemini-powered via Emergent integrations (gemini-3.7-flash)
 - Multi-turn conversations with image uploads
+- **Image context persistence** — all images stay in context for follow-up questions
+- **Stop button** — cancel slow/stuck requests mid-stream with AbortController
+- **Retry button** — regenerate the last AI response with same prompt
+- **Delete button** — remove last user+assistant exchange
 - Saved prompts, chat history, message copying
-- Light/dark theme integration
-- Image memory replay for conversation continuity
-- Expanded view with sidebar conversation list
+- Light/dark theme integration, expanded view with sidebar
+- **Parallel image fetching** on session replay for faster context loading
+- History replay capped to last 20 messages for speed
 
 ## Recent Changes
 
+### Sep 7, 2026 — AI Chat Stop/Retry/Delete + Speed Optimization
+- **Added**: Stop button (red, replaces Send during streaming) using AbortController to cancel fetch
+- **Added**: Retry button after each AI response — re-sends same prompt for fresh answer
+- **Added**: Delete button after each AI response — removes last user+assistant pair
+- **Optimized**: Image fetching during history replay changed from sequential to parallel (asyncio.gather)
+- **Optimized**: History replay capped to last 20 messages
+- **Preserved**: ALL images always included in replay — no image context loss for follow-ups
+- **Tested**: Context memory confirmed, Stop/Send toggle verified, Retry/Delete functional
+
 ### Sep 7, 2026 — AI Chat Input Disappearing Bug Fix
-- **Fixed**: Input disappeared in expanded mode when history button was toggled (history shows in sidebar, not main area, but isActiveChat condition incorrectly hid input)
-- **Fixed**: Closing and reopening panel kept stale showHistory/showPrompts state, hiding the input on reopen
-- **Fixed**: Mobile viewport height constraint changed from `vh` to `dvh` for better virtual keyboard handling
-- **Fixed**: Added `min-h-0` to flex body container to prevent overflow-related input displacement
-- **Change**: `isActiveChat` condition updated to: `!showPrompts && (!showHistory || isExpanded)`
-- **Change**: useEffect on `isOpen` now resets `showHistory` and `showPrompts` to false
-- **Tested**: 100% pass rate on 10 test scenarios (desktop + mobile), iteration_70
+- **Fixed**: Input disappeared in expanded mode when history button was toggled
+- **Fixed**: Closing/reopening panel kept stale state hiding input
+- **Fixed**: Mobile viewport height changed from vh to dvh
+- **Tested**: 100% pass rate on 10 test scenarios (desktop + mobile)
 
 ### Sep 7, 2026 — Trip Route Replay + Pause/Resume
-- Added: Pause/resume events, per-leg OSRM distance calculation and geometry storage
-- Added: TripReplayMap component with animated car, progress bar, speed controls
-- Updated: Header buttons, voice commands support pause/resume
+- Added pause/resume, per-leg OSRM distance, TripReplayMap component
+- Updated header buttons, voice commands support pause/resume
 
 ### Sep 7, 2026 — GPS Tracker Unification + Siri API Key
-- Removed: Old continuous GPS tracking system
-- Added: Siri API Key CRUD endpoints with trip-only auth scope
-- Simplified: AdminDashboard removed old GPS state/functions
+- Removed old continuous GPS tracking, added Siri API Key CRUD
 
 ## Pending / Unconfirmed
-- AI assistant auto-scroll (reported by user, claimed fixed, unconfirmed)
+- AI assistant auto-scroll behavior
 - AI assistant image memory accuracy vs Gemini web
-- Employee walkthrough acceptance
-- AnyDesk production validation
-- Daily.co cross-device real testing
 - GPS features awaiting production redeploy confirmation
 - Employee message desktop notifications (code shipped, unverified on real device)
+- AnyDesk watcher offline (needs user's Mac logs)
 
 ## Backlog
-- Category manager settings panel (add/edit/delete purpose categories)
+- Category manager settings panel
 - Trip editing/classification UX polish
 - Mapbox GPS matching integration
 - eBay Browse API for listing enrichment

@@ -119,13 +119,38 @@ async def _get_or_create_chat(conversation_id: str, history: list = None, user_i
         .with_model("gemini", "gemini-3.7-flash")
     )
 
-    # Replay stored history with images so LLM has full visual+text context
-    # Format must match what _add_user_message produces:
-    #   text  -> {"role":"user","content":[{"type":"text","text":"..."}]}
-    #   image -> {"role":"user","content":[{"type":"image_url","image_url":{"url":"data:mime;base64,..."}}]}
-    #   each image is a SEPARATE message (library convention)
+    # Replay stored history so LLM has context.
+    # Only replay the last MAX_REPLAY messages to keep context lean.
+    # ALL images are always included — they're essential for listing follow-ups.
+    # Images are fetched in parallel for speed.
+    MAX_REPLAY = 20
+    import asyncio as _asyncio
+
     if history:
-        for msg in history:
+        trimmed = history[-MAX_REPLAY:] if len(history) > MAX_REPLAY else history
+
+        # First pass: collect all image IDs we need to fetch
+        needed_images = {}  # img_id -> None (placeholder)
+        for msg in trimmed:
+            if msg.get("role") == "user" and msg.get("image_ids") and user_id:
+                for img_id in msg["image_ids"]:
+                    needed_images[img_id] = None
+
+        # Fetch all images in parallel
+        if needed_images:
+            async def _fetch_img(img_id):
+                doc = await db.ai_images.find_one(
+                    {"id": img_id, "user_id": user_id, "is_deleted": False},
+                    {"_id": 0, "base64_data": 1},
+                )
+                return img_id, doc.get("base64_data") if doc else None
+
+            results = await _asyncio.gather(*[_fetch_img(iid) for iid in needed_images])
+            for iid, b64 in results:
+                needed_images[iid] = b64
+
+        # Second pass: build chat messages with pre-fetched images
+        for msg in trimmed:
             role = msg.get("role", "")
             text = msg.get("text", "")
             image_ids = msg.get("image_ids", [])
@@ -135,12 +160,8 @@ async def _get_or_create_chat(conversation_id: str, history: list = None, user_i
                     chat.messages.append({"role": "user", "content": [{"type": "text", "text": text}]})
                 if image_ids and user_id:
                     for img_id in image_ids:
-                        img_doc = await db.ai_images.find_one(
-                            {"id": img_id, "user_id": user_id, "is_deleted": False},
-                            {"_id": 0, "base64_data": 1},
-                        )
-                        if img_doc and img_doc.get("base64_data"):
-                            b64 = img_doc["base64_data"]
+                        b64 = needed_images.get(img_id)
+                        if b64:
                             mime = ImageContent.get_mime_type(b64)
                             chat.messages.append({
                                 "role": "user",

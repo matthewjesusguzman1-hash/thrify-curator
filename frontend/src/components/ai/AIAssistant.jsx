@@ -20,6 +20,8 @@ import {
   Minimize2,
   Mic,
   MicOff,
+  RotateCcw,
+  Square,
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -103,6 +105,7 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
   const messagesContainerRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -284,9 +287,10 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
   };
 
   // --- Send message ---
-  const sendMessage = async () => {
-    const text = input.trim();
-    if (!text && pendingImages.length === 0) return;
+  const sendMessage = async (overrideText = null, overrideImageIds = null) => {
+    const text = overrideText ?? input.trim();
+    const imageIds = overrideImageIds ?? pendingImages.map((i) => i.id);
+    if (!text && imageIds.length === 0) return;
     if (isStreaming) return;
 
     let convId = activeConvId;
@@ -301,26 +305,31 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
       }
     }
 
-    const imageIds = pendingImages.map((i) => i.id);
     const userMsg = {
       role: "user",
       text: text || "(image attached)",
       image_ids: imageIds,
-      _previews: pendingImages.map((i) => i.preview),
+      _previews: overrideText ? [] : pendingImages.map((i) => i.preview),
       timestamp: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setPendingImages([]);
+    if (!overrideText) {
+      setMessages((prev) => [...prev, userMsg]);
+      setInput("");
+      setPendingImages([]);
+    }
     setIsStreaming(true);
     setMessages((prev) => [...prev, { role: "assistant", text: "", timestamp: new Date().toISOString() }]);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       const response = await fetch(`${API}/api/ai/conversations/${convId}/messages`, {
         method: "POST",
         headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({ text: text || "Describe this image and suggest a Vendoo listing.", image_ids: imageIds }),
+        signal: controller.signal,
       });
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -350,19 +359,61 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
         }
       }
       loadConversations();
-    } catch {
-      toast.error("Failed to get response");
-      setMessages((prev) => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last?.role === "assistant" && !last.text) {
-          updated[updated.length - 1] = { ...last, text: "Sorry, something went wrong. Please try again." };
-        }
-        return updated;
-      });
+    } catch (err) {
+      if (err.name === "AbortError") {
+        // User cancelled — keep whatever partial response was received
+        setMessages((prev) => {
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          if (last?.role === "assistant" && !last.text) {
+            updated[updated.length - 1] = { ...last, text: "(Stopped)" };
+          }
+          return updated;
+        });
+      } else {
+        toast.error("Failed to get response");
+        setMessages((prev) => {
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          if (last?.role === "assistant" && !last.text) {
+            updated[updated.length - 1] = { ...last, text: "Sorry, something went wrong. Please try again." };
+          }
+          return updated;
+        });
+      }
     } finally {
+      abortControllerRef.current = null;
       setIsStreaming(false);
     }
+  };
+
+  const stopStreaming = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  };
+
+  const regenerateLastMessage = () => {
+    // Find the last user message and resend it
+    const lastUserIdx = [...messages].reverse().findIndex((m) => m.role === "user");
+    if (lastUserIdx === -1) return;
+    const idx = messages.length - 1 - lastUserIdx;
+    const lastUserMsg = messages[idx];
+
+    // Remove last user + assistant pair from UI
+    setMessages((prev) => prev.slice(0, idx));
+
+    // Resend
+    sendMessage(lastUserMsg.text, lastUserMsg.image_ids || []);
+  };
+
+  const deleteLastExchange = () => {
+    // Remove the last user+assistant pair from the UI
+    const lastUserIdx = [...messages].reverse().findIndex((m) => m.role === "user");
+    if (lastUserIdx === -1) return;
+    const idx = messages.length - 1 - lastUserIdx;
+    setMessages((prev) => prev.slice(0, idx));
+    toast.success("Last exchange removed");
   };
 
   const handleKeyDown = (e) => {
@@ -806,6 +857,29 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
                 ) : (
                   <>
                     {messages.map(renderMessage)}
+                    {/* Regenerate / Delete last exchange buttons */}
+                    {!isStreaming && messages.length >= 2 && messages[messages.length - 1]?.role === "assistant" && (
+                      <div className="flex items-center gap-2 justify-center py-1">
+                        <button
+                          onClick={regenerateLastMessage}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs ${t.textDim} ${t.cardHover} transition-colors`}
+                          title="Regenerate response"
+                          data-testid="ai-regenerate-btn"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          Retry
+                        </button>
+                        <button
+                          onClick={deleteLastExchange}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs ${t.textDim} hover:text-red-400 transition-colors`}
+                          title="Delete last exchange"
+                          data-testid="ai-delete-last-btn"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete
+                        </button>
+                      </div>
+                    )}
                     <div ref={messagesEndRef} />
                   </>
                 )}
@@ -900,15 +974,26 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
                       )}
                       <span className={`${t.textFaint} text-[10px] hidden sm:inline`}>{speech.isListening ? "Listening..." : "or drag & drop"}</span>
                     </div>
-                    <button
-                      onClick={sendMessage}
-                      disabled={isStreaming || (!input.trim() && pendingImages.length === 0)}
-                      className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium disabled:opacity-30 hover:bg-emerald-500 active:scale-95 transition-all flex items-center gap-2"
-                      data-testid="ai-send-btn"
-                    >
-                      {isStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                      Send
-                    </button>
+                    {isStreaming ? (
+                      <button
+                        onClick={stopStreaming}
+                        className="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 active:scale-95 transition-all flex items-center gap-2"
+                        data-testid="ai-stop-btn"
+                      >
+                        <Square className="w-4 h-4" />
+                        Stop
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => sendMessage()}
+                        disabled={!input.trim() && pendingImages.length === 0}
+                        className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium disabled:opacity-30 hover:bg-emerald-500 active:scale-95 transition-all flex items-center gap-2"
+                        data-testid="ai-send-btn"
+                      >
+                        <Send className="w-4 h-4" />
+                        Send
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
