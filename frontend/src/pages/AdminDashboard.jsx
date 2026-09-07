@@ -986,16 +986,10 @@ export default function AdminDashboard() {
         switch (pendingAction) {
           case 'StartTrip':
             // Start GPS tracking via the tracker component
-            setForceOpenOperations(true);
-            setTimeout(() => {
-              if (gpsTrackerRef.current?.startTrip) {
-                gpsTrackerRef.current.startTrip();
-                toast.info('Starting GPS trip...', { duration: 2000 });
-              }
-              if (gpsTrackerRef.current?.scrollIntoView) {
-                gpsTrackerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }
-            }, 400);
+            if (gpsTrackerRef.current?.startTrip) {
+              gpsTrackerRef.current.startTrip();
+              toast.info('Starting GPS trip...', { duration: 2000 });
+            }
             break;
             
           case 'LogMiles':
@@ -3191,7 +3185,7 @@ export default function AdminDashboard() {
                             gpsTrackerRef.current?.resumeTrip();
                           }}
                           size="sm"
-                          className="flex items-center gap-1 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9"
+                          className="flex items-center gap-1 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"
                           data-testid="resume-trip-header-btn"
                         >
                           <Play className="w-4 h-4" />
@@ -3204,7 +3198,7 @@ export default function AdminDashboard() {
                             gpsTrackerRef.current?.pauseTrip();
                           }}
                           size="sm"
-                          className="flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9"
+                          className="flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"
                           data-testid="pause-trip-header-btn"
                         >
                           <Pause className="w-4 h-4" />
@@ -3218,7 +3212,7 @@ export default function AdminDashboard() {
                           gpsTrackerRef.current?.endTrip();
                         }}
                         size="sm"
-                        className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9"
+                        className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"
                         data-testid="end-trip-header-btn"
                       >
                         <Square className="w-4 h-4" />
@@ -3229,11 +3223,7 @@ export default function AdminDashboard() {
                     <Button
                       onClick={() => {
                         buttonPress();
-                        setForceOpenOperations(true);
                         gpsTrackerRef.current?.startTrip();
-                        setTimeout(() => {
-                          gpsTrackerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 400);
                       }}
                       disabled={tripStarting}
                       size="sm"
