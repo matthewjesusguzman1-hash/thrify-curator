@@ -38,6 +38,7 @@ from app.routers.web_push import router as web_push_router
 from app.routers.employee_terminations import router as employee_terminations_router
 from app.routers.contractor_agreement import router as contractor_agreement_router
 from app.routers.video_calls import router as video_calls_router
+from app.routers.ai_assistant import router as ai_assistant_router
 
 # Configure logging
 logging.basicConfig(
@@ -173,6 +174,7 @@ app.include_router(web_push_router, prefix="/api")  # Web Push for Safari PWA
 app.include_router(employee_terminations_router)  # Already has /api prefix
 app.include_router(contractor_agreement_router, prefix="/api")  # Contractor agreements
 app.include_router(video_calls_router, prefix="/api")  # Daily.co video calls
+app.include_router(ai_assistant_router, prefix="/api")  # AI Listing Assistant
 
 
 @app.get("/api/")
@@ -230,3 +232,12 @@ async def _periodic_cross_check():
 async def start_cross_check_loop():
     global _cross_check_task
     _cross_check_task = asyncio.create_task(_periodic_cross_check())
+
+@app.on_event("startup")
+async def init_object_storage():
+    try:
+        from app.routers.ai_assistant import init_storage
+        init_storage()
+        logger.info("Object storage initialized")
+    except Exception as e:
+        logger.error(f"Object storage init failed: {e}")

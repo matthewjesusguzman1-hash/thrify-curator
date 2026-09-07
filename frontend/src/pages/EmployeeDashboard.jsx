@@ -61,6 +61,7 @@ import MessagingSection from "@/components/MessagingSection";
 import FullScreenMessaging from "@/components/FullScreenMessaging";
 import PullToRefresh from "@/components/PullToRefresh";
 import EmployeeWalkthrough, { useEmployeeWalkthrough } from "@/components/employee/EmployeeWalkthrough";
+import AIAssistant from "@/components/ai/AIAssistant";
 
 // Check if running in Capacitor native app
 const isNativePlatform = () => {
@@ -4092,6 +4093,14 @@ export default function EmployeeDashboard({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* AI Listing Assistant - floating bubble */}
+      {!isAdminView && (
+        <AIAssistant
+          token={localStorage.getItem("token")}
+          userName={user?.name}
+        />
+      )}
     </div>
   );
 }

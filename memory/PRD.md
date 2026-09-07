@@ -1,7 +1,7 @@
 # Thrifty Curator - Product Requirements Document
 
 ## Overview
-Resale/consignment operations platform with employee/admin management, time tracking, remote session monitoring, financial reporting, interview scheduling, video calling, and mobile/native support.
+Resale/consignment operations platform with employee/admin management, time tracking, remote session monitoring, financial reporting, interview scheduling, video calling, AI listing assistant, and mobile/native support.
 
 ## Core Features (Implemented)
 
@@ -34,14 +34,15 @@ Resale/consignment operations platform with employee/admin management, time trac
 - Direct iframe video call UI
 - Role-based tabs: Admin (Active/Upcoming/History/Recordings), Employee (Active/History)
 - Incoming call banner, optional recording (admin-only, off by default)
-- **Invitee names stored and displayed** - calls show "Call with [name]" not just creator
-- Room docs store invitee_names and full participant_names
+- Invitee names stored and displayed
 
 ### Remote Session Monitoring (AnyDesk)
 - Watcher service for Mac log monitoring
 - Session events/heartbeats, shutdown/restart commands
 - Auto clock-out on AnyDesk disconnect
 - Notification silencing toggle (remote session notifications only)
+- Quick Connect deep link button (one tap opens AnyDesk to work computer)
+- Auto-close stale LIVE sessions when heartbeat reports no active connections for 2+ minutes
 
 ### Financial Management
 - CSV import (multiple formats including Vendoo)
@@ -52,6 +53,19 @@ Resale/consignment operations platform with employee/admin management, time trac
 - Admin-employee and admin-consignor chat
 - Full-screen messaging modal, unread message badges
 
+### AI Listing Assistant (NEW - Feb 2026)
+- **Floating chat bubble** on Employee Dashboard (sparkles icon, bottom-right)
+- Conversational AI powered by **Gemini (gemini-3-flash-preview)** via emergentintegrations
+- **Image upload support**: JPEG, PNG, WEBP up to 5MB — stored in Emergent Object Storage
+- **Multi-turn conversations** with session tracking in MongoDB
+- **Marketplace-aware**: Quick action buttons for eBay, Poshmark, Mercari, Depop, FB Marketplace
+- Streaming responses via SSE (real-time token delivery)
+- System prompt tuned for resale listing expertise (titles, descriptions, sizing, measurements, pricing)
+- Conversation history: list, view, delete previous chats
+- Backend: `/api/ai/conversations` CRUD + `/api/ai/upload-image` + `/api/ai/conversations/{id}/messages` (SSE)
+- User-scoped: employees only see their own conversations
+- **Tested**: 21/21 backend tests passed, all frontend flows verified
+
 ## Architecture
 - **Frontend**: React + Tailwind CSS + Shadcn/UI, served on port 3000
 - **Backend**: FastAPI on port 8001, prefixed with /api
@@ -59,24 +73,25 @@ Resale/consignment operations platform with employee/admin management, time trac
 - **Video**: Daily.co (direct iframe embed)
 - **Push**: Web Push (VAPID) + APNs (native iOS)
 - **Storage**: Emergent Object Storage
+- **AI**: Gemini via emergentintegrations (gemini-3-flash-preview), Emergent LLM Key
 
 ## Recent Changes (Feb 2026)
-- Added: Quick Connect deep link button on Remote Sessions page - one tap opens AnyDesk and connects to work computer
-- Admin configures work computer's AnyDesk address once via Quick Connect Setup modal
-- Added: Auto-close stuck LIVE sessions when heartbeat reports no active connections for 2+ minutes
-- Fixed: Heartbeat logging - success/failure now visible in watcher logs (was silently swallowed)
-- Fixed: Video call invites now store and display invitee names correctly
-- Fixed: "Call with [name]" shown instead of just creator name in all call lists
-- Fixed: Web Push added to ALL clock-in/out paths (was missing, only APNs sent before)
+- **NEW**: AI Listing Assistant — floating Gemini-powered chat on employee dashboard with image upload and marketplace-specific listing help
+- Added: Quick Connect deep link button on Remote Sessions page
+- Added: Auto-close stuck LIVE sessions when heartbeat reports no active connections
+- Fixed: Heartbeat logging visibility in watcher logs
+- Fixed: Video call invitee names displayed correctly
+- Fixed: Web Push added to ALL clock-in/out paths
 - Fixed: Remote session notification APNs/Web Push split into independent try/except blocks
-- Fixed: Admin clock-in of employee now sends notifications (had none before)
+- Fixed: Admin clock-in of employee now sends notifications
 - Added: Employee notification opt-in toggle on dashboard
 
 ## Pending / Backlog
 - P1: Verify push notification fixes in production after redeploy
 - P1: Verify Daily call workflows end-to-end in production
+- P1: Verify Quick Connect deep link on real iPhone/Mac
+- P1: Verify stale session auto-close in production
 - P2: Financial/Vendoo import production validation
 - P2: Clean up React hook warnings in VideoCallsPage.jsx
 - P3: GPS route matching (Mapbox)
-- P3: LLM vision for product image/spec workflows
 - P3: eBay Browse API integration
