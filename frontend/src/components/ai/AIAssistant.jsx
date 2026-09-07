@@ -642,7 +642,7 @@ export default function AIAssistant({ token }) {
                               <p className={`${t.text} font-medium text-sm truncate`}>{p.label}</p>
                               <p className={`${t.textDim} text-xs mt-0.5 line-clamp-2`}>{p.text}</p>
                             </button>
-                            <div className={`flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                            <div className="flex items-center gap-0.5 shrink-0">
                               <button onClick={() => { setEditingPromptId(p.id); setEditLabel(p.label); setEditText(p.text); }} className={`p-1 ${t.textFaint} hover:${t.text}`} data-testid={`edit-prompt-${p.id}`}>
                                 <Edit3 className="w-3.5 h-3.5" />
                               </button>
