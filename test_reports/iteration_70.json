@@ -1,0 +1,50 @@
+{
+  "summary": "Comprehensive testing of AI Assistant chat input visibility bug fix. All 10 test scenarios passed on both desktop (1920x1080) and mobile (390x844) viewports. The fix correctly addresses: (1) Input visible on initial panel open, (2) Compact mode: History button hides input, Back restores it, (3) Compact mode: Prompts button hides input, Back restores it, (4) Expanded mode: History button does NOT hide input (history shows in sidebar), (5) Expanded mode: Prompts button hides input, (6) Close and reopen panel resets state - input always visible, (7) Toggle History on/off restores input, (8) Input accepts text and send button enables, (9) Attach button visible, (10) Mobile viewport works correctly with dvh max-height.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/frontend/src/components/ai/AIAssistant.jsx"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Line 157 useEffect correctly resets showHistory/showPrompts to false when isOpen changes - fixes stale state on reopen",
+    "Line 487 isActiveChat condition correctly handles expanded mode: !showPrompts && (!showHistory || isExpanded) - input stays visible when history is in sidebar",
+    "Line 593 body div has min-h-0 class for proper flex overflow handling",
+    "Line 529 uses dvh (dynamic viewport height) for mobile viewport compatibility",
+    "Line 856 input area conditional render based on isActiveChat works correctly"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend only testing)",
+    "frontend": "100% (all 10 test scenarios passed)"
+  },
+  "test_credentials": "Employee: testemployee@thriftycurator.com (no password needed)",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "AI Assistant chat input visibility bug fix fully tested. KEY FIX AREAS: (1) useEffect at line 157 resets showHistory/showPrompts on panel open. (2) isActiveChat condition at line 487 handles expanded mode correctly - input visible when history shows in sidebar. (3) min-h-0 on flex parent at line 593 for proper overflow. (4) dvh max-height at line 529 for mobile viewport. KEY DATA-TESTIDS: ai-assistant-fab, ai-assistant-panel, ai-message-input, ai-send-btn, ai-attach-btn, ai-history-btn, ai-prompts-btn, ai-back-btn, ai-expand-btn, ai-close-btn. Login flow: POST /api/auth/login with {email: 'testemployee@thriftycurator.com'} returns access_token, set in localStorage as 'token'.",
+  "features_tested": {
+    "desktop_initial_open": "PASS - Panel opens via FAB with input, send button, attach button visible",
+    "desktop_compact_history_hides_input": "PASS - History button hides input in compact mode",
+    "desktop_compact_back_restores_input": "PASS - Back button restores input after history",
+    "desktop_compact_prompts_hides_input": "PASS - Prompts button hides input in compact mode",
+    "desktop_compact_back_from_prompts": "PASS - Back button restores input after prompts",
+    "desktop_expanded_history_keeps_input": "PASS - History button does NOT hide input in expanded mode (sidebar)",
+    "desktop_expanded_prompts_hides_input": "PASS - Prompts button hides input in expanded mode",
+    "desktop_close_reopen_resets_state": "PASS - Close and reopen shows input (state reset)",
+    "desktop_input_accepts_text": "PASS - Input field accepts text, send button enables",
+    "desktop_toggle_history_restores_input": "PASS - Toggle history on/off restores input",
+    "mobile_panel_opens_with_input": "PASS - Panel opens on mobile with input visible",
+    "mobile_history_hides_input": "PASS - History button hides input on mobile",
+    "mobile_back_restores_input": "PASS - Back button restores input on mobile",
+    "mobile_close_reopen_resets_state": "PASS - Close and reopen shows input on mobile",
+    "mobile_input_accepts_text": "PASS - Input field accepts text on mobile"
+  }
+}

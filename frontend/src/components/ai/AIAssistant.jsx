@@ -154,6 +154,9 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
 
   useEffect(() => {
     if (isOpen) {
+      // Reset view states so the input is always visible on reopen
+      setShowHistory(false);
+      setShowPrompts(false);
       loadConversations();
       loadPrompts();
     }
@@ -478,8 +481,10 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
     );
   };
 
-  // Active view (not history, not prompts manager)
-  const isActiveChat = !showHistory && !showPrompts;
+  // Active view — show input when not in prompts manager.
+  // In expanded mode, history is in sidebar so input should still show.
+  // In compact mode, history replaces the main area so input hides.
+  const isActiveChat = !showPrompts && (!showHistory || isExpanded);
 
   return (
     <>
@@ -523,7 +528,7 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
                   ? "inset-2 sm:inset-auto sm:top-[2vh] sm:left-0 sm:right-0 sm:mx-auto sm:w-[90vw] sm:max-w-[1200px] sm:h-[96vh]"
                   : "bottom-2 right-2 left-2 sm:left-auto sm:bottom-4 sm:right-4 sm:w-[440px]"
               }`}
-              style={isExpanded ? {} : { maxHeight: "min(85vh, 640px)" }}
+              style={isExpanded ? {} : { maxHeight: "min(85dvh, 640px)" }}
               data-testid="ai-assistant-panel"
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
@@ -585,7 +590,7 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
             </div>
 
             {/* Body — flex row when expanded (sidebar + chat), single col when compact */}
-            <div className={`flex-1 flex ${isExpanded ? "flex-row" : "flex-col"} overflow-hidden`}>
+            <div className={`flex-1 flex ${isExpanded ? "flex-row" : "flex-col"} overflow-hidden min-h-0`}>
               {/* Left sidebar — recent conversations (expanded mode only) */}
               {isExpanded && (
                 <div className={`w-[220px] shrink-0 border-r ${isDark ? "border-white/10" : "border-gray-200"} overflow-y-auto`} data-testid="ai-sidebar">
