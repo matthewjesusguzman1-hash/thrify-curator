@@ -91,19 +91,7 @@ class SendMessageRequest(BaseModel):
 
 
 # --- System prompt for the listing assistant ---
-SYSTEM_PROMPT = """You are the Thrifty Curator Listing Assistant — an expert resale product specialist.
-
-You are a resale listing assistant. You help employees list items on Vendoo.
-
-IMPORTANT: Only give exactly what is asked for. Do NOT add extra information, tips, pricing suggestions, measurement guidance, or marketplace advice unless specifically requested. Be concise and direct.
-
-Examples of good behavior:
-- Asked for "title with 5 hashtags" → give just the title and 5 hashtags, nothing else
-- Asked for "description" → give just the description
-- Asked to "describe this photo" → briefly identify the item
-- Asked for a "full listing" → then give title, description, and details
-
-You know resale marketplaces (eBay, Poshmark, Mercari, Depop, Facebook Marketplace) and can identify brands, styles, sizes, conditions, and materials from photos. Use that knowledge when asked, but keep responses tight and copy-paste ready."""
+SYSTEM_PROMPT = """You are the Thrifty Curator Listing Assistant — a resale product specialist helping employees list items on Vendoo. Be concise and copy-paste ready."""
 
 
 # In-memory LlmChat instances keyed by conversation_id
@@ -115,28 +103,49 @@ ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
 # --- Helpers ---
-def _get_or_create_chat(conversation_id: str, history: list = None):
-    """Get existing chat session or create new one with history replay."""
+async def _get_or_create_chat(conversation_id: str, history: list = None, user_id: str = None):
+    """Get existing chat session or create new one with history replay including images."""
     if conversation_id in _chat_sessions:
         return _chat_sessions[conversation_id]
 
-    from emergentintegrations.llm.chat import LlmChat
+    from emergentintegrations.llm.chat import LlmChat, ImageContent
+
     chat = (
         LlmChat(
             api_key=EMERGENT_LLM_KEY,
             session_id=conversation_id,
             system_message=SYSTEM_PROMPT,
         )
-        .with_model("gemini", "gemini-3-flash-preview")
+        .with_model("gemini", "gemini-3.5-flash")
     )
 
-    # Replay stored history so LLM remembers the full conversation
+    # Replay stored history with images so LLM has full visual+text context
+    # Format must match what _add_user_message produces:
+    #   text  -> {"role":"user","content":[{"type":"text","text":"..."}]}
+    #   image -> {"role":"user","content":[{"type":"image_url","image_url":{"url":"data:mime;base64,..."}}]}
+    #   each image is a SEPARATE message (library convention)
     if history:
         for msg in history:
             role = msg.get("role", "")
             text = msg.get("text", "")
-            if role == "user" and text:
-                chat.messages.append({"role": "user", "content": text})
+            image_ids = msg.get("image_ids", [])
+
+            if role == "user":
+                if text:
+                    chat.messages.append({"role": "user", "content": [{"type": "text", "text": text}]})
+                if image_ids and user_id:
+                    for img_id in image_ids:
+                        img_doc = await db.ai_images.find_one(
+                            {"id": img_id, "user_id": user_id, "is_deleted": False},
+                            {"_id": 0, "base64_data": 1},
+                        )
+                        if img_doc and img_doc.get("base64_data"):
+                            b64 = img_doc["base64_data"]
+                            mime = ImageContent.get_mime_type(b64)
+                            chat.messages.append({
+                                "role": "user",
+                                "content": [{"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}}],
+                            })
             elif role == "assistant" and text:
                 chat.messages.append({"role": "assistant", "content": text})
 
@@ -355,7 +364,7 @@ async def send_message(
     results = await asyncio.gather(*tasks)
     file_contents = [r for r in results[1:] if r is not None]
 
-    chat = _get_or_create_chat(conv_id, history=conv.get("messages", []))
+    chat = await _get_or_create_chat(conv_id, history=conv.get("messages", []), user_id=user["id"])
     user_message = UserMessage(
         text=body.text,
         file_contents=file_contents if file_contents else None,
