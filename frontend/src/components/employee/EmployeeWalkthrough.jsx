@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, ChevronRight, ChevronLeft, Clock, FileText, 
-  Lock, DollarSign, MessageSquare, CheckCircle, Play
+  Lock, DollarSign, MessageSquare, CheckCircle, Play,
+  Sparkles, Globe, Bell, Video
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -26,6 +27,59 @@ const WALKTHROUGH_STEPS = [
       'Clock out when you finish',
       'Your hours are automatically saved',
       'View your time entries in the dashboard'
+    ]
+  },
+  {
+    id: 'ai-assistant',
+    title: 'AI Listing Assistant',
+    description: 'Your built-in Gemini-powered assistant for creating Vendoo listings. Upload product photos and it will identify brands, suggest measurements, write descriptions, and more.',
+    icon: Sparkles,
+    color: 'from-emerald-500 to-cyan-500',
+    tips: [
+      'Tap the sparkle button at the bottom right to open',
+      'Upload photos or screenshots of items',
+      'Ask for measurements, titles, descriptions, or hashtags',
+      'Save your favorite prompts for one-tap reuse',
+      'View past conversations in the sidebar'
+    ]
+  },
+  {
+    id: 'video-calls',
+    title: 'Video Calls',
+    description: 'Join video calls with your supervisor directly from the dashboard. You\'ll receive notifications when a call is scheduled or when someone is waiting for you.',
+    icon: Video,
+    color: 'from-violet-500 to-purple-500',
+    tips: [
+      'Tap the Video button in the header to view calls',
+      'Join scheduled calls with one tap',
+      'You\'ll get a notification when a call starts',
+      'Audio and video work right in your browser'
+    ]
+  },
+  {
+    id: 'notifications',
+    title: 'Notifications',
+    description: 'Enable push notifications to stay updated on messages, video calls, and important alerts even when you\'re not on the dashboard.',
+    icon: Bell,
+    color: 'from-amber-500 to-orange-500',
+    tips: [
+      'Tap the bell icon in the header to toggle notifications',
+      'Allow browser notifications when prompted',
+      'Get alerts for new messages and video calls',
+      'Works on mobile and desktop'
+    ]
+  },
+  {
+    id: 'timezone',
+    title: 'Timezone Settings',
+    description: 'Remote workers can switch between Central Time (US) and Philippine Time. All timestamps on the dashboard — clock entries, messages, and pay periods — will adjust automatically.',
+    icon: Globe,
+    color: 'from-sky-500 to-blue-500',
+    tips: [
+      'Look for the timezone toggle on your dashboard',
+      'Switch between Central Time and Philippine Time',
+      'All times update instantly across the dashboard',
+      'Your preference is saved for next time'
     ]
   },
   {
