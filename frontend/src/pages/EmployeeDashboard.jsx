@@ -4115,6 +4115,7 @@ export default function EmployeeDashboard({
       {!isAdminView && (
         <AIAssistant
           token={localStorage.getItem("token")}
+          isDark={isDark}
         />
       )}
     </div>

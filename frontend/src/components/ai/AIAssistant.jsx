@@ -26,8 +26,10 @@ import { useDashboardTheme } from "@/hooks/useDashboardTheme";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-export default function AIAssistant({ token }) {
-  const { isDark } = useDashboardTheme();
+export default function AIAssistant({ token, isDark: isDarkProp }) {
+  // Use prop if provided, otherwise fall back to hook
+  const hookTheme = useDashboardTheme();
+  const isDark = isDarkProp !== undefined ? isDarkProp : hookTheme.isDark;
 
   // Theme tokens
   const t = isDark ? {
