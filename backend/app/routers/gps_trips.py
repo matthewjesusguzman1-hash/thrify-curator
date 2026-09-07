@@ -405,6 +405,9 @@ class TripUpdate(BaseModel):
     total_miles: Optional[float] = None
     purpose: Optional[str] = None
     notes: Optional[str] = None
+    start_address: Optional[str] = None
+    end_address: Optional[str] = None
+    classification: Optional[str] = None  # "business" or "personal"
 
 
 class MileageAdjustment(BaseModel):
@@ -1174,6 +1177,22 @@ async def update_trip(
     # Update notes
     if trip_data.notes is not None:
         update_fields["notes"] = trip_data.notes if trip_data.notes else None
+
+    # Update addresses
+    if trip_data.start_address is not None:
+        update_fields["start_address"] = trip_data.start_address.strip()
+
+    if trip_data.end_address is not None:
+        update_fields["end_address"] = trip_data.end_address.strip()
+
+    # Update classification
+    if trip_data.classification is not None:
+        if trip_data.classification not in ("business", "personal"):
+            raise HTTPException(status_code=400, detail="Classification must be 'business' or 'personal'")
+        update_fields["classification"] = trip_data.classification
+        irs_rate = get_irs_rate()
+        miles = trip_data.total_miles if trip_data.total_miles else trip.get("total_miles", 0)
+        update_fields["tax_deduction"] = round(miles * irs_rate, 2) if trip_data.classification == "business" else 0.0
     
     if not update_fields:
         raise HTTPException(status_code=400, detail="No fields to update")

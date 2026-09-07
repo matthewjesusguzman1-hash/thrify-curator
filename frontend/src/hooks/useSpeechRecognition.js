@@ -1,8 +1,26 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
+// Short confirmation beep using Web Audio API
+function playConfirmSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = "sine";
+    gain.gain.value = 0.15;
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.2);
+  } catch {}
+}
+
 /**
  * Hook for browser-native speech recognition (Web Speech API).
  * Works on Chrome, Edge, Safari. Falls back gracefully if unsupported.
+ * Plays a confirmation tone when speech is recognized.
  */
 export default function useSpeechRecognition({ onResult, onEnd, continuous = false, lang = "en-US" } = {}) {
   const [isListening, setIsListening] = useState(false);
@@ -34,7 +52,10 @@ export default function useSpeechRecognition({ onResult, onEnd, continuous = fal
         .map((r) => r[0].transcript)
         .join(" ")
         .trim();
-      if (transcript && onResult) onResult(transcript);
+      if (transcript) {
+        playConfirmSound();
+        if (onResult) onResult(transcript);
+      }
     };
 
     recognition.onerror = (event) => {
