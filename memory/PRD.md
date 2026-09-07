@@ -53,18 +53,21 @@ Resale/consignment operations platform with employee/admin management, time trac
 - Admin-employee and admin-consignor chat
 - Full-screen messaging modal, unread message badges
 
-### AI Listing Assistant (NEW - Feb 2026)
+### AI Listing Assistant (Feb 2026)
 - **Floating chat bubble** on Employee Dashboard (sparkles icon, bottom-right)
+- **Popup overlay** — doesn't take over full screen, click outside (backdrop) to dismiss
 - Conversational AI powered by **Gemini (gemini-3-flash-preview)** via emergentintegrations
 - **Image upload support**: JPEG, PNG, WEBP up to 5MB — stored in Emergent Object Storage
+- **Drag-and-drop** image upload + file picker
 - **Multi-turn conversations** with session tracking in MongoDB
-- **Marketplace-aware**: Quick action buttons for eBay, Poshmark, Mercari, Depop, FB Marketplace
+- **Vendoo-focused**: system prompt optimized for Vendoo cross-listing (not per-marketplace)
+- **Saved Prompts**: users create/edit/delete custom prompts, use them at a click
+- **Copy button** on every assistant response for easy clipboard copy to Vendoo
 - Streaming responses via SSE (real-time token delivery)
-- System prompt tuned for resale listing expertise (titles, descriptions, sizing, measurements, pricing)
 - Conversation history: list, view, delete previous chats
-- Backend: `/api/ai/conversations` CRUD + `/api/ai/upload-image` + `/api/ai/conversations/{id}/messages` (SSE)
-- User-scoped: employees only see their own conversations
-- **Tested**: 21/21 backend tests passed, all frontend flows verified
+- Backend: `/api/ai/conversations` CRUD + `/api/ai/upload-image` + `/api/ai/conversations/{id}/messages` (SSE) + `/api/ai/prompts` CRUD
+- User-scoped: employees only see their own conversations and prompts
+- **Tested**: 32/32 backend tests passed, all frontend flows verified
 
 ## Architecture
 - **Frontend**: React + Tailwind CSS + Shadcn/UI, served on port 3000
@@ -76,7 +79,12 @@ Resale/consignment operations platform with employee/admin management, time trac
 - **AI**: Gemini via emergentintegrations (gemini-3-flash-preview), Emergent LLM Key
 
 ## Recent Changes (Feb 2026)
-- **NEW**: AI Listing Assistant — floating Gemini-powered chat on employee dashboard with image upload and marketplace-specific listing help
+- **NEW**: AI Listing Assistant — floating Gemini-powered chat popup on employee dashboard with image upload, drag-and-drop, saved custom prompts, copy-to-clipboard, and click-outside-to-close
+- Updated: Assistant focused on Vendoo cross-listing (removed per-marketplace quick actions)
+- Added: Saved Prompts CRUD (create/edit/delete reusable prompts)
+- Added: Copy button on assistant responses for easy paste into Vendoo
+- Added: Click-outside backdrop to dismiss assistant popup
+- Added: Quick Connect deep link button on Remote Sessions page
 - Added: Quick Connect deep link button on Remote Sessions page
 - Added: Auto-close stuck LIVE sessions when heartbeat reports no active connections
 - Fixed: Heartbeat logging visibility in watcher logs

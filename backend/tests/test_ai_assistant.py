@@ -476,6 +476,385 @@ class TestMessageStreaming:
         print("PASS: 404 for message to nonexistent conversation")
 
 
+class TestSavedPromptsCRUD:
+    """Test saved prompts CRUD operations - NEW FEATURE"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Get auth token for employee"""
+        response = requests.post(f"{BASE_URL}/api/auth/login", json={"email": EMPLOYEE_EMAIL})
+        assert response.status_code == 200, f"Employee login failed: {response.text}"
+        data = response.json()
+        self.token = data.get("access_token")
+        assert self.token, "No access token returned"
+        self.headers = {"Authorization": f"Bearer {self.token}"}
+        self.created_prompt_ids = []
+    
+    def teardown_method(self, method):
+        """Cleanup created prompts"""
+        for prompt_id in self.created_prompt_ids:
+            try:
+                requests.delete(f"{BASE_URL}/api/ai/prompts/{prompt_id}", headers=self.headers)
+            except Exception:
+                pass
+    
+    def test_create_prompt(self):
+        """POST /api/ai/prompts creates a saved prompt with label and text"""
+        response = requests.post(
+            f"{BASE_URL}/api/ai/prompts",
+            json={"label": "TEST_Vintage Denim", "text": "Describe this vintage denim item for Vendoo listing"},
+            headers=self.headers
+        )
+        assert response.status_code == 200, f"Create prompt failed: {response.text}"
+        data = response.json()
+        
+        assert "id" in data, "Response missing 'id'"
+        assert "label" in data, "Response missing 'label'"
+        assert "text" in data, "Response missing 'text'"
+        assert "created_at" in data, "Response missing 'created_at'"
+        assert data["label"] == "TEST_Vintage Denim", f"Label mismatch: {data['label']}"
+        assert data["text"] == "Describe this vintage denim item for Vendoo listing", f"Text mismatch"
+        
+        self.created_prompt_ids.append(data["id"])
+        print(f"PASS: Created prompt with id={data['id']}, label='{data['label']}'")
+    
+    def test_create_prompt_requires_label_and_text(self):
+        """POST /api/ai/prompts requires both label and text"""
+        # Missing text
+        response = requests.post(
+            f"{BASE_URL}/api/ai/prompts",
+            json={"label": "TEST_Missing Text"},
+            headers=self.headers
+        )
+        assert response.status_code in [400, 422], f"Expected 400/422, got {response.status_code}"
+        
+        # Missing label
+        response = requests.post(
+            f"{BASE_URL}/api/ai/prompts",
+            json={"text": "Some prompt text"},
+            headers=self.headers
+        )
+        assert response.status_code in [400, 422], f"Expected 400/422, got {response.status_code}"
+        
+        # Empty label
+        response = requests.post(
+            f"{BASE_URL}/api/ai/prompts",
+            json={"label": "   ", "text": "Some text"},
+            headers=self.headers
+        )
+        assert response.status_code == 400, f"Expected 400 for empty label, got {response.status_code}"
+        
+        print("PASS: Create prompt validates required fields")
+    
+    def test_list_prompts(self):
+        """GET /api/ai/prompts lists user's saved prompts"""
+        # Create a prompt first
+        create_resp = requests.post(
+            f"{BASE_URL}/api/ai/prompts",
+            json={"label": "TEST_List Prompt", "text": "Test prompt for listing"},
+            headers=self.headers
+        )
+        assert create_resp.status_code == 200
+        prompt_id = create_resp.json()["id"]
+        self.created_prompt_ids.append(prompt_id)
+        
+        # List prompts
+        response = requests.get(f"{BASE_URL}/api/ai/prompts", headers=self.headers)
+        assert response.status_code == 200, f"List prompts failed: {response.text}"
+        data = response.json()
+        
+        assert isinstance(data, list), "Expected list response"
+        # Find our created prompt
+        found = any(p["id"] == prompt_id for p in data)
+        assert found, "Created prompt not found in list"
+        print(f"PASS: Listed {len(data)} prompts, found test prompt")
+    
+    def test_update_prompt_label(self):
+        """PUT /api/ai/prompts/{id} updates prompt label"""
+        # Create a prompt
+        create_resp = requests.post(
+            f"{BASE_URL}/api/ai/prompts",
+            json={"label": "TEST_Original Label", "text": "Original text"},
+            headers=self.headers
+        )
+        assert create_resp.status_code == 200
+        prompt_id = create_resp.json()["id"]
+        self.created_prompt_ids.append(prompt_id)
+        
+        # Update label only
+        response = requests.put(
+            f"{BASE_URL}/api/ai/prompts/{prompt_id}",
+            json={"label": "TEST_Updated Label"},
+            headers=self.headers
+        )
+        assert response.status_code == 200, f"Update failed: {response.text}"
+        data = response.json()
+        assert data.get("updated") == True, "Expected updated=True"
+        
+        # Verify update by listing
+        list_resp = requests.get(f"{BASE_URL}/api/ai/prompts", headers=self.headers)
+        prompts = list_resp.json()
+        updated_prompt = next((p for p in prompts if p["id"] == prompt_id), None)
+        assert updated_prompt is not None, "Prompt not found after update"
+        assert updated_prompt["label"] == "TEST_Updated Label", f"Label not updated: {updated_prompt['label']}"
+        assert updated_prompt["text"] == "Original text", "Text should not have changed"
+        
+        print("PASS: Updated prompt label")
+    
+    def test_update_prompt_text(self):
+        """PUT /api/ai/prompts/{id} updates prompt text"""
+        # Create a prompt
+        create_resp = requests.post(
+            f"{BASE_URL}/api/ai/prompts",
+            json={"label": "TEST_Text Update", "text": "Original text"},
+            headers=self.headers
+        )
+        assert create_resp.status_code == 200
+        prompt_id = create_resp.json()["id"]
+        self.created_prompt_ids.append(prompt_id)
+        
+        # Update text only
+        response = requests.put(
+            f"{BASE_URL}/api/ai/prompts/{prompt_id}",
+            json={"text": "Updated prompt text for Vendoo"},
+            headers=self.headers
+        )
+        assert response.status_code == 200, f"Update failed: {response.text}"
+        
+        # Verify update
+        list_resp = requests.get(f"{BASE_URL}/api/ai/prompts", headers=self.headers)
+        prompts = list_resp.json()
+        updated_prompt = next((p for p in prompts if p["id"] == prompt_id), None)
+        assert updated_prompt["text"] == "Updated prompt text for Vendoo", "Text not updated"
+        
+        print("PASS: Updated prompt text")
+    
+    def test_update_prompt_both_fields(self):
+        """PUT /api/ai/prompts/{id} updates both label and text"""
+        # Create a prompt
+        create_resp = requests.post(
+            f"{BASE_URL}/api/ai/prompts",
+            json={"label": "TEST_Both Update", "text": "Original text"},
+            headers=self.headers
+        )
+        assert create_resp.status_code == 200
+        prompt_id = create_resp.json()["id"]
+        self.created_prompt_ids.append(prompt_id)
+        
+        # Update both
+        response = requests.put(
+            f"{BASE_URL}/api/ai/prompts/{prompt_id}",
+            json={"label": "TEST_New Label", "text": "New text"},
+            headers=self.headers
+        )
+        assert response.status_code == 200
+        
+        # Verify
+        list_resp = requests.get(f"{BASE_URL}/api/ai/prompts", headers=self.headers)
+        prompts = list_resp.json()
+        updated_prompt = next((p for p in prompts if p["id"] == prompt_id), None)
+        assert updated_prompt["label"] == "TEST_New Label"
+        assert updated_prompt["text"] == "New text"
+        
+        print("PASS: Updated both label and text")
+    
+    def test_update_nonexistent_prompt(self):
+        """PUT /api/ai/prompts/{id} returns 404 for nonexistent prompt"""
+        response = requests.put(
+            f"{BASE_URL}/api/ai/prompts/nonexistent-prompt-id",
+            json={"label": "Test"},
+            headers=self.headers
+        )
+        assert response.status_code == 404, f"Expected 404, got {response.status_code}"
+        print("PASS: 404 for updating nonexistent prompt")
+    
+    def test_update_prompt_empty_body(self):
+        """PUT /api/ai/prompts/{id} returns 400 for empty update"""
+        # Create a prompt
+        create_resp = requests.post(
+            f"{BASE_URL}/api/ai/prompts",
+            json={"label": "TEST_Empty Update", "text": "Some text"},
+            headers=self.headers
+        )
+        assert create_resp.status_code == 200
+        prompt_id = create_resp.json()["id"]
+        self.created_prompt_ids.append(prompt_id)
+        
+        # Try empty update
+        response = requests.put(
+            f"{BASE_URL}/api/ai/prompts/{prompt_id}",
+            json={},
+            headers=self.headers
+        )
+        assert response.status_code == 400, f"Expected 400 for empty update, got {response.status_code}"
+        print("PASS: 400 for empty update body")
+    
+    def test_delete_prompt(self):
+        """DELETE /api/ai/prompts/{id} deletes the prompt"""
+        # Create a prompt
+        create_resp = requests.post(
+            f"{BASE_URL}/api/ai/prompts",
+            json={"label": "TEST_Delete Me", "text": "To be deleted"},
+            headers=self.headers
+        )
+        assert create_resp.status_code == 200
+        prompt_id = create_resp.json()["id"]
+        
+        # Delete it
+        response = requests.delete(f"{BASE_URL}/api/ai/prompts/{prompt_id}", headers=self.headers)
+        assert response.status_code == 200, f"Delete failed: {response.text}"
+        data = response.json()
+        assert data.get("deleted") == True, "Expected deleted=True"
+        
+        # Verify it's gone
+        list_resp = requests.get(f"{BASE_URL}/api/ai/prompts", headers=self.headers)
+        prompts = list_resp.json()
+        found = any(p["id"] == prompt_id for p in prompts)
+        assert not found, "Prompt should be deleted"
+        
+        print("PASS: Deleted prompt and verified removal")
+    
+    def test_delete_nonexistent_prompt(self):
+        """DELETE /api/ai/prompts/{id} returns 404 for nonexistent prompt"""
+        response = requests.delete(
+            f"{BASE_URL}/api/ai/prompts/nonexistent-prompt-id",
+            headers=self.headers
+        )
+        assert response.status_code == 404, f"Expected 404, got {response.status_code}"
+        print("PASS: 404 for deleting nonexistent prompt")
+    
+    def test_prompts_require_auth(self):
+        """Prompts endpoints require authentication"""
+        # GET without auth
+        response = requests.get(f"{BASE_URL}/api/ai/prompts")
+        assert response.status_code in [401, 403], f"GET prompts should require auth, got {response.status_code}"
+        
+        # POST without auth
+        response = requests.post(f"{BASE_URL}/api/ai/prompts", json={"label": "Test", "text": "Test"})
+        assert response.status_code in [401, 403], f"POST prompts should require auth, got {response.status_code}"
+        
+        print("PASS: Prompts endpoints require authentication")
+
+
+class TestPromptsScoping:
+    """Test that prompts are scoped to authenticated user"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Get tokens for two different users"""
+        # Employee token
+        emp_resp = requests.post(f"{BASE_URL}/api/auth/login", json={"email": EMPLOYEE_EMAIL})
+        assert emp_resp.status_code == 200
+        self.employee_token = emp_resp.json().get("access_token")
+        self.employee_headers = {"Authorization": f"Bearer {self.employee_token}"}
+        
+        # Admin token
+        admin_resp = requests.post(f"{BASE_URL}/api/auth/login", json={"email": ADMIN_EMAIL})
+        if admin_resp.status_code == 200:
+            admin_data = admin_resp.json()
+            if admin_data.get("requires_code"):
+                verify_resp = requests.post(f"{BASE_URL}/api/auth/verify-code", json={
+                    "email": ADMIN_EMAIL,
+                    "code": ADMIN_CODE
+                })
+                if verify_resp.status_code == 200:
+                    self.admin_token = verify_resp.json().get("access_token")
+                else:
+                    self.admin_token = None
+            else:
+                self.admin_token = admin_data.get("access_token")
+        else:
+            self.admin_token = None
+        
+        self.admin_headers = {"Authorization": f"Bearer {self.admin_token}"} if self.admin_token else {}
+        self.created_prompt_ids = []
+    
+    def teardown_method(self, method):
+        """Cleanup"""
+        for prompt_id in self.created_prompt_ids:
+            try:
+                requests.delete(f"{BASE_URL}/api/ai/prompts/{prompt_id}", headers=self.employee_headers)
+            except Exception:
+                pass
+    
+    def test_user_cannot_see_other_users_prompts(self):
+        """User A cannot see user B's prompts in their list"""
+        if not self.admin_token:
+            pytest.skip("Admin token not available for cross-user test")
+        
+        # Create prompt as employee
+        create_resp = requests.post(
+            f"{BASE_URL}/api/ai/prompts",
+            json={"label": "TEST_Employee Private Prompt", "text": "Private prompt text"},
+            headers=self.employee_headers
+        )
+        assert create_resp.status_code == 200
+        prompt_id = create_resp.json()["id"]
+        self.created_prompt_ids.append(prompt_id)
+        
+        # List prompts as admin - should NOT see employee's prompt
+        list_resp = requests.get(f"{BASE_URL}/api/ai/prompts", headers=self.admin_headers)
+        assert list_resp.status_code == 200
+        admin_prompts = list_resp.json()
+        
+        found = any(p["id"] == prompt_id for p in admin_prompts)
+        assert not found, "Admin should not see employee's prompt in their list"
+        print("PASS: User cannot see other user's prompts")
+    
+    def test_user_cannot_update_other_users_prompt(self):
+        """User A cannot update user B's prompts"""
+        if not self.admin_token:
+            pytest.skip("Admin token not available for cross-user test")
+        
+        # Create prompt as employee
+        create_resp = requests.post(
+            f"{BASE_URL}/api/ai/prompts",
+            json={"label": "TEST_Employee Prompt 2", "text": "Private text"},
+            headers=self.employee_headers
+        )
+        assert create_resp.status_code == 200
+        prompt_id = create_resp.json()["id"]
+        self.created_prompt_ids.append(prompt_id)
+        
+        # Try to update as admin - should get 404
+        update_resp = requests.put(
+            f"{BASE_URL}/api/ai/prompts/{prompt_id}",
+            json={"label": "Hacked Label"},
+            headers=self.admin_headers
+        )
+        assert update_resp.status_code == 404, f"Admin should not update employee's prompt, got {update_resp.status_code}"
+        print("PASS: User cannot update other user's prompt")
+    
+    def test_user_cannot_delete_other_users_prompt(self):
+        """User A cannot delete user B's prompts"""
+        if not self.admin_token:
+            pytest.skip("Admin token not available for cross-user test")
+        
+        # Create prompt as employee
+        create_resp = requests.post(
+            f"{BASE_URL}/api/ai/prompts",
+            json={"label": "TEST_Employee Prompt 3", "text": "Private text"},
+            headers=self.employee_headers
+        )
+        assert create_resp.status_code == 200
+        prompt_id = create_resp.json()["id"]
+        self.created_prompt_ids.append(prompt_id)
+        
+        # Try to delete as admin - should get 404
+        del_resp = requests.delete(
+            f"{BASE_URL}/api/ai/prompts/{prompt_id}",
+            headers=self.admin_headers
+        )
+        assert del_resp.status_code == 404, f"Admin should not delete employee's prompt, got {del_resp.status_code}"
+        
+        # Verify it still exists for employee
+        list_resp = requests.get(f"{BASE_URL}/api/ai/prompts", headers=self.employee_headers)
+        prompts = list_resp.json()
+        found = any(p["id"] == prompt_id for p in prompts)
+        assert found, "Prompt should still exist for owner"
+        print("PASS: User cannot delete other user's prompt")
+
+
 class TestConversationScoping:
     """Test that conversations are scoped to authenticated user"""
     

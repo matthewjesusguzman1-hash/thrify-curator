@@ -4098,7 +4098,6 @@ export default function EmployeeDashboard({
       {!isAdminView && (
         <AIAssistant
           token={localStorage.getItem("token")}
-          userName={user?.name}
         />
       )}
     </div>

@@ -93,23 +93,18 @@ class SendMessageRequest(BaseModel):
 # --- System prompt for the listing assistant ---
 SYSTEM_PROMPT = """You are the Thrifty Curator Listing Assistant — an expert resale product specialist.
 
-You help employees create compelling marketplace listings for resale/consignment items. You are knowledgeable about:
-- **eBay**: Best practices for titles (80 chars), item specifics, condition descriptions
-- **Poshmark**: Style-focused descriptions, brand emphasis, size/fit guidance
-- **Mercari**: Concise descriptions, competitive pricing tips
-- **Depop**: Trendy/vintage language, hashtag suggestions
-- **Facebook Marketplace**: Local selling tips, casual tone
+You help employees create compelling product listings for Vendoo cross-listing. You are an expert at writing descriptions that work well across all major resale marketplaces (eBay, Poshmark, Mercari, Depop, Facebook Marketplace) since Vendoo publishes to all of them.
 
 When an employee shares a product photo or description, you:
 1. Identify the item (brand, type, size, condition, materials if visible)
-2. Suggest a compelling title and description for their chosen marketplace(s)
+2. Suggest a compelling title and a detailed description optimized for Vendoo cross-listing
 3. Provide sizing/measurement guidance when relevant
 4. Suggest pricing ranges based on the item type and condition
-5. Offer tips specific to the marketplace they're listing on
+5. Note any details that should be filled into Vendoo's item specifics fields
 
 Keep responses practical and actionable. Be conversational and helpful, like a knowledgeable colleague.
-If you can see a product image, describe what you observe and use those details in your listing suggestions.
-Always ask which marketplace(s) they want to list on if not specified."""
+If you can see a product image, describe what you observe and use those details in your listing.
+Format listings clearly with Title, Description, and any relevant tags/keywords."""
 
 
 # In-memory LlmChat instances keyed by conversation_id
@@ -378,3 +373,75 @@ async def send_message(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# --- Saved Prompts ---
+
+class SavePromptRequest(BaseModel):
+    label: str
+    text: str
+
+
+class UpdatePromptRequest(BaseModel):
+    label: Optional[str] = None
+    text: Optional[str] = None
+
+
+@router.get("/prompts")
+async def list_prompts(user: dict = Depends(get_current_user)):
+    cursor = db.ai_prompts.find(
+        {"user_id": user["id"]}, {"_id": 0}
+    ).sort("created_at", -1)
+    return await cursor.to_list(100)
+
+
+@router.post("/prompts")
+async def create_prompt(
+    body: SavePromptRequest,
+    user: dict = Depends(get_current_user),
+):
+    if not body.label.strip() or not body.text.strip():
+        raise HTTPException(status_code=400, detail="Label and text are required")
+
+    prompt_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    doc = {
+        "id": prompt_id,
+        "user_id": user["id"],
+        "label": body.label.strip(),
+        "text": body.text.strip(),
+        "created_at": now,
+    }
+    await db.ai_prompts.insert_one(doc)
+    return {"id": prompt_id, "label": doc["label"], "text": doc["text"], "created_at": now}
+
+
+@router.put("/prompts/{prompt_id}")
+async def update_prompt(
+    prompt_id: str,
+    body: UpdatePromptRequest,
+    user: dict = Depends(get_current_user),
+):
+    updates = {}
+    if body.label is not None:
+        updates["label"] = body.label.strip()
+    if body.text is not None:
+        updates["text"] = body.text.strip()
+    if not updates:
+        raise HTTPException(status_code=400, detail="Nothing to update")
+
+    result = await db.ai_prompts.update_one(
+        {"id": prompt_id, "user_id": user["id"]},
+        {"$set": updates},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Prompt not found")
+    return {"updated": True}
+
+
+@router.delete("/prompts/{prompt_id}")
+async def delete_prompt(prompt_id: str, user: dict = Depends(get_current_user)):
+    result = await db.ai_prompts.delete_one({"id": prompt_id, "user_id": user["id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Prompt not found")
+    return {"deleted": True}
