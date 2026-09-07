@@ -564,12 +564,18 @@ def main():
     report_anydesk_config(cfg)
 
     observer = PollingObserver(timeout=2)
-    watch_dirs = {os.path.dirname(p) for p in cfg["trace_files"] + cfg["service_trace_files"] if os.path.dirname(p)}
+    # Only watch user-level AnyDesk directories, NOT system dirs like /var/log
+    # (polling /var/log starves the main loop via GIL contention)
+    # The periodic scan_all() every 5 seconds still reads /var/log/anydesk.trace by path.
+    watch_dirs = set()
+    for p in cfg["trace_files"] + cfg["service_trace_files"]:
+        d = os.path.dirname(p)
+        if d and os.path.isdir(d) and not d.startswith("/var") and not d.startswith("/private/var"):
+            watch_dirs.add(d)
     handler = TraceHandler(cfg, state)
     for d in watch_dirs:
-        if os.path.isdir(d):
-            observer.schedule(handler, d, recursive=False)
-            log.info(f"Watching directory: {d}")
+        observer.schedule(handler, d, recursive=False)
+        log.info(f"Watching directory: {d}")
     observer.start()
 
     try:
