@@ -647,8 +647,8 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
                   </div>
                 )}
 
-                {showPrompts && !isExpanded ? (
-                  /* ---- Saved Prompts Manager (compact mode only — expanded shows inline) ---- */
+                {showPrompts ? (
+                  /* ---- Saved Prompts Manager ---- */
                   <div className="space-y-3">
                     {isAddingPrompt ? (
                       <div className={`p-3 rounded-xl ${t.card} space-y-2`}>
