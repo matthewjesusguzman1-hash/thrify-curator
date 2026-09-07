@@ -312,34 +312,37 @@ async def send_message(
         "timestamp": now,
     }
 
-    # Store user message in DB
-    await db.ai_conversations.update_one(
-        {"id": conv_id},
-        {
-            "$push": {"messages": user_msg_doc},
-            "$set": {"updated_at": now},
-        },
-    )
-
-    # Auto-set title from first message if still default
-    if conv.get("title") == "New Chat" and len(conv.get("messages", [])) == 0:
-        short_title = body.text[:50] + ("..." if len(body.text) > 50 else "")
-        await db.ai_conversations.update_one(
-            {"id": conv_id}, {"$set": {"title": short_title}}
-        )
-
     # Prepare image attachments for Gemini
     from emergentintegrations.llm.chat import UserMessage, ImageContent, TextDelta, StreamDone
+    import asyncio
 
-    file_contents = []
-    if body.image_ids:
-        for img_id in body.image_ids:
-            img_doc = await db.ai_images.find_one(
-                {"id": img_id, "user_id": user["id"], "is_deleted": False},
-                {"_id": 0, "base64_data": 1},
+    # Run DB writes + image fetches in parallel to minimize time-to-first-token
+    async def save_user_msg():
+        await db.ai_conversations.update_one(
+            {"id": conv_id},
+            {"$push": {"messages": user_msg_doc}, "$set": {"updated_at": now}},
+        )
+        if conv.get("title") == "New Chat" and len(conv.get("messages", [])) == 0:
+            short_title = body.text[:50] + ("..." if len(body.text) > 50 else "")
+            await db.ai_conversations.update_one(
+                {"id": conv_id}, {"$set": {"title": short_title}}
             )
-            if img_doc and img_doc.get("base64_data"):
-                file_contents.append(ImageContent(image_base64=img_doc["base64_data"]))
+
+    async def fetch_image(img_id):
+        doc = await db.ai_images.find_one(
+            {"id": img_id, "user_id": user["id"], "is_deleted": False},
+            {"_id": 0, "base64_data": 1},
+        )
+        if doc and doc.get("base64_data"):
+            return ImageContent(image_base64=doc["base64_data"])
+        return None
+
+    tasks = [save_user_msg()]
+    if body.image_ids:
+        tasks.extend(fetch_image(iid) for iid in body.image_ids)
+
+    results = await asyncio.gather(*tasks)
+    file_contents = [r for r in results[1:] if r is not None]
 
     chat = _get_or_create_chat(conv_id)
     user_message = UserMessage(
@@ -357,7 +360,9 @@ async def send_message(
                 elif isinstance(ev, StreamDone):
                     break
 
-            # Save assistant response to DB
+            yield f"data: {json.dumps({'type': 'done', 'content': full_response})}\n\n"
+
+            # Save assistant response in background (don't block the stream close)
             assistant_msg = {
                 "role": "assistant",
                 "text": full_response,
@@ -371,8 +376,6 @@ async def send_message(
                     "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
                 },
             )
-
-            yield f"data: {json.dumps({'type': 'done', 'content': full_response})}\n\n"
         except Exception as e:
             logger.error(f"AI streaming error: {e}")
             error_msg = "Sorry, I encountered an error. Please try again."
