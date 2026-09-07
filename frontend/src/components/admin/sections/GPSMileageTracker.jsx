@@ -33,7 +33,12 @@ import {
   Settings2,
   Plus,
   Minus,
-  Pencil
+  Pencil,
+  Mic,
+  MicOff,
+  Navigation2,
+  Download,
+  Loader2 as Loader,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +47,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import axios from "axios";
+import useSpeechRecognition from "@/hooks/useSpeechRecognition";
 
 // Import refactored sub-components
 import {
@@ -244,6 +250,143 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
   // Background geolocation (native only)
   const backgroundGeoRef = useRef(null);
   const containerRef = useRef(null);
+
+  // ========== Quick Trip (Start/End with GPS + voice) ==========
+  const [quickTripActive, setQuickTripActive] = useState(false);
+  const [quickTripId, setQuickTripId] = useState(null);
+  const [quickTripStartAddr, setQuickTripStartAddr] = useState("");
+  const [quickTripLoading, setQuickTripLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+
+  // Voice commands for trip control
+  const voiceHandler = useSpeechRecognition({
+    onResult: (transcript) => {
+      const lower = transcript.toLowerCase().trim();
+      if (lower.includes("start trip") || lower.includes("start drive") || lower.includes("begin trip")) {
+        handleQuickStart();
+      } else if (lower.includes("end trip") || lower.includes("stop trip") || lower.includes("end drive") || lower.includes("stop drive")) {
+        handleQuickEnd();
+      } else {
+        toast.info(`Heard: "${transcript}" — say "start trip" or "end trip"`);
+      }
+    },
+  });
+
+  const getGPSPosition = () => new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("Geolocation not supported"));
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+      (err) => reject(err),
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  });
+
+  const handleQuickStart = async () => {
+    if (quickTripActive) return toast.info("Trip already in progress");
+    setQuickTripLoading(true);
+    try {
+      const pos = await getGPSPosition();
+      const headers = getAuthHeader();
+      const { data } = await axios.post(`${API}/admin/gps-trips/log-drive`, {
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        event: "start",
+      }, { headers });
+      if (data.success) {
+        setQuickTripActive(true);
+        setQuickTripId(data.trip_id);
+        setQuickTripStartAddr(data.start_address || "");
+        toast.success(data.message);
+      } else {
+        toast.error(data.message || "Failed to start trip");
+      }
+    } catch (err) {
+      const msg = err?.message?.includes("denied") ? "Location permission denied. Please allow GPS access." : "Failed to get location";
+      toast.error(msg);
+    } finally {
+      setQuickTripLoading(false);
+    }
+  };
+
+  const handleQuickEnd = async () => {
+    if (!quickTripActive) return toast.info("No trip in progress");
+    setQuickTripLoading(true);
+    try {
+      const pos = await getGPSPosition();
+      const headers = getAuthHeader();
+      const { data } = await axios.post(`${API}/admin/gps-trips/log-drive`, {
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        event: "end",
+      }, { headers });
+      if (data.success) {
+        setQuickTripActive(false);
+        setQuickTripId(null);
+        setQuickTripStartAddr("");
+        toast.success(data.message);
+        fetchTripHistory();
+        fetchSummary();
+      } else {
+        toast.error(data.message || "Failed to end trip");
+      }
+    } catch (err) {
+      toast.error("Failed to get location");
+    } finally {
+      setQuickTripLoading(false);
+    }
+  };
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const headers = getAuthHeader();
+      const { data } = await axios.get(`${API}/admin/gps-trips/categories`, { headers });
+      setCategories(data.categories || []);
+    } catch {}
+  }, [getAuthHeader]);
+
+  const handleExportCSV = async () => {
+    try {
+      const headers = getAuthHeader();
+      const resp = await axios.get(`${API}/admin/gps-trips/export-csv`, { headers, responseType: "blob" });
+      const url = URL.createObjectURL(resp.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `mileage_log_${new Date().getFullYear()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("CSV exported");
+    } catch {
+      toast.error("Export failed");
+    }
+  };
+
+  const handleClassifyTrip = async (tripId, classification) => {
+    try {
+      const headers = getAuthHeader();
+      await axios.put(`${API}/admin/gps-trips/${tripId}/classify?classification=${classification}`, {}, { headers });
+      fetchTripHistory();
+      toast.success(`Trip marked as ${classification}`);
+    } catch {
+      toast.error("Failed to update");
+    }
+  };
+
+  // Check for pending bluetooth trip on mount
+  useEffect(() => {
+    const checkPending = async () => {
+      try {
+        const headers = getAuthHeader();
+        const { data } = await axios.get(`${API}/admin/gps-trips/active`, { headers });
+        if (data && data.is_bluetooth && data.status === "active") {
+          setQuickTripActive(true);
+          setQuickTripId(data.id);
+          setQuickTripStartAddr(data.start_address || "");
+        }
+      } catch {}
+    };
+    checkPending();
+    fetchCategories();
+  }, [getAuthHeader, fetchCategories]);
 
   // Expose methods via ref for external control (e.g., iOS Quick Actions)
   useImperativeHandle(ref, () => ({
@@ -1265,7 +1408,71 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
             className="overflow-hidden"
           >
             <div className="pt-4 space-y-4">
-              {/* Active Trip Panel */}
+              {/* Quick Trip — Start / End with GPS */}
+              <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200" data-testid="quick-trip-section">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Navigation2 className={`w-5 h-5 ${quickTripActive ? "text-green-600 animate-pulse" : "text-emerald-600"}`} />
+                    <h4 className="font-semibold text-emerald-900 text-sm">Quick Trip</h4>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {voiceHandler.isSupported && (
+                      <button
+                        onClick={voiceHandler.toggle}
+                        className={`p-2 rounded-lg transition-all ${voiceHandler.isListening ? "bg-red-100 text-red-500 animate-pulse" : "bg-white/60 text-emerald-600 hover:bg-white"}`}
+                        title={voiceHandler.isListening ? 'Listening... say "start trip" or "end trip"' : "Voice command"}
+                        data-testid="trip-voice-btn"
+                      >
+                        {voiceHandler.isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                      </button>
+                    )}
+                    <button
+                      onClick={handleExportCSV}
+                      className="p-2 rounded-lg bg-white/60 text-emerald-600 hover:bg-white transition-all"
+                      title="Export IRS CSV"
+                      data-testid="export-csv-btn"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {voiceHandler.isListening && (
+                  <p className="text-xs text-red-500 mb-2 text-center animate-pulse">
+                    Listening... say "start trip" or "end trip"
+                  </p>
+                )}
+
+                {quickTripActive ? (
+                  <div className="space-y-3">
+                    <div className="bg-white/70 rounded-lg p-3">
+                      <p className="text-xs text-emerald-600 font-medium">Trip in progress</p>
+                      <p className="text-sm text-emerald-900 mt-1">{quickTripStartAddr || "Getting address..."}</p>
+                    </div>
+                    <button
+                      onClick={handleQuickEnd}
+                      disabled={quickTripLoading}
+                      className="w-full py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                      data-testid="end-trip-btn"
+                    >
+                      {quickTripLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Square className="w-4 h-4" />}
+                      End Trip
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleQuickStart}
+                    disabled={quickTripLoading}
+                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                    data-testid="start-trip-btn"
+                  >
+                    {quickTripLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                    Start Trip
+                  </button>
+                )}
+              </div>
+
+              {/* Active Trip Panel (old GPS tracking) */}
               {(activeTrip || showCompletionForm) && (
                 <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
                   <div className="flex items-center justify-between mb-3">
@@ -1986,7 +2193,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                       }
                       
                       return todayTrips.map(trip => (
-                        <TripRow key={trip.id} trip={trip} onViewMap={handleViewTripMap} onEdit={handleEditTrip} onDelete={handleDeleteTrip} getPurposeIcon={getPurposeIcon} getPurposeLabel={getPurposeLabel} formatDate={formatDate} API={API} />
+                        <TripRow key={trip.id} trip={trip} onViewMap={handleViewTripMap} onEdit={handleEditTrip} onDelete={handleDeleteTrip} onClassify={handleClassifyTrip} getPurposeIcon={getPurposeIcon} getPurposeLabel={getPurposeLabel} formatDate={formatDate} API={API} />
                       ));
                     })()}
                     
@@ -2051,7 +2258,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                                 className="overflow-hidden bg-gray-50"
                               >
                                 {tripsByDay[day].trips.map(trip => (
-                                  <TripRow key={trip.id} trip={trip} onViewMap={handleViewTripMap} onEdit={handleEditTrip} onDelete={handleDeleteTrip} getPurposeIcon={getPurposeIcon} getPurposeLabel={getPurposeLabel} formatDate={formatDate} API={API} compact />
+                                  <TripRow key={trip.id} trip={trip} onViewMap={handleViewTripMap} onEdit={handleEditTrip} onDelete={handleDeleteTrip} onClassify={handleClassifyTrip} getPurposeIcon={getPurposeIcon} getPurposeLabel={getPurposeLabel} formatDate={formatDate} API={API} compact />
                                 ))}
                               </motion.div>
                             )}
@@ -2162,7 +2369,7 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({
                                             className="overflow-hidden bg-white"
                                           >
                                             {tripsByMonth[month].byDay[day].trips.map(trip => (
-                                              <TripRow key={trip.id} trip={trip} onViewMap={handleViewTripMap} onEdit={handleEditTrip} onDelete={handleDeleteTrip} getPurposeIcon={getPurposeIcon} getPurposeLabel={getPurposeLabel} formatDate={formatDate} API={API} compact nested />
+                                              <TripRow key={trip.id} trip={trip} onViewMap={handleViewTripMap} onEdit={handleEditTrip} onDelete={handleDeleteTrip} onClassify={handleClassifyTrip} getPurposeIcon={getPurposeIcon} getPurposeLabel={getPurposeLabel} formatDate={formatDate} API={API} compact nested />
                                             ))}
                                           </motion.div>
                                         )}

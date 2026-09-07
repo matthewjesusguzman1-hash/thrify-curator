@@ -9,7 +9,8 @@ const TripRow = ({
   trip, 
   onViewMap, 
   onEdit, 
-  onDelete, 
+  onDelete,
+  onClassify,
   getPurposeIcon, 
   getPurposeLabel, 
   formatDate, 
@@ -18,6 +19,8 @@ const TripRow = ({
 }) => {
   const PurposeIcon = getPurposeIcon(trip.purpose);
   const loggedBy = trip.logged_by || trip.user_name || null;
+  const classification = trip.classification || "business";
+  const hasAddresses = trip.start_address || trip.end_address;
   
   return (
     <div 
@@ -30,8 +33,16 @@ const TripRow = ({
         </div>
         <div className="min-w-0 flex-1">
           <p className={`font-medium ${compact ? 'text-xs' : 'text-sm'} text-gray-800 truncate`}>
-            {getPurposeLabel(trip.purpose)}
-            {trip.notes && <span className="text-gray-500 font-normal"> - {trip.notes}</span>}
+            {hasAddresses ? (
+              <>
+                {trip.start_address || "Unknown"} → {trip.end_address || "Unknown"}
+              </>
+            ) : (
+              <>
+                {getPurposeLabel(trip.purpose)}
+                {trip.notes && <span className="text-gray-500 font-normal"> - {trip.notes}</span>}
+              </>
+            )}
           </p>
           <p className={`${compact ? 'text-[10px]' : 'text-xs'} text-gray-500`}>
             {trip.total_miles?.toFixed(2)} mi • ${trip.tax_deduction?.toFixed(2)}
@@ -46,7 +57,17 @@ const TripRow = ({
         </div>
       </div>
       <div className="flex items-center gap-0.5 flex-shrink-0">
-        {/* Only show map button for GPS-tracked trips (not manual entries) */}
+        {/* Business/Personal toggle */}
+        {onClassify && (
+          <button
+            onClick={() => onClassify(trip.id, classification === "business" ? "personal" : "business")}
+            className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${classification === "business" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}
+            title={`Mark as ${classification === "business" ? "personal" : "business"}`}
+            data-testid={`classify-btn-${trip.id}`}
+          >
+            {classification === "business" ? "Biz" : "Per"}
+          </button>
+        )}
         {!trip.is_manual && (
           <Button
             size="sm"

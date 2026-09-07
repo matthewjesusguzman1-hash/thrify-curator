@@ -1,17 +1,25 @@
 """
-GPS Trip Tracking Router
-Handles real-time GPS mileage tracking with trip management
+GPS Trip Tracking & Mileage Router
+Handles Bluetooth-triggered mileage tracking, road routing, reverse geocoding,
+manual trips, IRS summaries, and CSV export.
 """
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
 import uuid
 import math
 import os
+import io
+import csv
+import httpx
+import logging
 
 from app.database import db
 from app.dependencies import get_admin_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin/gps-trips", tags=["GPS Trips"])
 
@@ -29,7 +37,338 @@ def get_irs_rate(year: int = None) -> float:
     return IRS_RATES.get(year, 0.725)
 
 
-# Pydantic Models
+# ========== OSRM & Nominatim Helpers ==========
+
+OSRM_BASE = "https://router.project-osrm.org"
+NOMINATIM_BASE = "https://nominatim.openstreetmap.org"
+HTTP_HEADERS = {"User-Agent": "ThriftyCurator/1.0"}
+
+
+async def get_road_distance_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> Optional[float]:
+    """Get driving distance in miles between two points using OSRM."""
+    url = f"{OSRM_BASE}/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=false"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(url, headers=HTTP_HEADERS)
+            data = resp.json()
+            if data.get("code") == "Ok" and data.get("routes"):
+                meters = data["routes"][0]["distance"]
+                return round(meters / 1609.344, 2)
+    except Exception as e:
+        logger.warning(f"OSRM routing failed: {e}")
+    return None
+
+
+async def reverse_geocode(lat: float, lon: float) -> str:
+    """Convert coordinates to a street address using Nominatim."""
+    url = f"{NOMINATIM_BASE}/reverse?format=json&lat={lat}&lon={lon}&addressdetails=1"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(url, headers=HTTP_HEADERS)
+            data = resp.json()
+            addr = data.get("address", {})
+            # Build a concise address
+            parts = []
+            house = addr.get("house_number", "")
+            road = addr.get("road", "")
+            if house and road:
+                parts.append(f"{house} {road}")
+            elif road:
+                parts.append(road)
+            city = addr.get("city") or addr.get("town") or addr.get("village") or ""
+            state = addr.get("state", "")
+            if city:
+                parts.append(city)
+            if state:
+                parts.append(state)
+            if parts:
+                return ", ".join(parts)
+            return data.get("display_name", f"{lat}, {lon}")
+    except Exception as e:
+        logger.warning(f"Nominatim reverse geocode failed: {e}")
+    return f"{lat:.5f}, {lon:.5f}"
+
+
+# ========== New Pydantic Models ==========
+
+class LogDrivePayload(BaseModel):
+    latitude: float
+    longitude: float
+    timestamp: Optional[str] = None
+    event: str = "ping"  # "start", "end", or "ping" (auto-detect)
+
+
+class CategoryCreate(BaseModel):
+    name: str
+
+
+class CategoryUpdate(BaseModel):
+    name: str
+
+
+# ========== Bluetooth Log-Drive Endpoint ==========
+
+@router.post("/log-drive")
+async def log_drive(
+    payload: LogDrivePayload,
+    admin: dict = Depends(get_admin_user),
+):
+    """
+    Accept a GPS ping from a phone automation (e.g. iPhone Shortcuts on Bluetooth connect/disconnect).
+    - event='start' or first ping: saves start location as pending trip
+    - event='end' or second ping: completes the trip with OSRM road distance + reverse geocoding
+    """
+    now = datetime.now(timezone.utc)
+    ts = payload.timestamp or now.isoformat()
+    user_id = admin["email"]
+    event = payload.event.lower()
+
+    # Check for a pending (active) trip
+    pending = await db.gps_trips.find_one({
+        "user_id": user_id,
+        "status": "active",
+        "is_bluetooth": True,
+    })
+
+    if event == "start" or (event == "ping" and not pending):
+        # Start a new trip
+        if pending:
+            # Auto-complete stale pending trip (older than 12 hours)
+            start_time = datetime.fromisoformat(pending["start_time"].replace("Z", "+00:00"))
+            if (now - start_time) > timedelta(hours=12):
+                await db.gps_trips.update_one({"id": pending["id"]}, {"$set": {"status": "cancelled"}})
+            else:
+                return {
+                    "success": False,
+                    "message": "Trip already in progress. Send event='end' to complete it.",
+                    "pending_trip_id": pending["id"],
+                }
+
+        trip_id = str(uuid.uuid4())
+        start_address = await reverse_geocode(payload.latitude, payload.longitude)
+
+        trip_doc = {
+            "id": trip_id,
+            "user_id": user_id,
+            "user_name": admin.get("name", user_id),
+            "status": "active",
+            "purpose": "sourcing",  # Default, can be changed later
+            "classification": "business",
+            "notes": None,
+            "start_time": ts,
+            "end_time": None,
+            "start_lat": payload.latitude,
+            "start_lng": payload.longitude,
+            "start_address": start_address,
+            "end_lat": None,
+            "end_lng": None,
+            "end_address": None,
+            "locations": [],
+            "total_miles": 0.0,
+            "routing_miles": None,
+            "tax_deduction": 0.0,
+            "receipt_url": None,
+            "is_bluetooth": True,
+            "created_at": now.isoformat(),
+        }
+        await db.gps_trips.insert_one(trip_doc)
+
+        return {
+            "success": True,
+            "event": "trip_started",
+            "trip_id": trip_id,
+            "start_address": start_address,
+            "message": f"Trip started at {start_address}",
+        }
+
+    elif event == "end" or (event == "ping" and pending):
+        if not pending:
+            return {"success": False, "message": "No active trip to end. Send event='start' first."}
+
+        # Reverse-geocode end location
+        end_address = await reverse_geocode(payload.latitude, payload.longitude)
+
+        # Get road distance via OSRM
+        road_miles = await get_road_distance_miles(
+            pending["start_lat"], pending["start_lng"],
+            payload.latitude, payload.longitude,
+        )
+
+        # Fallback to haversine if OSRM fails
+        if road_miles is None:
+            road_miles = haversine_distance(
+                pending["start_lat"], pending["start_lng"],
+                payload.latitude, payload.longitude,
+            )
+
+        irs_rate = get_irs_rate()
+        tax_deduction = round(road_miles * irs_rate, 2)
+
+        await db.gps_trips.update_one(
+            {"id": pending["id"]},
+            {"$set": {
+                "status": "completed",
+                "end_time": ts,
+                "end_lat": payload.latitude,
+                "end_lng": payload.longitude,
+                "end_address": end_address,
+                "total_miles": road_miles,
+                "routing_miles": road_miles,
+                "tax_deduction": tax_deduction,
+            }},
+        )
+
+        return {
+            "success": True,
+            "event": "trip_completed",
+            "trip_id": pending["id"],
+            "start_address": pending.get("start_address", ""),
+            "end_address": end_address,
+            "total_miles": road_miles,
+            "tax_deduction": tax_deduction,
+            "message": f"Trip completed: {road_miles} miles — ${tax_deduction} deduction",
+        }
+
+    return {"success": False, "message": f"Unknown event: {event}"}
+
+
+# ========== Trip Classification ==========
+
+@router.put("/{trip_id}/classify")
+async def classify_trip(
+    trip_id: str,
+    classification: str = Query(..., regex="^(business|personal)$"),
+    admin: dict = Depends(get_admin_user),
+):
+    """Toggle a trip between business and personal."""
+    result = await db.gps_trips.update_one(
+        {"id": trip_id, "user_id": admin["email"]},
+        {"$set": {"classification": classification}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    # Recalculate deduction
+    irs_rate = get_irs_rate()
+    deduction = 0.0 if classification == "personal" else None
+    if classification == "business":
+        trip = await db.gps_trips.find_one({"id": trip_id}, {"total_miles": 1})
+        deduction = round((trip or {}).get("total_miles", 0) * irs_rate, 2)
+    await db.gps_trips.update_one({"id": trip_id}, {"$set": {"tax_deduction": deduction}})
+    return {"success": True, "classification": classification, "tax_deduction": deduction}
+
+
+# ========== Purpose Categories CRUD ==========
+
+DEFAULT_CATEGORIES = [
+    "Resale Sourcing",
+    "Shipping / Post Office",
+    "Pickup / Delivery",
+    "Client Meeting",
+]
+
+
+@router.get("/categories")
+async def get_categories(admin: dict = Depends(get_admin_user)):
+    """Get purpose categories. Seeds defaults on first call."""
+    cats = await db.mileage_categories.find(
+        {"user_id": admin["email"]}, {"_id": 0}
+    ).sort("created_at", 1).to_list(50)
+
+    if not cats:
+        # Seed defaults
+        now = datetime.now(timezone.utc).isoformat()
+        for name in DEFAULT_CATEGORIES:
+            doc = {"id": str(uuid.uuid4()), "user_id": admin["email"], "name": name, "is_default": True, "created_at": now}
+            await db.mileage_categories.insert_one(doc)
+        cats = await db.mileage_categories.find({"user_id": admin["email"]}, {"_id": 0}).sort("created_at", 1).to_list(50)
+    return {"categories": cats}
+
+
+@router.post("/categories")
+async def create_category(body: CategoryCreate, admin: dict = Depends(get_admin_user)):
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": admin["email"],
+        "name": body.name.strip(),
+        "is_default": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.mileage_categories.insert_one(doc)
+    return {"success": True, "category": {k: v for k, v in doc.items() if k != "_id"}}
+
+
+@router.put("/categories/{cat_id}")
+async def update_category(cat_id: str, body: CategoryUpdate, admin: dict = Depends(get_admin_user)):
+    result = await db.mileage_categories.update_one(
+        {"id": cat_id, "user_id": admin["email"]},
+        {"$set": {"name": body.name.strip()}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return {"success": True}
+
+
+@router.delete("/categories/{cat_id}")
+async def delete_category(cat_id: str, admin: dict = Depends(get_admin_user)):
+    result = await db.mileage_categories.delete_one({"id": cat_id, "user_id": admin["email"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return {"success": True}
+
+
+# ========== IRS CSV Export ==========
+
+@router.get("/export-csv")
+async def export_csv(
+    year: Optional[int] = None,
+    admin: dict = Depends(get_admin_user),
+):
+    """Export trips as IRS-compliant CSV."""
+    if not year:
+        year = datetime.now(timezone.utc).year
+    start_date = datetime(year, 1, 1, tzinfo=timezone.utc)
+    end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+
+    trips = await db.gps_trips.find(
+        {
+            "user_id": admin["email"],
+            "status": "completed",
+            "is_hidden": {"$ne": True},
+            "start_time": {"$gte": start_date.isoformat(), "$lt": end_date.isoformat()},
+        },
+        {"_id": 0, "locations": 0},
+    ).sort("start_time", 1).to_list(5000)
+
+    irs_rate = get_irs_rate(year)
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["Date", "Start Address", "End Address", "Miles", "Purpose", "Classification", "Tax Deduction", "Notes"])
+
+    for t in trips:
+        dt = datetime.fromisoformat(t["start_time"].replace("Z", "+00:00"))
+        classification = t.get("classification", "business")
+        deduction = round(t.get("total_miles", 0) * irs_rate, 2) if classification == "business" else 0
+        writer.writerow([
+            dt.strftime("%m/%d/%Y"),
+            t.get("start_address", ""),
+            t.get("end_address", ""),
+            round(t.get("total_miles", 0), 2),
+            t.get("purpose", ""),
+            classification.title(),
+            f"${deduction:.2f}",
+            t.get("notes", "") or "",
+        ])
+
+    buf.seek(0)
+    filename = f"mileage_log_{year}.csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+# Pydantic Models (original)
 class LocationPoint(BaseModel):
     latitude: float
     longitude: float

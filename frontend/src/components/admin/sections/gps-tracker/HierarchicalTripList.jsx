@@ -14,6 +14,7 @@ const HierarchicalTripList = ({
   onViewMap,
   onEdit,
   onDelete,
+  onClassify,
   getPurposeIcon,
   getPurposeLabel,
   formatDate
@@ -66,6 +67,7 @@ const HierarchicalTripList = ({
               onViewMap={onViewMap} 
               onEdit={onEdit} 
               onDelete={onDelete} 
+                              onClassify={onClassify}
               getPurposeIcon={getPurposeIcon} 
               getPurposeLabel={getPurposeLabel} 
               formatDate={formatDate}
@@ -137,6 +139,7 @@ const HierarchicalTripList = ({
                         onViewMap={onViewMap} 
                         onEdit={onEdit} 
                         onDelete={onDelete} 
+                              onClassify={onClassify}
                         getPurposeIcon={getPurposeIcon} 
                         getPurposeLabel={getPurposeLabel} 
                         formatDate={formatDate}
@@ -254,6 +257,7 @@ const HierarchicalTripList = ({
                                     onViewMap={onViewMap} 
                                     onEdit={onEdit} 
                                     onDelete={onDelete} 
+                              onClassify={onClassify}
                                     getPurposeIcon={getPurposeIcon} 
                                     getPurposeLabel={getPurposeLabel} 
                                     formatDate={formatDate}

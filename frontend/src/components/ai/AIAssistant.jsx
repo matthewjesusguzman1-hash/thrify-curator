@@ -18,11 +18,14 @@ import {
   CheckCheck,
   Maximize2,
   Minimize2,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import { useDashboardTheme } from "@/hooks/useDashboardTheme";
+import useSpeechRecognition from "@/hooks/useSpeechRecognition";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -74,6 +77,11 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
   const [showPrompts, setShowPrompts] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState(null);
+
+  // Voice input
+  const speech = useSpeechRecognition({
+    onResult: (transcript) => setInput((prev) => prev ? prev + " " + transcript : transcript),
+  });
 
   // Saved prompts state
   const [savedPrompts, setSavedPrompts] = useState([]);
@@ -875,7 +883,17 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
                       <button onClick={() => fileInputRef.current?.click()} className={`${t.textDim} hover:text-emerald-400 p-2 transition-colors rounded-lg ${t.cardHover}`} title="Attach image" data-testid="ai-attach-btn">
                         <ImageIcon className="w-5 h-5" />
                       </button>
-                      <span className={`${t.textFaint} text-[10px] hidden sm:inline`}>or drag & drop</span>
+                      {speech.isSupported && (
+                        <button
+                          onClick={speech.toggle}
+                          className={`p-2 transition-colors rounded-lg ${speech.isListening ? "text-red-400 bg-red-400/10 animate-pulse" : `${t.textDim} hover:text-emerald-400 ${t.cardHover}`}`}
+                          title={speech.isListening ? "Stop listening" : "Voice input"}
+                          data-testid="ai-voice-btn"
+                        >
+                          {speech.isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                        </button>
+                      )}
+                      <span className={`${t.textFaint} text-[10px] hidden sm:inline`}>{speech.isListening ? "Listening..." : "or drag & drop"}</span>
                     </div>
                     <button
                       onClick={sendMessage}
