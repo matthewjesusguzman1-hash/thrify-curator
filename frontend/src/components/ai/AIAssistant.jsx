@@ -424,9 +424,9 @@ export default function AIAssistant({ token }) {
       <div key={idx} className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3 group/msg`} data-testid={`chat-message-${idx}`}>
         <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${isUser ? t.userBubble + " rounded-br-md" : t.aiBubble + " rounded-bl-md"}`}>
           {isUser && msg._previews?.length > 0 && (
-            <div className={`grid gap-1.5 mb-2 ${msg._previews.length === 1 ? "grid-cols-1" : msg._previews.length <= 4 ? "grid-cols-2" : "grid-cols-3"}`}>
+            <div className="flex gap-1.5 mb-2 flex-wrap">
               {msg._previews.map((src, i) => (
-                <img key={i} src={src} alt="attached" className="w-full aspect-square object-cover rounded-lg border border-white/20" />
+                <img key={i} src={src} alt="attached" className="w-10 h-10 object-cover rounded-lg border border-white/20" />
               ))}
             </div>
           )}
@@ -654,6 +654,24 @@ export default function AIAssistant({ token }) {
               ) : showHistory ? (
                 /* ---- Conversation list ---- */
                 <div className="space-y-2">
+                  {conversations.length > 0 && (
+                    <button
+                      onClick={async () => {
+                        if (!window.confirm("Delete all conversations?")) return;
+                        for (const c of conversations) {
+                          try { await axios.delete(`${API}/api/ai/conversations/${c.id}`, { headers }); } catch {}
+                        }
+                        setActiveConvId(null);
+                        setMessages([]);
+                        loadConversations();
+                        toast.success("All chats cleared");
+                      }}
+                      className="w-full text-center py-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+                      data-testid="clear-all-chats-btn"
+                    >
+                      Clear all chats
+                    </button>
+                  )}
                   {conversations.length === 0 ? (
                     <p className={`${t.textDim} text-sm text-center mt-8`}>No conversations yet</p>
                   ) : conversations.map((c) => (
@@ -662,7 +680,7 @@ export default function AIAssistant({ token }) {
                         <p className={`${t.text} text-sm font-medium truncate`}>{c.title}</p>
                         <p className={`${t.textDim} text-xs mt-0.5`}>{new Date(c.updated_at).toLocaleDateString()}</p>
                       </div>
-                      <button onClick={(e) => deleteConversation(c.id, e)} className={`${t.textFaint} hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity`} data-testid={`conv-delete-${c.id}`}>
+                      <button onClick={(e) => deleteConversation(c.id, e)} className={`${t.textFaint} hover:text-red-400 p-1 transition-opacity`} data-testid={`conv-delete-${c.id}`}>
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -729,7 +747,7 @@ export default function AIAssistant({ token }) {
                 <div className="flex gap-2 flex-wrap max-h-28 overflow-y-auto">
                   {pendingImages.map((img) => (
                     <div key={img.id} className="relative shrink-0 group/img">
-                      <img src={img.preview} alt={img.name} className={`w-14 h-14 object-cover rounded-lg border ${isDark ? "border-white/10" : "border-gray-200"}`} />
+                      <img src={img.preview} alt={img.name} className={`w-10 h-10 object-cover rounded-lg border ${isDark ? "border-white/10" : "border-gray-200"}`} />
                       <button
                         onClick={() => removePendingImage(img.id)}
                         className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover/img:opacity-100 sm:opacity-100 transition-opacity"
@@ -739,13 +757,13 @@ export default function AIAssistant({ token }) {
                     </div>
                   ))}
                   {uploadingCount > 0 && (
-                    <div className="w-14 h-14 rounded-lg border border-dashed border-white/20 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-lg border border-dashed border-white/20 flex items-center justify-center">
                       <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
                     </div>
                   )}
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className={`w-14 h-14 rounded-lg border border-dashed ${isDark ? "border-white/15 text-white/25" : "border-gray-300 text-gray-300"} flex items-center justify-center hover:text-emerald-400 hover:border-emerald-500/30 transition-colors`}
+                    className={`w-10 h-10 rounded-lg border border-dashed ${isDark ? "border-white/15 text-white/25" : "border-gray-300 text-gray-300"} flex items-center justify-center hover:text-emerald-400 hover:border-emerald-500/30 transition-colors`}
                     title="Add more images"
                     data-testid="ai-add-more-images"
                   >
