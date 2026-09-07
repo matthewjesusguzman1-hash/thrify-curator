@@ -511,7 +511,7 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className={`fixed z-50 flex flex-col ${t.panel} rounded-2xl shadow-2xl border overflow-hidden transition-all duration-300 ${
                 isExpanded
-                  ? "inset-2 sm:inset-auto sm:top-[7vh] sm:left-0 sm:right-0 sm:mx-auto sm:w-[85vw] sm:max-w-[1100px] sm:h-[85vh] sm:max-h-[800px]"
+                  ? "inset-2 sm:inset-auto sm:top-[2vh] sm:left-0 sm:right-0 sm:mx-auto sm:w-[90vw] sm:max-w-[1200px] sm:h-[96vh]"
                   : "bottom-2 right-2 left-2 sm:left-auto sm:bottom-4 sm:right-4 sm:w-[440px]"
               }`}
               style={isExpanded ? {} : { maxHeight: "min(85vh, 640px)" }}
