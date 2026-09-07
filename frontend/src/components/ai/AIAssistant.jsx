@@ -22,10 +22,45 @@ import {
 import { toast } from "sonner";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
+import { useDashboardTheme } from "@/hooks/useDashboardTheme";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function AIAssistant({ token }) {
+  const { isDark } = useDashboardTheme();
+
+  // Theme tokens
+  const t = isDark ? {
+    panel: "bg-[#0F1A2E] border-white/10",
+    header: "bg-[#0D1525] border-b border-white/10",
+    text: "text-white",
+    textMuted: "text-white/60",
+    textDim: "text-white/40",
+    textFaint: "text-white/30",
+    card: "bg-white/5 border border-white/10",
+    cardHover: "hover:bg-white/10",
+    input: "bg-white/5 border-white/10 text-white placeholder:text-white/30",
+    userBubble: "bg-emerald-600 text-white",
+    aiBubble: "bg-white/10 text-white/90",
+    aiProse: "prose-invert [&_strong]:text-emerald-300",
+    iconBtn: "text-white/50 hover:text-white hover:bg-white/5",
+    dragOverlay: "bg-emerald-600/20 border-emerald-400",
+  } : {
+    panel: "bg-white border-gray-200",
+    header: "bg-gray-50 border-b border-gray-200",
+    text: "text-gray-900",
+    textMuted: "text-gray-600",
+    textDim: "text-gray-400",
+    textFaint: "text-gray-300",
+    card: "bg-gray-50 border border-gray-200",
+    cardHover: "hover:bg-gray-100",
+    input: "bg-white border-gray-300 text-gray-900 placeholder:text-gray-400",
+    userBubble: "bg-emerald-600 text-white",
+    aiBubble: "bg-gray-100 text-gray-800",
+    aiProse: "[&_strong]:text-emerald-700",
+    iconBtn: "text-gray-400 hover:text-gray-700 hover:bg-gray-100",
+    dragOverlay: "bg-emerald-50 border-emerald-400",
+  };
   const [isOpen, setIsOpen] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [activeConvId, setActiveConvId] = useState(null);
@@ -61,14 +96,22 @@ export default function AIAssistant({ token }) {
   const headers = { Authorization: `Bearer ${token}` };
 
   const scrollToBottom = useCallback(() => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-    }
+    requestAnimationFrame(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+    });
   }, []);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  // Also scroll when last message text changes (streaming deltas)
+  const lastMsgText = messages.length > 0 ? messages[messages.length - 1]?.text : "";
+  useEffect(() => {
+    if (lastMsgText) scrollToBottom();
+  }, [lastMsgText, scrollToBottom]);
 
   // Load conversations
   const loadConversations = useCallback(async () => {
@@ -366,7 +409,7 @@ export default function AIAssistant({ token }) {
     const isUser = msg.role === "user";
     return (
       <div key={idx} className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3 group/msg`} data-testid={`chat-message-${idx}`}>
-        <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${isUser ? "bg-emerald-600 text-white rounded-br-md" : "bg-white/10 text-white/90 rounded-bl-md"}`}>
+        <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${isUser ? t.userBubble + " rounded-br-md" : t.aiBubble + " rounded-bl-md"}`}>
           {isUser && msg._previews?.length > 0 && (
             <div className={`grid gap-1.5 mb-2 ${msg._previews.length === 1 ? "grid-cols-1" : msg._previews.length <= 4 ? "grid-cols-2" : "grid-cols-3"}`}>
               {msg._previews.map((src, i) => (
@@ -377,9 +420,9 @@ export default function AIAssistant({ token }) {
           {isUser ? (
             <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
           ) : (
-            <div className="text-sm prose prose-invert prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_h3]:mt-2 [&_h3]:mb-1 [&_strong]:text-emerald-300">
+            <div className={`text-sm prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_h3]:mt-2 [&_h3]:mb-1 ${t.aiProse}`}>
               {msg.text ? <ReactMarkdown>{msg.text}</ReactMarkdown> : (
-                <span className="inline-flex items-center gap-1 text-white/50"><Loader2 className="w-3 h-3 animate-spin" /> Thinking...</span>
+                <span className={`inline-flex items-center gap-1 ${t.textDim}`}><Loader2 className="w-3 h-3 animate-spin" /> Thinking...</span>
               )}
             </div>
           )}
@@ -396,7 +439,7 @@ export default function AIAssistant({ token }) {
               >
                 {copiedIdx === idx
                   ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  : <Copy className="w-3.5 h-3.5 text-white/40" />
+                  : <Copy className={`w-3.5 h-3.5 ${t.textDim}`} />
                 }
               </button>
             )}
@@ -446,7 +489,7 @@ export default function AIAssistant({ token }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 40, scale: 0.95 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className={`fixed z-50 flex flex-col bg-[#0F1A2E] rounded-2xl shadow-2xl border border-white/10 overflow-hidden transition-all duration-300 ${
+              className={`fixed z-50 flex flex-col ${t.panel} rounded-2xl shadow-2xl border overflow-hidden transition-all duration-300 ${
                 isExpanded
                   ? "inset-2 sm:inset-auto sm:top-[7vh] sm:left-0 sm:right-0 sm:mx-auto sm:w-[85vw] sm:max-w-[1100px] sm:h-[85vh] sm:max-h-[800px]"
                   : "bottom-2 right-2 left-2 sm:left-auto sm:bottom-4 sm:right-4 sm:w-[440px]"
@@ -459,7 +502,7 @@ export default function AIAssistant({ token }) {
               onDrop={handleDrop}
             >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[#0D1525] border-b border-white/10 shrink-0">
+            <div className={`flex items-center justify-between px-4 py-3 ${t.header} shrink-0`}>
               <div className="flex items-center gap-2">
                 {(activeConvId || showHistory || showPrompts) && (
                   <button
@@ -467,21 +510,21 @@ export default function AIAssistant({ token }) {
                       if (showHistory || showPrompts) { setShowHistory(false); setShowPrompts(false); }
                       else { setActiveConvId(null); setMessages([]); }
                     }}
-                    className="text-white/60 hover:text-white p-1"
+                    className={`${t.textMuted} hover:${t.text} p-1`}
                     data-testid="ai-back-btn"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                 )}
                 <Sparkles className="w-5 h-5 text-emerald-400" />
-                <span className="text-white font-semibold text-sm">
+                <span className={`${t.text} font-semibold text-sm`}>
                   {showHistory ? "Chat History" : showPrompts ? "Saved Prompts" : "Listing Assistant"}
                 </span>
               </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => { setShowPrompts((v) => !v); setShowHistory(false); }}
-                  className={`p-1.5 rounded-lg transition-colors ${showPrompts ? "text-emerald-400 bg-emerald-400/10" : "text-white/50 hover:text-white hover:bg-white/5"}`}
+                  className={`p-1.5 rounded-lg transition-colors ${showPrompts ? "text-emerald-400 bg-emerald-400/10" : t.iconBtn}`}
                   title="Saved prompts"
                   data-testid="ai-prompts-btn"
                 >
@@ -489,24 +532,24 @@ export default function AIAssistant({ token }) {
                 </button>
                 <button
                   onClick={() => { setShowHistory((v) => !v); setShowPrompts(false); }}
-                  className={`p-1.5 rounded-lg transition-colors ${showHistory ? "text-emerald-400 bg-emerald-400/10" : "text-white/50 hover:text-white hover:bg-white/5"}`}
+                  className={`p-1.5 rounded-lg transition-colors ${showHistory ? "text-emerald-400 bg-emerald-400/10" : t.iconBtn}`}
                   title="Chat history"
                   data-testid="ai-history-btn"
                 >
                   <MessageSquare className="w-4 h-4" />
                 </button>
-                <button onClick={startNewChat} className="text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/5" title="New chat" data-testid="ai-new-chat-btn">
+                <button onClick={startNewChat} className={`${t.iconBtn} p-1.5 rounded-lg`} title="New chat" data-testid="ai-new-chat-btn">
                   <Plus className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setIsExpanded((v) => !v)}
-                  className="hidden sm:flex text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/5"
+                  className={`hidden sm:flex ${t.iconBtn} p-1.5 rounded-lg`}
                   title={isExpanded ? "Collapse" : "Expand"}
                   data-testid="ai-expand-btn"
                 >
                   {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </button>
-                <button onClick={() => setIsOpen(false)} className="text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/5" data-testid="ai-close-btn">
+                <button onClick={() => setIsOpen(false)} className={`${t.iconBtn} p-1.5 rounded-lg`} data-testid="ai-close-btn">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -516,7 +559,7 @@ export default function AIAssistant({ token }) {
             <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-3 py-4 relative">
               {/* Drag overlay */}
               {isDragging && (
-                <div className="absolute inset-0 z-10 bg-emerald-600/20 border-2 border-dashed border-emerald-400 rounded-xl flex flex-col items-center justify-center backdrop-blur-sm">
+                <div className={`absolute inset-0 z-10 ${t.dragOverlay} border-2 border-dashed rounded-xl flex flex-col items-center justify-center backdrop-blur-sm`}>
                   <Upload className="w-10 h-10 text-emerald-400 mb-2" />
                   <p className="text-emerald-300 font-medium text-sm">Drop images here</p>
                   <p className="text-emerald-300/60 text-xs mt-1">JPEG, PNG, WEBP up to 5MB</p>
@@ -528,12 +571,12 @@ export default function AIAssistant({ token }) {
                 <div className="space-y-3">
                   {/* Add new prompt */}
                   {isAddingPrompt ? (
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                    <div className={`p-3 rounded-xl ${t.card} space-y-2`}>
                       <input
                         value={newPromptLabel}
                         onChange={(e) => setNewPromptLabel(e.target.value)}
                         placeholder="Prompt name (e.g. 'Vintage Denim')"
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-emerald-500/40"
+                        className={`w-full ${t.input} rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500/40`}
                         data-testid="new-prompt-label-input"
                       />
                       <textarea
@@ -541,18 +584,18 @@ export default function AIAssistant({ token }) {
                         onChange={(e) => setNewPromptText(e.target.value)}
                         placeholder="Prompt text that will be sent to the assistant..."
                         rows={3}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder:text-white/30 resize-none focus:outline-none focus:border-emerald-500/40"
+                        className={`w-full ${t.input} rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-emerald-500/40`}
                         data-testid="new-prompt-text-input"
                       />
                       <div className="flex gap-2 justify-end">
-                        <button onClick={() => { setIsAddingPrompt(false); setNewPromptLabel(""); setNewPromptText(""); }} className="px-3 py-1.5 rounded-lg text-white/50 text-xs hover:bg-white/5">Cancel</button>
+                        <button onClick={() => { setIsAddingPrompt(false); setNewPromptLabel(""); setNewPromptText(""); }} className={`px-3 py-1.5 rounded-lg ${t.textDim} text-xs ${t.cardHover}`}>Cancel</button>
                         <button onClick={saveNewPrompt} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs hover:bg-emerald-500" data-testid="save-new-prompt-btn">Save</button>
                       </div>
                     </div>
                   ) : (
                     <button
                       onClick={() => setIsAddingPrompt(true)}
-                      className="w-full p-3 rounded-xl border border-dashed border-white/20 text-white/50 text-sm hover:border-emerald-500/40 hover:text-emerald-300 transition-colors flex items-center justify-center gap-2"
+                      className={`w-full p-3 rounded-xl border border-dashed ${isDark ? "border-white/20 text-white/50" : "border-gray-300 text-gray-400"} text-sm hover:border-emerald-500/40 hover:text-emerald-300 transition-colors flex items-center justify-center gap-2`}
                       data-testid="add-prompt-btn"
                     >
                       <Plus className="w-4 h-4" /> Create New Prompt
@@ -560,17 +603,17 @@ export default function AIAssistant({ token }) {
                   )}
 
                   {savedPrompts.length === 0 && !isAddingPrompt && (
-                    <p className="text-white/30 text-sm text-center mt-6">No saved prompts yet. Create one to use it with a single tap.</p>
+                    <p className={`${t.textFaint} text-sm text-center mt-6`}>No saved prompts yet. Create one to use it with a single tap.</p>
                   )}
 
                   {savedPrompts.map((p) => (
-                    <div key={p.id} className="p-3 rounded-xl bg-white/5 hover:bg-white/[0.07] transition-colors group" data-testid={`prompt-item-${p.id}`}>
+                    <div key={p.id} className={`p-3 rounded-xl ${t.card} ${t.cardHover} transition-colors group`} data-testid={`prompt-item-${p.id}`}>
                       {editingPromptId === p.id ? (
                         <div className="space-y-2">
-                          <input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-emerald-500/40" data-testid="edit-prompt-label-input" />
-                          <textarea value={editText} onChange={(e) => setEditText(e.target.value)} rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm resize-none focus:outline-none focus:border-emerald-500/40" data-testid="edit-prompt-text-input" />
+                          <input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} className={`w-full ${t.input} rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-emerald-500/40`} data-testid="edit-prompt-label-input" />
+                          <textarea value={editText} onChange={(e) => setEditText(e.target.value)} rows={3} className={`w-full ${t.input} rounded-lg px-3 py-1.5 text-sm resize-none focus:outline-none focus:border-emerald-500/40`} data-testid="edit-prompt-text-input" />
                           <div className="flex gap-2 justify-end">
-                            <button onClick={() => setEditingPromptId(null)} className="px-2 py-1 text-white/40 text-xs hover:bg-white/5 rounded">Cancel</button>
+                            <button onClick={() => setEditingPromptId(null)} className={`px-2 py-1 ${t.textDim} text-xs ${t.cardHover} rounded`}>Cancel</button>
                             <button onClick={() => updatePrompt(p.id)} className="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-500" data-testid="confirm-edit-prompt-btn"><Check className="w-3 h-3" /></button>
                           </div>
                         </div>
@@ -578,14 +621,14 @@ export default function AIAssistant({ token }) {
                         <>
                           <div className="flex items-start justify-between gap-2">
                             <button onClick={() => applyPrompt(p.text)} className="text-left flex-1 min-w-0">
-                              <p className="text-white font-medium text-sm truncate">{p.label}</p>
-                              <p className="text-white/40 text-xs mt-0.5 line-clamp-2">{p.text}</p>
+                              <p className={`${t.text} font-medium text-sm truncate`}>{p.label}</p>
+                              <p className={`${t.textDim} text-xs mt-0.5 line-clamp-2`}>{p.text}</p>
                             </button>
-                            <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => { setEditingPromptId(p.id); setEditLabel(p.label); setEditText(p.text); }} className="p-1 text-white/30 hover:text-white" data-testid={`edit-prompt-${p.id}`}>
+                            <div className={`flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                              <button onClick={() => { setEditingPromptId(p.id); setEditLabel(p.label); setEditText(p.text); }} className={`p-1 ${t.textFaint} hover:${t.text}`} data-testid={`edit-prompt-${p.id}`}>
                                 <Edit3 className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={(e) => deletePrompt(p.id, e)} className="p-1 text-white/30 hover:text-red-400" data-testid={`delete-prompt-${p.id}`}>
+                              <button onClick={(e) => deletePrompt(p.id, e)} className={`p-1 ${t.textFaint} hover:text-red-400`} data-testid={`delete-prompt-${p.id}`}>
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -599,14 +642,14 @@ export default function AIAssistant({ token }) {
                 /* ---- Conversation list ---- */
                 <div className="space-y-2">
                   {conversations.length === 0 ? (
-                    <p className="text-white/40 text-sm text-center mt-8">No conversations yet</p>
+                    <p className={`${t.textDim} text-sm text-center mt-8`}>No conversations yet</p>
                   ) : conversations.map((c) => (
-                    <div key={c.id} onClick={() => openConversation(c.id)} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 cursor-pointer transition-colors group" data-testid={`conv-item-${c.id}`}>
+                    <div key={c.id} onClick={() => openConversation(c.id)} className={`flex items-center justify-between p-3 rounded-xl ${t.card} ${t.cardHover} cursor-pointer transition-colors group`} data-testid={`conv-item-${c.id}`}>
                       <div className="min-w-0 flex-1">
-                        <p className="text-white text-sm font-medium truncate">{c.title}</p>
-                        <p className="text-white/40 text-xs mt-0.5">{new Date(c.updated_at).toLocaleDateString()}</p>
+                        <p className={`${t.text} text-sm font-medium truncate`}>{c.title}</p>
+                        <p className={`${t.textDim} text-xs mt-0.5`}>{new Date(c.updated_at).toLocaleDateString()}</p>
                       </div>
-                      <button onClick={(e) => deleteConversation(c.id, e)} className="text-white/20 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`conv-delete-${c.id}`}>
+                      <button onClick={(e) => deleteConversation(c.id, e)} className={`${t.textFaint} hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity`} data-testid={`conv-delete-${c.id}`}>
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -622,21 +665,21 @@ export default function AIAssistant({ token }) {
                   <div className="w-14 h-14 rounded-full bg-emerald-600/20 flex items-center justify-center mb-4">
                     <Sparkles className="w-7 h-7 text-emerald-400" />
                   </div>
-                  <h3 className="text-white font-semibold text-base mb-1">Listing Assistant</h3>
-                  <p className="text-white/50 text-sm mb-5 max-w-[300px]">
+                  <h3 className={`${t.text} font-semibold text-base mb-1`}>Listing Assistant</h3>
+                  <p className={`${t.textDim} text-sm mb-5 max-w-[300px]`}>
                     Drop a screenshot or describe an item. I'll write a Vendoo listing for you.
                   </p>
 
                   {/* Saved prompts shortcuts */}
                   {savedPrompts.length > 0 && (
                     <div className="w-full max-w-[320px] mb-4">
-                      <p className="text-white/30 text-xs uppercase tracking-wider mb-2">Your prompts</p>
+                      <p className={`${t.textFaint} text-xs uppercase tracking-wider mb-2`}>Your prompts</p>
                       <div className="flex flex-wrap gap-2 justify-center">
                         {savedPrompts.slice(0, 6).map((p) => (
                           <button
                             key={p.id}
                             onClick={() => applyPrompt(p.text)}
-                            className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/70 text-xs hover:bg-emerald-600/20 hover:text-emerald-300 hover:border-emerald-500/30 transition-colors truncate max-w-[140px]"
+                            className={`px-3 py-1.5 rounded-full ${t.card} ${isDark ? "text-white/70" : "text-gray-600"} text-xs hover:bg-emerald-600/20 hover:text-emerald-300 hover:border-emerald-500/30 transition-colors truncate max-w-[140px]`}
                             data-testid={`welcome-prompt-${p.id}`}
                           >
                             {p.label}
@@ -647,8 +690,8 @@ export default function AIAssistant({ token }) {
                   )}
 
                   {/* Drop zone hint */}
-                  <div className="w-full max-w-[300px] p-4 rounded-xl border border-dashed border-white/15 text-white/30 text-xs flex flex-col items-center gap-1.5">
-                    <Upload className="w-5 h-5 text-white/20" />
+                  <div className={`w-full max-w-[300px] p-4 rounded-xl border border-dashed ${isDark ? "border-white/15 text-white/30" : "border-gray-300 text-gray-400"} text-xs flex flex-col items-center gap-1.5`}>
+                    <Upload className={`w-5 h-5 ${isDark ? "text-white/20" : "text-gray-300"}`} />
                     Drag & drop screenshots here
                   </div>
                 </div>
@@ -662,10 +705,10 @@ export default function AIAssistant({ token }) {
 
             {/* Pending images strip */}
             {(pendingImages.length > 0 || uploadingCount > 0) && (
-              <div className="px-3 py-2 border-t border-white/5 shrink-0">
+              <div className={`px-3 py-2 border-t ${isDark ? "border-white/5" : "border-gray-200"} shrink-0`}>
                 <div className="flex items-center gap-1.5 mb-1.5">
-                  <ImageIcon className="w-3.5 h-3.5 text-white/30" />
-                  <span className="text-white/40 text-[11px]">
+                  <ImageIcon className={`w-3.5 h-3.5 ${t.textFaint}`} />
+                  <span className={`${t.textDim} text-[11px]`}>
                     {pendingImages.length} image{pendingImages.length !== 1 ? "s" : ""} attached
                     {uploadingCount > 0 && ` · uploading ${uploadingCount}...`}
                   </span>
@@ -673,7 +716,7 @@ export default function AIAssistant({ token }) {
                 <div className="flex gap-2 flex-wrap max-h-28 overflow-y-auto">
                   {pendingImages.map((img) => (
                     <div key={img.id} className="relative shrink-0 group/img">
-                      <img src={img.preview} alt={img.name} className="w-14 h-14 object-cover rounded-lg border border-white/10" />
+                      <img src={img.preview} alt={img.name} className={`w-14 h-14 object-cover rounded-lg border ${isDark ? "border-white/10" : "border-gray-200"}`} />
                       <button
                         onClick={() => removePendingImage(img.id)}
                         className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover/img:opacity-100 sm:opacity-100 transition-opacity"
@@ -689,7 +732,7 @@ export default function AIAssistant({ token }) {
                   )}
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-14 h-14 rounded-lg border border-dashed border-white/15 flex items-center justify-center text-white/25 hover:text-emerald-400 hover:border-emerald-500/30 transition-colors"
+                    className={`w-14 h-14 rounded-lg border border-dashed ${isDark ? "border-white/15 text-white/25" : "border-gray-300 text-gray-300"} flex items-center justify-center hover:text-emerald-400 hover:border-emerald-500/30 transition-colors`}
                     title="Add more images"
                     data-testid="ai-add-more-images"
                   >
@@ -701,7 +744,7 @@ export default function AIAssistant({ token }) {
 
             {/* Input area — large box */}
             {isActiveChat && (
-              <div className="px-3 py-3 border-t border-white/10 bg-[#0D1525] shrink-0">
+              <div className={`px-3 py-3 border-t ${t.header} shrink-0`}>
                 {/* Saved prompt pills above input */}
                 {savedPrompts.length > 0 && messages.length === 0 && !activeConvId ? null : savedPrompts.length > 0 ? (
                   <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none">
@@ -709,7 +752,7 @@ export default function AIAssistant({ token }) {
                       <button
                         key={p.id}
                         onClick={() => applyPrompt(p.text)}
-                        className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/50 text-[11px] hover:bg-emerald-600/20 hover:text-emerald-300 hover:border-emerald-500/30 transition-colors whitespace-nowrap shrink-0"
+                        className={`px-2.5 py-1 rounded-full ${t.card} ${isDark ? "text-white/50" : "text-gray-500"} text-[11px] hover:bg-emerald-600/20 hover:text-emerald-300 hover:border-emerald-500/30 transition-colors whitespace-nowrap shrink-0`}
                         data-testid={`input-prompt-${p.id}`}
                       >
                         {p.label}
@@ -726,16 +769,16 @@ export default function AIAssistant({ token }) {
                     onKeyDown={handleKeyDown}
                     placeholder="Describe your item, paste details, or drop a screenshot..."
                     rows={4}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder:text-white/30 resize-none focus:outline-none focus:border-emerald-500/40 overflow-y-auto"
+                    className={`w-full ${t.input} border rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:border-emerald-500/40 overflow-y-auto`}
                     data-testid="ai-message-input"
                   />
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1">
                       <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/jpeg,image/png,image/webp" multiple className="hidden" data-testid="ai-image-input" />
-                      <button onClick={() => fileInputRef.current?.click()} className="text-white/40 hover:text-emerald-400 p-2 transition-colors rounded-lg hover:bg-white/5" title="Attach image" data-testid="ai-attach-btn">
+                      <button onClick={() => fileInputRef.current?.click()} className={`${t.textDim} hover:text-emerald-400 p-2 transition-colors rounded-lg ${t.cardHover}`} title="Attach image" data-testid="ai-attach-btn">
                         <ImageIcon className="w-5 h-5" />
                       </button>
-                      <span className="text-white/20 text-[10px] hidden sm:inline">or drag & drop</span>
+                      <span className={`${t.textFaint} text-[10px] hidden sm:inline`}>or drag & drop</span>
                     </div>
                     <button
                       onClick={sendMessage}
