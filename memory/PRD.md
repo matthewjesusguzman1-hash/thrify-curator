@@ -44,9 +44,9 @@ Thrifty Curator is a React + FastAPI + MongoDB operational dashboard for a resal
 ## Recent Changes
 
 ### Sep 7, 2026 — Light Mode Palette Fix
-- **Fixed**: Light mode was too bright / too white — user wanted color like the dark version has
-- **Changed**: Light blue palette mirroring the dark navy (#e4ecf5→#d0dbeb gradient, #e9eff7 headers, navy text)
-- **Concept**: Dark mode = deep navy, Light mode = soft sky blue — same app, different time of day
+- **Fixed**: Light mode was too bright / looked white — user wanted visible color like dark mode has
+- **Changed**: Clear light blue palette (#c2d4e8→#a9c0db gradient, #cdd9ea headers, blue-tinted cards, navy text)
+- **Concept**: Dark mode = deep navy, Light mode = clear sky blue — same family, opposite brightness
 - **Scope**: Both admin and employee dashboards — backgrounds, cards, inputs, borders, scrollbars, glass sections
 - **File**: `/app/frontend/src/index.css` light theme overrides section
 

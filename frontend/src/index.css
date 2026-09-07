@@ -678,46 +678,46 @@ table tbody tr:hover {
 
 
 /* ===== Dashboard Light Theme Overrides ===== */
-/* Light blue counterpart to the dark navy palette */
+/* Clear light blue — the bright counterpart to dark navy */
 [data-theme="light"][data-testid="employee-dashboard"],
 [data-theme="light"][data-testid="admin-dashboard"] {
-  background: linear-gradient(135deg, #e4ecf5 0%, #dae4f1 50%, #d0dbeb 100%) !important;
+  background: linear-gradient(135deg, #c2d4e8 0%, #b5cae2 50%, #a9c0db 100%) !important;
 }
 
 [data-theme="light"] header,
 [data-theme="light"] [data-testid="timezone-toggle-bar"] {
-  background: #e9eff7 !important;
-  border-color: #c2d0e2 !important;
+  background: #cdd9ea !important;
+  border-color: #a0b5cd !important;
 }
 
 /* Text colors — dark navy for readability */
-[data-theme="light"] .text-white { color: #1e2d42 !important; }
-[data-theme="light"] .text-white\/70 { color: #3a4d65 !important; }
-[data-theme="light"] .text-white\/60 { color: #4d6480 !important; }
-[data-theme="light"] .text-white\/50 { color: #5f7590 !important; }
-[data-theme="light"] .text-white\/40 { color: #7d92a8 !important; }
-[data-theme="light"] .text-white\/30 { color: #96a8ba !important; }
+[data-theme="light"] .text-white { color: #152238 !important; }
+[data-theme="light"] .text-white\/70 { color: #2a3f5a !important; }
+[data-theme="light"] .text-white\/60 { color: #3b5272 !important; }
+[data-theme="light"] .text-white\/50 { color: #4d6585 !important; }
+[data-theme="light"] .text-white\/40 { color: #6b85a8 !important; }
+[data-theme="light"] .text-white\/30 { color: #8aa0b8 !important; }
 
 /* Card/section backgrounds */
 [data-theme="light"] .bg-white\/5,
 [data-theme="light"] .bg-white\/10,
 [data-theme="light"] .bg-white\/\[0\.03\] {
-  background: rgba(235, 241, 250, 0.82) !important;
-  border-color: #c5d2e3 !important;
-  box-shadow: 0 1px 3px rgba(30,60,100,0.06);
+  background: rgba(195, 215, 238, 0.7) !important;
+  border-color: #a3b9d2 !important;
+  box-shadow: 0 1px 3px rgba(20,50,90,0.08);
 }
 
 /* Borders */
 [data-theme="light"] .border-white\/10,
 [data-theme="light"] .border-white\/20,
 [data-theme="light"] .border-white\/5 {
-  border-color: #c5d2e3 !important;
+  border-color: #a3b9d2 !important;
 }
 
 /* Buttons and interactive hover */
 [data-theme="light"] .hover\:bg-white\/10:hover,
 [data-theme="light"] .hover\:bg-white\/5:hover {
-  background: rgba(30,60,100,0.06) !important;
+  background: rgba(20,50,90,0.08) !important;
 }
 
 /* Header gradient avatar stays vivid */
@@ -732,77 +732,77 @@ table tbody tr:hover {
 [data-theme="light"] input,
 [data-theme="light"] textarea,
 [data-theme="light"] select {
-  background: #edf2f9 !important;
-  color: #1e2d42 !important;
-  border-color: #b8c8dc !important;
+  background: #d5e1ef !important;
+  color: #152238 !important;
+  border-color: #97aec8 !important;
 }
 [data-theme="light"] input::placeholder,
 [data-theme="light"] textarea::placeholder {
-  color: #96a8ba !important;
+  color: #7a96b2 !important;
 }
 
 /* Scrollbar */
-[data-theme="light"]::-webkit-scrollbar-track { background: #dce5f0; }
-[data-theme="light"]::-webkit-scrollbar-thumb { background: #a8b9ce; }
+[data-theme="light"]::-webkit-scrollbar-track { background: #b8cce0; }
+[data-theme="light"]::-webkit-scrollbar-thumb { background: #8aa3be; }
 
 /* Badge/pill overrides */
-[data-theme="light"] .bg-green-500\/20 { background: rgba(34,197,94,0.14) !important; }
-[data-theme="light"] .bg-red-500\/20 { background: rgba(239,68,68,0.14) !important; }
-[data-theme="light"] .bg-yellow-500\/20 { background: rgba(234,179,8,0.14) !important; }
-[data-theme="light"] .bg-blue-500\/20 { background: rgba(59,130,246,0.14) !important; }
+[data-theme="light"] .bg-green-500\/20 { background: rgba(34,197,94,0.18) !important; }
+[data-theme="light"] .bg-red-500\/20 { background: rgba(239,68,68,0.18) !important; }
+[data-theme="light"] .bg-yellow-500\/20 { background: rgba(234,179,8,0.18) !important; }
+[data-theme="light"] .bg-blue-500\/20 { background: rgba(59,130,246,0.18) !important; }
 
 /* Glass/blur sections */
 [data-theme="light"] .glass-dark {
-  background: rgba(230, 238, 248, 0.7) !important;
-  border-color: #c5d2e3 !important;
+  background: rgba(190, 212, 236, 0.7) !important;
+  border-color: #a3b9d2 !important;
 }
 
 /* Keep the theme toggle button visible in both modes */
 [data-theme="light"] [data-testid="dashboard-theme-toggle"] {
-  color: #3a4d65 !important;
+  color: #2a3f5a !important;
 }
 
 /* Timezone toggle bar */
 [data-theme="light"] .bg-\[\#1A1A2E\]\/80 {
-  background: rgba(233, 239, 247, 0.92) !important;
+  background: rgba(205, 217, 234, 0.92) !important;
 }
 
 
 /* Admin dashboard light theme */
 [data-theme="light"].dashboard-container {
-  background: linear-gradient(135deg, #e4ecf5 0%, #dae4f1 50%, #d0dbeb 100%) !important;
+  background: linear-gradient(135deg, #c2d4e8 0%, #b5cae2 50%, #a9c0db 100%) !important;
 }
 
 [data-theme="light"] .dashboard-header {
-  background: #e9eff7 !important;
-  border-bottom-color: #b8c8dc !important;
-  box-shadow: 0 1px 4px rgba(30,60,100,0.06) !important;
+  background: #cdd9ea !important;
+  border-bottom-color: #97aec8 !important;
+  box-shadow: 0 1px 4px rgba(20,50,90,0.08) !important;
 }
 
 [data-theme="light"] .dashboard-header p,
 [data-theme="light"] .dashboard-header span,
 [data-theme="light"] .dashboard-header button {
-  color: #2a3f58 !important;
+  color: #1e3350 !important;
 }
 
 [data-theme="light"] .dashboard-header button:hover {
-  background: rgba(30,60,100,0.06) !important;
+  background: rgba(20,50,90,0.08) !important;
 }
 
 /* Keep colored elements visible in light mode */
-[data-theme="light"] .dashboard-header .text-\[\#10B981\] { color: #059669 !important; }
-[data-theme="light"] .dashboard-header .text-\[\#00D4FF\] { color: #0891b2 !important; }
+[data-theme="light"] .dashboard-header .text-\[\#10B981\] { color: #047857 !important; }
+[data-theme="light"] .dashboard-header .text-\[\#00D4FF\] { color: #0e7490 !important; }
 
 /* Admin content area cards */
 [data-theme="light"] .dashboard-content .bg-white\/5,
 [data-theme="light"] .dashboard-content .bg-white\/10,
 [data-theme="light"] .dashboard-content .bg-white\/\[0\.03\] {
-  background: rgba(235, 241, 250, 0.85) !important;
-  box-shadow: 0 1px 3px rgba(30,60,100,0.06);
+  background: rgba(195, 215, 238, 0.75) !important;
+  box-shadow: 0 1px 3px rgba(20,50,90,0.08);
 }
 
 /* Dropdown notification stays as-is in light mode */
 [data-theme="light"] [data-testid="notification-dropdown"],
 [data-theme="light"] [data-testid="notification-dropdown"] * {
-  color: #1e2d42;
+  color: #152238;
 }
