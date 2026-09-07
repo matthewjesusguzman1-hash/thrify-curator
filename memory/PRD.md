@@ -43,6 +43,12 @@ Thrifty Curator is a React + FastAPI + MongoDB operational dashboard for a resal
 
 ## Recent Changes
 
+### Sep 7, 2026 — Light Mode Palette Fix
+- **Fixed**: Light mode was too bright (pure white backgrounds + bright blue-white gradient)
+- **Changed**: Replaced with warm, muted off-white palette (#f2efeb headers, #edeae6→#d9d5cf gradient)
+- **Scope**: Both admin and employee dashboards — backgrounds, cards, inputs, borders, scrollbars, glass sections
+- **File**: `/app/frontend/src/index.css` light theme overrides section
+
 ### Sep 7, 2026 — AI Image Compression for Speed
 - **Added**: Image compression via Pillow — resize to max 1024px, JPEG quality 80%
 - **Result**: Gemini gets ~90KB instead of ~2-5MB per image; display still uses original full-res

@@ -678,45 +678,46 @@ table tbody tr:hover {
 
 
 /* ===== Dashboard Light Theme Overrides ===== */
+/* Warm muted palette — no pure whites, easy on the eyes */
 [data-theme="light"][data-testid="employee-dashboard"],
 [data-theme="light"][data-testid="admin-dashboard"] {
-  background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 50%, #dbeafe 100%) !important;
+  background: linear-gradient(135deg, #edeae6 0%, #e3dfd9 50%, #d9d5cf 100%) !important;
 }
 
 [data-theme="light"] header,
 [data-theme="light"] [data-testid="timezone-toggle-bar"] {
-  background: #ffffff !important;
-  border-color: #e2e8f0 !important;
+  background: #f2efeb !important;
+  border-color: #d5d0c9 !important;
 }
 
 /* Text colors */
-[data-theme="light"] .text-white { color: #1e293b !important; }
-[data-theme="light"] .text-white\/70 { color: #475569 !important; }
-[data-theme="light"] .text-white\/60 { color: #64748b !important; }
-[data-theme="light"] .text-white\/50 { color: #64748b !important; }
-[data-theme="light"] .text-white\/40 { color: #94a3b8 !important; }
-[data-theme="light"] .text-white\/30 { color: #94a3b8 !important; }
+[data-theme="light"] .text-white { color: #2c2a27 !important; }
+[data-theme="light"] .text-white\/70 { color: #4a4740 !important; }
+[data-theme="light"] .text-white\/60 { color: #5e5a53 !important; }
+[data-theme="light"] .text-white\/50 { color: #6e6a62 !important; }
+[data-theme="light"] .text-white\/40 { color: #8a857d !important; }
+[data-theme="light"] .text-white\/30 { color: #a09a92 !important; }
 
 /* Card/section backgrounds */
 [data-theme="light"] .bg-white\/5,
 [data-theme="light"] .bg-white\/10,
 [data-theme="light"] .bg-white\/\[0\.03\] {
-  background: rgba(255,255,255,0.85) !important;
-  border-color: #e2e8f0 !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  background: rgba(242, 239, 235, 0.92) !important;
+  border-color: #d5d0c9 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 /* Borders */
 [data-theme="light"] .border-white\/10,
 [data-theme="light"] .border-white\/20,
 [data-theme="light"] .border-white\/5 {
-  border-color: #e2e8f0 !important;
+  border-color: #d5d0c9 !important;
 }
 
 /* Buttons and interactive hover */
 [data-theme="light"] .hover\:bg-white\/10:hover,
 [data-theme="light"] .hover\:bg-white\/5:hover {
-  background: rgba(0,0,0,0.05) !important;
+  background: rgba(0,0,0,0.06) !important;
 }
 
 /* Header gradient avatar stays vivid */
@@ -731,18 +732,18 @@ table tbody tr:hover {
 [data-theme="light"] input,
 [data-theme="light"] textarea,
 [data-theme="light"] select {
-  background: #ffffff !important;
-  color: #1e293b !important;
-  border-color: #d1d5db !important;
+  background: #f2efeb !important;
+  color: #2c2a27 !important;
+  border-color: #c8c3bb !important;
 }
 [data-theme="light"] input::placeholder,
 [data-theme="light"] textarea::placeholder {
-  color: #94a3b8 !important;
+  color: #a09a92 !important;
 }
 
 /* Scrollbar */
-[data-theme="light"]::-webkit-scrollbar-track { background: #f1f5f9; }
-[data-theme="light"]::-webkit-scrollbar-thumb { background: #cbd5e1; }
+[data-theme="light"]::-webkit-scrollbar-track { background: #e6e3de; }
+[data-theme="light"]::-webkit-scrollbar-thumb { background: #b8b3ab; }
 
 /* Badge/pill overrides */
 [data-theme="light"] .bg-green-500\/20 { background: rgba(34,197,94,0.15) !important; }
@@ -752,40 +753,40 @@ table tbody tr:hover {
 
 /* Glass/blur sections */
 [data-theme="light"] .glass-dark {
-  background: rgba(255,255,255,0.7) !important;
-  border-color: #e2e8f0 !important;
+  background: rgba(242, 239, 235, 0.75) !important;
+  border-color: #d5d0c9 !important;
 }
 
 /* Keep the theme toggle button visible in both modes */
 [data-theme="light"] [data-testid="dashboard-theme-toggle"] {
-  color: #475569 !important;
+  color: #4a4740 !important;
 }
 
 /* Timezone toggle bar */
 [data-theme="light"] .bg-\[\#1A1A2E\]\/80 {
-  background: rgba(255,255,255,0.9) !important;
+  background: rgba(242, 239, 235, 0.92) !important;
 }
 
 
 /* Admin dashboard light theme */
 [data-theme="light"].dashboard-container {
-  background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 50%, #dbeafe 100%) !important;
+  background: linear-gradient(135deg, #edeae6 0%, #e3dfd9 50%, #d9d5cf 100%) !important;
 }
 
 [data-theme="light"] .dashboard-header {
-  background: #ffffff !important;
-  border-bottom-color: #60a5fa !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+  background: #f2efeb !important;
+  border-bottom-color: #c8c3bb !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
 }
 
 [data-theme="light"] .dashboard-header p,
 [data-theme="light"] .dashboard-header span,
 [data-theme="light"] .dashboard-header button {
-  color: #334155 !important;
+  color: #3a3732 !important;
 }
 
 [data-theme="light"] .dashboard-header button:hover {
-  background: rgba(0, 0, 0, 0.05) !important;
+  background: rgba(0, 0, 0, 0.06) !important;
 }
 
 /* Keep colored elements visible in light mode */
@@ -796,12 +797,12 @@ table tbody tr:hover {
 [data-theme="light"] .dashboard-content .bg-white\/5,
 [data-theme="light"] .dashboard-content .bg-white\/10,
 [data-theme="light"] .dashboard-content .bg-white\/\[0\.03\] {
-  background: rgba(255,255,255,0.9) !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  background: rgba(242, 239, 235, 0.92) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 /* Dropdown notification stays as-is in light mode */
 [data-theme="light"] [data-testid="notification-dropdown"],
 [data-theme="light"] [data-testid="notification-dropdown"] * {
-  color: #1A1A2E;
+  color: #2c2a27;
 }
