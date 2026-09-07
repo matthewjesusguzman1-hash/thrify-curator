@@ -116,7 +116,7 @@ async def _get_or_create_chat(conversation_id: str, history: list = None, user_i
             session_id=conversation_id,
             system_message=SYSTEM_PROMPT,
         )
-        .with_model("gemini", "gemini-3.5-flash")
+        .with_model("gemini", "gemini-3.7-flash")
     )
 
     # Replay stored history with images so LLM has full visual+text context
