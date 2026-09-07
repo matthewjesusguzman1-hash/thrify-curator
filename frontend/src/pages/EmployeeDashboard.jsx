@@ -686,6 +686,58 @@ export default function EmployeeDashboard({
     };
   }, [navigate]);
 
+  // Poll for new messages and show desktop notification (every 15 seconds)
+  const lastUnreadCountRef = useRef(0);
+  useEffect(() => {
+    if (isAdminView) return;
+    
+    const checkMessages = async () => {
+      try {
+        const msgRes = await axios.get(`${API}/conversations/employee/my-conversation`, getAuthHeader());
+        const messages = msgRes.data?.messages || [];
+        const unread = messages.filter(m => m.sender_type === 'admin' && !m.read).length;
+        setUnreadMessageCount(unread);
+        
+        // Show desktop notification if new unread messages appeared
+        if (unread > lastUnreadCountRef.current && unread > 0) {
+          // Find the latest unread admin message
+          const latestUnread = [...messages]
+            .filter(m => m.sender_type === 'admin' && !m.read)
+            .sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at))[0];
+          
+          // Browser notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            try {
+              const notif = new Notification('New message from admin', {
+                body: latestUnread?.content?.substring(0, 100) || 'You have a new message',
+                icon: '/favicon.ico',
+                tag: 'admin-message',
+                renotify: true,
+              });
+              notif.onclick = () => {
+                window.focus();
+                setShowFullScreenMessages(true);
+                notif.close();
+              };
+            } catch (e) {
+              console.log('Desktop notification error:', e);
+            }
+          } else if ('Notification' in window && Notification.permission === 'default') {
+            // Request permission on first new message
+            Notification.requestPermission();
+          }
+        }
+        lastUnreadCountRef.current = unread;
+      } catch {}
+    };
+    
+    // Check immediately on mount
+    checkMessages();
+    const msgPollInterval = setInterval(checkMessages, 15000);
+    return () => clearInterval(msgPollInterval);
+  }, [isAdminView]);
+
+
   // Handle pending shortcut actions (from iOS Quick Actions)
   useEffect(() => {
     const handlePendingShortcut = async () => {
@@ -1613,7 +1665,7 @@ export default function EmployeeDashboard({
                   <MessageSquare className="w-4 h-4 mr-1" />
                   Messages
                   {unreadMessageCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold animate-pulse">
                       {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
                     </span>
                   )}
