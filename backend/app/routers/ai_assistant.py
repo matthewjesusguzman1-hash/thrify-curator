@@ -116,7 +116,7 @@ ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 # --- Helpers ---
 def _get_or_create_chat(conversation_id: str, history: list = None):
-    """Get existing chat session or create new one."""
+    """Get existing chat session or create new one with history replay."""
     if conversation_id in _chat_sessions:
         return _chat_sessions[conversation_id]
 
@@ -129,6 +129,17 @@ def _get_or_create_chat(conversation_id: str, history: list = None):
         )
         .with_model("gemini", "gemini-3-flash-preview")
     )
+
+    # Replay stored history so LLM remembers the full conversation
+    if history:
+        for msg in history:
+            role = msg.get("role", "")
+            text = msg.get("text", "")
+            if role == "user" and text:
+                chat.messages.append({"role": "user", "content": text})
+            elif role == "assistant" and text:
+                chat.messages.append({"role": "assistant", "content": text})
+
     _chat_sessions[conversation_id] = chat
     return chat
 
@@ -344,7 +355,7 @@ async def send_message(
     results = await asyncio.gather(*tasks)
     file_contents = [r for r in results[1:] if r is not None]
 
-    chat = _get_or_create_chat(conv_id)
+    chat = _get_or_create_chat(conv_id, history=conv.get("messages", []))
     user_message = UserMessage(
         text=body.text,
         file_contents=file_contents if file_contents else None,
