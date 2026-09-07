@@ -678,46 +678,46 @@ table tbody tr:hover {
 
 
 /* ===== Dashboard Light Theme Overrides ===== */
-/* Warm muted palette — no pure whites, easy on the eyes */
+/* Soft warm linen — gentle on the eyes, minimal contrast */
 [data-theme="light"][data-testid="employee-dashboard"],
 [data-theme="light"][data-testid="admin-dashboard"] {
-  background: linear-gradient(135deg, #edeae6 0%, #e3dfd9 50%, #d9d5cf 100%) !important;
+  background: linear-gradient(135deg, #f3f0ec 0%, #edeae5 50%, #e7e3de 100%) !important;
 }
 
 [data-theme="light"] header,
 [data-theme="light"] [data-testid="timezone-toggle-bar"] {
-  background: #f2efeb !important;
-  border-color: #d5d0c9 !important;
+  background: #f6f4f0 !important;
+  border-color: #dedad4 !important;
 }
 
-/* Text colors */
-[data-theme="light"] .text-white { color: #2c2a27 !important; }
-[data-theme="light"] .text-white\/70 { color: #4a4740 !important; }
-[data-theme="light"] .text-white\/60 { color: #5e5a53 !important; }
-[data-theme="light"] .text-white\/50 { color: #6e6a62 !important; }
-[data-theme="light"] .text-white\/40 { color: #8a857d !important; }
-[data-theme="light"] .text-white\/30 { color: #a09a92 !important; }
+/* Text colors — softer contrast */
+[data-theme="light"] .text-white { color: #3d3a36 !important; }
+[data-theme="light"] .text-white\/70 { color: #5c5850 !important; }
+[data-theme="light"] .text-white\/60 { color: #6e6a62 !important; }
+[data-theme="light"] .text-white\/50 { color: #7d7970 !important; }
+[data-theme="light"] .text-white\/40 { color: #9b968e !important; }
+[data-theme="light"] .text-white\/30 { color: #aea9a1 !important; }
 
 /* Card/section backgrounds */
 [data-theme="light"] .bg-white\/5,
 [data-theme="light"] .bg-white\/10,
 [data-theme="light"] .bg-white\/\[0\.03\] {
-  background: rgba(242, 239, 235, 0.92) !important;
-  border-color: #d5d0c9 !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  background: rgba(250, 248, 244, 0.88) !important;
+  border-color: #dfdbd5 !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
 
 /* Borders */
 [data-theme="light"] .border-white\/10,
 [data-theme="light"] .border-white\/20,
 [data-theme="light"] .border-white\/5 {
-  border-color: #d5d0c9 !important;
+  border-color: #dfdbd5 !important;
 }
 
 /* Buttons and interactive hover */
 [data-theme="light"] .hover\:bg-white\/10:hover,
 [data-theme="light"] .hover\:bg-white\/5:hover {
-  background: rgba(0,0,0,0.06) !important;
+  background: rgba(0,0,0,0.04) !important;
 }
 
 /* Header gradient avatar stays vivid */
@@ -732,61 +732,61 @@ table tbody tr:hover {
 [data-theme="light"] input,
 [data-theme="light"] textarea,
 [data-theme="light"] select {
-  background: #f2efeb !important;
-  color: #2c2a27 !important;
-  border-color: #c8c3bb !important;
+  background: #f6f4f0 !important;
+  color: #3d3a36 !important;
+  border-color: #d4d0c9 !important;
 }
 [data-theme="light"] input::placeholder,
 [data-theme="light"] textarea::placeholder {
-  color: #a09a92 !important;
+  color: #aea9a1 !important;
 }
 
 /* Scrollbar */
-[data-theme="light"]::-webkit-scrollbar-track { background: #e6e3de; }
-[data-theme="light"]::-webkit-scrollbar-thumb { background: #b8b3ab; }
+[data-theme="light"]::-webkit-scrollbar-track { background: #edeae5; }
+[data-theme="light"]::-webkit-scrollbar-thumb { background: #c5c0b8; }
 
 /* Badge/pill overrides */
-[data-theme="light"] .bg-green-500\/20 { background: rgba(34,197,94,0.15) !important; }
-[data-theme="light"] .bg-red-500\/20 { background: rgba(239,68,68,0.15) !important; }
-[data-theme="light"] .bg-yellow-500\/20 { background: rgba(234,179,8,0.15) !important; }
-[data-theme="light"] .bg-blue-500\/20 { background: rgba(59,130,246,0.15) !important; }
+[data-theme="light"] .bg-green-500\/20 { background: rgba(34,197,94,0.12) !important; }
+[data-theme="light"] .bg-red-500\/20 { background: rgba(239,68,68,0.12) !important; }
+[data-theme="light"] .bg-yellow-500\/20 { background: rgba(234,179,8,0.12) !important; }
+[data-theme="light"] .bg-blue-500\/20 { background: rgba(59,130,246,0.12) !important; }
 
 /* Glass/blur sections */
 [data-theme="light"] .glass-dark {
-  background: rgba(242, 239, 235, 0.75) !important;
-  border-color: #d5d0c9 !important;
+  background: rgba(250, 248, 244, 0.7) !important;
+  border-color: #dfdbd5 !important;
 }
 
 /* Keep the theme toggle button visible in both modes */
 [data-theme="light"] [data-testid="dashboard-theme-toggle"] {
-  color: #4a4740 !important;
+  color: #5c5850 !important;
 }
 
 /* Timezone toggle bar */
 [data-theme="light"] .bg-\[\#1A1A2E\]\/80 {
-  background: rgba(242, 239, 235, 0.92) !important;
+  background: rgba(246, 244, 240, 0.92) !important;
 }
 
 
 /* Admin dashboard light theme */
 [data-theme="light"].dashboard-container {
-  background: linear-gradient(135deg, #edeae6 0%, #e3dfd9 50%, #d9d5cf 100%) !important;
+  background: linear-gradient(135deg, #f3f0ec 0%, #edeae5 50%, #e7e3de 100%) !important;
 }
 
 [data-theme="light"] .dashboard-header {
-  background: #f2efeb !important;
-  border-bottom-color: #c8c3bb !important;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
+  background: #f6f4f0 !important;
+  border-bottom-color: #d4d0c9 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
 }
 
 [data-theme="light"] .dashboard-header p,
 [data-theme="light"] .dashboard-header span,
 [data-theme="light"] .dashboard-header button {
-  color: #3a3732 !important;
+  color: #4a4640 !important;
 }
 
 [data-theme="light"] .dashboard-header button:hover {
-  background: rgba(0, 0, 0, 0.06) !important;
+  background: rgba(0, 0, 0, 0.04) !important;
 }
 
 /* Keep colored elements visible in light mode */
@@ -797,12 +797,12 @@ table tbody tr:hover {
 [data-theme="light"] .dashboard-content .bg-white\/5,
 [data-theme="light"] .dashboard-content .bg-white\/10,
 [data-theme="light"] .dashboard-content .bg-white\/\[0\.03\] {
-  background: rgba(242, 239, 235, 0.92) !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  background: rgba(250, 248, 244, 0.88) !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
 
 /* Dropdown notification stays as-is in light mode */
 [data-theme="light"] [data-testid="notification-dropdown"],
 [data-theme="light"] [data-testid="notification-dropdown"] * {
-  color: #2c2a27;
+  color: #3d3a36;
 }
