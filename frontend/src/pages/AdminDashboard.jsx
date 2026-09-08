@@ -282,7 +282,7 @@ export default function AdminDashboard() {
   const [messagesTheme, setMessagesTheme] = useState(() => {
     return localStorage.getItem('thrifty_curator_messages_theme') || 'light';
   });
-  const { isDark, toggleTheme } = useDashboardTheme();
+  const { isDark, toggleTheme } = useDashboardTheme(); // kept for messages only
   const [showEmailSettings, setShowEmailSettings] = useState(false);
   const [showSubmissionDetails, setShowSubmissionDetails] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
@@ -2525,7 +2525,7 @@ export default function AdminDashboard() {
   if (!user) return null;
 
   return (
-    <div className="dashboard-container" data-testid="admin-dashboard" data-theme={isDark ? "dark" : "light"}>
+    <div className="dashboard-container" data-testid="admin-dashboard">
       {/* Header - Sticky */}
       <header 
         className="dashboard-header sticky top-0 z-40" 
@@ -3062,7 +3062,7 @@ export default function AdminDashboard() {
               </span>
             )}
           </Button>
-          {/* More dropdown: Home, Theme, Logout */}
+          {/* More dropdown: Home, Logout */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -3082,13 +3082,6 @@ export default function AdminDashboard() {
               >
                 <Home className="w-4 h-4 mr-2" />
                 Home
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => { lightTap(); toggleTheme(); }}
-                data-testid="dashboard-theme-toggle"
-              >
-                {isDark ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
-                {isDark ? "Light Mode" : "Dark Mode"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
