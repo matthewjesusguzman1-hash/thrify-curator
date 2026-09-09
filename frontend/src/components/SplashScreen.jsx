@@ -188,7 +188,7 @@ export default function SplashScreen({ onComplete }) {
               transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
               className="font-poppins text-3xl sm:text-4xl font-bold text-white mb-2 text-center"
             >
-              Thrifty Curator
+              Thrifty Curator™
             </motion.h1>
 
             <motion.p

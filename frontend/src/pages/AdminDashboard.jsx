@@ -3316,7 +3316,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <span className="font-medium">Subject:</span>
-                        <span>Welcome to Thrifty Curator - Employee Portal Access & W9 Instructions</span>
+                        <span>Welcome to Thrifty Curator™ - Employee Portal Access & W9 Instructions</span>
                       </div>
                     </div>
                     
@@ -3327,7 +3327,7 @@ export default function AdminDashboard() {
                       </p>
                       
                       <p className="text-gray-700 mb-4">
-                        Welcome to the <strong>Thrifty Curator</strong> team! We're excited to have you on board.
+                        Welcome to the <strong>Thrifty Curator™</strong> team! We're excited to have you on board.
                       </p>
                       
                       <p className="text-gray-700 mb-4">

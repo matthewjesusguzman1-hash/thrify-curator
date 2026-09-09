@@ -3047,7 +3047,7 @@ export default function ConsignmentAgreementForm() {
                               
                               {/* Definitions */}
                               <div className="bg-white/60 rounded-lg p-2.5 mb-3 border border-[#8B5CF6]/10 text-xs">
-                                <p className="mb-1"><strong className="text-[#8B5CF6]">Consignee:</strong> Thrifty Curator</p>
+                                <p className="mb-1"><strong className="text-[#8B5CF6]">Consignee:</strong> Thrifty Curator™</p>
                                 <p><strong className="text-[#8B5CF6]">Consignor:</strong> You</p>
                               </div>
                               
@@ -3816,8 +3816,8 @@ export default function ConsignmentAgreementForm() {
                 <div className="bg-white/60 rounded-lg p-3 mb-4 border border-[#8B5CF6]/10">
                   <h5 className="font-semibold text-[#1A1A2E] mb-2 text-xs uppercase tracking-wide">Definitions</h5>
                   <div className="space-y-2">
-                    <p><strong className="text-[#8B5CF6]">Consignee:</strong> Thrifty Curator - the business accepting your items to sell on your behalf.</p>
-                    <p><strong className="text-[#8B5CF6]">Consignor:</strong> You - the person submitting items to be sold through Thrifty Curator.</p>
+                    <p><strong className="text-[#8B5CF6]">Consignee:</strong> Thrifty Curator™ - the business accepting your items to sell on your behalf.</p>
+                    <p><strong className="text-[#8B5CF6]">Consignor:</strong> You - the person submitting items to be sold through Thrifty Curator™.</p>
                   </div>
                 </div>
                 

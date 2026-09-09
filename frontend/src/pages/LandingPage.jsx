@@ -205,8 +205,8 @@ export default function LandingPage() {
     lightTap(); // Haptic on share button
     setShareLoading(true);
     const shareData = {
-      title: "Thrifty Curator",
-      text: "Check out Thrifty Curator - Curated resale finds!",
+      title: "Thrifty Curator™",
+      text: "Check out Thrifty Curator™ - Curated resale finds!",
       url: WEBSITE_URL
     };
 
@@ -256,7 +256,7 @@ export default function LandingPage() {
           </div>
           <div className="text-center">
             <h1 className="font-poppins text-3xl md:text-4xl font-bold text-white tracking-tight" data-testid="main-title">
-              Thrifty Curator
+              Thrifty Curator™
             </h1>
             <p className="text-sm text-white/60 font-medium tracking-wider uppercase mt-1">
               Curated Resale Finds
@@ -466,7 +466,7 @@ export default function LandingPage() {
                     data-testid="share-button"
                   >
                     <Share2 className="w-4 h-4" />
-                    {shareLoading ? "Sharing..." : "Share Thrifty Curator"}
+                    {shareLoading ? "Sharing..." : "Share Thrifty Curator™"}
                   </button>
                 </div>
               </div>
