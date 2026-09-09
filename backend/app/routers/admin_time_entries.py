@@ -24,7 +24,7 @@ async def get_clocked_in_employees(admin: dict = Depends(get_admin_user)):
     """Get all currently clocked-in employees with their clock-in times and hourly rates."""
     clocked_in = await db.time_entries.find(
         {"clock_out": None},
-        {"user_id": 1, "user_name": 1, "clock_in": 1, "last_clock_in": 1, "_id": 0}
+        {"user_id": 1, "user_name": 1, "clock_in": 1, "last_clock_in": 1, "hourly_rate": 1, "_id": 0}
     ).to_list(100)
     
     # Get payroll settings for default rate
@@ -36,12 +36,14 @@ async def get_clocked_in_employees(admin: dict = Depends(get_admin_user)):
         clock_in_time = entry.get("last_clock_in") or entry.get("clock_in")
         user_id = entry.get("user_id")
         
-        # Fetch the employee's hourly rate from users collection
-        hourly_rate = default_rate
-        if user_id:
+        # Use the shift's stored rate first, fall back to employee's current rate
+        hourly_rate = entry.get("hourly_rate")
+        if hourly_rate is None and user_id:
             user = await db.users.find_one({"id": user_id}, {"hourly_rate": 1, "_id": 0})
             if user and user.get("hourly_rate"):
                 hourly_rate = user.get("hourly_rate")
+        if hourly_rate is None:
+            hourly_rate = default_rate
         
         employees.append({
             "user_id": user_id,
@@ -392,12 +394,16 @@ async def create_time_entry(entry_data: CreateTimeEntryRequest, admin: dict = De
     
     display_name = "Administrator" if employee.get("role") == "admin" else employee["name"]
     
+    # Snapshot hourly rate at the time of the shift
+    current_rate = employee.get("hourly_rate")
+    
     entry = TimeEntry(
         user_id=entry_data.employee_id,
         user_name=display_name,
         clock_in=entry_data.clock_in,
         clock_out=clock_out_str,
-        total_hours=total_hours
+        total_hours=total_hours,
+        hourly_rate=current_rate
     )
     
     await db.time_entries.insert_one(entry.model_dump())

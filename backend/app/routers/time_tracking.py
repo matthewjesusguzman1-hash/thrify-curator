@@ -132,11 +132,17 @@ async def clock_in_out(action: ClockInOut, user: dict = Depends(get_current_user
         # Always create a new entry for each clock-in
         # This ensures that completed shifts (clocked out by admin or employee) 
         # are not accidentally reopened
+        
+        # Snapshot hourly rate at clock-in time
+        employee_doc = await db.users.find_one({"id": user["id"]}, {"_id": 0, "hourly_rate": 1})
+        current_rate = employee_doc.get("hourly_rate") if employee_doc else None
+        
         entry = TimeEntry(
             user_id=user["id"],
             user_name=display_name,
             clock_in=now_iso,
-            shift_date=today_start.strftime("%Y-%m-%d")
+            shift_date=today_start.strftime("%Y-%m-%d"),
+            hourly_rate=current_rate
         )
         entry_dict = entry.model_dump()
         entry_dict["last_clock_in"] = now_iso
@@ -435,9 +441,13 @@ async def get_time_summary(user: dict = Depends(get_current_user), user_id: str 
     if hourly_rate is None:
         hourly_rate = default_rate
     
-    # Round hours UP to nearest minute for pay calculation (benefits employee)
-    rounded_hours = round_up_to_minute(period_hours * 3600)  # Convert to seconds then round up
-    estimated_pay = round(rounded_hours * hourly_rate, 2)
+    # Calculate estimated pay per-shift using each shift's stored rate
+    estimated_pay = 0.0
+    for entry in period_entries:
+        shift_hours = entry.get("total_hours", 0) or 0
+        shift_rate = entry.get("hourly_rate") if entry.get("hourly_rate") is not None else hourly_rate
+        estimated_pay += round_up_to_minute(shift_hours * 3600) * shift_rate
+    estimated_pay = round(estimated_pay, 2)
     
     # Get YTD actual payments from payment records for this employee
     year_start = today.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)

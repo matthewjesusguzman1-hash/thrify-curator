@@ -181,6 +181,24 @@ async def update_employee(employee_id: str, update_data: UpdateEmployeeDetails, 
     if update_data.hourly_rate is not None:
         if update_data.hourly_rate < 0:
             raise HTTPException(status_code=400, detail="Hourly rate cannot be negative")
+        
+        old_rate = employee.get("hourly_rate")
+        # Backfill old shifts without a stored rate
+        if old_rate is not None and old_rate != update_data.hourly_rate:
+            await db.time_entries.update_many(
+                {"user_id": employee_id, "hourly_rate": None},
+                {"$set": {"hourly_rate": old_rate}}
+            )
+            # Log rate change
+            from datetime import datetime, timezone
+            await db.rate_changes.insert_one({
+                "user_id": employee_id,
+                "old_rate": old_rate,
+                "new_rate": update_data.hourly_rate,
+                "changed_at": datetime.now(timezone.utc).isoformat(),
+                "changed_by": admin.get("id", "admin")
+            })
+        
         update_fields["hourly_rate"] = update_data.hourly_rate
     
     if update_data.role:
@@ -261,13 +279,32 @@ async def update_employee(employee_id: str, update_data: UpdateEmployeeDetails, 
 
 @router.put("/employees/{employee_id}/rate")
 async def update_employee_rate(employee_id: str, rate_data: UpdateEmployeeRate, admin: dict = Depends(get_admin_user)):
-    """Update employee hourly rate."""
+    """Update employee hourly rate. Backfills old shifts with the previous rate."""
     employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
     if rate_data.hourly_rate < 0:
         raise HTTPException(status_code=400, detail="Hourly rate cannot be negative")
+    
+    old_rate = employee.get("hourly_rate")
+    
+    # Backfill all existing shifts that don't have a stored rate with the OLD rate
+    if old_rate is not None:
+        await db.time_entries.update_many(
+            {"user_id": employee_id, "hourly_rate": None},
+            {"$set": {"hourly_rate": old_rate}}
+        )
+    
+    # Log rate change for audit trail
+    from datetime import datetime, timezone
+    await db.rate_changes.insert_one({
+        "user_id": employee_id,
+        "old_rate": old_rate,
+        "new_rate": rate_data.hourly_rate,
+        "changed_at": datetime.now(timezone.utc).isoformat(),
+        "changed_by": admin.get("id", "admin")
+    })
     
     await db.users.update_one(
         {"id": employee_id},
@@ -276,6 +313,26 @@ async def update_employee_rate(employee_id: str, rate_data: UpdateEmployeeRate, 
     
     updated = await db.users.find_one({"id": employee_id}, {"_id": 0, "password_hash": 0})
     return UserResponse(**updated)
+
+
+
+@router.put("/employees/{employee_id}/backfill-rate")
+async def backfill_employee_shift_rates(employee_id: str, rate_data: UpdateEmployeeRate, admin: dict = Depends(get_admin_user)):
+    """Backfill old shifts that have no stored rate with a specific rate. 
+    Use this to fix historical shifts after a rate change."""
+    employee = await db.users.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    if rate_data.hourly_rate < 0:
+        raise HTTPException(status_code=400, detail="Hourly rate cannot be negative")
+    
+    result = await db.time_entries.update_many(
+        {"user_id": employee_id, "hourly_rate": None},
+        {"$set": {"hourly_rate": rate_data.hourly_rate}}
+    )
+    
+    return {"message": f"Updated {result.modified_count} shifts to ${rate_data.hourly_rate}/hr"}
 
 
 @router.get("/employee/{employee_id}/entries")
@@ -311,7 +368,7 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
     total_hours = sum(entry.get("total_hours", 0) or 0 for entry in entries)
     total_shifts = len(entries)
     
-    # Helper function to filter entries by period
+    # Helper function to filter entries by period — returns entries list too
     def get_entries_for_period(start, end):
         if start.tzinfo is None:
             start = start.replace(tzinfo=timezone.utc)
@@ -320,6 +377,7 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
         
         period_hours = 0
         period_shifts = 0
+        period_entries = []
         
         for entry in entries:
             clock_in = entry.get("clock_in", "")
@@ -331,30 +389,40 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
                     if start <= entry_time <= end:
                         period_hours += entry.get("total_hours", 0) or 0
                         period_shifts += 1
+                        period_entries.append(entry)
                 except (ValueError, TypeError):
                     pass
         
-        return period_hours, period_shifts, start, end
+        return period_hours, period_shifts, start, end, period_entries
     
     # Get current period
     current_period_start, current_period_end = get_biweekly_period(period_index=0)
-    current_hours, current_shifts, _, _ = get_entries_for_period(current_period_start, current_period_end)
+    current_hours, current_shifts, _, _, current_entries = get_entries_for_period(current_period_start, current_period_end)
     
     # If current period has no hours, use previous period instead
     if current_hours == 0 and current_shifts == 0:
         prev_period_start, prev_period_end = get_biweekly_period(period_index=-1)
-        period_hours, period_shifts, period_start, period_end = get_entries_for_period(prev_period_start, prev_period_end)
+        period_hours, period_shifts, period_start, period_end, period_entries = get_entries_for_period(prev_period_start, prev_period_end)
         is_previous_period = True
     else:
         period_hours = current_hours
         period_shifts = current_shifts
         period_start = current_period_start
         period_end = current_period_end
+        period_entries = current_entries
         is_previous_period = False
     
     hourly_rate = employee.get("hourly_rate")
     if not hourly_rate:
         hourly_rate = settings.get("default_hourly_rate", 20.0) if settings else 20.0
+    
+    # Calculate estimated pay per-shift using each shift's stored rate
+    estimated_pay = 0.0
+    for entry in period_entries:
+        shift_hours = entry.get("total_hours", 0) or 0
+        shift_rate = entry.get("hourly_rate") or hourly_rate  # fallback to current rate for old entries
+        estimated_pay += round_hours_to_minute(shift_hours) * shift_rate
+    estimated_pay = round(estimated_pay, 2)
     
     # Get YTD actual payments from payment records
     today = datetime.now(timezone.utc)
@@ -388,7 +456,7 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
         "total_hours": round(total_hours, 2),
         "total_shifts": total_shifts,
         "hourly_rate": hourly_rate,
-        "estimated_pay": round(round_hours_to_minute(period_hours) * hourly_rate, 2),
+        "estimated_pay": estimated_pay,
         "period_start": period_start.isoformat(),
         "period_end": period_end.isoformat(),
         "is_previous_period": is_previous_period,

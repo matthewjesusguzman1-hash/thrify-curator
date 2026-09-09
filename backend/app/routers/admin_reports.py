@@ -60,6 +60,8 @@ async def get_shift_report(
     for entry in entries:
         emp = employee_map.get(entry["user_id"], {})
         emp_rate = emp.get("hourly_rate") if emp.get("hourly_rate") is not None else default_rate
+        # Use the shift's stored rate if available, otherwise fall back to current employee rate
+        shift_rate = entry.get("hourly_rate") if entry.get("hourly_rate") is not None else emp_rate
         report_data.append({
             "employee_id": entry["user_id"],
             "employee_name": entry.get("user_name") or emp.get("name", "Unknown"),
@@ -68,7 +70,7 @@ async def get_shift_report(
             "total_hours": entry.get("total_hours", 0),
             "admin_note": entry.get("admin_note"),
             "adjusted_by_admin": entry.get("adjusted_by_admin", False),
-            "hourly_rate": emp_rate
+            "hourly_rate": shift_rate
         })
     
     summary = {}
@@ -85,13 +87,14 @@ async def get_shift_report(
         raw_hours = item["total_hours"] or 0
         summary[emp_id]["total_hours"] += raw_hours
         summary[emp_id]["total_shifts"] += 1
+        # Accumulate pay per-shift using each shift's rate
+        summary[emp_id]["estimated_pay"] += round_hours_to_minute(raw_hours) * item["hourly_rate"]
     
-    # Calculate pay by rounding the TOTAL hours (not each shift individually)
-    # This ensures rounding always benefits the employee
+    # Round final pay and calculate rounded hours
     for emp_id in summary:
         rounded_total = round_hours_to_minute(summary[emp_id]["total_hours"])
         summary[emp_id]["rounded_hours"] = rounded_total
-        summary[emp_id]["estimated_pay"] = round(rounded_total * summary[emp_id]["hourly_rate"], 2)
+        summary[emp_id]["estimated_pay"] = round(summary[emp_id]["estimated_pay"], 2)
     
     return {
         "start_date": start_date,
