@@ -256,7 +256,7 @@ export default function LandingPage() {
           </div>
           <div className="text-center">
             <h1 className="font-poppins text-3xl md:text-4xl font-bold text-white tracking-tight" data-testid="main-title">
-              Thrifty Curator™
+              Thrifty Curator<sup className="text-xs align-super opacity-50">™</sup>
             </h1>
             <p className="text-sm text-white/60 font-medium tracking-wider uppercase mt-1">
               Curated Resale Finds
