@@ -430,6 +430,63 @@ async def revoke_siri_key(admin: dict = Depends(get_admin_user)):
     return {"success": True, "deleted": result.deleted_count}
 
 
+
+# ========== Route Geometry Recovery ==========
+
+@router.get("/{trip_id}/route-geometry")
+async def get_trip_route_geometry(trip_id: str, admin: dict = Depends(get_admin_user)):
+    """Fetch or recover route geometry for a trip. If not stored, fetches from OSRM."""
+    trip = await db.gps_trips.find_one({"id": trip_id}, {"_id": 0})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    # If geometry already exists, return it
+    if trip.get("route_geometry") and len(trip["route_geometry"]) > 1:
+        return {"route_geometry": trip["route_geometry"], "source": "stored"}
+    
+    # Try to recover from OSRM using start/end coordinates
+    start_lat = trip.get("start_lat")
+    start_lng = trip.get("start_lng")
+    end_lat = trip.get("end_lat")
+    end_lng = trip.get("end_lng")
+    
+    if not all([start_lat, start_lng, end_lat, end_lng]):
+        return {"route_geometry": [], "source": "unavailable"}
+    
+    # If trip has legs with intermediate points, route through them
+    legs = trip.get("legs", [])
+    if legs and len(legs) > 1:
+        # Multi-leg: reconstruct each leg
+        combined = []
+        for leg in legs:
+            if leg.get("geometry"):
+                if combined:
+                    combined.extend(leg["geometry"][1:])
+                else:
+                    combined.extend(leg["geometry"])
+            else:
+                _, geo = await get_road_distance_miles(
+                    leg["start_lat"], leg["start_lng"],
+                    leg["end_lat"], leg["end_lng"]
+                )
+                if geo:
+                    if combined:
+                        combined.extend(geo[1:])
+                    else:
+                        combined.extend(geo)
+        if combined:
+            await db.gps_trips.update_one({"id": trip_id}, {"$set": {"route_geometry": combined}})
+            return {"route_geometry": combined, "source": "recovered"}
+    
+    # Single leg: fetch from OSRM
+    _, geo = await get_road_distance_miles(start_lat, start_lng, end_lat, end_lng)
+    if geo and len(geo) > 1:
+        await db.gps_trips.update_one({"id": trip_id}, {"$set": {"route_geometry": geo}})
+        return {"route_geometry": geo, "source": "recovered"}
+    
+    return {"route_geometry": [], "source": "unavailable"}
+
+
 # ========== Trip Classification ==========
 
 @router.put("/{trip_id}/classify")

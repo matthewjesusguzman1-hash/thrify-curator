@@ -988,10 +988,13 @@ export default function AdminDashboard() {
         switch (pendingAction) {
           case 'StartTrip':
             // Start GPS tracking via the tracker component
-            if (gpsTrackerRef.current?.startTrip) {
-              gpsTrackerRef.current.startTrip();
-              toast.info('Starting GPS trip...', { duration: 2000 });
-            }
+            setForceOpenOperations(true);
+            setTimeout(() => {
+              if (gpsTrackerRef.current?.startTrip) {
+                gpsTrackerRef.current.startTrip();
+                toast.info('Starting GPS trip...', { duration: 2000 });
+              }
+            }, 400);
             break;
             
           case 'LogMiles':
@@ -3183,7 +3186,8 @@ export default function AdminDashboard() {
                         <Button
                           onClick={() => {
                             buttonPress();
-                            gpsTrackerRef.current?.resumeTrip();
+                            setForceOpenOperations(true);
+                            setTimeout(() => gpsTrackerRef.current?.resumeTrip(), 400);
                           }}
                           size="sm"
                           className="flex items-center gap-1 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"
@@ -3196,7 +3200,8 @@ export default function AdminDashboard() {
                         <Button
                           onClick={() => {
                             buttonPress();
-                            gpsTrackerRef.current?.pauseTrip();
+                            setForceOpenOperations(true);
+                            setTimeout(() => gpsTrackerRef.current?.pauseTrip(), 400);
                           }}
                           size="sm"
                           className="flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"
@@ -3211,10 +3216,12 @@ export default function AdminDashboard() {
                         onClick={() => {
                           buttonPress();
                           setForceOpenOperations(true);
-                          gpsTrackerRef.current?.endTrip();
                           setTimeout(() => {
-                            gpsTrackerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                          }, 500);
+                            gpsTrackerRef.current?.endTrip();
+                            setTimeout(() => {
+                              gpsTrackerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }, 500);
+                          }, 400);
                         }}
                         size="sm"
                         className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md transition-all border-0 text-xs sm:text-sm h-9 flex-1"
@@ -3228,7 +3235,14 @@ export default function AdminDashboard() {
                     <Button
                       onClick={() => {
                         buttonPress();
-                        gpsTrackerRef.current?.startTrip();
+                        // Force open Operations group so GPS tracker mounts
+                        setForceOpenOperations(true);
+                        // Wait for mount, then start trip
+                        setTimeout(() => {
+                          if (gpsTrackerRef.current?.startTrip) {
+                            gpsTrackerRef.current.startTrip();
+                          }
+                        }, 400);
                       }}
                       disabled={tripStarting}
                       size="sm"

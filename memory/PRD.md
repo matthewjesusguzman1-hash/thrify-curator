@@ -43,7 +43,21 @@ Thrifty Curator is a React + FastAPI + MongoDB operational dashboard for a resal
 
 ## Recent Changes
 
-### Sep 7, 2026 — Light/Dark Theme Changes
+### Sep 9, 2026 — Pay Rate Snapshot + GPS Trip Fixes
+- **Fixed**: Pay rate changes no longer retroactively inflate old shifts — each shift stores the rate at clock-in
+- **Fixed**: Header "Start Trip" button now works even when Operations section is collapsed (forces it open first)
+- **Fixed**: Trip replay map recovers route geometry from OSRM on-demand if not stored
+- **Added**: Rate change audit trail in `rate_changes` collection
+- **Added**: Admin backfill endpoint for historical shift rates
+- **Added**: `/gps-trips/{trip_id}/route-geometry` endpoint for on-demand geometry recovery
+- **Files**: `time_entry.py`, `time_tracking.py`, `admin_employees.py`, `admin_time_entries.py`, `admin_reports.py`, `gps_trips.py`, `GPSMileageTracker.jsx`, `AdminDashboard.jsx`
+
+### Sep 9, 2026 — Watcher System-Wide + Worker Profile
+- **Changed**: Watcher moved to `/opt/thriftycurator` for system-wide access
+- **Changed**: Worker profile LaunchAgent + Login Item for reliable auto-start
+- **Changed**: Command polling reduced to 2 seconds for near-instant response
+- **Changed**: Restart command now kills first, uses full `/Applications/AnyDesk.app` path, logs subprocess output
+- **Files**: `anydesk_session_watcher.py`, `install_autostart.sh`
 - **Removed**: Light/dark mode toggle from admin dashboard — admin is always dark mode
 - **Kept**: Employee dashboard still has light/dark toggle (light blue palette)
 - **Kept**: Messages panel theme toggle (separate from dashboard theme)

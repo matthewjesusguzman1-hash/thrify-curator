@@ -538,7 +538,19 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
     try {
       const response = await axios.get(`${API}/admin/gps-trips/trip/${tripId}?include_locations=true`, getAuthHeader());
       if (response.data.trip) {
-        setViewingTripMap({ trip: response.data.trip, locations: response.data.trip.locations || [] });
+        let trip = response.data.trip;
+        // If no route geometry stored, try to recover it from OSRM
+        if (!trip.route_geometry || trip.route_geometry.length < 2) {
+          try {
+            const geoRes = await axios.get(`${API}/admin/gps-trips/${tripId}/route-geometry`, getAuthHeader());
+            if (geoRes.data.route_geometry?.length > 1) {
+              trip = { ...trip, route_geometry: geoRes.data.route_geometry };
+            }
+          } catch (e) {
+            console.warn("Could not recover route geometry:", e);
+          }
+        }
+        setViewingTripMap({ trip, locations: trip.locations || [] });
       }
     } catch (error) {
       console.error("Failed to load trip map:", error);
