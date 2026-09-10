@@ -156,7 +156,7 @@ async def _get_or_create_chat(conversation_id: str, history: list = None, user_i
             session_id=conversation_id,
             system_message=SYSTEM_PROMPT,
         )
-        .with_model("gemini", "gemini-3.7-flash")
+        .with_model("gemini", "gemini-3.7-pro")
     )
 
     # Replay stored history so LLM has context.
