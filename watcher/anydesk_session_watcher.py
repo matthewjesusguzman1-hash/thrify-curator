@@ -269,13 +269,19 @@ def execute_disconnect():
     try:
         if IS_MAC:
             log.warning("Admin disconnect: killing AnyDesk...")
-            subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True)
-            time.sleep(5)
-            log.info("Reopening AnyDesk so admin can reconnect...")
-            subprocess.run(["open", "-a", "AnyDesk"], timeout=10, capture_output=True)
+            r = subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True, text=True)
+            log.info(f"pkill result: rc={r.returncode} out={r.stdout} err={r.stderr}")
+            time.sleep(3)
+            log.info("Reopening AnyDesk...")
+            r = subprocess.run(["open", "/Applications/AnyDesk.app"], timeout=10, capture_output=True, text=True)
+            log.info(f"open result: rc={r.returncode} out={r.stdout} err={r.stderr}")
+            if r.returncode != 0:
+                log.info("Trying open -a fallback...")
+                r = subprocess.run(["open", "-a", "AnyDesk"], timeout=10, capture_output=True, text=True)
+                log.info(f"open -a result: rc={r.returncode} out={r.stdout} err={r.stderr}")
         else:
             subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
-            time.sleep(5)
+            time.sleep(3)
             subprocess.Popen(["AnyDesk.exe"], shell=True)
         log.info("AnyDesk restarted after admin disconnect.")
         return True
@@ -290,8 +296,9 @@ def execute_security_kill():
     try:
         if IS_MAC:
             log.warning("SHUTDOWN: Killing AnyDesk.")
-            subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True)
-            subprocess.run(["killall", "-9", "AnyDesk"], timeout=5, capture_output=True)
+            r1 = subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True, text=True)
+            r2 = subprocess.run(["killall", "-9", "AnyDesk"], timeout=5, capture_output=True, text=True)
+            log.info(f"pkill rc={r1.returncode}, killall rc={r2.returncode}")
         else:
             subprocess.run(["taskkill", "/F", "/IM", "AnyDesk.exe"], timeout=5)
         log.info("AnyDesk killed. Use Restart button in app to bring it back.")
@@ -307,7 +314,16 @@ def execute_restart():
     try:
         if IS_MAC:
             log.info("Restarting AnyDesk by admin command...")
-            subprocess.run(["open", "-a", "AnyDesk"], timeout=10, capture_output=True)
+            # Kill first to ensure clean state
+            subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True)
+            time.sleep(2)
+            # Try direct app path first
+            r = subprocess.run(["open", "/Applications/AnyDesk.app"], timeout=10, capture_output=True, text=True)
+            log.info(f"open result: rc={r.returncode} out={r.stdout} err={r.stderr}")
+            if r.returncode != 0:
+                log.info("Trying open -a fallback...")
+                r = subprocess.run(["open", "-a", "AnyDesk"], timeout=10, capture_output=True, text=True)
+                log.info(f"open -a result: rc={r.returncode} out={r.stdout} err={r.stderr}")
         else:
             subprocess.Popen(["AnyDesk.exe"], shell=True)
         log.info("AnyDesk restarted.")
