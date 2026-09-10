@@ -5,7 +5,7 @@ import globals from "globals";
 
 export default [
   {
-    ignores: ["build/**", "node_modules/**", "public/**"],
+    ignores: ["build/**", "node_modules/**", "public/**", "../tests/**", "../.emergent/**"],
   },
   js.configs.recommended,
   {
@@ -36,6 +36,10 @@ export default [
       "no-empty": "off",
       "no-case-declarations": "off",
       "no-useless-catch": "off",
+      "react/no-unescaped-entities": "off",
+      "react/display-name": "off",
+      "react/no-unknown-property": "off",
+      "no-control-regex": "off",
     },
   },
 ];

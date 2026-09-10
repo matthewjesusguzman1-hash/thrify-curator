@@ -1,95 +1,94 @@
-# Thrifty Curator - Product Requirements Document
+# Thrifty Curator™ — Product Requirements Document
 
-## Overview
-Thrifty Curator is a React + FastAPI + MongoDB operational dashboard for a resale/consignment business. It includes employee/admin dashboards, AI listing help, time tracking, AnyDesk worker monitoring, messaging, notifications, Daily.co video calls, reports, mobile wrappers, and an admin GPS/mileage tracker.
+## Original Problem Statement
+Build a comprehensive operations dashboard for a resale/consignment business supporting:
+- Admin/employee management, time tracking, payroll
+- Remote worker (AnyDesk) monitoring
+- GPS mileage tracking
+- Reports, messages, training materials
+- AI listing assistance (Gemini Flash)
+- Vendoo CSV inventory import & analytics
+- Native/mobile (Capacitor) features
+- Consignment portal, job applications, forms
 
-## Architecture
-- **Frontend**: React (CRA + Craco), TailwindCSS, Shadcn/UI, Framer Motion, Leaflet maps
-- **Backend**: FastAPI, MongoDB (Motor), Python
-- **Auth**: JWT-based with admin code login, employee email login
-- **Integrations**: Gemini AI (Emergent LLM Key), OSRM routing, Nominatim geocoding, Daily.co, AnyDesk watcher, Resend email, Web Push/APNs
+## Core Architecture
+- **Frontend**: React (CRA + CRACO) + Tailwind + Shadcn/UI
+- **Backend**: FastAPI + MongoDB (Motor)
+- **AI**: Gemini 3.7 Flash via Emergent integrations
+- **Storage**: Emergent Object Storage for images
+- **Maps**: OSRM (mileage), Nominatim (geocoding)
+- **Mobile**: Capacitor (Android/iOS wrappers), PWA
 
-## Core Features (Implemented)
+## What's Been Implemented
+
+### Pull List Feature (Sep 2026) — NEW
+- **Backend**: `/api/inventory/pull-list` GET (sold items sorted by SKU), `/api/inventory/pull-list/mark-pulled` POST, `/api/inventory/pull-list/reset` POST, `/api/inventory/pull-list/mark-all-pulled` POST
+- **Frontend**: `PullListSection.jsx` in Reports & Operations dashboard group
+- Items grouped by SKU row letter (A, B, C...) for shelf walk-through
+- Natural SKU sorting (A6 < A10 < A25)
+- Date filters: All Sold, Today, This Week, 2 Weeks
+- Individual and bulk mark-as-pulled with undo
+- Show/hide pulled items toggle
+- Collapsible row groups
+- Print-friendly view
+- **Smart CSV Import**: Modified import endpoint to upsert by SKU — re-importing the full Vendoo CSV preserves pulled status on existing items
+- Testing: 100% pass (17 backend, 7 frontend scenarios)
+
+### AI Assistant
+- Gemini 3.7 Flash for listing assistance
+- Improved hashtag prompt (creative, buyer-oriented, not title repetition)
+- Streaming responses, image context, history, retry/delete
+- Composer viewport fixes, AbortController stop
+
+### Pay Rate Snapshots (Aug 2026)
+- Hourly rate stored per shift at clock-in time
+- Old shifts keep original rate when employee rate changes
+- Backfill logic for legacy shifts without rate
+
+### GPS Mileage Tracking
+- Real-time trip tracking with OSRM road routing
+- Header Start Trip forces Operations group open
+- On-demand route geometry for trips missing stored routes
+- Multi-leg pause/resume, editable purpose categories
+- Siri shortcut support (scoped keys)
 
 ### Admin Dashboard
-- Team management, payroll tracking, hiring/interviews
-- Forms & communications, sales data, taxes
-- Remote sessions (AnyDesk monitoring), video calls (Daily.co)
-- Messaging & notifications
-- GPS Mileage Tracker (unified quick-trip system)
-- AI Listing Assistant (Gemini-powered)
+- Dark-only theme (light mode removed per user request)
+- Trademark ™ placement throughout branding
+- Dashboard groups: Team, Payroll, Forms, Hiring, Reports & Operations
 
-### Employee Dashboard  
-- Clock in/out, hours tracking, AI Listing Assistant
-- Video calls, notifications, timezone settings, employee walkthrough
+### Inventory & Sales (Vendoo)
+- CSV import with smart SKU-based deduplication
+- Analytics, stale inventory detection, tax reports
+- Year-over-year comparison, export
 
-### GPS Mileage Tracker (Admin-only)
-- Unified quick-trip system with Start/Pause/Resume/End flow using OSRM road routing
-- Multi-stop trip support, trip route replay, Siri API Key for Shortcuts
-- Manual trip entry, summary tabs, hierarchical trip history
-- Trip editing with classification, IRS-oriented CSV export, voice commands
+### Other Features
+- Employee time tracking, payroll history, payment records
+- Messaging system, form submissions, consignment portal
+- Job applications, skills tests, interview scheduling
+- Remote session monitoring (AnyDesk watcher)
+- Password management, W-9/W-8BEN document handling
+- Web push notifications, APNs (sandbox)
 
-### AI Listing Assistant
-- Gemini-powered via Emergent integrations (gemini-3.7-flash)
-- Multi-turn conversations with image uploads
-- **Image compression**: uploads resized to 1024px and JPEG 80% for Gemini context (~90% smaller), original full-res kept for display
-- **Image context persistence**: all images stay in context for follow-up questions
-- **Stop button**: cancel slow requests mid-stream with AbortController
-- **Retry button**: regenerate the last AI response with same prompt
-- **Delete button**: remove last user+assistant exchange
-- Saved prompts, chat history, message copying
-- Light/dark theme integration, expanded view with sidebar
-- Parallel image fetching on session replay, capped to last 20 messages
+## Prioritized Backlog
 
-## Recent Changes
+### P0 — User Requested / In Discussion
+- Shipping label management (Gmail integration or upload approach — TBD)
+- Training video section (content types, upload flow — TBD)
 
-### Sep 9, 2026 — Pay Rate Snapshot + GPS Trip Fixes
-- **Fixed**: Pay rate changes no longer retroactively inflate old shifts — each shift stores the rate at clock-in
-- **Fixed**: Header "Start Trip" button now works even when Operations section is collapsed (forces it open first)
-- **Fixed**: Trip replay map recovers route geometry from OSRM on-demand if not stored
-- **Added**: Rate change audit trail in `rate_changes` collection
-- **Added**: Admin backfill endpoint for historical shift rates
-- **Added**: `/gps-trips/{trip_id}/route-geometry` endpoint for on-demand geometry recovery
-- **Files**: `time_entry.py`, `time_tracking.py`, `admin_employees.py`, `admin_time_entries.py`, `admin_reports.py`, `gps_trips.py`, `GPSMileageTracker.jsx`, `AdminDashboard.jsx`
+### P1 — Pending User Confirmation
+- Pay rate snapshot: production validation after real $3→$5 rate change
+- GPS header Start Trip & route replay: production device validation
+- AI hashtag quality: real merchant feedback on Flash + improved prompt
 
-### Sep 9, 2026 — Watcher System-Wide + Worker Profile
-- **Changed**: Watcher moved to `/opt/thriftycurator` for system-wide access
-- **Changed**: Worker profile LaunchAgent + Login Item for reliable auto-start
-- **Changed**: Command polling reduced to 2 seconds for near-instant response
-- **Changed**: Restart command now kills first, uses full `/Applications/AnyDesk.app` path, logs subprocess output
-- **Files**: `anydesk_session_watcher.py`, `install_autostart.sh`
-- **Removed**: Light/dark mode toggle from admin dashboard — admin is always dark mode
-- **Kept**: Employee dashboard still has light/dark toggle (light blue palette)
-- **Kept**: Messages panel theme toggle (separate from dashboard theme)
-- **Files**: `AdminDashboard.jsx` — removed `data-theme` attr, removed toggle from More dropdown
+### P2 — Known Issues
+- AnyDesk watcher: autostart/remote restart reliability unresolved
+- Platform lint engine error (ESLint works locally, platform check fails)
+- AI composer/autoscroll: not user-confirmed in production
 
-### Sep 7, 2026 — AI Image Compression for Speed
-- **Added**: Image compression via Pillow — resize to max 1024px, JPEG quality 80%
-- **Result**: Gemini gets ~90KB instead of ~2-5MB per image; display still uses original full-res
-- **Logged**: Compression ratio logged per upload (e.g. "467KB -> 90KB for Gemini")
-
-### Sep 7, 2026 — AI Chat Stop/Retry/Delete + Speed Optimization
-- **Added**: Stop button, Retry button, Delete button
-- **Optimized**: Parallel image fetching, history replay capped to 20 messages
-- **Preserved**: All images always included in replay
-
-### Sep 7, 2026 — AI Chat Input Disappearing Bug Fix
-- **Fixed**: Input disappeared in expanded mode when history toggled
-- **Fixed**: Stale state on panel reopen, mobile viewport height (dvh)
-- **Tested**: 100% pass on 10 scenarios (desktop + mobile)
-
-### Sep 7, 2026 — Trip Route Replay + Pause/Resume + GPS Unification + Siri API Key
-- Pause/resume, per-leg OSRM distance, TripReplayMap, Siri API Key CRUD
-
-## Pending / Unconfirmed
-- AI assistant auto-scroll behavior
-- GPS features awaiting production redeploy confirmation
-- Employee message desktop notifications (unverified on real device)
-- AnyDesk watcher offline (needs user's Mac logs)
-
-## Backlog
-- Category manager settings panel
-- Trip editing/classification UX polish
-- Mapbox GPS matching integration
-- eBay Browse API for listing enrichment
-- Bulk CSV trip import for historical trips
+### P3 — Future / Backlog
+- Payroll provider integration (Gusto discussed, not started)
+- Daily AI-generated activity summaries
+- Message classification & draft replies
+- Employee message cross-device notification
+- Remote worker geolocation real-device validation

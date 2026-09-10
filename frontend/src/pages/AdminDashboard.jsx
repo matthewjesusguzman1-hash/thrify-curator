@@ -90,6 +90,7 @@ import PasswordManagementSection from "@/components/admin/sections/PasswordManag
 import FinancialsSection from "@/components/admin/sections/FinancialsSection";
 import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArchiveSection";
 import SalesDataSection from "@/components/admin/sections/SalesDataSection";
+import PullListSection from "@/components/admin/sections/PullListSection";
 import TaxesSection from "@/components/admin/sections/TaxesSection";
 import InterviewSchedulerSection from "@/components/admin/sections/InterviewSchedulerSection";
 import ApplicantTestsSection from "@/components/admin/sections/ApplicantTestsSection";
@@ -3852,6 +3853,9 @@ export default function AdminDashboard() {
                 getAuthHeader={getAuthHeader}
                 onTripStateChange={setTripState}
               />
+
+              {/* Pull List - Sorted SKU list for pulling sold items */}
+              <PullListSection getAuthHeader={getAuthHeader} />
 
               {/* Sales Data Section - CSV Import, Reports, Analytics */}
               <SalesDataSection getAuthHeader={getAuthHeader} />

@@ -847,7 +847,12 @@ const ImportModal = ({ getAuthHeader, hasExistingData, onClose, onSuccess }) => 
                 </div>
               ) : (
                 <p className="text-gray-600 mb-4">
-                  {result.details?.rows_processed?.toLocaleString()} items imported
+                  {result.message || `${result.details?.rows_processed?.toLocaleString()} items imported`}
+                  {result.details?.rows_updated > 0 && (
+                    <span className="block text-xs text-gray-500 mt-1">
+                      {result.details.pulled_preserved > 0 && `${result.details.pulled_preserved} pulled items preserved`}
+                    </span>
+                  )}
                 </p>
               )}
               <Button onClick={onSuccess} className="bg-green-600 hover:bg-green-700">

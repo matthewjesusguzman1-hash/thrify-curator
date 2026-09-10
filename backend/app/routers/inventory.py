@@ -142,22 +142,18 @@ async def import_inventory_csv(
 ):
     """
     Import inventory/sales data from CSV.
-    Stores ALL data without filtering - every row is preserved.
-    
-    Handles large files (10,000+ rows) efficiently.
+    Smart merge: matches items by SKU to avoid duplicates.
+    Preserves pulled status across re-imports.
     """
     if not file.filename.lower().endswith('.csv'):
         raise HTTPException(status_code=400, detail="Only CSV files are supported")
     
     try:
-        # Read file content
         content = await file.read()
         
-        # Check file size (limit to 50MB for safety)
         if len(content) > 50 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="File too large. Maximum size is 50MB.")
         
-        # Try different encodings
         decoded = None
         for encoding in ['utf-8-sig', 'utf-8', 'latin-1', 'cp1252']:
             try:
@@ -169,43 +165,55 @@ async def import_inventory_csv(
         if decoded is None:
             raise HTTPException(status_code=400, detail="Could not decode CSV file. Try saving it as UTF-8.")
         
-        # Parse CSV
         reader = csv.DictReader(io.StringIO(decoded))
         
         if not reader.fieldnames:
             raise HTTPException(status_code=400, detail="CSV file has no headers")
         
-        # Create header mapping
         header_map = {normalize_column_name(h): h for h in reader.fieldnames}
         
-        # Generate batch ID for this import
         batch_id = str(uuid.uuid4())
         imported_at = datetime.now(timezone.utc).isoformat()
         
-        # Process rows in batches for efficiency
+        # Build lookup of existing items by SKU to preserve pulled status
+        existing_by_sku = {}
+        cursor = db.inventory_items.find(
+            {"sku": {"$ne": None}},
+            {"sku": 1, "pulled": 1, "pulled_at": 1, "id": 1, "_id": 0}
+        )
+        async for doc in cursor:
+            if doc.get("sku"):
+                existing_by_sku[doc["sku"]] = doc
+        
+        # Collect all SKUs from this import to detect removed items later
+        import_skus = set()
+        
         items_to_insert = []
+        items_to_update = []
         rows_processed = 0
         rows_skipped = 0
+        rows_updated = 0
+        rows_new = 0
         
         for row in reader:
-            # Skip completely empty rows
             if all(not v or str(v).strip() == "" for v in row.values()):
                 rows_skipped += 1
                 continue
             
-            # Extract normalized fields
             title = find_column_value(row, VENDOO_COLUMN_MAPPINGS["title"], header_map)
             
-            # Skip rows without a title/name (likely header duplicates or empty)
             if not title:
                 rows_skipped += 1
                 continue
             
-            item = {
-                "id": str(uuid.uuid4()),
-                "raw_data": {k: v for k, v in row.items() if v},  # Store non-empty values
+            sku = find_column_value(row, VENDOO_COLUMN_MAPPINGS["sku"], header_map)
+            if sku:
+                import_skus.add(sku)
+            
+            item_data = {
+                "raw_data": {k: v for k, v in row.items() if v},
                 "title": title,
-                "sku": find_column_value(row, VENDOO_COLUMN_MAPPINGS["sku"], header_map),
+                "sku": sku,
                 "platform": find_column_value(row, VENDOO_COLUMN_MAPPINGS["platform"], header_map),
                 "status": find_column_value(row, VENDOO_COLUMN_MAPPINGS["status"], header_map),
                 "sold_date": parse_date(find_column_value(row, VENDOO_COLUMN_MAPPINGS["sold_date"], header_map)),
@@ -227,19 +235,41 @@ async def import_inventory_csv(
                 "source": source,
             }
             
-            items_to_insert.append(item)
+            # If SKU exists in DB, update data but preserve pulled status
+            if sku and sku in existing_by_sku:
+                existing = existing_by_sku[sku]
+                items_to_update.append((existing["id"], item_data))
+                rows_updated += 1
+            else:
+                item_data["id"] = str(uuid.uuid4())
+                items_to_insert.append(item_data)
+                rows_new += 1
+            
             rows_processed += 1
             
-            # Insert in batches of 500 to avoid memory issues
+            # Batch inserts
             if len(items_to_insert) >= 500:
                 await db.inventory_items.insert_many(items_to_insert)
                 items_to_insert = []
+            
+            # Batch updates
+            if len(items_to_update) >= 200:
+                for item_id, update_data in items_to_update:
+                    await db.inventory_items.update_one(
+                        {"id": item_id},
+                        {"$set": update_data}
+                    )
+                items_to_update = []
         
-        # Insert remaining items
+        # Flush remaining
         if items_to_insert:
             await db.inventory_items.insert_many(items_to_insert)
+        for item_id, update_data in items_to_update:
+            await db.inventory_items.update_one(
+                {"id": item_id},
+                {"$set": update_data}
+            )
         
-        # Get column summary for user reference
         detected_columns = {
             "total_columns": len(reader.fieldnames),
             "columns": reader.fieldnames,
@@ -251,14 +281,17 @@ async def import_inventory_csv(
         
         return {
             "success": True,
-            "message": f"Successfully imported {rows_processed} items",
+            "message": f"Imported {rows_processed} items ({rows_new} new, {rows_updated} updated)",
             "batch_id": batch_id,
             "details": {
                 "rows_processed": rows_processed,
+                "rows_new": rows_new,
+                "rows_updated": rows_updated,
                 "rows_skipped": rows_skipped,
                 "total_rows": rows_processed + rows_skipped,
                 "file_name": file.filename,
                 "file_size_kb": round(len(content) / 1024, 1),
+                "pulled_preserved": sum(1 for s in import_skus if s in existing_by_sku and existing_by_sku[s].get("pulled")),
             },
             "columns_detected": detected_columns
         }
@@ -1095,3 +1128,118 @@ async def generate_tax_report(year: int, platforms: Optional[str] = None):
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+
+# ============== PULL LIST ==============
+
+class PullListMarkRequest(BaseModel):
+    item_ids: List[str]
+
+class PullListResetRequest(BaseModel):
+    item_ids: List[str]
+
+
+@router.get("/pull-list")
+async def get_pull_list(
+    since: Optional[str] = Query(None, description="ISO date, e.g. 2026-01-15"),
+    until: Optional[str] = Query(None, description="ISO date upper bound"),
+    show_pulled: bool = Query(False, description="Include already-pulled items"),
+):
+    """
+    Return sold inventory items sorted by SKU for shelf pulling.
+    Items are sorted with natural SKU ordering (letter row, then number).
+    """
+    query = {"status": iregex("sold")}
+
+    if not show_pulled:
+        query["pulled"] = {"$ne": True}
+
+    if since or until:
+        date_filter = {}
+        if since:
+            date_filter["$gte"] = since
+        if until:
+            date_filter["$lte"] = until
+        query["sold_date"] = date_filter
+
+    items = await db.inventory_items.find(query, {"_id": 0}).to_list(length=5000)
+
+    def sku_sort_key(item):
+        sku = item.get("sku") or ""
+        # Extract leading letters and trailing numbers for natural sort
+        letters = ""
+        numbers = ""
+        for ch in sku:
+            if ch.isalpha():
+                letters += ch.upper()
+            elif ch.isdigit():
+                numbers += ch
+            # skip other chars
+        return (letters, int(numbers) if numbers else 0)
+
+    items.sort(key=sku_sort_key)
+
+    # Group by row letter for easy shelf navigation
+    rows = {}
+    for item in items:
+        sku = item.get("sku") or "?"
+        row_letter = ""
+        for ch in sku:
+            if ch.isalpha():
+                row_letter += ch.upper()
+            else:
+                break
+        if not row_letter:
+            row_letter = "?"
+        rows.setdefault(row_letter, []).append(item)
+
+    return {
+        "items": items,
+        "total": len(items),
+        "rows": {k: len(v) for k, v in rows.items()},
+    }
+
+
+@router.post("/pull-list/mark-pulled")
+async def mark_items_pulled(req: PullListMarkRequest):
+    """Mark items as pulled from shelf."""
+    now = datetime.now(timezone.utc).isoformat()
+    result = await db.inventory_items.update_many(
+        {"id": {"$in": req.item_ids}},
+        {"$set": {"pulled": True, "pulled_at": now}},
+    )
+    return {"updated": result.modified_count}
+
+
+@router.post("/pull-list/reset")
+async def reset_pulled_items(req: PullListResetRequest):
+    """Un-mark items (undo accidental pull)."""
+    result = await db.inventory_items.update_many(
+        {"id": {"$in": req.item_ids}},
+        {"$unset": {"pulled": "", "pulled_at": ""}},
+    )
+    return {"updated": result.modified_count}
+
+
+@router.post("/pull-list/mark-all-pulled")
+async def mark_all_pulled(
+    since: Optional[str] = Query(None),
+    until: Optional[str] = Query(None),
+):
+    """Mark every unpulled sold item in the date range as pulled."""
+    query = {"status": iregex("sold"), "pulled": {"$ne": True}}
+    if since or until:
+        date_filter = {}
+        if since:
+            date_filter["$gte"] = since
+        if until:
+            date_filter["$lte"] = until
+        query["sold_date"] = date_filter
+
+    now = datetime.now(timezone.utc).isoformat()
+    result = await db.inventory_items.update_many(
+        query,
+        {"$set": {"pulled": True, "pulled_at": now}},
+    )
+    return {"updated": result.modified_count}
