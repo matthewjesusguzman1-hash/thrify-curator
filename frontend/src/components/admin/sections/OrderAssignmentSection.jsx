@@ -6,9 +6,10 @@ import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-export default function OrderAssignmentSection({ getAuthHeader, employees }) {
+export default function OrderAssignmentSection({ getAuthHeader, employees: employeesProp }) {
   const [assignments, setAssignments] = useState([]);
   const [labels, setLabels] = useState([]);
+  const [employeesList, setEmployeesList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -22,6 +23,9 @@ export default function OrderAssignmentSection({ getAuthHeader, employees }) {
   };
   const [sinceDate, setSinceDate] = useState(getLocalDate);
   const [untilDate, setUntilDate] = useState(getLocalDate);
+
+  // Use prop if available, otherwise fetch our own
+  const employees = (employeesProp && employeesProp.length > 0) ? employeesProp : employeesList;
 
   const fetchAssignments = useCallback(async () => {
     try {
@@ -37,10 +41,17 @@ export default function OrderAssignmentSection({ getAuthHeader, employees }) {
     } catch (err) { /* ignore */ }
   }, [getAuthHeader]);
 
+  const fetchEmployees = useCallback(async () => {
+    try {
+      const { data } = await axios.get(`${API}/admin/employees`, getAuthHeader());
+      setEmployeesList(data || []);
+    } catch (err) { /* ignore */ }
+  }, [getAuthHeader]);
+
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchAssignments(), fetchLabels()]).finally(() => setLoading(false));
-  }, [fetchAssignments, fetchLabels]);
+    Promise.all([fetchAssignments(), fetchLabels(), fetchEmployees()]).finally(() => setLoading(false));
+  }, [fetchAssignments, fetchLabels, fetchEmployees]);
 
   const handleAssign = async () => {
     if (!selectedEmployee) { toast.error("Select an employee"); return; }
