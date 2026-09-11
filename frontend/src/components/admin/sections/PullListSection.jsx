@@ -9,34 +9,38 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 export default function PullListSection({ getAuthHeader }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const todayStr = new Date().toISOString().split("T")[0];
-  const [sinceDate, setSinceDate] = useState(todayStr);
-  const [untilDate, setUntilDate] = useState(todayStr);
+  const getLocalDate = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+  const [sinceDate, setSinceDate] = useState(getLocalDate);
+  const [untilDate, setUntilDate] = useState(getLocalDate);
   const [expandedRows, setExpandedRows] = useState(new Set());
 
   const applyPreset = (key) => {
     const now = new Date();
-    const to = now.toISOString().split("T")[0];
+    const to = getLocalDate();
     let from = to;
     if (key === "3days") {
       const d = new Date(now); d.setDate(d.getDate() - 3);
-      from = d.toISOString().split("T")[0];
+      from = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     } else if (key === "week") {
       const d = new Date(now); d.setDate(d.getDate() - 7);
-      from = d.toISOString().split("T")[0];
+      from = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     }
     setSinceDate(from);
     setUntilDate(to);
   };
 
   const activePreset = (() => {
-    const now = new Date();
-    const to = now.toISOString().split("T")[0];
+    const to = getLocalDate();
     if (sinceDate === to && untilDate === to) return "today";
-    const d3 = new Date(now); d3.setDate(d3.getDate() - 3);
-    if (sinceDate === d3.toISOString().split("T")[0] && untilDate === to) return "3days";
-    const d7 = new Date(now); d7.setDate(d7.getDate() - 7);
-    if (sinceDate === d7.toISOString().split("T")[0] && untilDate === to) return "week";
+    const d3 = new Date(); d3.setDate(d3.getDate() - 3);
+    const d3s = `${d3.getFullYear()}-${String(d3.getMonth() + 1).padStart(2, "0")}-${String(d3.getDate()).padStart(2, "0")}`;
+    if (sinceDate === d3s && untilDate === to) return "3days";
+    const d7 = new Date(); d7.setDate(d7.getDate() - 7);
+    const d7s = `${d7.getFullYear()}-${String(d7.getMonth() + 1).padStart(2, "0")}-${String(d7.getDate()).padStart(2, "0")}`;
+    if (sinceDate === d7s && untilDate === to) return "week";
     return null;
   })();
 
