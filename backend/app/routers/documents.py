@@ -60,13 +60,23 @@ async def upload_document(
     storage_path = f"documents/{doc_id}.{ext}" if ext else f"documents/{doc_id}"
     put_object(storage_path, content, content_type)
 
-    # Generate preview for PDFs
-    preview_path = ""
+    # Generate previews for PDFs (all pages)
+    preview_paths = []
+    page_count = 1
     if ext == "pdf":
         try:
-            img_bytes = _pdf_to_image(content)
-            preview_path = f"documents/previews/{doc_id}.png"
-            put_object(preview_path, img_bytes, "image/png")
+            import fitz
+            pdf_doc = fitz.open(stream=content, filetype="pdf")
+            page_count = pdf_doc.page_count
+            mat = fitz.Matrix(2, 2)
+            for i in range(page_count):
+                page = pdf_doc.load_page(i)
+                pix = page.get_pixmap(matrix=mat)
+                img_bytes = pix.tobytes("png")
+                p_path = f"documents/previews/{doc_id}_p{i}.png"
+                put_object(p_path, img_bytes, "image/png")
+                preview_paths.append(p_path)
+            pdf_doc.close()
         except Exception:
             pass
 
@@ -77,10 +87,10 @@ async def upload_document(
     if not extracted_text.strip():
         try:
             if ext == "pdf":
-                img_bytes = _pdf_to_image(content) if not preview_path else None
-                if preview_path:
+                img_bytes = _pdf_to_image(content) if not preview_paths else None
+                if preview_paths:
                     from app.services.object_storage import get_object
-                    img_bytes, _ = get_object(preview_path)
+                    img_bytes, _ = get_object(preview_paths[0])
             elif content_type.startswith("image/"):
                 img_bytes = content
             else:
@@ -109,7 +119,8 @@ async def upload_document(
         "extension": ext,
         "file_size": len(content),
         "storage_path": storage_path,
-        "preview_path": preview_path,
+        "preview_paths": preview_paths,
+        "page_count": page_count,
         "extracted_text": extracted_text,
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
         "uploaded_by": admin.get("email", ""),
@@ -227,13 +238,17 @@ async def get_document_file(
     return Response(
         content=data,
         media_type=doc.get("content_type", ct),
-        headers={"Content-Disposition": f'inline; filename="{doc["filename"]}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{doc["filename"]}"',
+            "Cache-Control": "no-cache",
+        },
     )
 
 
 @router.get("/{doc_id}/preview")
 async def get_document_preview(
     doc_id: str,
+    page: int = Query(0, description="Page number (0-indexed)"),
     token: Optional[str] = Query(None),
 ):
     import jwt as pyjwt
@@ -255,17 +270,40 @@ async def get_document_preview(
 
     from fastapi.responses import Response
 
+    # Image files: serve directly (single page)
     if doc.get("content_type", "").startswith("image/"):
         from app.services.object_storage import get_object
         data, ct = get_object(doc["storage_path"])
         return Response(content=data, media_type=ct)
 
-    if doc.get("preview_path"):
-        from app.services.object_storage import get_object
-        data, ct = get_object(doc["preview_path"])
-        return Response(content=data, media_type="image/png")
+    # PDF: serve the requested page preview
+    preview_paths = doc.get("preview_paths", [])
+    # Backward compat: old docs may have single preview_path
+    if not preview_paths and doc.get("preview_path"):
+        preview_paths = [doc["preview_path"]]
 
-    raise HTTPException(404, "No preview available")
+    if page < 0 or page >= len(preview_paths):
+        # Fallback: generate on-the-fly if we have the PDF
+        try:
+            from app.services.object_storage import get_object
+            import fitz
+            data, _ = get_object(doc["storage_path"])
+            pdf_doc = fitz.open(stream=data, filetype="pdf")
+            if page < 0 or page >= pdf_doc.page_count:
+                raise HTTPException(404, "Page not found")
+            mat = fitz.Matrix(2, 2)
+            pix = pdf_doc.load_page(page).get_pixmap(matrix=mat)
+            img_bytes = pix.tobytes("png")
+            pdf_doc.close()
+            return Response(content=img_bytes, media_type="image/png")
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(404, "No preview available")
+
+    from app.services.object_storage import get_object
+    data, ct = get_object(preview_paths[page])
+    return Response(content=data, media_type="image/png")
 
 
 # ── Update document ───────────────────────────────────────────
@@ -287,6 +325,8 @@ async def update_document(
         updates["folder"] = body["folder"]
     if "tags" in body:
         updates["tags"] = body["tags"] if isinstance(body["tags"], list) else [t.strip() for t in body["tags"].split(",") if t.strip()]
+    if "page_count" in body and isinstance(body["page_count"], int):
+        updates["page_count"] = body["page_count"]
 
     if updates:
         await database.business_documents.update_one({"id": doc_id}, {"$set": updates})
@@ -306,6 +346,50 @@ async def delete_document(doc_id: str, admin: dict = Depends(get_admin_user)):
 
     await database.business_documents.delete_one({"id": doc_id})
     return {"success": True}
+
+
+
+@router.post("/backfill-pages")
+async def backfill_page_counts(admin: dict = Depends(get_admin_user)):
+    """Generate multi-page previews for existing PDFs missing page_count."""
+    import fitz
+    from app.services.object_storage import get_object, put_object
+
+    database = get_db()
+    docs = await database.business_documents.find(
+        {"extension": "pdf", "$or": [{"page_count": {"$exists": False}}, {"page_count": None}]},
+        {"_id": 0}
+    ).to_list(500)
+
+    results = []
+    for doc in docs:
+        doc_id = doc["id"]
+        try:
+            data, ct = get_object(doc["storage_path"])
+            pdf_doc = fitz.open(stream=data, filetype="pdf")
+            page_count = pdf_doc.page_count
+
+            preview_paths = []
+            mat = fitz.Matrix(2, 2)
+            for i in range(page_count):
+                p_path = f"documents/previews/{doc_id}_p{i}.png"
+                page = pdf_doc.load_page(i)
+                pix = page.get_pixmap(matrix=mat)
+                img_bytes = pix.tobytes("png")
+                put_object(p_path, img_bytes, "image/png")
+                preview_paths.append(p_path)
+
+            pdf_doc.close()
+
+            await database.business_documents.update_one(
+                {"id": doc_id},
+                {"$set": {"page_count": page_count, "preview_paths": preview_paths}}
+            )
+            results.append({"name": doc["display_name"], "pages": page_count, "status": "ok"})
+        except Exception as e:
+            results.append({"name": doc["display_name"], "pages": 0, "status": str(e)})
+
+    return {"processed": len(results), "results": results}
 
 
 # ── Helpers ───────────────────────────────────────────────────

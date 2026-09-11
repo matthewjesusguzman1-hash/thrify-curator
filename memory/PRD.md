@@ -113,4 +113,6 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 - **Actions**: Print, download, edit (name/folder/tags), delete with confirmation
 - **Preview**: PDFs converted to PNG, images served directly
 - **Object Storage**: Files stored durably via Emergent Object Storage
-- **Backend**: `/api/documents/*` — upload, list, search, folders, tags, update, delete, file/preview serve
+- **Multi-page Preview**: Tap a document to expand — swipe left/right or tap arrows to navigate all pages; page dots + "Page X of Y" indicator
+- **Download**: Blob-based download works on any device (phone, desktop) with Content-Disposition: attachment header
+- **Backend**: `/api/documents/*` — upload, list, search, folders, tags, update, delete, file/preview serve (with `?page=N` for multi-page)

@@ -3,7 +3,8 @@ import axios from "axios";
 import { toast } from "sonner";
 import {
   FolderOpen, Upload, Search, Tag, Trash2, FileText, Image as ImageIcon,
-  Eye, Edit2, X, Download, ChevronDown, ChevronUp, Printer, Plus, Loader2,
+  Eye, Edit2, X, Download, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
+  Printer, Plus, Loader2,
   Landmark, ShieldCheck, FileCheck, Receipt, Scale, FolderClosed, MoreHorizontal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -403,21 +404,55 @@ function DocumentRow({
   const [editName, setEditName] = useState(doc.display_name);
   const [editFolder, setEditFolder] = useState(doc.folder);
   const [editTags, setEditTags] = useState((doc.tags || []).join(", "));
+  const [currentPage, setCurrentPage] = useState(0);
+  const touchStartRef = useRef(null);
   const isExpanded = previewDoc === doc.id;
   const isEditing = editingDoc === doc.id;
   const isImage = doc.content_type?.startsWith("image/");
   const isPdf = doc.extension === "pdf";
   const hasPreview = isImage || isPdf;
+  const pageCount = doc.page_count || 1;
 
   const FolderIcon = FOLDER_ICONS[doc.folder] || FolderClosed;
   const folderColor = FOLDER_COLORS[doc.folder] || "#6B7280";
+
+  const goPage = (dir) => {
+    setCurrentPage(p => Math.max(0, Math.min(pageCount - 1, p + dir)));
+  };
+
+  const handleTouchStart = (e) => { touchStartRef.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e) => {
+    if (touchStartRef.current === null) return;
+    const diff = touchStartRef.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) goPage(diff > 0 ? 1 : -1);
+    touchStartRef.current = null;
+  };
+
+  const handleDownload = async (e) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(getFileUrl(doc.id));
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = doc.filename || "document";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // Fallback: open in new tab
+      window.open(getFileUrl(doc.id), "_blank");
+    }
+  };
 
   return (
     <div className="rounded-xl border border-white/[0.06] bg-[#0f0f1a] overflow-hidden" data-testid={`doc-row-${doc.id}`}>
       {/* Main row */}
       <div
         className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/[0.02] transition-colors"
-        onClick={() => setPreviewDoc(isExpanded ? null : doc.id)}
+        onClick={() => { setPreviewDoc(isExpanded ? null : doc.id); setCurrentPage(0); }}
       >
         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${folderColor}15` }}>
           {isImage ? <ImageIcon className="w-4 h-4" style={{ color: folderColor }} /> : <FileText className="w-4 h-4" style={{ color: folderColor }} />}
@@ -431,6 +466,11 @@ function DocumentRow({
             <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: `${folderColor}15`, color: folderColor }}>
               {doc.folder}
             </span>
+            {pageCount > 1 && (
+              <span className="px-1.5 py-0.5 rounded bg-white/[0.06] text-white/40 text-[10px]">
+                {pageCount} pages
+              </span>
+            )}
           </div>
           {doc.tags?.length > 0 && (
             <div className="flex gap-1 mt-1 flex-wrap">
@@ -452,16 +492,14 @@ function DocumentRow({
         >
           <Printer className="w-4 h-4" />
         </button>
-        <a
-          href={getFileUrl(doc.id)}
-          download={doc.filename}
-          onClick={(e) => e.stopPropagation()}
+        <button
+          onClick={handleDownload}
           className="text-white/20 hover:text-[#10B981] transition-colors flex-shrink-0"
           title="Download"
           data-testid={`download-doc-${doc.id}`}
         >
           <Download className="w-4 h-4" />
-        </a>
+        </button>
         <button
           onClick={(e) => { e.stopPropagation(); setEditingDoc(isEditing ? null : doc.id); }}
           className="text-white/20 hover:text-[#F59E0B] transition-colors flex-shrink-0"
@@ -545,15 +583,61 @@ function DocumentRow({
         </div>
       )}
 
-      {/* Preview */}
+      {/* Multi-page preview with swipe */}
       {isExpanded && hasPreview && (
-        <div className="px-3 py-3 bg-white/[0.01] border-t border-white/[0.06]">
-          <img
-            src={getPreviewUrl(doc.id)}
-            alt={doc.display_name}
-            className="max-w-full h-auto rounded-lg border border-white/[0.06] max-h-[400px] object-contain mx-auto"
-            data-testid={`preview-img-${doc.id}`}
-          />
+        <div className="border-t border-white/[0.06] bg-white/[0.01]">
+          <div
+            className="relative touch-pan-y"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            data-testid={`preview-container-${doc.id}`}
+          >
+            <img
+              src={`${getPreviewUrl(doc.id)}&page=${currentPage}`}
+              alt={`${doc.display_name} - Page ${currentPage + 1}`}
+              className="max-w-full h-auto max-h-[500px] object-contain mx-auto block"
+              data-testid={`preview-img-${doc.id}`}
+            />
+
+            {/* Page navigation arrows */}
+            {pageCount > 1 && currentPage > 0 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); goPage(-1); }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white/80 hover:bg-black/70 transition-colors"
+                data-testid={`prev-page-${doc.id}`}
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            )}
+            {pageCount > 1 && currentPage < pageCount - 1 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); goPage(1); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white/80 hover:bg-black/70 transition-colors"
+                data-testid={`next-page-${doc.id}`}
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Page indicator */}
+          {pageCount > 1 && (
+            <div className="flex items-center justify-center gap-2 py-2">
+              <span className="text-xs text-white/40">
+                Page {currentPage + 1} of {pageCount}
+              </span>
+              <div className="flex gap-1">
+                {Array.from({ length: pageCount }, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(i)}
+                    className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentPage ? "bg-[#00D4FF] w-4" : "bg-white/20 hover:bg-white/40"}`}
+                    data-testid={`page-dot-${doc.id}-${i}`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

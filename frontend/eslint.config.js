@@ -19,6 +19,9 @@ module.exports = [
     rules: {
       "no-unused-vars": "warn",
       "no-undef": "off",
+      "no-empty": "warn",
+      "no-case-declarations": "warn",
+      "no-useless-catch": "warn",
     },
   },
   { ignores: ["build/", "node_modules/", "public/"] },
