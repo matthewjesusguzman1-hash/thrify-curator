@@ -24,15 +24,18 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 ### Orders & Shipping Labels (Sep 11, 2026) — NEW
 - **Backend**: `/api/orders/*` router with label upload, list, delete, SKU tag, preview; order assignment CRUD; employee endpoints
 - **Admin Operations page**: Shipping Labels section (drag-and-drop + file picker, PDF/image support, Emergent Object Storage)
-- **Inline Label Preview**: Eye icon expands to show full shipping label image (PDFs converted to PNG via PyMuPDF at 2x resolution)
+- **Inline Label Preview**: Click label row to expand/collapse full shipping label image (PDFs converted to PNG via PyMuPDF at 2x resolution)
 - **SKU Tagging**: Each label has "Add SKU" button — type the SKU after previewing, exact match at 100% confidence
+- **Admin Print Labels**: Individual print button per label + "Print All" button in section header
+- **Auto-Name Labels**: On upload, PDF text is extracted (pdfplumber + PyMuPDF fallback); recipient name parsed from "SHIP TO" / "DELIVER TO" sections and shown as the label display name
 - **Admin Operations page**: Order Assignments section (assign orders to specific employees with date range + labels)
+- **Assignment History Log**: Active, Completed (green), and Incomplete (yellow) statuses shown; admin can remove any entry with confirmation
 - **Employee Dashboard**: "Orders" button (only visible when admin has assigned active orders)
 - **Employee Orders page**: Side-by-side view — matched labels shown directly under their pull list item with link icon, preview, and print buttons
 - **Label Printing**: Print button on each label opens a clean print window (works for both PDF and image labels)
 - **Auto-matching**: SKU tag exact match (priority) → PDF text extraction + platform/title/SKU heuristics (fallback)
 - **Unmatched labels**: Shown separately with warning indicator, preview, and print buttons
-- **Complete flow**: Employee taps "Complete Orders" → assignment marked done → disappears from dashboard
+- **Complete flow**: Employee taps "Complete Orders" → assignment marked done → logged in history; unreplaced/uncompleted assignments logged as incomplete
 - **Access control**: Admin assigns, employee sees only when assigned
 
 ### Admin Dashboard Restructure (Sep 2026)

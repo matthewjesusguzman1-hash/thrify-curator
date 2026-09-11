@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Upload, FileText, Trash2, Image as ImageIcon, Loader2,
-  Check, Tag, ChevronDown, ChevronUp
+  Check, Tag, ChevronDown, ChevronUp, Printer
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -108,6 +108,65 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
   const getLabelUrl = (labelId) =>
     `${API}/orders/labels/${labelId}/file?token=${localStorage.getItem("token")}`;
 
+  const getPreviewUrl = (labelId) =>
+    `${API}/orders/labels/${labelId}/preview?token=${localStorage.getItem("token")}`;
+
+  const printLabel = (label) => {
+    const url = getLabelUrl(label.id);
+    const isImg = label.content_type?.startsWith("image/");
+    const win = window.open("", "_blank", "width=600,height=800");
+    if (!win) { toast.error("Pop-up blocked — allow pop-ups to print"); return; }
+    win.document.write(`
+      <html><head><title>Print Label</title>
+      <style>
+        body { margin: 0; display: flex; justify-content: center; align-items: flex-start; }
+        img { max-width: 100%; height: auto; }
+        iframe { width: 100%; height: 100vh; border: none; }
+        @media print { body { margin: 0; } }
+      </style></head><body>
+      ${isImg
+        ? `<img src="${url}" onload="setTimeout(()=>{window.print();},300)" />`
+        : `<iframe src="${url}" onload="setTimeout(()=>{window.print();},500)"></iframe>`
+      }
+      </body></html>
+    `);
+    win.document.close();
+  };
+
+  const printAllLabels = () => {
+    if (labels.length === 0) { toast.error("No labels to print"); return; }
+    const token = localStorage.getItem("token");
+    const win = window.open("", "_blank", "width=600,height=800");
+    if (!win) { toast.error("Pop-up blocked — allow pop-ups to print"); return; }
+    const imgs = labels.map((l) =>
+      `<div class="label-page"><img src="${API}/orders/labels/${l.id}/preview?token=${token}" /></div>`
+    ).join("\n");
+    win.document.write(`
+      <html><head><title>Print All Labels</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #fff; }
+        .label-page { page-break-after: always; display: flex; justify-content: center; align-items: flex-start; padding: 0; }
+        .label-page:last-child { page-break-after: auto; }
+        .label-page img { max-width: 100%; height: auto; }
+        @media print { .label-page { padding: 0; } }
+      </style></head><body>
+      ${imgs}
+      <script>
+        var total = ${labels.length}, loaded = 0;
+        document.querySelectorAll('img').forEach(function(img) {
+          if (img.complete) { loaded++; } else {
+            img.onload = function() { loaded++; if (loaded >= total) setTimeout(function(){ window.print(); }, 300); };
+            img.onerror = function() { loaded++; if (loaded >= total) setTimeout(function(){ window.print(); }, 300); };
+          }
+        });
+        if (loaded >= total) setTimeout(function(){ window.print(); }, 500);
+      </script>
+      </body></html>
+    `);
+    win.document.close();
+  };
+
   const formatSize = (bytes) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -130,6 +189,16 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
             </span>
           )}
         </div>
+        {labels.length > 0 && (
+          <button
+            onClick={printAllLabels}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#00D4FF]/10 text-[#00D4FF] hover:bg-[#00D4FF]/20 transition-colors text-xs font-medium"
+            data-testid="print-all-labels-btn"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print All
+          </button>
+        )}
       </div>
 
       {/* Drop Zone */}
@@ -180,8 +249,11 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-[#333] truncate font-medium">{label.filename}</p>
+                  <p className="text-sm text-[#333] truncate font-medium">{label.display_name || label.filename}</p>
                   <div className="flex items-center gap-2 text-xs text-[#999]">
+                    {label.display_name && (
+                      <span className="truncate max-w-[120px]" title={label.filename}>{label.filename}</span>
+                    )}
                     <span>{formatSize(label.file_size)}</span>
                     {label.platform_guess && (
                       <span className="px-1.5 py-0.5 rounded bg-[#f0f0f0] text-[#666] capitalize text-[10px]">
@@ -196,6 +268,14 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
                 {previewId !== label.id && (
                   <ChevronDown className="w-4 h-4 text-[#aaa] flex-shrink-0" />
                 )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); printLabel(label); }}
+                  className="text-[#bbb] hover:text-[#00D4FF] transition-colors flex-shrink-0"
+                  data-testid={`print-label-${label.id}`}
+                  title="Print label"
+                >
+                  <Printer className="w-4 h-4" />
+                </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDelete(label.id); }}
                   className="text-[#ccc] hover:text-red-500 transition-colors flex-shrink-0"

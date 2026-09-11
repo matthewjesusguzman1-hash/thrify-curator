@@ -499,8 +499,8 @@ class TestOrdersLabelsAPI:
         assert "completed_at" in data
         print(f"PASS: Employee completed assignment {assignment_id}")
     
-    def test_duplicate_assignment_rejected(self):
-        """Test that assigning to employee with active assignment is rejected"""
+    def test_duplicate_assignment_auto_replaces(self):
+        """Test that assigning to employee with active assignment auto-replaces the old one as incomplete"""
         admin_token = self._get_admin_token()
         admin_headers = {"Authorization": f"Bearer {admin_token}"}
         
@@ -538,22 +538,221 @@ class TestOrdersLabelsAPI:
             headers=admin_headers
         )
         assert first_response.status_code == 200
-        self.created_assignment_ids.append(first_response.json()["id"])
+        first_id = first_response.json()["id"]
+        self.created_assignment_ids.append(first_id)
         
-        # Try to create second assignment - should fail
+        # Create second assignment - should succeed and mark first as incomplete
         second_response = self.session.post(
             f"{BASE_URL}/api/orders/assign",
             json={
                 "employee_id": employee_id,
                 "since": today,
                 "until": today,
-                "notes": "TEST: Second assignment (should fail)"
+                "notes": "TEST: Second assignment (replaces first)"
             },
             headers=admin_headers
         )
-        assert second_response.status_code == 400, f"Expected 400, got {second_response.status_code}"
-        assert "already has an active" in second_response.json().get("detail", "").lower()
-        print("PASS: Duplicate assignment correctly rejected")
+        assert second_response.status_code == 200, f"Expected 200, got {second_response.status_code}"
+        second_id = second_response.json()["id"]
+        self.created_assignment_ids.append(second_id)
+        
+        # Verify first assignment is now incomplete
+        all_assignments = self.session.get(
+            f"{BASE_URL}/api/orders/assignments",
+            headers=admin_headers
+        ).json().get("assignments", [])
+        
+        first_assignment = next((a for a in all_assignments if a["id"] == first_id), None)
+        assert first_assignment is not None, "First assignment not found"
+        assert first_assignment["status"] == "incomplete", f"Expected 'incomplete', got '{first_assignment['status']}'"
+        assert "replaced_at" in first_assignment, "Missing replaced_at field"
+        
+        print("PASS: Duplicate assignment auto-replaces old one as incomplete")
+    
+    # ============== ASSIGNMENT HISTORY TESTS ==============
+    
+    def test_my_history_requires_auth(self):
+        """Test that my-history endpoint requires authentication"""
+        response = self.session.get(f"{BASE_URL}/api/orders/my-history")
+        assert response.status_code == 401 or response.status_code == 403
+        print("PASS: my-history requires authentication")
+    
+    def test_my_history_returns_non_active_assignments(self):
+        """Test employee can fetch their assignment history (completed and incomplete)"""
+        admin_token = self._get_admin_token()
+        admin_headers = {"Authorization": f"Bearer {admin_token}"}
+        
+        employee_token = self._get_employee_token()
+        if not employee_token:
+            pytest.skip("Could not get employee token")
+        
+        employee_headers = {"Authorization": f"Bearer {employee_token}"}
+        employee_id = self._get_employee_id(employee_token)
+        if not employee_id:
+            pytest.skip("Could not get employee ID")
+        
+        # Cancel any existing active assignment
+        assignments_response = self.session.get(
+            f"{BASE_URL}/api/orders/assignments?status=active",
+            headers=admin_headers
+        )
+        if assignments_response.status_code == 200:
+            for assignment in assignments_response.json().get("assignments", []):
+                if assignment.get("employee_id") == employee_id:
+                    self.session.delete(
+                        f"{BASE_URL}/api/orders/assignments/{assignment['id']}",
+                        headers=admin_headers
+                    )
+        
+        # Create and complete an assignment
+        today = time.strftime("%Y-%m-%d")
+        assign_response = self.session.post(
+            f"{BASE_URL}/api/orders/assign",
+            json={
+                "employee_id": employee_id,
+                "since": today,
+                "until": today,
+                "notes": "TEST: History test - to be completed"
+            },
+            headers=admin_headers
+        )
+        assert assign_response.status_code == 200
+        assignment_id = assign_response.json()["id"]
+        self.created_assignment_ids.append(assignment_id)
+        
+        # Complete the assignment
+        complete_response = self.session.post(
+            f"{BASE_URL}/api/orders/complete/{assignment_id}",
+            json={},
+            headers=employee_headers
+        )
+        assert complete_response.status_code == 200
+        
+        # Fetch history
+        history_response = self.session.get(
+            f"{BASE_URL}/api/orders/my-history",
+            headers=employee_headers
+        )
+        assert history_response.status_code == 200, f"Failed: {history_response.text}"
+        
+        data = history_response.json()
+        assert "history" in data, "Response missing 'history' field"
+        assert isinstance(data["history"], list), "History should be a list"
+        
+        # Find our completed assignment in history
+        completed_assignment = next(
+            (h for h in data["history"] if h["id"] == assignment_id),
+            None
+        )
+        assert completed_assignment is not None, "Completed assignment not found in history"
+        assert completed_assignment["status"] == "completed"
+        
+        print(f"PASS: Employee fetched history with {len(data['history'])} entries")
+    
+    def test_assignments_filter_by_status(self):
+        """Test admin can filter assignments by status"""
+        admin_token = self._get_admin_token()
+        admin_headers = {"Authorization": f"Bearer {admin_token}"}
+        
+        # Test filtering by active status
+        active_response = self.session.get(
+            f"{BASE_URL}/api/orders/assignments?status=active",
+            headers=admin_headers
+        )
+        assert active_response.status_code == 200
+        active_data = active_response.json()
+        for assignment in active_data.get("assignments", []):
+            assert assignment["status"] == "active", f"Expected active, got {assignment['status']}"
+        
+        # Test filtering by completed status
+        completed_response = self.session.get(
+            f"{BASE_URL}/api/orders/assignments?status=completed",
+            headers=admin_headers
+        )
+        assert completed_response.status_code == 200
+        completed_data = completed_response.json()
+        for assignment in completed_data.get("assignments", []):
+            assert assignment["status"] == "completed", f"Expected completed, got {assignment['status']}"
+        
+        # Test filtering by incomplete status
+        incomplete_response = self.session.get(
+            f"{BASE_URL}/api/orders/assignments?status=incomplete",
+            headers=admin_headers
+        )
+        assert incomplete_response.status_code == 200
+        incomplete_data = incomplete_response.json()
+        for assignment in incomplete_data.get("assignments", []):
+            assert assignment["status"] == "incomplete", f"Expected incomplete, got {assignment['status']}"
+        
+        print(f"PASS: Status filtering works - active: {active_data['total']}, completed: {completed_data['total']}, incomplete: {incomplete_data['total']}")
+    
+    def test_delete_assignment_from_history(self):
+        """Test admin can delete an assignment from history log"""
+        admin_token = self._get_admin_token()
+        admin_headers = {"Authorization": f"Bearer {admin_token}"}
+        
+        employee_token = self._get_employee_token()
+        if not employee_token:
+            pytest.skip("Could not get employee token")
+        
+        employee_headers = {"Authorization": f"Bearer {employee_token}"}
+        employee_id = self._get_employee_id(employee_token)
+        if not employee_id:
+            pytest.skip("Could not get employee ID")
+        
+        # Cancel any existing active assignment
+        assignments_response = self.session.get(
+            f"{BASE_URL}/api/orders/assignments?status=active",
+            headers=admin_headers
+        )
+        if assignments_response.status_code == 200:
+            for assignment in assignments_response.json().get("assignments", []):
+                if assignment.get("employee_id") == employee_id:
+                    self.session.delete(
+                        f"{BASE_URL}/api/orders/assignments/{assignment['id']}",
+                        headers=admin_headers
+                    )
+        
+        # Create and complete an assignment
+        today = time.strftime("%Y-%m-%d")
+        assign_response = self.session.post(
+            f"{BASE_URL}/api/orders/assign",
+            json={
+                "employee_id": employee_id,
+                "since": today,
+                "until": today,
+                "notes": "TEST: To be deleted from history"
+            },
+            headers=admin_headers
+        )
+        assert assign_response.status_code == 200
+        assignment_id = assign_response.json()["id"]
+        
+        # Complete the assignment
+        self.session.post(
+            f"{BASE_URL}/api/orders/complete/{assignment_id}",
+            json={},
+            headers=employee_headers
+        )
+        
+        # Delete from history
+        delete_response = self.session.delete(
+            f"{BASE_URL}/api/orders/assignments/{assignment_id}",
+            headers=admin_headers
+        )
+        assert delete_response.status_code == 200, f"Failed to delete: {delete_response.text}"
+        assert delete_response.json().get("deleted") == True
+        
+        # Verify it's gone
+        all_assignments = self.session.get(
+            f"{BASE_URL}/api/orders/assignments",
+            headers=admin_headers
+        ).json().get("assignments", [])
+        
+        deleted_assignment = next((a for a in all_assignments if a["id"] == assignment_id), None)
+        assert deleted_assignment is None, "Assignment should be deleted"
+        
+        print(f"PASS: Admin deleted assignment {assignment_id} from history")
 
 
 if __name__ == "__main__":

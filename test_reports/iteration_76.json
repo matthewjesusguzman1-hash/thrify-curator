@@ -1,0 +1,54 @@
+{
+  "summary": "Tested Print Labels and Auto-Name features. All 15 backend tests passed (100%). Frontend UI verified: Print All button present, individual print buttons for each label, display_name/filename fallback working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_print_labels_autoname.py",
+    "/app/test_reports/pytest/test_print_labels_autoname.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend _extract_pdf_text correctly tries pdfplumber first, then PyMuPDF as fallback",
+    "Backend _extract_recipient_name correctly parses SHIP TO/DELIVER TO sections",
+    "Backend upload endpoint returns display_name field in response",
+    "Backend list endpoint returns display_name field for each label",
+    "Frontend Print All button (data-testid='print-all-labels-btn') appears when labels exist",
+    "Frontend individual print buttons (data-testid='print-label-{id}') present for each label",
+    "Frontend correctly displays display_name if available, falls back to filename",
+    "Existing labels have empty display_name (image-based PDFs) - expected behavior"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_print_labels_autoname.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 tests passed)",
+    "frontend": "100% (all features verified)"
+  },
+  "test_credentials": "Admin: matthewjesusguzman1@gmail.com, code: 4399",
+  "seed_data_creation": "Test labels created during backend tests (cleaned up automatically)",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Print Labels and Auto-Name features fully tested. Key data-testids: print-all-labels-btn, print-label-{id}, delete-label-{id}, label-item-{id}, shipping-labels-section. The auto-name feature extracts recipient names from text-based PDFs using SHIP TO/DELIVER TO parsing. Existing 5 labels have empty display_name because they are image-based PDFs where text extraction doesn't work - this is expected behavior and frontend correctly falls back to filename.",
+  "features_tested": {
+    "backend_upload_returns_display_name": "PASS - POST /api/orders/labels/upload returns display_name field",
+    "backend_list_returns_display_name": "PASS - GET /api/orders/labels returns display_name for each label",
+    "backend_extract_recipient_name_ship_to": "PASS - Correctly extracts name from SHIP TO section",
+    "backend_extract_recipient_name_deliver_to": "PASS - Correctly extracts name from DELIVER TO section",
+    "backend_extract_recipient_name_same_line": "PASS - Handles 'SHIP TO: Name' on same line",
+    "backend_extract_recipient_name_skips_addresses": "PASS - Skips address lines to find name",
+    "backend_looks_like_name_heuristics": "PASS - Correctly identifies names vs non-names",
+    "backend_label_file_endpoint": "PASS - Label file accessible with token",
+    "backend_label_preview_endpoint": "PASS - Label preview endpoint responds",
+    "frontend_print_all_button_exists": "PASS - Print All button found with data-testid='print-all-labels-btn'",
+    "frontend_individual_print_buttons": "PASS - Print buttons found for all 5 labels",
+    "frontend_display_name_fallback": "PASS - Labels show filename when display_name is empty",
+    "existing_labels_have_display_name_field": "PASS - All 5 existing labels have display_name field (empty for image PDFs)"
+  }
+}

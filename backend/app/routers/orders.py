@@ -50,9 +50,13 @@ async def upload_label(
     # Guess platform from filename or extracted text
     platform_guess = _guess_platform(file.filename or "", extracted_text)
 
+    # Try to extract recipient name from label text
+    display_name = _extract_recipient_name(extracted_text) if extracted_text else ""
+
     doc = {
         "id": label_id,
         "filename": file.filename or f"label.{ext}",
+        "display_name": display_name,
         "storage_path": storage_path,
         "content_type": content_type,
         "file_size": len(content),
@@ -68,6 +72,7 @@ async def upload_label(
     return {
         "id": label_id,
         "filename": doc["filename"],
+        "display_name": display_name,
         "content_type": content_type,
         "file_size": len(content),
         "platform_guess": platform_guess,
@@ -198,7 +203,7 @@ async def assign_orders(req: AssignOrdersRequest, admin: dict = Depends(get_admi
     if existing:
         await db.order_assignments.update_one(
             {"id": existing["id"]},
-            {"$set": {"status": "replaced", "replaced_at": datetime.now(timezone.utc).isoformat()}},
+            {"$set": {"status": "incomplete", "replaced_at": datetime.now(timezone.utc).isoformat()}},
         )
 
     # Fetch pull list items for this range
@@ -269,8 +274,8 @@ async def list_assignments(
 
 
 @router.delete("/assignments/{assignment_id}")
-async def cancel_assignment(assignment_id: str, admin: dict = Depends(get_admin_user)):
-    """Cancel/delete an order assignment."""
+async def delete_assignment(assignment_id: str, admin: dict = Depends(get_admin_user)):
+    """Admin permanently removes an assignment from the log."""
     result = await db.order_assignments.delete_one({"id": assignment_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Assignment not found")
@@ -278,6 +283,15 @@ async def cancel_assignment(assignment_id: str, admin: dict = Depends(get_admin_
 
 
 # ============== EMPLOYEE ENDPOINTS ==============
+
+@router.get("/my-history")
+async def get_my_history(user: dict = Depends(get_current_user)):
+    """Employee fetches their past assignment history."""
+    history = await db.order_assignments.find(
+        {"employee_id": user["id"], "status": {"$ne": "active"}},
+        {"_id": 0, "matches": 0, "label_ids": 0},
+    ).sort("assigned_at", -1).to_list(length=50)
+    return {"history": history}
 
 @router.get("/my-assignment")
 async def get_my_assignment(user: dict = Depends(get_current_user)):
@@ -403,19 +417,39 @@ async def complete_assignment(
 # ============== MATCHING HELPERS ==============
 
 def _extract_pdf_text(content: bytes) -> str:
-    """Extract text from a PDF for matching purposes."""
+    """Extract text from a PDF for matching purposes. Tries pdfplumber first, then PyMuPDF."""
+    text = ""
+    # Try pdfplumber first
     try:
         import pdfplumber
         import io
         text_parts = []
         with pdfplumber.open(io.BytesIO(content)) as pdf:
-            for page in pdf.pages[:3]:  # First 3 pages max
+            for page in pdf.pages[:3]:
                 t = page.extract_text()
                 if t:
                     text_parts.append(t)
-        return "\n".join(text_parts)
+        text = "\n".join(text_parts)
     except Exception:
-        return ""
+        pass
+
+    # Fallback to PyMuPDF if pdfplumber got nothing
+    if not text.strip():
+        try:
+            import fitz
+            doc = fitz.open(stream=content, filetype="pdf")
+            parts = []
+            for i in range(min(doc.page_count, 3)):
+                page = doc.load_page(i)
+                t = page.get_text()
+                if t:
+                    parts.append(t)
+            doc.close()
+            text = "\n".join(parts)
+        except Exception:
+            pass
+
+    return text
 
 
 PLATFORM_PATTERNS = {
@@ -426,6 +460,67 @@ PLATFORM_PATTERNS = {
     "pirate ship": [r"pirate\s*ship", r"pirateship"],
     "whatnot": [r"whatnot"],
 }
+
+
+def _extract_recipient_name(text: str) -> str:
+    """Extract the recipient/ship-to name from shipping label text."""
+    if not text:
+        return ""
+    lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
+
+    # Strategy 1: look for a line right after "SHIP TO" / "DELIVER TO"
+    ship_to_idx = -1
+    for i, ln in enumerate(lines):
+        low = ln.lower()
+        if any(kw in low for kw in ["ship to", "deliver to", "ship-to"]):
+            ship_to_idx = i
+            break
+
+    if ship_to_idx >= 0:
+        # The name is usually the next non-empty line (or same line after colon)
+        same = lines[ship_to_idx]
+        # Check if name is on the same line after a colon
+        if ":" in same:
+            after = same.split(":", 1)[1].strip()
+            if after and _looks_like_name(after):
+                return after
+        # Check subsequent lines
+        for j in range(ship_to_idx + 1, min(ship_to_idx + 4, len(lines))):
+            candidate = lines[j]
+            if _looks_like_name(candidate):
+                return candidate
+
+    # Strategy 2: scan all lines for a person-name-looking line
+    # Skip common label noise: addresses, tracking nums, barcodes, platforms
+    skip_patterns = [
+        r"^\d", r"tracking", r"usps", r"fedex", r"ups\b", r"ebay", r"mercari",
+        r"poshmark", r"depop", r"pirate", r"www\.", r"http", r"order",
+        r"#\d", r"weight", r"lbs", r"oz\b", r"class", r"priority",
+        r"first.class", r"parcel", r"package", r"return", r"from:",
+        r"ship date", r"po box", r"apt\b", r"suite", r"@",
+    ]
+    for ln in lines:
+        if _looks_like_name(ln) and not any(re.search(p, ln.lower()) for p in skip_patterns):
+            return ln
+
+    return ""
+
+
+def _looks_like_name(s: str) -> bool:
+    """Heuristic: a short title-case-ish string of 2-4 words, mostly alpha."""
+    s = s.strip()
+    words = s.split()
+    if len(words) < 2 or len(words) > 5:
+        return False
+    if len(s) > 50:
+        return False
+    alpha_ratio = sum(c.isalpha() or c == ' ' for c in s) / max(len(s), 1)
+    if alpha_ratio < 0.85:
+        return False
+    # At least first word should be capitalized
+    if words[0][0].islower():
+        return False
+    return True
 
 
 def _guess_platform(filename: str, text: str) -> str:
