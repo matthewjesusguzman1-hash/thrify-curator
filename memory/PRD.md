@@ -21,7 +21,7 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 
 ## What's Been Implemented
 
-### Orders & Shipping Labels (Sep 11, 2026) — NEW
+### Orders & Shipping Labels (Sep 11, 2026)
 - **Backend**: `/api/orders/*` router with label upload, list, delete, SKU tag, preview; order assignment CRUD; employee endpoints
 - **Admin Operations page**: Shipping Labels section (drag-and-drop + file picker, PDF/image support, Emergent Object Storage)
 - **Inline Label Preview**: Click label row to expand/collapse full shipping label image (PDFs converted to PNG via PyMuPDF at 2x resolution)
@@ -37,43 +37,53 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 - **Unmatched labels**: Shown separately with warning indicator, preview, and print buttons
 - **Complete flow**: Employee taps "Complete Orders" → assignment marked done → logged in history; unreplaced/uncompleted assignments logged as incomplete
 - **Access control**: Admin assigns, employee sees only when assigned
-- **Bug fix**: Employee dropdown now re-fetches when assignment form opens (prevents stale empty list)
+
+### iOS Date Picker Fix & Preview Count (Sep 11, 2026) — LATEST
+- **Root cause**: iOS date picker onChange was not reliably capturing date changes. User selected Sept 1–11 but stored dates were Sept 11–11 (0 orders)
+- **Fix**: Added `onInput` and `onBlur` handlers alongside `onChange` for date inputs on the assignment form
+- **Preview count**: Live preview shows order count AND label match count before assigning (e.g., "83 orders found · 5 label matches")
+- **Backend**: Enhanced `/api/orders/preview-count` to accept `label_ids` param and return `{count, match_count}`
+- **Assign button**: Shows count text (e.g., "Assign 83 Orders") and is disabled when count is 0
+- **Zero orders warning**: Red banner "0 orders found for this date range — check your dates"
+- **Employee chips**: Employee selection uses tappable chips instead of native `<select>` (iOS showed "No Options" with dropdown)
+- **Testing**: 100% pass (11/11 backend, all frontend verified) — iteration_79
+
+### Business Files Document Vault (Sep 11, 2026)
+- **Admin-only** document storage for important business paperwork
+- **Own tile** on admin home page → dedicated page with full document management
+- **Folders**: Bank Account, LLC Formation, Tax, Other (with counts + custom folder creation)
+- **Custom tags**: Comma-separated, filterable tag pills
+- **AI OCR Search**: Gemini Flash vision reads scanned documents; search finds text inside files, display name, tags, folder
+- **Upload**: Drag & drop or tap to select, with folder/name/tags form (supports phone camera scans)
+- **Document rows**: Display name, folder badge, tags, file size, date, expandable preview
+- **Actions**: Print, download, edit (name/folder/tags), delete with confirmation
+- **Multi-page Preview**: Tap a document to expand — swipe left/right or tap arrows to navigate all pages; page dots + "Page X of Y" indicator
+- **Download**: Blob-based download works on any device (phone, desktop) with Content-Disposition: attachment header
+- **Backend**: `/api/documents/*` — upload, list, search, folders, tags, update, delete, file/preview serve (with `?page=N` for multi-page)
 
 ### Admin Dashboard Restructure (Sep 2026)
 - Replaced overloaded one-page admin dashboard with tile-based home page + separate full-page sections
 - Home page: All Employees + Hours visible, tile grid for Operations, Team, Hiring, Messages, Training, AI
 - Operations page: Shipping Labels, Order Assignments, GPS Tracker, Pull List, Sales Data, Taxes
 - Back button navigation, header icons preserved
-- Testing: 100% pass (8/8 tiles, navigation, back button)
 
 ### Pull List Feature (Sep 2026)
 - **Backend**: `/api/inventory/pull-list` GET, mark-pulled POST, reset POST, mark-all-pulled POST
 - Defaults to "Today" — same-day sold items, max 1 week back
 - Clean minimal design: SKU, title, platform only
 - SKU grouping by row, natural sort (A6 < A10 < A25)
-- Print-friendly PDF via isolated print window (large header, prominent SKU text)
-- **Smart CSV Import**: Upserts by SKU — re-importing full Vendoo CSV preserves pulled status
+- Print-friendly PDF via isolated print window
 
 ### AI Assistant
 - Gemini 3.7 Flash for listing assistance
 - Improved hashtag prompt, streaming responses, image context, history
 
-### Pay Rate Snapshots (Aug 2026)
-- Hourly rate stored per shift at clock-in time
-- Old shifts keep original rate when employee rate changes
-
-### GPS Mileage Tracking
-- Real-time trip tracking with OSRM road routing
-- Header Start Trip, multi-leg pause/resume, Siri shortcut support
-
-### Inventory & Sales (Vendoo)
-- CSV import with smart SKU-based deduplication
-- Analytics, stale inventory detection, tax reports
-
 ### Other Features
-- Employee time tracking, payroll history, payment records
+- Employee time tracking, payroll history, payment records, pay rate snapshots
+- GPS mileage tracking with OSRM road routing, header Start Trip, multi-leg pause/resume
 - Messaging, forms, consignment portal, job applications
 - Remote session monitoring (AnyDesk watcher)
+- Inventory & Sales (Vendoo CSV import, analytics, tax reports)
 - Password management, W-9/W-8BEN, web push, APNs
 
 ## Prioritized Backlog
@@ -86,6 +96,7 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 - Pay rate snapshot: production validation after real rate change
 - GPS header Start Trip & route replay: production device validation
 - AI hashtag quality: real merchant feedback
+- iOS date picker fix: user confirmation from their actual device
 
 ### P2 — Known Issues
 - AnyDesk watcher: autostart/remote restart reliability unresolved
@@ -98,21 +109,3 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 - Message classification & draft replies
 - Employee message cross-device notification
 - Remote worker geolocation real-device validation
-
----
-## What's Implemented
-
-### Business Files Document Vault (Sep 11, 2026)
-- **Admin-only** document storage for important business paperwork
-- **Own tile** on admin home page → dedicated page with full document management
-- **Folders**: Banking, Licenses, Insurance, Tax, Legal, Receipts, Other (with counts)
-- **Custom tags**: Comma-separated, filterable tag pills
-- **AI OCR Search**: Gemini Flash vision reads scanned documents; search finds text inside files, display name, tags, folder
-- **Upload**: Drag & drop or tap to select, with folder/name/tags form (supports phone camera scans)
-- **Document rows**: Display name, folder badge, tags, file size, date, expandable preview
-- **Actions**: Print, download, edit (name/folder/tags), delete with confirmation
-- **Preview**: PDFs converted to PNG, images served directly
-- **Object Storage**: Files stored durably via Emergent Object Storage
-- **Multi-page Preview**: Tap a document to expand — swipe left/right or tap arrows to navigate all pages; page dots + "Page X of Y" indicator
-- **Download**: Blob-based download works on any device (phone, desktop) with Content-Disposition: attachment header
-- **Backend**: `/api/documents/*` — upload, list, search, folders, tags, update, delete, file/preview serve (with `?page=N` for multi-page)

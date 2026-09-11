@@ -207,6 +207,39 @@ async def get_label_preview(
 
 # ============== ORDER ASSIGNMENTS ==============
 
+
+@router.get("/preview-count")
+async def preview_order_count(
+    since: Optional[str] = None,
+    until: Optional[str] = None,
+    label_ids: Optional[str] = Query(None, description="Comma-separated label IDs"),
+    admin: dict = Depends(get_admin_user),
+):
+    """Quick count of pull list items and label matches for the given date range."""
+    pull_query = {"status": {"$regex": "sold", "$options": "i"}}
+    if since or until:
+        date_filter = {}
+        if since:
+            date_filter["$gte"] = since
+        if until:
+            date_filter["$lte"] = until
+        pull_query["sold_date"] = date_filter
+    count = await db.inventory_items.count_documents(pull_query)
+
+    match_count = 0
+    if label_ids:
+        lid_list = [lid.strip() for lid in label_ids.split(",") if lid.strip()]
+        if lid_list and count > 0:
+            labels = await db.shipping_labels.find(
+                {"id": {"$in": lid_list}}, {"_id": 0}
+            ).to_list(length=500)
+            items = await db.inventory_items.find(pull_query, {"_id": 0, "id": 1, "sku": 1}).to_list(length=5000)
+            matches = _auto_match(items, labels)
+            match_count = len(matches)
+
+    return {"count": count, "match_count": match_count}
+
+
 @router.post("/assign")
 async def assign_orders(req: AssignOrdersRequest, admin: dict = Depends(get_admin_user)):
     """Admin assigns a set of orders (pull list range + labels) to an employee."""

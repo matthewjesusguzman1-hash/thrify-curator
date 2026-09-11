@@ -23,8 +23,45 @@ export default function OrderAssignmentSection({ getAuthHeader, employees: emplo
   };
   const [sinceDate, setSinceDate] = useState(getLocalDate);
   const [untilDate, setUntilDate] = useState(getLocalDate);
+  const [previewCount, setPreviewCount] = useState(null);
+  const [previewMatches, setPreviewMatches] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const employees = (employeesProp && employeesProp.length > 0) ? employeesProp : employeesList;
+
+  // Robust date handler — iOS sometimes fires onInput but not onChange
+  const handleDateChange = (setter) => (e) => {
+    const val = e.target.value;
+    if (val) setter(val);
+  };
+
+  // Live preview: fetch item count + match preview when dates change
+  useEffect(() => {
+    if (!showForm || !sinceDate || !untilDate) return;
+    let cancelled = false;
+    const fetchPreview = async () => {
+      setPreviewLoading(true);
+      try {
+        const labelIds = selectedLabels.length > 0 ? selectedLabels : labels.map((l) => l.id);
+        const params = new URLSearchParams({ since: sinceDate, until: untilDate });
+        if (labelIds.length > 0) params.set("label_ids", labelIds.join(","));
+        const { data } = await axios.get(
+          `${API}/orders/preview-count?${params.toString()}`,
+          getAuthHeader()
+        );
+        if (!cancelled) {
+          setPreviewCount(data.count);
+          setPreviewMatches(data.match_count ?? null);
+        }
+      } catch {
+        if (!cancelled) { setPreviewCount(null); setPreviewMatches(null); }
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    };
+    fetchPreview();
+    return () => { cancelled = true; };
+  }, [sinceDate, untilDate, showForm, selectedLabels, labels, getAuthHeader]);
 
   const fetchAssignments = useCallback(async () => {
     try {
@@ -162,16 +199,44 @@ export default function OrderAssignmentSection({ getAuthHeader, employees: emplo
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs text-[#888] mb-1 block font-medium">From</label>
-              <input type="date" value={sinceDate} onChange={(e) => setSinceDate(e.target.value)}
+              <input type="date" value={sinceDate}
+                onChange={handleDateChange(setSinceDate)}
+                onInput={handleDateChange(setSinceDate)}
+                onBlur={handleDateChange(setSinceDate)}
                 className="w-full bg-white border border-[#ddd] rounded-lg px-3 py-2 text-sm text-[#333] focus:outline-none focus:border-[#8B5CF6]"
                 data-testid="assign-since-date" />
             </div>
             <div>
               <label className="text-xs text-[#888] mb-1 block font-medium">To</label>
-              <input type="date" value={untilDate} onChange={(e) => setUntilDate(e.target.value)}
+              <input type="date" value={untilDate}
+                onChange={handleDateChange(setUntilDate)}
+                onInput={handleDateChange(setUntilDate)}
+                onBlur={handleDateChange(setUntilDate)}
                 className="w-full bg-white border border-[#ddd] rounded-lg px-3 py-2 text-sm text-[#333] focus:outline-none focus:border-[#8B5CF6]"
                 data-testid="assign-until-date" />
             </div>
+          </div>
+          {/* Live item count preview */}
+          <div className={`px-3 py-2 rounded-lg text-xs font-medium ${
+            previewLoading ? "bg-[#f5f5f5] text-[#aaa]" :
+            previewCount === 0 ? "bg-red-50 text-red-500 border border-red-200" :
+            previewCount > 0 ? "bg-green-50 text-green-600 border border-green-200" :
+            "bg-[#f5f5f5] text-[#aaa]"
+          }`} data-testid="preview-item-count">
+            {previewLoading ? "Counting orders..." :
+             previewCount === 0 ? "0 orders found for this date range — check your dates" :
+             previewCount > 0 ? (
+               <span>
+                 {previewCount} orders found for {sinceDate} to {untilDate}
+                 {previewMatches != null && previewMatches > 0 && (
+                   <span className="ml-1">· {previewMatches} label {previewMatches === 1 ? "match" : "matches"}</span>
+                 )}
+                 {previewMatches === 0 && labels.length > 0 && (
+                   <span className="ml-1 text-amber-600">· 0 label matches</span>
+                 )}
+               </span>
+             ) :
+             "Select dates to preview"}
           </div>
           {labels.length > 0 && (
             <div>
@@ -183,7 +248,7 @@ export default function OrderAssignmentSection({ getAuthHeader, employees: emplo
                   <label key={label.id} className="flex items-center gap-2 p-2 rounded-lg bg-white hover:bg-[#f5f5f5] cursor-pointer border border-[#eee]">
                     <input type="checkbox" checked={selectedLabels.length === 0 || selectedLabels.includes(label.id)}
                       onChange={() => toggleLabel(label.id)} className="rounded border-[#ccc]" />
-                    <span className="text-xs text-[#555] truncate">{label.filename}</span>
+                    <span className="text-xs text-[#555] truncate">{label.display_name || label.filename}</span>
                     {label.platform_guess && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#f0f0f0] text-[#888] capitalize ml-auto">{label.platform_guess}</span>
                     )}
@@ -197,9 +262,9 @@ export default function OrderAssignmentSection({ getAuthHeader, employees: emplo
             <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g., Priority items first..."
               className="w-full bg-white border border-[#ddd] rounded-lg px-3 py-2 text-sm text-[#333] focus:outline-none focus:border-[#8B5CF6]" />
           </div>
-          <Button onClick={handleAssign} disabled={assigning || !selectedEmployee} className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white" data-testid="confirm-assign-btn">
+          <Button onClick={handleAssign} disabled={assigning || !selectedEmployee || previewCount === 0} className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white" data-testid="confirm-assign-btn">
             {assigning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-            {assigning ? "Assigning..." : "Assign to Employee"}
+            {assigning ? "Assigning..." : previewCount > 0 ? `Assign ${previewCount} Orders` : "Assign to Employee"}
           </Button>
         </div>
       )}
