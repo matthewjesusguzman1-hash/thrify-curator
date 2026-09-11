@@ -143,6 +143,44 @@ async def get_label_file(
     )
 
 
+@router.get("/labels/{label_id}/preview")
+async def get_label_preview(
+    label_id: str,
+    token: Optional[str] = Query(None),
+):
+    """Render first page of a PDF label as a PNG image preview."""
+    import jwt as pyjwt
+    from app.config import JWT_SECRET, JWT_ALGORITHM
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Token required")
+    try:
+        payload = pyjwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if not payload.get("sub"):
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    label = await db.shipping_labels.find_one({"id": label_id}, {"_id": 0})
+    if not label:
+        raise HTTPException(status_code=404, detail="Label not found")
+
+    # If it's already an image, serve it directly
+    if label.get("content_type", "").startswith("image/"):
+        from fastapi.responses import Response
+        data, ct = get_object(label["storage_path"])
+        return Response(content=data, media_type=ct)
+
+    # Convert PDF first page to image
+    try:
+        data, _ = get_object(label["storage_path"])
+        img_bytes = _pdf_to_image(data)
+        from fastapi.responses import Response
+        return Response(content=img_bytes, media_type="image/png")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Preview generation failed: {str(e)}")
+
+
 # ============== ORDER ASSIGNMENTS ==============
 
 @router.post("/assign")
@@ -398,6 +436,20 @@ def _guess_platform(filename: str, text: str) -> str:
             if re.search(p, combined):
                 return platform
     return ""
+
+
+def _pdf_to_image(pdf_bytes: bytes) -> bytes:
+    """Convert first page of PDF to PNG image bytes."""
+    import fitz  # PyMuPDF
+    import io
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    page = doc.load_page(0)
+    # Render at 2x for clarity on mobile
+    mat = fitz.Matrix(2, 2)
+    pix = page.get_pixmap(matrix=mat)
+    img_bytes = pix.tobytes("png")
+    doc.close()
+    return img_bytes
 
 
 def _auto_match(pull_items: list, labels: list) -> list:

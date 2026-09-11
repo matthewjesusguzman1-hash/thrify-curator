@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Upload, FileText, Trash2, Image as ImageIcon, Loader2, Check, Tag } from "lucide-react";
+import {
+  Upload, FileText, Trash2, Image as ImageIcon, Loader2,
+  Check, Tag, ChevronDown, ChevronUp, Eye
+} from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -10,8 +13,10 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [editingSku, setEditingSku] = useState(null); // label id being edited
+  const [editingSku, setEditingSku] = useState(null);
   const [skuInput, setSkuInput] = useState("");
+  const [previewId, setPreviewId] = useState(null);
+  const [previewBlob, setPreviewBlob] = useState(null);
   const fileInputRef = useRef(null);
   const skuInputRef = useRef(null);
 
@@ -32,8 +37,7 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
   const uploadFiles = async (files) => {
     if (!files || files.length === 0) return;
     setUploading(true);
-    let success = 0;
-    let failed = 0;
+    let success = 0, failed = 0;
     for (const file of files) {
       try {
         const form = new FormData();
@@ -42,30 +46,22 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
           headers: { ...getAuthHeader().headers, "Content-Type": "multipart/form-data" },
         });
         success++;
-      } catch (err) {
-        failed++;
-      }
+      } catch (err) { failed++; }
     }
     setUploading(false);
     if (success > 0) toast.success(`${success} label${success > 1 ? "s" : ""} uploaded`);
-    if (failed > 0) toast.error(`${failed} file${failed > 1 ? "s" : ""} failed`);
+    if (failed > 0) toast.error(`${failed} failed`);
     fetchLabels();
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-    uploadFiles(Array.from(e.dataTransfer.files));
-  };
+  const handleDrop = (e) => { e.preventDefault(); setDragOver(false); uploadFiles(Array.from(e.dataTransfer.files)); };
 
   const handleDelete = async (labelId) => {
     try {
       await axios.delete(`${API}/orders/labels/${labelId}`, getAuthHeader());
       setLabels((prev) => prev.filter((l) => l.id !== labelId));
-      toast.success("Label deleted");
-    } catch (err) {
-      toast.error("Failed to delete");
-    }
+      toast.success("Deleted");
+    } catch (err) { toast.error("Failed to delete"); }
   };
 
   const startSkuEdit = (label) => {
@@ -76,30 +72,41 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
 
   const saveSku = async (labelId) => {
     try {
-      await axios.patch(
-        `${API}/orders/labels/${labelId}`,
-        { sku_tag: skuInput },
-        getAuthHeader()
-      );
-      setLabels((prev) =>
-        prev.map((l) => l.id === labelId ? { ...l, sku_tag: skuInput.trim().toUpperCase() } : l)
-      );
+      await axios.patch(`${API}/orders/labels/${labelId}`, { sku_tag: skuInput }, getAuthHeader());
+      setLabels((prev) => prev.map((l) => l.id === labelId ? { ...l, sku_tag: skuInput.trim().toUpperCase() } : l));
       setEditingSku(null);
       setSkuInput("");
-    } catch (err) {
-      toast.error("Failed to save SKU");
-    }
+    } catch (err) { toast.error("Failed to save SKU"); }
   };
 
   const handleSkuKeyDown = (e, labelId) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      saveSku(labelId);
-    } else if (e.key === "Escape") {
-      setEditingSku(null);
-      setSkuInput("");
+    if (e.key === "Enter") { e.preventDefault(); saveSku(labelId); }
+    else if (e.key === "Escape") { setEditingSku(null); setSkuInput(""); }
+  };
+
+  const togglePreview = async (label) => {
+    if (previewId === label.id) {
+      setPreviewId(null);
+      setPreviewBlob(null);
+      return;
+    }
+    setPreviewId(label.id);
+    setPreviewBlob(null);
+    try {
+      const token = localStorage.getItem("token");
+      const url = `${API}/orders/labels/${label.id}/preview?token=${token}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed");
+      const blob = await res.blob();
+      setPreviewBlob(URL.createObjectURL(blob));
+    } catch (err) {
+      toast.error("Failed to load preview");
+      setPreviewId(null);
     }
   };
+
+  const getLabelUrl = (labelId) =>
+    `${API}/orders/labels/${labelId}/file?token=${localStorage.getItem("token")}`;
 
   const formatSize = (bytes) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -107,8 +114,10 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const isImage = (ct) => ct && ct.startsWith("image/");
+
   return (
-    <div className="dashboard-card" data-testid="shipping-labels-section">
+    <div className="dashboard-card" style={{ overflow: "visible" }} data-testid="shipping-labels-section">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF6B35] to-[#E85D2C] flex items-center justify-center">
@@ -126,9 +135,7 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
       {/* Drop Zone */}
       <div
         className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer mb-4 ${
-          dragOver
-            ? "border-[#FF6B35] bg-[#FF6B35]/5"
-            : "border-[#ddd] hover:border-[#bbb] bg-[#fafafa]"
+          dragOver ? "border-[#FF6B35] bg-[#FF6B35]/5" : "border-[#ddd] hover:border-[#bbb] bg-[#fafafa]"
         }`}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
@@ -136,14 +143,8 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
         onClick={() => fileInputRef.current?.click()}
         data-testid="label-drop-zone"
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept=".pdf,.png,.jpg,.jpeg,.webp"
-          className="hidden"
-          onChange={(e) => uploadFiles(Array.from(e.target.files))}
-        />
+        <input ref={fileInputRef} type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp" className="hidden"
+          onChange={(e) => uploadFiles(Array.from(e.target.files))} />
         {uploading ? (
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="w-8 h-8 text-[#FF6B35] animate-spin" />
@@ -162,22 +163,17 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
 
       {/* Labels List */}
       {loading ? (
-        <div className="flex justify-center py-4">
-          <Loader2 className="w-5 h-5 text-[#ccc] animate-spin" />
-        </div>
+        <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 text-[#ccc] animate-spin" /></div>
       ) : labels.length === 0 ? (
         <p className="text-sm text-[#aaa] text-center py-2">No labels uploaded yet</p>
       ) : (
-        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+        <div className="space-y-2">
           {labels.map((label) => (
-            <div
-              key={label.id}
-              className="p-3 rounded-lg bg-[#f8f8f8] border border-[#eee] group"
-              data-testid={`label-item-${label.id}`}
-            >
-              <div className="flex items-center gap-3">
+            <div key={label.id} className="rounded-lg bg-[#f8f8f8] border border-[#eee]" data-testid={`label-item-${label.id}`}>
+              {/* Label Header Row */}
+              <div className="flex items-center gap-3 p-3">
                 <div className="w-10 h-10 rounded-lg bg-[#FF6B35]/10 flex items-center justify-center flex-shrink-0">
-                  {label.content_type?.startsWith("image/") ? (
+                  {isImage(label.content_type) ? (
                     <ImageIcon className="w-5 h-5 text-[#FF6B35]" />
                   ) : (
                     <FileText className="w-5 h-5 text-[#FF6B35]" />
@@ -194,15 +190,15 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
                     )}
                   </div>
                 </div>
-                <a
-                  href={`${API}/orders/labels/${label.id}/file?token=${localStorage.getItem("token")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-[#00A8CC] hover:underline flex-shrink-0 font-medium"
-                  onClick={(e) => e.stopPropagation()}
+                <button
+                  onClick={() => togglePreview(label)}
+                  className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${
+                    previewId === label.id ? "bg-[#FF6B35]/10 text-[#FF6B35]" : "text-[#aaa] hover:text-[#666] hover:bg-[#eee]"
+                  }`}
+                  data-testid={`preview-label-${label.id}`}
                 >
-                  View
-                </a>
+                  <Eye className="w-4 h-4" />
+                </button>
                 <button
                   onClick={() => handleDelete(label.id)}
                   className="text-[#ccc] hover:text-red-500 transition-colors flex-shrink-0"
@@ -213,7 +209,7 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
               </div>
 
               {/* SKU Tag Row */}
-              <div className="mt-2 flex items-center gap-2">
+              <div className="px-3 pb-2 flex items-center gap-2">
                 {editingSku === label.id ? (
                   <>
                     <Tag className="w-3.5 h-3.5 text-[#8B5CF6] flex-shrink-0" />
@@ -230,11 +226,7 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
                       autoComplete="off"
                       data-testid={`sku-input-${label.id}`}
                     />
-                    <button
-                      onClick={() => saveSku(label.id)}
-                      className="text-[#10B981] hover:text-[#059669]"
-                      data-testid={`sku-save-${label.id}`}
-                    >
+                    <button onClick={() => saveSku(label.id)} className="text-[#10B981] hover:text-[#059669]" data-testid={`sku-save-${label.id}`}>
                       <Check className="w-4 h-4" />
                     </button>
                   </>
@@ -253,6 +245,19 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
                   </button>
                 )}
               </div>
+
+              {/* Inline Preview */}
+              {previewId === label.id && (
+                <div className="border-t border-[#eee] bg-[#f0f0f0] p-2" data-testid={`preview-panel-${label.id}`}>
+                  {!previewBlob ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-6 h-6 text-[#aaa] animate-spin" />
+                    </div>
+                  ) : (
+                    <img src={previewBlob} alt={label.filename} className="w-full rounded" style={{ maxHeight: 500, objectFit: "contain" }} />
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

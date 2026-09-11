@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Package, Check, CheckCircle, ChevronLeft, FileText,
-  Image as ImageIcon, Loader2, AlertTriangle, Link2
+  Image as ImageIcon, Loader2, AlertTriangle, Link2,
+  Printer, Eye, Tag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -13,7 +14,7 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
   const [assignment, setAssignment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
-  const [showLabels, setShowLabels] = useState(false);
+  const [expandedLabel, setExpandedLabel] = useState(null);
 
   const fetchAssignment = useCallback(async () => {
     setLoading(true);
@@ -33,17 +34,9 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
     const isPulled = item.pulled;
     try {
       if (isPulled) {
-        await axios.post(
-          `${API}/orders/my-assignment/reset-pulled`,
-          [item.id],
-          getAuthHeader()
-        );
+        await axios.post(`${API}/orders/my-assignment/reset-pulled`, [item.id], getAuthHeader());
       } else {
-        await axios.post(
-          `${API}/orders/my-assignment/mark-pulled`,
-          [item.id],
-          getAuthHeader()
-        );
+        await axios.post(`${API}/orders/my-assignment/mark-pulled`, [item.id], getAuthHeader());
       }
       setAssignment((prev) => {
         if (!prev) return prev;
@@ -63,18 +56,12 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
     if (!assignment) return;
     const unpulled = (assignment.items || []).filter((i) => !i.pulled);
     if (unpulled.length > 0) {
-      const ok = window.confirm(
-        `${unpulled.length} item${unpulled.length > 1 ? "s" : ""} not pulled yet. Complete anyway?`
-      );
+      const ok = window.confirm(`${unpulled.length} item${unpulled.length > 1 ? "s" : ""} not pulled yet. Complete anyway?`);
       if (!ok) return;
     }
     setCompleting(true);
     try {
-      await axios.post(
-        `${API}/orders/complete/${assignment.id}`,
-        {},
-        getAuthHeader()
-      );
+      await axios.post(`${API}/orders/complete/${assignment.id}`, {}, getAuthHeader());
       toast.success("Orders completed!");
       onBack();
     } catch (err) {
@@ -84,13 +71,51 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
     }
   };
 
-  // Build match map: item_id -> label info
-  const matchMap = {};
+  const getLabelUrl = (labelId) =>
+    `${API}/orders/labels/${labelId}/file?token=${localStorage.getItem("token")}`;
+
+  const getPreviewUrl = (labelId) =>
+    `${API}/orders/labels/${labelId}/preview?token=${localStorage.getItem("token")}`;
+
+  const printLabel = (label) => {
+    const url = getLabelUrl(label.id);
+    const isImg = label.content_type?.startsWith("image/");
+    const win = window.open("", "_blank", "width=600,height=800");
+    if (!win) { toast.error("Pop-up blocked — allow pop-ups to print"); return; }
+    win.document.write(`
+      <html><head><title>Print Label</title>
+      <style>
+        body { margin: 0; display: flex; justify-content: center; align-items: flex-start; }
+        img { max-width: 100%; height: auto; }
+        iframe { width: 100%; height: 100vh; border: none; }
+        @media print { body { margin: 0; } }
+      </style></head><body>
+      ${isImg
+        ? `<img src="${url}" onload="setTimeout(()=>{window.print();},300)" />`
+        : `<iframe src="${url}" onload="setTimeout(()=>{window.print();},500)"></iframe>`
+      }
+      </body></html>
+    `);
+    win.document.close();
+  };
+
+  // Build match maps
+  const matchByItem = {};   // item_id -> { match, label }
+  const matchByLabel = {};  // label_id -> { match, item }
   const matchedLabelIds = new Set();
-  if (assignment?.matches) {
+
+  if (assignment?.matches && assignment?.labels) {
+    const labelMap = {};
+    for (const l of assignment.labels) labelMap[l.id] = l;
+
     for (const m of assignment.matches) {
-      matchMap[m.item_id] = m;
-      matchedLabelIds.add(m.label_id);
+      const label = labelMap[m.label_id];
+      const item = (assignment.items || []).find((i) => i.id === m.item_id);
+      if (label) {
+        matchByItem[m.item_id] = { match: m, label };
+        matchByLabel[m.label_id] = { match: m, item };
+        matchedLabelIds.add(m.label_id);
+      }
     }
   }
 
@@ -112,24 +137,20 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
       <div className="flex flex-col items-center justify-center py-20">
         <Package className="w-10 h-10 text-white/20 mb-3" />
         <p className="text-sm text-white/40">No active orders assigned to you</p>
-        <button onClick={onBack} className="mt-4 text-sm text-[#00D4FF] hover:underline">
-          Back to Dashboard
-        </button>
+        <button onClick={onBack} className="mt-4 text-sm text-[#00D4FF] hover:underline">Back to Dashboard</button>
       </div>
     );
   }
+
+  const isImage = (ct) => ct && ct.startsWith("image/");
 
   return (
     <div className="space-y-4 pb-24" data-testid="orders-page">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1 text-sm text-white/50 hover:text-white/80 transition-colors"
-            data-testid="orders-back-btn"
-          >
-            <ChevronLeft className="w-4 h-4" />
+          <button onClick={onBack} className="text-white/50 hover:text-white/80 transition-colors" data-testid="orders-back-btn">
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <div>
             <h2 className="text-lg font-semibold text-white/90">Orders</h2>
@@ -140,20 +161,6 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowLabels(!showLabels)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              showLabels
-                ? "bg-[#FF6B35]/15 text-[#FF6B35] border border-[#FF6B35]/20"
-                : "bg-white/[0.05] text-white/50 border border-white/[0.08]"
-            }`}
-            data-testid="toggle-labels-btn"
-          >
-            <FileText className="w-3.5 h-3.5 inline mr-1" />
-            Labels ({assignment.labels?.length || 0})
-          </button>
-        </div>
       </div>
 
       {/* Admin Notes */}
@@ -163,137 +170,160 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
         </div>
       )}
 
-      {/* Labels Panel */}
-      {showLabels && (
-        <div className="space-y-2 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-          <h3 className="text-sm font-medium text-white/70 mb-2">
-            Shipping Labels
-            {assignment.matches?.length > 0 && (
-              <span className="ml-2 text-xs text-[#10B981]">
-                {assignment.matches.length} auto-matched
-              </span>
-            )}
-          </h3>
-          {(assignment.labels || []).length === 0 ? (
-            <p className="text-xs text-white/30">No labels attached</p>
-          ) : (
-            (assignment.labels || []).map((label) => {
-              const match = assignment.matches?.find((m) => m.label_id === label.id);
-              const matchedItem = match ? items.find((i) => i.id === match.item_id) : null;
-
-              return (
-                <div
-                  key={label.id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]"
-                  data-testid={`order-label-${label.id}`}
-                >
-                  <div className="w-9 h-9 rounded-lg bg-white/[0.05] flex items-center justify-center flex-shrink-0">
-                    {label.content_type?.startsWith("image/") ? (
-                      <ImageIcon className="w-4 h-4 text-[#FF6B35]/60" />
-                    ) : (
-                      <FileText className="w-4 h-4 text-[#FF6B35]/60" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white/80 truncate">{label.filename}</p>
-                    {match && matchedItem ? (
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Link2 className="w-3 h-3 text-[#10B981]" />
-                        <span className="text-[10px] text-[#10B981]">
-                          Matched: {matchedItem.sku} — {matchedItem.title?.slice(0, 40)}
-                        </span>
-                        <span className="text-[10px] text-white/30 ml-1">({match.confidence}%)</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <AlertTriangle className="w-3 h-3 text-[#F59E0B]" />
-                        <span className="text-[10px] text-[#F59E0B]">No match found</span>
-                      </div>
-                    )}
-                  </div>
-                  <a
-                    href={`${API}/orders/labels/${label.id}/file?token=${localStorage.getItem("token")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-[#00D4FF] hover:underline flex-shrink-0"
-                  >
-                    View
-                  </a>
-                </div>
-              );
-            })
-          )}
+      {/* Stats Bar */}
+      <div className="flex gap-2">
+        <div className="flex-1 p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-center">
+          <p className="text-lg font-bold text-white/80">{items.length}</p>
+          <p className="text-[10px] text-white/35 uppercase">Items</p>
         </div>
-      )}
+        <div className="flex-1 p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-center">
+          <p className="text-lg font-bold text-[#FF6B35]">{assignment.labels?.length || 0}</p>
+          <p className="text-[10px] text-white/35 uppercase">Labels</p>
+        </div>
+        <div className="flex-1 p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-center">
+          <p className="text-lg font-bold text-[#10B981]">{Object.keys(matchByItem).length}</p>
+          <p className="text-[10px] text-white/35 uppercase">Matched</p>
+        </div>
+      </div>
 
-      {/* Pull List */}
-      <div className="space-y-1">
+      {/* Pull List with Inline Matched Labels */}
+      <div className="space-y-2">
         {items.length === 0 ? (
           <p className="text-sm text-white/30 text-center py-4">No items to pull</p>
         ) : (
           items.map((item) => {
-            const match = matchMap[item.id];
+            const linked = matchByItem[item.id];
             return (
-              <button
-                key={item.id}
-                onClick={() => handleTogglePull(item)}
-                className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all ${
-                  item.pulled
-                    ? "bg-[#10B981]/5 border border-[#10B981]/15"
-                    : "bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04]"
-                }`}
-                data-testid={`pull-item-${item.id}`}
-              >
-                <div
-                  className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-colors ${
+              <div key={item.id} className="rounded-xl overflow-hidden">
+                {/* Item Row */}
+                <button
+                  onClick={() => handleTogglePull(item)}
+                  className={`w-full flex items-center gap-3 p-3 text-left transition-all ${
                     item.pulled
-                      ? "bg-[#10B981] text-white"
-                      : "border-2 border-white/15"
-                  }`}
+                      ? "bg-[#10B981]/5 border border-[#10B981]/15"
+                      : "bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04]"
+                  } ${linked ? "rounded-t-xl border-b-0" : "rounded-xl"}`}
+                  data-testid={`pull-item-${item.id}`}
                 >
-                  {item.pulled && <Check className="w-4 h-4" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-base font-bold tracking-wide ${
-                        item.pulled ? "text-[#10B981]/70" : "text-[#FFB800]"
-                      }`}
-                    >
-                      {item.sku || "—"}
-                    </span>
-                    {match && (
-                      <Link2 className="w-3 h-3 text-[#10B981] flex-shrink-0" />
+                  <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-colors ${
+                    item.pulled ? "bg-[#10B981] text-white" : "border-2 border-white/15"
+                  }`}>
+                    {item.pulled && <Check className="w-4 h-4" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-base font-bold tracking-wide ${item.pulled ? "text-[#10B981]/70" : "text-[#FFB800]"}`}>
+                        {item.sku || "—"}
+                      </span>
+                      {linked && <Link2 className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0" />}
+                    </div>
+                    <p className={`text-sm truncate ${item.pulled ? "text-white/30 line-through" : "text-white/70"}`}>
+                      {item.title || "Untitled"}
+                    </p>
+                    {item.platform && <span className="text-[10px] text-white/30 capitalize">{item.platform}</span>}
+                  </div>
+                </button>
+
+                {/* Matched Label — shown directly under the item */}
+                {linked && (
+                  <div className={`border border-t-0 rounded-b-xl p-2.5 ${
+                    item.pulled ? "border-[#10B981]/15 bg-[#10B981]/[0.02]" : "border-white/[0.06] bg-[#FF6B35]/[0.03]"
+                  }`}>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-md bg-[#FF6B35]/10 flex items-center justify-center flex-shrink-0">
+                        {isImage(linked.label.content_type) ? (
+                          <ImageIcon className="w-3.5 h-3.5 text-[#FF6B35]" />
+                        ) : (
+                          <FileText className="w-3.5 h-3.5 text-[#FF6B35]" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-white/60 truncate">{linked.label.filename}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <Tag className="w-2.5 h-2.5 text-[#10B981]" />
+                          <span className="text-[10px] text-[#10B981] font-mono font-bold">
+                            {linked.label.sku_tag || linked.match.reason}
+                          </span>
+                          <span className="text-[10px] text-white/20">({linked.match.confidence}%)</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setExpandedLabel(expandedLabel === linked.label.id ? null : linked.label.id); }}
+                        className="p-1.5 rounded-md text-white/30 hover:text-white/60 hover:bg-white/[0.05] transition-colors"
+                        data-testid={`preview-matched-${linked.label.id}`}
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); printLabel(linked.label); }}
+                        className="p-1.5 rounded-md text-white/30 hover:text-[#00D4FF] hover:bg-white/[0.05] transition-colors"
+                        data-testid={`print-label-${linked.label.id}`}
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {/* Inline Preview */}
+                    {expandedLabel === linked.label.id && (
+                      <div className="mt-2 rounded-lg overflow-hidden bg-white/[0.03] border border-white/[0.06]">
+                        <img src={getPreviewUrl(linked.label.id)} alt="Label" className="w-full max-h-[300px] object-contain" />
+                      </div>
                     )}
                   </div>
-                  <p className={`text-sm truncate ${item.pulled ? "text-white/30 line-through" : "text-white/70"}`}>
-                    {item.title || "Untitled"}
-                  </p>
-                  {item.platform && (
-                    <span className="text-[10px] text-white/30 capitalize">{item.platform}</span>
-                  )}
-                </div>
-              </button>
+                )}
+              </div>
             );
           })
         )}
       </div>
 
-      {/* Unmatched Labels Warning */}
-      {unmatchedLabels.length > 0 && !showLabels && (
-        <div className="p-3 rounded-lg bg-[#F59E0B]/5 border border-[#F59E0B]/15">
-          <div className="flex items-center gap-2">
+      {/* Unmatched Labels Section */}
+      {unmatchedLabels.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 px-1">
             <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
-            <p className="text-xs text-[#F59E0B]">
-              {unmatchedLabels.length} label{unmatchedLabels.length > 1 ? "s" : ""} not matched to any item
-            </p>
+            <h3 className="text-sm font-medium text-[#F59E0B]">
+              {unmatchedLabels.length} Unmatched Label{unmatchedLabels.length > 1 ? "s" : ""}
+            </h3>
           </div>
-          <button
-            onClick={() => setShowLabels(true)}
-            className="text-xs text-[#00D4FF] hover:underline mt-1"
-          >
-            View labels
-          </button>
+          {unmatchedLabels.map((label) => (
+            <div key={label.id} className="rounded-xl overflow-hidden border border-[#F59E0B]/15 bg-[#F59E0B]/[0.03]" data-testid={`unmatched-label-${label.id}`}>
+              <div className="flex items-center gap-2.5 p-3">
+                <div className="w-8 h-8 rounded-md bg-[#F59E0B]/10 flex items-center justify-center flex-shrink-0">
+                  {isImage(label.content_type) ? (
+                    <ImageIcon className="w-4 h-4 text-[#F59E0B]" />
+                  ) : (
+                    <FileText className="w-4 h-4 text-[#F59E0B]" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white/70 truncate">{label.filename}</p>
+                  {label.sku_tag && (
+                    <span className="text-[10px] text-[#F59E0B] font-mono font-bold">SKU: {label.sku_tag}</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setExpandedLabel(expandedLabel === label.id ? null : label.id)}
+                  className="p-1.5 rounded-md text-white/30 hover:text-white/60 hover:bg-white/[0.05] transition-colors"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => printLabel(label)}
+                  className="p-1.5 rounded-md text-white/30 hover:text-[#00D4FF] hover:bg-white/[0.05] transition-colors"
+                  data-testid={`print-unmatched-${label.id}`}
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {expandedLabel === label.id && (
+                <div className="px-3 pb-3">
+                  <div className="rounded-lg overflow-hidden bg-white/[0.03] border border-white/[0.06]">
+                    <img src={getPreviewUrl(label.id)} alt="Label" className="w-full max-h-[300px] object-contain" />
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
@@ -305,11 +335,7 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
           className="w-full bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-6 rounded-xl text-base"
           data-testid="complete-orders-btn"
         >
-          {completing ? (
-            <Loader2 className="w-5 h-5 animate-spin mr-2" />
-          ) : (
-            <CheckCircle className="w-5 h-5 mr-2" />
-          )}
+          {completing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CheckCircle className="w-5 h-5 mr-2" />}
           {completing ? "Completing..." : "Complete Orders"}
         </Button>
       </div>
