@@ -39,6 +39,7 @@ from app.routers.employee_terminations import router as employee_terminations_ro
 from app.routers.contractor_agreement import router as contractor_agreement_router
 from app.routers.video_calls import router as video_calls_router
 from app.routers.ai_assistant import router as ai_assistant_router
+from app.routers.orders import router as orders_router
 
 # Configure logging
 logging.basicConfig(
@@ -175,6 +176,7 @@ app.include_router(employee_terminations_router)  # Already has /api prefix
 app.include_router(contractor_agreement_router, prefix="/api")  # Contractor agreements
 app.include_router(video_calls_router, prefix="/api")  # Daily.co video calls
 app.include_router(ai_assistant_router, prefix="/api")  # AI Listing Assistant
+app.include_router(orders_router, prefix="/api")  # Orders & shipping labels
 
 
 @app.get("/api/")

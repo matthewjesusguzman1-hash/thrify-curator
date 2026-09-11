@@ -44,7 +44,8 @@ import {
   Minimize2,
   Sun,
   Moon,
-  Video
+  Video,
+  Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +63,7 @@ import FullScreenMessaging from "@/components/FullScreenMessaging";
 import PullToRefresh from "@/components/PullToRefresh";
 import EmployeeWalkthrough, { useEmployeeWalkthrough } from "@/components/employee/EmployeeWalkthrough";
 import AIAssistant from "@/components/ai/AIAssistant";
+import OrdersPage from "@/components/employee/OrdersPage";
 import { useDashboardTheme } from "@/hooks/useDashboardTheme";
 
 // Check if running in Capacitor native app
@@ -297,6 +299,10 @@ export default function EmployeeDashboard({
   const [viewing1099, setViewing1099] = useState(null);
 
   // Password management state
+  
+  // Orders page state
+  const [showOrdersPage, setShowOrdersPage] = useState(false);
+  const [hasActiveOrders, setHasActiveOrders] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [hasPassword, setHasPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -1030,6 +1036,16 @@ export default function EmployeeDashboard({
       } catch (err) {
         console.log('No onboarding data found:', err);
       }
+
+      // Check for active order assignment
+      if (!isAdminView) {
+        try {
+          const ordersRes = await axios.get(`${API}/orders/my-assignment`, getAuthHeader());
+          setHasActiveOrders(!!ordersRes.data?.assignment);
+        } catch (err) {
+          setHasActiveOrders(false);
+        }
+      }
       
       // Start Live Activity ONCE when clocked in (avoid restarting on every fetchData) - skip in admin view
       if (!isAdminView && isNowClocked && !liveActivityStartedRef.current && statusRes.data.entry?.clock_in) {
@@ -1607,6 +1623,25 @@ export default function EmployeeDashboard({
 
   if (!user) return null;
 
+  // Show Orders page as full-page overlay when active
+  if (showOrdersPage) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="employee-dashboard" data-theme={isDark ? "dark" : "light"}>
+        <div className="flex-1 px-4 pt-6 pb-4 max-w-2xl mx-auto w-full" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)' }}>
+          <OrdersPage
+            user={user}
+            getAuthHeader={() => getAuthHeader()}
+            onBack={() => {
+              setShowOrdersPage(false);
+              setHasActiveOrders(false); // Will re-check on next fetchData
+              fetchData();
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="employee-dashboard" data-theme={isDark ? "dark" : "light"}>
       {/* Header */}
@@ -1682,6 +1717,23 @@ export default function EmployeeDashboard({
                     Calls
                   </Button>
                 </Link>
+                {/* Orders shortcut - only when admin assigned orders */}
+                {hasActiveOrders && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      lightTap();
+                      setShowOrdersPage(true);
+                    }}
+                    className="text-[#FF6B35] hover:text-[#FF6B35] hover:bg-[#FF6B35]/10 px-2 relative"
+                    data-testid="orders-btn"
+                  >
+                    <Package className="w-4 h-4 mr-1" />
+                    Orders
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#FF6B35] animate-pulse" />
+                  </Button>
+                )}
                 <Button 
                   variant="ghost" 
                   size="sm" 

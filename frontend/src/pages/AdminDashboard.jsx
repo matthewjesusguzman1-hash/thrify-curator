@@ -64,7 +64,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Video,
-  MoreVertical
+  MoreVertical,
+  Grid3x3
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,6 +99,10 @@ import EmployeeTerminationsSection from "@/components/admin/sections/EmployeeTer
 import PendingDocumentsSection from "@/components/admin/sections/PendingDocumentsSection";
 import SendApplicationLinkSection from "@/components/admin/sections/SendApplicationLinkSection";
 import AllApplicationsSection from "@/components/admin/sections/AllApplicationsSection";
+import ShippingLabelsSection from "@/components/admin/sections/ShippingLabelsSection";
+import OrderAssignmentSection from "@/components/admin/sections/OrderAssignmentSection";
+import TrainingSection from "@/components/admin/sections/TrainingSection";
+import AIAssistant from "@/components/ai/AIAssistant";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
 import WebPushSettings from "@/components/WebPushSettings";
@@ -380,7 +385,7 @@ export default function AdminDashboard() {
   const [isOwner, setIsOwner] = useState(false);
   
   // GPS Trip tracking
-  const [forceOpenOperations, setForceOpenOperations] = useState(false); // Force open Operations group
+  const [forceOpenOperations, setForceOpenOperations] = useState(false); // Navigate to operations page
   const gpsTrackerRef = useRef(null); // Reference to scroll to GPS section
   const [tripState, setTripState] = useState({ active: false, paused: false }); // Synced from GPSMileageTracker
   const [tripStarting, setTripStarting] = useState(false); // Loading state for header button
@@ -388,6 +393,9 @@ export default function AdminDashboard() {
   // Hidden email settings trigger - triple click on title
   const titleClickCount = useRef(0);
   const titleClickTimer = useRef(null);
+
+  // Page navigation state for multi-page dashboard
+  const [activePage, setActivePage] = useState("home");
 
   // Business owner emails - only these users can assign admin roles
   const OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"];
@@ -692,124 +700,49 @@ export default function AdminDashboard() {
     // Determine which section to scroll to and what to open
     switch (notification.type) {
       case 'clock_in':
-        // Clock IN - expand the green Clocked In tracker (no scroll needed, it's at the top)
+        // Clock IN - expand the green Clocked In tracker (visible on home)
+        setActivePage("home");
         setForceOpenClockedInTracker(true);
         break;
         
       case 'clock_out':
-        // Clock OUT - show Hours by Employee section and refresh payroll data
-        fetchPayrollSummary(); // Refresh payroll data
-        await expandGroupIfNeeded('group-team');
-        await expandSectionIfNeeded('[data-testid="hours-section"]', '[data-testid="hours-by-employee-toggle"]');
+        // Clock OUT - show Hours section on home
+        setActivePage("home");
+        fetchPayrollSummary();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        document.querySelector('[data-testid="hours-section"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         break;
         
       case 'w9_submission':
       case 'w9_submitted':
-        // Team Management group contains All Employees
-        await expandGroupIfNeeded('group-team');
-        await expandSectionIfNeeded('[data-testid="employees-section"]', '[data-testid="employees-section-toggle"]');
+        // Navigate to team page
+        setActivePage("team");
+        await new Promise(resolve => setTimeout(resolve, 300));
+        document.querySelector('[data-testid="employees-section"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         break;
         
       case 'new_message':
-        // Forms & Communications group contains Messages
-        await expandGroupIfNeeded('group-forms');
-        await expandSectionIfNeeded('[data-testid="messages-section"]', '[data-testid="messages-section-toggle"]');
-        break;
-
       case 'employee_message':
       case 'consignor_message':
-        // Forms & Communications group contains Conversations
-        await expandGroupIfNeeded('group-forms');
-        await expandSectionIfNeeded('[data-testid="conversations-section"]', '[data-testid="conversations-section-toggle"]');
+        // Navigate to messages page
+        setActivePage("messages");
         break;
         
       case 'job_application':
-        // Hiring group contains All Applications
-        await expandGroupIfNeeded('group-hiring');
-        
-        // Scroll to All Applications section
-        const allAppsSection = document.querySelector('[data-testid="all-applications-section"]');
-        if (allAppsSection) {
-          allAppsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          
-          // Check if section is collapsed
-          const allAppsToggle = document.querySelector('[data-testid="all-applications-toggle"]');
-          if (allAppsToggle) {
-            const chevronDown = allAppsToggle.querySelector('svg.lucide-chevron-down');
-            if (chevronDown) {
-              await new Promise(resolve => setTimeout(resolve, 300));
-              allAppsToggle.click();
-            }
-          }
-        }
+        // Navigate to hiring page
+        setActivePage("hiring");
         break;
 
       case 'consignment_inquiry':
       case 'consignment_agreement':
-        // Forms & Communications group contains Form Submissions
-        await expandGroupIfNeeded('group-forms');
-        
-        // Scroll to Form Submissions section
-        const formSection = document.querySelector('[data-testid="form-submissions-section"]');
-        if (formSection) {
-          formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          
-          // Check if section is collapsed
-          const formToggle = document.querySelector('[data-testid="form-submissions-toggle"]');
-          if (formToggle) {
-            const chevronDown = formToggle.querySelector('svg.lucide-chevron-down');
-            if (chevronDown) {
-              await new Promise(resolve => setTimeout(resolve, 300));
-              formToggle.click();
-            }
-          }
-          
-          // Wait for section to expand then select the appropriate tab
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          if (notification.type === 'job_application') {
-            const jobTab = document.querySelector('[data-testid="tab-job-applications"]');
-            if (jobTab) jobTab.click();
-          } else {
-            // Both consignment_inquiry and consignment_agreement go to agreements tab
-            const agreementTab = document.querySelector('[data-testid="tab-consignment-agreements"]');
-            if (agreementTab) agreementTab.click();
-          }
-          
-          // Try to open the specific submission by ID
-          await new Promise(resolve => setTimeout(resolve, 300));
-          const viewBtn = document.querySelector(`[data-testid*="${notification.employee_id}"]`);
-          if (viewBtn) {
-            viewBtn.click();
-          }
-        }
+        // Navigate to forms page
+        setActivePage("forms");
         break;
       
       case 'payment_method_change':
       case 'consignment_items_added':
-        // Forms & Communications group contains Form Submissions -> Updates tab
-        await expandGroupIfNeeded('group-forms');
-        
-        // Scroll to Form Submissions section and open Updates tab
-        const updatesFormSection = document.querySelector('[data-testid="form-submissions-section"]');
-        if (updatesFormSection) {
-          updatesFormSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          
-          // Check if section is collapsed
-          const updatesFormToggle = document.querySelector('[data-testid="form-submissions-toggle"]');
-          if (updatesFormToggle) {
-            const chevronDown = updatesFormToggle.querySelector('svg.lucide-chevron-down');
-            if (chevronDown) {
-              await new Promise(resolve => setTimeout(resolve, 300));
-              updatesFormToggle.click();
-            }
-          }
-          
-          // Wait for section to expand then select Updates tab
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const updatesTab = document.querySelector('[data-testid="tab-updates"]');
-          if (updatesTab) updatesTab.click();
-        }
+        // Navigate to forms page
+        setActivePage("forms");
         break;
         
       default:
@@ -989,7 +922,7 @@ export default function AdminDashboard() {
         switch (pendingAction) {
           case 'StartTrip':
             // Start GPS tracking via the tracker component
-            setForceOpenOperations(true);
+            setActivePage("operations");
             setTimeout(() => {
               if (gpsTrackerRef.current?.startTrip) {
                 gpsTrackerRef.current.startTrip();
@@ -1000,7 +933,7 @@ export default function AdminDashboard() {
             
           case 'LogMiles':
             // Open manual trip entry form
-            setForceOpenOperations(true);
+            setActivePage("operations");
             setTimeout(() => {
               if (gpsTrackerRef.current?.openManualEntry) {
                 gpsTrackerRef.current.openManualEntry();
@@ -2756,11 +2689,11 @@ export default function AdminDashboard() {
                       style={{ color: '#059669' }}
                       onClick={() => {
                         setShowPayrollQuickView(false);
-                        setPayrollPeriodIndex(0); // Reset to current when closing
-                        setForceOpenPayrollGroup(true);
+                        setPayrollPeriodIndex(0);
+                        setActivePage("payroll");
                         setTimeout(() => {
-                          document.querySelector('[data-testid="group-payroll"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 400);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }, 200);
                       }}
                     >
                       View Full Payroll Details →
@@ -3187,7 +3120,7 @@ export default function AdminDashboard() {
                         <Button
                           onClick={() => {
                             buttonPress();
-                            setForceOpenOperations(true);
+                            setActivePage("operations");
                             setTimeout(() => gpsTrackerRef.current?.resumeTrip(), 400);
                           }}
                           size="sm"
@@ -3201,7 +3134,7 @@ export default function AdminDashboard() {
                         <Button
                           onClick={() => {
                             buttonPress();
-                            setForceOpenOperations(true);
+                            setActivePage("operations");
                             setTimeout(() => gpsTrackerRef.current?.pauseTrip(), 400);
                           }}
                           size="sm"
@@ -3216,7 +3149,7 @@ export default function AdminDashboard() {
                       <Button
                         onClick={() => {
                           buttonPress();
-                          setForceOpenOperations(true);
+                          setActivePage("operations");
                           setTimeout(() => {
                             gpsTrackerRef.current?.endTrip();
                             setTimeout(() => {
@@ -3237,7 +3170,7 @@ export default function AdminDashboard() {
                       onClick={() => {
                         buttonPress();
                         // Force open Operations group so GPS tracker mounts
-                        setForceOpenOperations(true);
+                        setActivePage("operations");
                         // Wait for mount, then start trip
                         setTimeout(() => {
                           if (gpsTrackerRef.current?.startTrip) {
@@ -3632,19 +3565,24 @@ export default function AdminDashboard() {
           />
 
 
-          {/* ====== GROUPED DASHBOARD SECTIONS ====== */}
-          <div className="space-y-6">
-            
-            {/* GROUP 1: Team Management */}
-            <DashboardGroup
-              title="Team Management"
-              icon={Users}
-              gradient="from-[#00D4FF] to-[#00A8CC]"
-              defaultOpen={false}
-              badge={`${employees.length} team members`}
-              testId="group-team"
+          {/* ====== PAGE-BASED DASHBOARD ====== */}
+
+          {/* Back button when not on home */}
+          {activePage !== "home" && (
+            <button
+              onClick={() => setActivePage("home")}
+              className="flex items-center gap-2 text-sm text-white/50 hover:text-white/80 transition-colors mb-4"
+              data-testid="admin-back-btn"
             >
-              {/* All Employees Section */}
+              <ChevronLeft className="w-4 h-4" />
+              Back
+            </button>
+          )}
+
+          {/* HOME PAGE */}
+          {activePage === "home" && (
+            <div className="space-y-6">
+              {/* All Employees - always visible on home */}
               <div data-testid="employees-section">
                 <AllEmployeesSection
                   employees={employees}
@@ -3659,7 +3597,7 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* Hours by Employee Section */}
+              {/* Hours by Employee - always visible on home */}
               <div data-testid="hours-section">
                 <HoursByEmployeeSection
                   timeEntries={timeEntries}
@@ -3672,10 +3610,67 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* Password Management for Employees */}
-              <PasswordManagementSection token={localStorage.getItem("token")} />
+              {/* Navigation Tiles */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" data-testid="admin-nav-tiles">
+                {[
+                  { id: "team", label: "Team", desc: `${employees.length} members`, icon: Users, color: "#00D4FF" },
+                  { id: "payroll", label: "Payroll", desc: "Earnings & payments", icon: DollarSign, color: "#8B5CF6" },
+                  { id: "operations", label: "Operations", desc: "Pull list & sales", icon: Package, color: "#FFB800" },
+                  { id: "forms", label: "Forms", desc: `${formsSummary.total_new || 0} new`, icon: FileText, color: "#FF1493" },
+                  { id: "hiring", label: "Hiring", desc: "Applications", icon: ClipboardCheck, color: "#8B5CF6" },
+                  { id: "messages", label: "Messages", desc: adminUnreadMessageCount > 0 ? `${adminUnreadMessageCount} unread` : "Messaging", icon: MessageSquare, color: "#10B981" },
+                  { id: "training", label: "Training", desc: "Materials", icon: Video, color: "#F59E0B" },
+                  { id: "ai", label: "AI Assistant", desc: "Listing helper", icon: Monitor, color: "#00D4FF" },
+                ].map(tile => (
+                  <button
+                    key={tile.id}
+                    onClick={() => setActivePage(tile.id)}
+                    className="group relative flex flex-col items-start p-4 rounded-xl border border-white/[0.06] bg-[#0f0f1a] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all text-left"
+                    data-testid={`nav-tile-${tile.id}`}
+                  >
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3" style={{ background: `${tile.color}15` }}>
+                      <tile.icon className="w-4.5 h-4.5" style={{ color: tile.color }} />
+                    </div>
+                    <span className="text-sm font-semibold text-white/85">{tile.label}</span>
+                    <span className="text-xs text-white/35 mt-0.5">{tile.desc}</span>
+                    {tile.id === "messages" && adminUnreadMessageCount > 0 && (
+                      <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-[#10B981]" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-              {/* Employee Terminations Section */}
+          {/* TEAM MANAGEMENT PAGE */}
+          {activePage === "team" && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold text-white/90">Team Management</h2>
+              <div data-testid="employees-section">
+                <AllEmployeesSection
+                  employees={employees}
+                  employeeClockStatuses={employeeClockStatuses}
+                  payrollSettings={payrollSettings}
+                  getAuthHeader={getAuthHeader}
+                  formatDateTime={formatDateTime}
+                  onViewEmployeePortal={handleViewEmployeePortal}
+                  onRefreshEmployees={fetchData}
+                  onDownloadBlankW9={handleDownloadBlankW9}
+                  isOwner={isOwner}
+                />
+              </div>
+              <div data-testid="hours-section">
+                <HoursByEmployeeSection
+                  timeEntries={timeEntries}
+                  employees={employees}
+                  formatDateTime={formatDateTime}
+                  onAddEntry={() => setShowAddEntry(true)}
+                  onEditEntry={handleEditEntry}
+                  onDeleteEntry={handleDeleteEntry}
+                  payPeriodStart={payrollSettings.pay_period_start_date}
+                />
+              </div>
+              <PasswordManagementSection token={localStorage.getItem("token")} />
               <div data-testid="terminations-section">
                 <EmployeeTerminationsSection
                   employees={employees}
@@ -3683,21 +3678,14 @@ export default function AdminDashboard() {
                   onEmployeeTerminated={fetchData}
                 />
               </div>
-            </DashboardGroup>
+            </div>
+          )}
 
-            {/* GROUP 2: Payroll & Payments */}
-            <DashboardGroup
-              title="Payroll & Payments"
-              icon={DollarSign}
-              gradient="from-[#8B5CF6] to-[#6D28D9]"
-              defaultOpen={false}
-              forceOpen={forceOpenPayrollGroup}
-              badge="Track earnings & payments"
-              testId="group-payroll"
-            >
-              {/* Integrated Payroll Summary & History */}
+          {/* PAYROLL PAGE */}
+          {activePage === "payroll" && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold text-white/90">Payroll & Payments</h2>
               <div className="dashboard-card" data-testid="payroll-summary">
-                {/* Compact Summary Row */}
                 <div className="flex flex-wrap items-center gap-3 mb-4">
                   <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#00D4FF]/10 to-[#00A8CC]/5 rounded-lg border border-[#00D4FF]/20">
                     <Clock className="w-4 h-4 text-[#00A8CC]" />
@@ -3708,7 +3696,6 @@ export default function AdminDashboard() {
                       <p className="text-[10px] text-[#666] leading-tight">This Period</p>
                     </div>
                   </div>
-                  {/* Outstanding from Previous Periods */}
                   {payrollSummary.outstanding_amount > 0 && (
                     <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#F59E0B]/10 to-[#D97706]/5 rounded-lg border border-[#F59E0B]/20">
                       <AlertCircle className="w-4 h-4 text-[#D97706]" />
@@ -3744,33 +3731,42 @@ export default function AdminDashboard() {
                     ) : ''}
                   </div>
                 </div>
-
-                {/* Integrated Employee Payroll History */}
                 <PayrollHistorySection 
                   employees={employees}
                   getAuthHeader={getAuthHeader}
                   formatHoursToHMS={formatHoursToHMS}
                   roundHoursToMinute={roundHoursToMinute}
-                  isCollapsible={true}
-                  compactMode={true}
+                  isCollapsible={false}
+                  compactMode={false}
                 />
               </div>
-
-              {/* Payment Records Section */}
               <PaymentRecordsSection getAuthHeader={getAuthHeader} />
-            </DashboardGroup>
+            </div>
+          )}
 
-            {/* GROUP 3: Forms & Communications */}
-            <DashboardGroup
-              title="Forms & Communications"
-              icon={MessageSquare}
-              gradient="from-[#FF1493] to-[#E91E8C]"
-              defaultOpen={false}
-              badge={`${formsSummary.total_new || 0} new submissions`}
-              testId="group-forms"
-            >
-              {/* Primary Section: Form Submissions */}
-              <div data-testid="form-submissions-section" className="mb-4">
+          {/* OPERATIONS PAGE */}
+          {activePage === "operations" && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold text-white/90">Operations</h2>
+              <ShippingLabelsSection getAuthHeader={getAuthHeader} />
+              <OrderAssignmentSection getAuthHeader={getAuthHeader} employees={employees} />
+              <GPSMileageTracker 
+                ref={gpsTrackerRef}
+                getAuthHeader={getAuthHeader}
+                onTripStateChange={setTripState}
+              />
+              <PullListSection getAuthHeader={getAuthHeader} />
+              <SalesDataSection getAuthHeader={getAuthHeader} />
+              <TaxesSection getAuthHeader={getAuthHeader} />
+              <TaxReturnsArchiveSection getAuthHeader={getAuthHeader} />
+            </div>
+          )}
+
+          {/* FORMS PAGE */}
+          {activePage === "forms" && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold text-white/90">Forms & Submissions</h2>
+              <div data-testid="form-submissions-section">
                 <FormSubmissionsSection
                   formSubmissions={formSubmissions}
                   formsSummary={formsSummary}
@@ -3792,83 +3788,56 @@ export default function AdminDashboard() {
                   onViewConsignorPortal={handleViewConsignorPortal}
                 />
               </div>
+            </div>
+          )}
 
-              {/* Messages Section */}
-              <div data-testid="messages-section" className="mb-4">
-                <MessagesSection />
-              </div>
-
-              {/* Additional Tools removed - Interview Scheduler moved to Hiring section */}
-            </DashboardGroup>
-
-            {/* GROUP 4: Hiring - Applications, Skills Tests & Interviews */}
-            <DashboardGroup
-              title="Hiring"
-              icon={ClipboardCheck}
-              gradient="from-[#8B5CF6] to-[#6D28D9]"
-              defaultOpen={false}
-              badge="Applications & Interviews"
-              testId="group-hiring"
-            >
-              {/* All Applications - View all job applications */}
+          {/* HIRING PAGE */}
+          {activePage === "hiring" && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold text-white/90">Hiring</h2>
               <div data-testid="all-applications-section">
                 <AllApplicationsSection getAuthHeader={getAuthHeader} refreshKey={refreshKey} />
               </div>
-              
-              {/* Onboarding & Applications - Send invites, set up logins */}
               <div data-testid="send-application-link-section">
                 <SendApplicationLinkSection getAuthHeader={getAuthHeader} refreshKey={refreshKey} />
               </div>
-              
-              {/* Pending Documents Review Section - For reviewing submitted forms */}
               <div data-testid="pending-documents-section">
                 <PendingDocumentsSection getAuthHeader={getAuthHeader} refreshKey={refreshKey} />
               </div>
-              
               <div data-testid="applicant-tests-section">
                 <ApplicantTestsSection getAuthHeader={getAuthHeader} />
               </div>
               <div data-testid="interview-scheduler-section">
                 <InterviewSchedulerSection getAuthHeader={getAuthHeader} />
               </div>
-            </DashboardGroup>
+            </div>
+          )}
 
-            {/* GROUP 4: Reports & Operations */}
-            <DashboardGroup
-              title="Reports & Operations"
-              icon={TrendingUp}
-              gradient="from-[#FFB800] to-[#F59E0B]"
-              defaultOpen={false}
-              badge="Sales, reports & tax prep"
-              testId="group-operations"
-              forceOpen={forceOpenOperations}
-              onOpenChange={(open) => {
-                if (!open) setForceOpenOperations(false);
-              }}
-            >
-              {/* GPS Mileage Tracker - New real-time tracking */}
-              {/* FEATURE FLAG: GPS tracking enabled for testing */}
-              <GPSMileageTracker 
-                ref={gpsTrackerRef}
-                getAuthHeader={getAuthHeader}
-                onTripStateChange={setTripState}
-              />
+          {/* MESSAGES PAGE */}
+          {activePage === "messages" && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold text-white/90">Messages</h2>
+              <div data-testid="messages-section">
+                <MessagesSection />
+              </div>
+            </div>
+          )}
 
-              {/* Pull List - Sorted SKU list for pulling sold items */}
-              <PullListSection getAuthHeader={getAuthHeader} />
+          {/* TRAINING PAGE */}
+          {activePage === "training" && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold text-white/90">Training</h2>
+              <TrainingSection getAuthHeader={getAuthHeader} />
+            </div>
+          )}
 
-              {/* Sales Data Section - CSV Import, Reports, Analytics */}
-              <SalesDataSection getAuthHeader={getAuthHeader} />
-
-              {/* Taxes Section - Deductions and Tax Prep */}
-              <TaxesSection getAuthHeader={getAuthHeader} />
-
-              {/* Tax Returns Archive - Store filed tax returns by year */}
-              <TaxReturnsArchiveSection getAuthHeader={getAuthHeader} />
-            </DashboardGroup>
-
-          </div>
-          {/* ====== END GROUPED SECTIONS ====== */}
+          {/* AI ASSISTANT PAGE */}
+          {activePage === "ai" && (
+            <div className="space-y-6">
+              <h2 className="text-lg font-semibold text-white/90">AI Assistant</h2>
+              <AIAssistant getAuthHeader={getAuthHeader} />
+            </div>
+          )}
 
           {/* Submission Details Modal */}
           {showSubmissionDetails && selectedSubmission && (

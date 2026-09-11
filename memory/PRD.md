@@ -15,80 +15,78 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 - **Frontend**: React (CRA + CRACO) + Tailwind + Shadcn/UI
 - **Backend**: FastAPI + MongoDB (Motor)
 - **AI**: Gemini 3.7 Flash via Emergent integrations
-- **Storage**: Emergent Object Storage for images
+- **Storage**: Emergent Object Storage for images and shipping labels
 - **Maps**: OSRM (mileage), Nominatim (geocoding)
 - **Mobile**: Capacitor (Android/iOS wrappers), PWA
 
 ## What's Been Implemented
 
-### Pull List Feature (Sep 2026) — NEW
-- **Backend**: `/api/inventory/pull-list` GET (sold items sorted by SKU), `/api/inventory/pull-list/mark-pulled` POST, `/api/inventory/pull-list/reset` POST, `/api/inventory/pull-list/mark-all-pulled` POST
-- **Frontend**: `PullListSection.jsx` in Reports & Operations dashboard group
-- Defaults to "Today" — user typically pulls same-day sold items, max 1 week back
-- Filters: Today, 3 Days, Week (no "All Sold" — avoids data overload)
-- Clean minimal design: SKU, title, platform only — no prices, dates, or meta clutter
-- Items grouped by SKU row letter when multiple rows, flat list when single row
-- Natural SKU sorting (A6 < A10 < A25)
-- Tap checkbox to mark pulled, "Mark All Pulled" at bottom
-- Show/hide pulled items toggle
-- Print-friendly view
+### Orders & Shipping Labels (Sep 11, 2026) — NEW
+- **Backend**: `/api/orders/*` router with label upload, list, delete; order assignment CRUD; employee endpoints
+- **Admin Operations page**: Shipping Labels section (drag-and-drop + file picker, PDF/image support, Emergent Object Storage)
+- **Admin Operations page**: Order Assignments section (assign orders to specific employees with date range + labels)
+- **Employee Dashboard**: "Orders" button (only visible when admin has assigned active orders)
+- **Employee Orders page**: Pull list items sorted by SKU, shipping labels panel, auto-matching system (platform + title + SKU heuristics)
+- **Auto-matching**: PDF text extraction (pdfplumber) → platform guess + title keyword + SKU overlap scoring
+- **Complete flow**: Employee taps "Complete Orders" → assignment marked done → disappears from dashboard
+- **Access control**: Admin assigns, employee sees only when assigned
+- Testing: 100% pass (17 backend, 12 frontend scenarios)
+
+### Admin Dashboard Restructure (Sep 2026)
+- Replaced overloaded one-page admin dashboard with tile-based home page + separate full-page sections
+- Home page: All Employees + Hours visible, tile grid for Operations, Team, Hiring, Messages, Training, AI
+- Operations page: Shipping Labels, Order Assignments, GPS Tracker, Pull List, Sales Data, Taxes
+- Back button navigation, header icons preserved
+- Testing: 100% pass (8/8 tiles, navigation, back button)
+
+### Pull List Feature (Sep 2026)
+- **Backend**: `/api/inventory/pull-list` GET, mark-pulled POST, reset POST, mark-all-pulled POST
+- Defaults to "Today" — same-day sold items, max 1 week back
+- Clean minimal design: SKU, title, platform only
+- SKU grouping by row, natural sort (A6 < A10 < A25)
+- Print-friendly PDF via isolated print window (large header, prominent SKU text)
 - **Smart CSV Import**: Upserts by SKU — re-importing full Vendoo CSV preserves pulled status
-- Testing: 100% pass (17 backend, 7 frontend scenarios)
 
 ### AI Assistant
 - Gemini 3.7 Flash for listing assistance
-- Improved hashtag prompt (creative, buyer-oriented, not title repetition)
-- Streaming responses, image context, history, retry/delete
-- Composer viewport fixes, AbortController stop
+- Improved hashtag prompt, streaming responses, image context, history
 
 ### Pay Rate Snapshots (Aug 2026)
 - Hourly rate stored per shift at clock-in time
 - Old shifts keep original rate when employee rate changes
-- Backfill logic for legacy shifts without rate
 
 ### GPS Mileage Tracking
 - Real-time trip tracking with OSRM road routing
-- Header Start Trip forces Operations group open
-- On-demand route geometry for trips missing stored routes
-- Multi-leg pause/resume, editable purpose categories
-- Siri shortcut support (scoped keys)
-
-### Admin Dashboard
-- Dark-only theme (light mode removed per user request)
-- Trademark ™ placement throughout branding
-- Dashboard groups: Team, Payroll, Forms, Hiring, Reports & Operations
+- Header Start Trip, multi-leg pause/resume, Siri shortcut support
 
 ### Inventory & Sales (Vendoo)
 - CSV import with smart SKU-based deduplication
 - Analytics, stale inventory detection, tax reports
-- Year-over-year comparison, export
 
 ### Other Features
 - Employee time tracking, payroll history, payment records
-- Messaging system, form submissions, consignment portal
-- Job applications, skills tests, interview scheduling
+- Messaging, forms, consignment portal, job applications
 - Remote session monitoring (AnyDesk watcher)
-- Password management, W-9/W-8BEN document handling
-- Web push notifications, APNs (sandbox)
+- Password management, W-9/W-8BEN, web push, APNs
 
 ## Prioritized Backlog
 
-### P0 — User Requested / In Discussion
-- Shipping label management (Gmail integration or upload approach — TBD)
-- Training video section (content types, upload flow — TBD)
+### P0 — Next Up
+- **Gmail automation for labels**: Auto-retrieve shipping label PDFs from Gmail inbox (requires user credentials/OAuth setup)
+- **Training video section**: Content types, upload flow, video playback (requirements TBD)
 
 ### P1 — Pending User Confirmation
-- Pay rate snapshot: production validation after real $3→$5 rate change
+- Pay rate snapshot: production validation after real rate change
 - GPS header Start Trip & route replay: production device validation
-- AI hashtag quality: real merchant feedback on Flash + improved prompt
+- AI hashtag quality: real merchant feedback
 
 ### P2 — Known Issues
 - AnyDesk watcher: autostart/remote restart reliability unresolved
 - Platform lint engine error (ESLint works locally, platform check fails)
-- AI composer/autoscroll: not user-confirmed in production
+- AI composer/autoscroll: not user-confirmed
 
 ### P3 — Future / Backlog
-- Payroll provider integration (Gusto discussed, not started)
+- Payroll provider integration (Gusto discussed)
 - Daily AI-generated activity summaries
 - Message classification & draft replies
 - Employee message cross-device notification
