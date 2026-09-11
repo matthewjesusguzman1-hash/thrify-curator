@@ -1,13 +1,11 @@
-import js from "@eslint/js";
-import reactPlugin from "eslint-plugin-react";
-import reactHooksPlugin from "eslint-plugin-react-hooks";
-import globals from "globals";
+const reactPlugin = require("eslint-plugin-react");
+const reactHooksPlugin = require("eslint-plugin-react-hooks");
+const globals = require("globals");
 
-export default [
+module.exports = [
   {
-    ignores: ["build/**", "node_modules/**", "public/**", "../tests/**", "../.emergent/**"],
+    ignores: ["build/**", "node_modules/**", "public/**"],
   },
-  js.configs.recommended,
   {
     files: ["**/*.{js,jsx}"],
     plugins: {

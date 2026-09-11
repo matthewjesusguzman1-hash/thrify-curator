@@ -24,14 +24,15 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 ### Pull List Feature (Sep 2026) — NEW
 - **Backend**: `/api/inventory/pull-list` GET (sold items sorted by SKU), `/api/inventory/pull-list/mark-pulled` POST, `/api/inventory/pull-list/reset` POST, `/api/inventory/pull-list/mark-all-pulled` POST
 - **Frontend**: `PullListSection.jsx` in Reports & Operations dashboard group
-- Items grouped by SKU row letter (A, B, C...) for shelf walk-through
+- Defaults to "Today" — user typically pulls same-day sold items, max 1 week back
+- Filters: Today, 3 Days, Week (no "All Sold" — avoids data overload)
+- Clean minimal design: SKU, title, platform only — no prices, dates, or meta clutter
+- Items grouped by SKU row letter when multiple rows, flat list when single row
 - Natural SKU sorting (A6 < A10 < A25)
-- Date filters: All Sold, Today, This Week, 2 Weeks
-- Individual and bulk mark-as-pulled with undo
+- Tap checkbox to mark pulled, "Mark All Pulled" at bottom
 - Show/hide pulled items toggle
-- Collapsible row groups
 - Print-friendly view
-- **Smart CSV Import**: Modified import endpoint to upsert by SKU — re-importing the full Vendoo CSV preserves pulled status on existing items
+- **Smart CSV Import**: Upserts by SKU — re-importing full Vendoo CSV preserves pulled status
 - Testing: 100% pass (17 backend, 7 frontend scenarios)
 
 ### AI Assistant
