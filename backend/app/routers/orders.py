@@ -53,6 +53,25 @@ async def upload_label(
     # Try to extract recipient name from label text
     display_name = _extract_recipient_name(extracted_text) if extracted_text else ""
 
+    # If no name from text, try AI vision OCR on the label image
+    if not display_name:
+        try:
+            if ext == "pdf":
+                img_bytes = _pdf_to_image(content)
+            elif content_type and content_type.startswith("image/"):
+                img_bytes = content
+            else:
+                img_bytes = None
+            if img_bytes:
+                ocr_name = await _ocr_recipient_name(img_bytes)
+                if ocr_name:
+                    display_name = ocr_name
+                    # Also try to get platform from OCR
+                    if not platform_guess:
+                        platform_guess = _guess_platform("", ocr_name)
+        except Exception:
+            pass
+
     doc = {
         "id": label_id,
         "filename": file.filename or f"label.{ext}",
@@ -416,6 +435,54 @@ async def complete_assignment(
 
 # ============== MATCHING HELPERS ==============
 
+async def _ocr_recipient_name(img_bytes: bytes) -> str:
+    """Use Gemini vision to OCR a shipping label image and extract the recipient name."""
+    import os
+    import base64
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        return ""
+
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent, TextDelta, StreamDone
+
+        b64 = base64.b64encode(img_bytes).decode("utf-8")
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"label-ocr-{uuid.uuid4()}",
+            system_message="You extract shipping information from label images. Reply ONLY with the recipient's full name — nothing else. No quotes, no explanation, no address. Just the name.",
+        ).with_model("gemini", "gemini-3-flash-preview")
+
+        image = ImageContent(image_base64=b64)
+        msg = UserMessage(
+            text="What is the recipient's name on this shipping label? Reply with ONLY the name.",
+            file_contents=[image],
+        )
+
+        result = ""
+        async for event in chat.stream_message(msg):
+            if isinstance(event, TextDelta):
+                result += event.content
+            elif isinstance(event, StreamDone):
+                break
+
+        name = result.strip().strip('"').strip("'").strip()
+        # Validate it looks like a name
+        if name and _looks_like_name(name):
+            return name
+        # Try to clean up — sometimes model adds extra words
+        for line in name.split("\n"):
+            line = line.strip().strip('"').strip("'").strip()
+            if line and _looks_like_name(line):
+                return line
+        return ""
+    except Exception:
+        return ""
+
+
 def _extract_pdf_text(content: bytes) -> str:
     """Extract text from a PDF for matching purposes. Tries pdfplumber first, then PyMuPDF."""
     text = ""
@@ -507,10 +574,10 @@ def _extract_recipient_name(text: str) -> str:
 
 
 def _looks_like_name(s: str) -> bool:
-    """Heuristic: a short title-case-ish string of 2-4 words, mostly alpha."""
+    """Heuristic: a short title-case-ish string of 1-5 words, mostly alpha."""
     s = s.strip()
     words = s.split()
-    if len(words) < 2 or len(words) > 5:
+    if len(words) < 1 or len(words) > 5:
         return False
     if len(s) > 50:
         return False

@@ -27,7 +27,7 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 - **Inline Label Preview**: Click label row to expand/collapse full shipping label image (PDFs converted to PNG via PyMuPDF at 2x resolution)
 - **SKU Tagging**: Each label has "Add SKU" button — type the SKU after previewing, exact match at 100% confidence
 - **Admin Print Labels**: Individual print button per label + "Print All" button in section header
-- **Auto-Name Labels**: On upload, PDF text is extracted (pdfplumber + PyMuPDF fallback); recipient name parsed from "SHIP TO" / "DELIVER TO" sections and shown as the label display name
+- **Auto-Name Labels (AI OCR)**: On upload, PDF text extracted (pdfplumber + PyMuPDF); if empty (image-based PDFs), Gemini Flash vision OCR reads the label image to find recipient name. Display name shown instead of filename.
 - **Admin Operations page**: Order Assignments section (assign orders to specific employees with date range + labels)
 - **Assignment History Log**: Active, Completed (green), and Incomplete (yellow) statuses shown; admin can remove any entry with confirmation
 - **Employee Dashboard**: "Orders" button (only visible when admin has assigned active orders)
@@ -37,6 +37,7 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 - **Unmatched labels**: Shown separately with warning indicator, preview, and print buttons
 - **Complete flow**: Employee taps "Complete Orders" → assignment marked done → logged in history; unreplaced/uncompleted assignments logged as incomplete
 - **Access control**: Admin assigns, employee sees only when assigned
+- **Bug fix**: Employee dropdown now re-fetches when assignment form opens (prevents stale empty list)
 
 ### Admin Dashboard Restructure (Sep 2026)
 - Replaced overloaded one-page admin dashboard with tile-based home page + separate full-page sections

@@ -120,7 +120,7 @@ export default function OrderAssignmentSection({ getAuthHeader, employees: emplo
         </div>
         <Button
           size="sm"
-          onClick={() => { setShowForm(!showForm); if (!showForm) fetchLabels(); }}
+          onClick={() => { setShowForm(!showForm); if (!showForm) { fetchLabels(); fetchEmployees(); } }}
           className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-xs"
           data-testid="assign-orders-btn"
         >
