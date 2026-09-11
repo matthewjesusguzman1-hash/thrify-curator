@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Package, Check, CheckCircle, ChevronLeft, FileText,
   Image as ImageIcon, Loader2, AlertTriangle, Link2,
-  Printer, Eye, Tag
+  Printer, Eye, Tag, Filter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
   const [expandedLabel, setExpandedLabel] = useState(null);
+  const [filterMatched, setFilterMatched] = useState(false);
 
   const fetchAssignment = useCallback(async () => {
     setLoading(true);
@@ -233,12 +234,41 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
         </button>
       )}
 
+      {/* Filter Chips */}
+      {Object.keys(matchByItem).length > 0 && (
+        <div className="flex gap-2" data-testid="order-filter-bar">
+          <button
+            onClick={() => setFilterMatched(false)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              !filterMatched
+                ? "bg-white/10 text-white border border-white/20"
+                : "bg-white/[0.03] text-white/40 border border-white/[0.06] hover:bg-white/[0.05]"
+            }`}
+            data-testid="filter-all-btn"
+          >
+            All ({items.length})
+          </button>
+          <button
+            onClick={() => setFilterMatched(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              filterMatched
+                ? "bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30"
+                : "bg-white/[0.03] text-white/40 border border-white/[0.06] hover:bg-white/[0.05]"
+            }`}
+            data-testid="filter-matched-btn"
+          >
+            <Filter className="w-3 h-3" />
+            With Labels ({Object.keys(matchByItem).length})
+          </button>
+        </div>
+      )}
+
       {/* Pull List with Inline Matched Labels */}
       <div className="space-y-2">
         {items.length === 0 ? (
           <p className="text-sm text-white/30 text-center py-4">No items to pull</p>
         ) : (
-          items.map((item) => {
+          (filterMatched ? items.filter((i) => matchByItem[i.id]) : items).map((item) => {
             const linked = matchByItem[item.id];
             return (
               <div key={item.id} className="rounded-xl overflow-hidden">

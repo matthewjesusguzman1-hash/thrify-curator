@@ -46,7 +46,8 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 - **Assign button**: Shows count text (e.g., "Assign 83 Orders") and is disabled when count is 0
 - **Zero orders warning**: Red banner "0 orders found for this date range — check your dates"
 - **Employee chips**: Employee selection uses tappable chips instead of native `<select>` (iOS showed "No Options" with dropdown)
-- **Testing**: 100% pass (11/11 backend, all frontend verified) — iteration_79
+- **Employee filter**: "With Labels" filter on Orders page lets employee show only items with matching labels
+- **Testing**: 100% pass — iteration_79 (preview/assign), iteration_80 (filter)
 
 ### Business Files Document Vault (Sep 11, 2026)
 - **Admin-only** document storage for important business paperwork
