@@ -220,42 +220,50 @@ export default function BusinessFilesPage({ getAuthHeader }) {
           className="p-4 rounded-xl border border-white/[0.08] bg-[#0f0f1a] space-y-3"
           data-testid="upload-form"
         >
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="space-y-3">
             <div>
               <label className="text-xs text-white/50 mb-1 block">Folder</label>
-              <select
-                value={uploadFolder}
-                onChange={(e) => setUploadFolder(e.target.value)}
-                className="w-full border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80"
-                style={{ backgroundColor: '#1a1a2e', color: '#e0e0e0' }}
-                data-testid="upload-folder-select"
-              >
+              <div className="flex flex-wrap gap-1.5" data-testid="upload-folder-select">
                 {["Banking", "Licenses", "Insurance", "Tax", "Legal", "Receipts", "Other"].map(f => (
-                  <option key={f} value={f} style={{ backgroundColor: '#fff', color: '#111' }}>{f}</option>
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setUploadFolder(f)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      uploadFolder === f
+                        ? "bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40"
+                        : "bg-white/[0.04] text-white/40 border border-white/[0.08] hover:bg-white/[0.08]"
+                    }`}
+                    data-testid={`upload-folder-option-${f.toLowerCase()}`}
+                  >
+                    {f}
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
-            <div>
-              <label className="text-xs text-white/50 mb-1 block">Name (optional)</label>
-              <input
-                type="text"
-                value={uploadName}
-                onChange={(e) => setUploadName(e.target.value)}
-                placeholder="Auto-detect from file"
-                className="w-full bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25"
-                data-testid="upload-name-input"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-white/50 mb-1 block">Tags (comma-separated)</label>
-              <input
-                type="text"
-                value={uploadTags}
-                onChange={(e) => setUploadTags(e.target.value)}
-                placeholder="e.g. chase, checking"
-                className="w-full bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25"
-                data-testid="upload-tags-input"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">Name (optional)</label>
+                <input
+                  type="text"
+                  value={uploadName}
+                  onChange={(e) => setUploadName(e.target.value)}
+                  placeholder="Auto-detect from file"
+                  className="w-full bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25"
+                  data-testid="upload-name-input"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-white/50 mb-1 block">Tags (comma-separated)</label>
+                <input
+                  type="text"
+                  value={uploadTags}
+                  onChange={(e) => setUploadTags(e.target.value)}
+                  placeholder="e.g. chase, checking"
+                  className="w-full bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25"
+                  data-testid="upload-tags-input"
+                />
+              </div>
             </div>
           </div>
 
@@ -534,49 +542,53 @@ function DocumentRow({
 
       {/* Edit form */}
       {isEditing && (
-        <div className="px-3 py-3 bg-white/[0.02] border-t border-white/[0.06] space-y-2">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <div>
-              <label className="text-[10px] text-white/40 block mb-0.5">Name</label>
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="w-full bg-white/[0.06] border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-white/80"
-                data-testid={`edit-name-${doc.id}`}
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-white/40 block mb-0.5">Folder</label>
-              <select
-                value={editFolder}
-                onChange={(e) => setEditFolder(e.target.value)}
-                className="w-full border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-white/80"
-                style={{ backgroundColor: '#1a1a2e', color: '#e0e0e0' }}
-                data-testid={`edit-folder-${doc.id}`}
-              >
-                {["Banking", "Licenses", "Insurance", "Tax", "Legal", "Receipts", "Other"].map(f => (
-                  <option key={f} value={f} style={{ backgroundColor: '#fff', color: '#111' }}>{f}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] text-white/40 block mb-0.5">Tags</label>
-              <input
-                type="text"
-                value={editTags}
-                onChange={(e) => setEditTags(e.target.value)}
-                className="w-full bg-white/[0.06] border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-white/80"
-                placeholder="comma-separated"
-                data-testid={`edit-tags-${doc.id}`}
-              />
+        <div className="px-3 py-3 bg-white/[0.02] border-t border-white/[0.06] space-y-3">
+          <div>
+            <label className="text-[10px] text-white/40 block mb-1">Name</label>
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="w-full bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80"
+              data-testid={`edit-name-${doc.id}`}
+            />
+          </div>
+          <div>
+            <label className="text-[10px] text-white/40 block mb-1">Folder</label>
+            <div className="flex flex-wrap gap-1.5" data-testid={`edit-folder-${doc.id}`}>
+              {["Banking", "Licenses", "Insurance", "Tax", "Legal", "Receipts", "Other"].map(f => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setEditFolder(f)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    editFolder === f
+                      ? "bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40"
+                      : "bg-white/[0.04] text-white/40 border border-white/[0.08] hover:bg-white/[0.08]"
+                  }`}
+                  data-testid={`edit-folder-option-${f.toLowerCase()}`}
+                >
+                  {f}
+                </button>
+              ))}
             </div>
           </div>
-          <div className="flex justify-end gap-2">
-            <button onClick={() => setEditingDoc(null)} className="text-xs text-white/40 hover:text-white/70 px-3 py-1">Cancel</button>
+          <div>
+            <label className="text-[10px] text-white/40 block mb-1">Tags</label>
+            <input
+              type="text"
+              value={editTags}
+              onChange={(e) => setEditTags(e.target.value)}
+              className="w-full bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80"
+              placeholder="comma-separated"
+              data-testid={`edit-tags-${doc.id}`}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <button onClick={() => setEditingDoc(null)} className="text-xs text-white/40 hover:text-white/70 px-3 py-1.5">Cancel</button>
             <button
               onClick={() => onUpdate(doc.id, { display_name: editName, folder: editFolder, tags: editTags })}
-              className="text-xs bg-[#10B981]/20 text-[#10B981] px-3 py-1 rounded-md hover:bg-[#10B981]/30"
+              className="text-xs bg-[#10B981]/20 text-[#10B981] px-4 py-1.5 rounded-lg hover:bg-[#10B981]/30 font-medium"
               data-testid={`save-edit-${doc.id}`}
             >
               Save
