@@ -9,28 +9,45 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 export default function PullListSection({ getAuthHeader }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [dateRange, setDateRange] = useState("today");
+  const todayStr = new Date().toISOString().split("T")[0];
+  const [sinceDate, setSinceDate] = useState(todayStr);
+  const [untilDate, setUntilDate] = useState(todayStr);
   const [showPulled, setShowPulled] = useState(false);
   const [expandedRows, setExpandedRows] = useState(new Set());
 
-  const getDateParams = useCallback(() => {
+  const applyPreset = (key) => {
     const now = new Date();
-    const params = new URLSearchParams();
-    if (dateRange === "today") {
-      params.set("since", now.toISOString().split("T")[0]);
-      params.set("until", now.toISOString().split("T")[0]);
-    } else if (dateRange === "3days") {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 3);
-      params.set("since", d.toISOString().split("T")[0]);
-    } else if (dateRange === "week") {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 7);
-      params.set("since", d.toISOString().split("T")[0]);
+    const to = now.toISOString().split("T")[0];
+    let from = to;
+    if (key === "3days") {
+      const d = new Date(now); d.setDate(d.getDate() - 3);
+      from = d.toISOString().split("T")[0];
+    } else if (key === "week") {
+      const d = new Date(now); d.setDate(d.getDate() - 7);
+      from = d.toISOString().split("T")[0];
     }
+    setSinceDate(from);
+    setUntilDate(to);
+  };
+
+  const activePreset = (() => {
+    const now = new Date();
+    const to = now.toISOString().split("T")[0];
+    if (sinceDate === to && untilDate === to) return "today";
+    const d3 = new Date(now); d3.setDate(d3.getDate() - 3);
+    if (sinceDate === d3.toISOString().split("T")[0] && untilDate === to) return "3days";
+    const d7 = new Date(now); d7.setDate(d7.getDate() - 7);
+    if (sinceDate === d7.toISOString().split("T")[0] && untilDate === to) return "week";
+    return null;
+  })();
+
+  const getDateParams = useCallback(() => {
+    const params = new URLSearchParams();
+    if (sinceDate) params.set("since", sinceDate);
+    if (untilDate) params.set("until", untilDate);
     if (showPulled) params.set("show_pulled", "true");
     return params.toString();
-  }, [dateRange, showPulled]);
+  }, [sinceDate, untilDate, showPulled]);
 
   const fetchPullList = useCallback(async () => {
     setLoading(true);
@@ -127,36 +144,57 @@ export default function PullListSection({ getAuthHeader }) {
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-3 mb-4" data-testid="pull-list-filters">
-        <div className="inline-flex rounded-lg bg-white/[0.04] p-1 gap-0.5">
-          {[
-            { value: "today", label: "Today" },
-            { value: "3days", label: "3 Days" },
-            { value: "week", label: "Week" },
-          ].map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setDateRange(opt.value)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                dateRange === opt.value
-                  ? "bg-white/[0.12] text-white"
-                  : "text-white/35 hover:text-white/60"
-              }`}
-              data-testid={`pull-list-filter-${opt.value}`}
-            >
-              {opt.label}
-            </button>
-          ))}
+      <div className="flex flex-col gap-2.5 mb-4" data-testid="pull-list-filters">
+        {/* Quick presets */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="inline-flex rounded-lg bg-white/[0.04] p-1 gap-0.5">
+            {[
+              { value: "today", label: "Today" },
+              { value: "3days", label: "3 Days" },
+              { value: "week", label: "Week" },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => applyPreset(opt.value)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  activePreset === opt.value
+                    ? "bg-white/[0.12] text-white"
+                    : "text-white/35 hover:text-white/60"
+                }`}
+                data-testid={`pull-list-filter-${opt.value}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <label className="flex items-center gap-1.5 text-xs text-white/35 cursor-pointer ml-auto select-none">
+            <input
+              type="checkbox" checked={showPulled}
+              onChange={e => setShowPulled(e.target.checked)}
+              className="accent-white/60 w-3.5 h-3.5"
+              data-testid="pull-list-show-pulled"
+            />
+            Pulled
+          </label>
         </div>
-        <label className="flex items-center gap-1.5 text-xs text-white/35 cursor-pointer ml-auto select-none">
+        {/* Custom date range */}
+        <div className="flex items-center gap-2 flex-wrap">
           <input
-            type="checkbox" checked={showPulled}
-            onChange={e => setShowPulled(e.target.checked)}
-            className="accent-white/60 w-3.5 h-3.5"
-            data-testid="pull-list-show-pulled"
+            type="date"
+            value={sinceDate}
+            onChange={e => setSinceDate(e.target.value)}
+            className="bg-white/[0.04] border border-white/[0.08] rounded-md px-2.5 py-1.5 text-xs text-white/70 focus:outline-none focus:border-white/20 [color-scheme:dark]"
+            data-testid="pull-list-date-from"
           />
-          Pulled
-        </label>
+          <span className="text-xs text-white/25">to</span>
+          <input
+            type="date"
+            value={untilDate}
+            onChange={e => setUntilDate(e.target.value)}
+            className="bg-white/[0.04] border border-white/[0.08] rounded-md px-2.5 py-1.5 text-xs text-white/70 focus:outline-none focus:border-white/20 [color-scheme:dark]"
+            data-testid="pull-list-date-to"
+          />
+        </div>
       </div>
 
       {/* Item list */}
