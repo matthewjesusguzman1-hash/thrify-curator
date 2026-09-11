@@ -12,7 +12,6 @@ export default function PullListSection({ getAuthHeader }) {
   const todayStr = new Date().toISOString().split("T")[0];
   const [sinceDate, setSinceDate] = useState(todayStr);
   const [untilDate, setUntilDate] = useState(todayStr);
-  const [showPulled, setShowPulled] = useState(false);
   const [expandedRows, setExpandedRows] = useState(new Set());
 
   const applyPreset = (key) => {
@@ -45,9 +44,9 @@ export default function PullListSection({ getAuthHeader }) {
     const params = new URLSearchParams();
     if (sinceDate) params.set("since", sinceDate);
     if (untilDate) params.set("until", untilDate);
-    if (showPulled) params.set("show_pulled", "true");
+    params.set("show_pulled", "true");
     return params.toString();
-  }, [sinceDate, untilDate, showPulled]);
+  }, [sinceDate, untilDate]);
 
   const fetchPullList = useCallback(async () => {
     setLoading(true);
@@ -79,7 +78,7 @@ export default function PullListSection({ getAuthHeader }) {
     try {
       await axios.post(`${API}/inventory/pull-list/mark-pulled`, { item_ids: ids }, { headers: getAuthHeader() });
       toast.success(`${ids.length} pulled`);
-      fetchPullList();
+      setItems(prev => prev.map(i => ids.includes(i.id) ? { ...i, pulled: true } : i));
     } catch { toast.error("Failed"); }
   };
 
@@ -87,14 +86,19 @@ export default function PullListSection({ getAuthHeader }) {
     try {
       await axios.post(`${API}/inventory/pull-list/reset`, { item_ids: ids }, { headers: getAuthHeader() });
       toast.success("Undone");
-      fetchPullList();
+      setItems(prev => prev.map(i => ids.includes(i.id) ? { ...i, pulled: false } : i));
     } catch { toast.error("Failed"); }
   };
 
   const markAllPulled = async () => {
     const unpulled = items.filter(i => !i.pulled);
     if (!unpulled.length) return;
-    await markPulled(unpulled.map(i => i.id));
+    const ids = unpulled.map(i => i.id);
+    try {
+      await axios.post(`${API}/inventory/pull-list/mark-pulled`, { item_ids: ids }, { headers: getAuthHeader() });
+      toast.success(`${ids.length} pulled`);
+      setItems(prev => prev.map(i => ids.includes(i.id) ? { ...i, pulled: true } : i));
+    } catch { toast.error("Failed"); }
   };
 
   const toggleRow = (letter) => {
@@ -167,15 +171,6 @@ export default function PullListSection({ getAuthHeader }) {
               </button>
             ))}
           </div>
-          <label className="flex items-center gap-1.5 text-xs text-white/35 cursor-pointer ml-auto select-none">
-            <input
-              type="checkbox" checked={showPulled}
-              onChange={e => setShowPulled(e.target.checked)}
-              className="accent-white/60 w-3.5 h-3.5"
-              data-testid="pull-list-show-pulled"
-            />
-            Pulled
-          </label>
         </div>
         {/* Custom date range */}
         <div className="flex items-center gap-2 flex-wrap">
