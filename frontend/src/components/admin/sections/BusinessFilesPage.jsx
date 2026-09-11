@@ -11,25 +11,21 @@ import { Button } from "@/components/ui/button";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
+const DEFAULT_FOLDERS = ["Bank Account", "LLC Formation", "Tax", "Other"];
+
 const FOLDER_ICONS = {
   "All": FolderOpen,
-  "Banking": Landmark,
-  "Licenses": ShieldCheck,
-  "Insurance": FileCheck,
+  "Bank Account": Landmark,
+  "LLC Formation": ShieldCheck,
   "Tax": Receipt,
-  "Legal": Scale,
-  "Receipts": Receipt,
   "Other": FolderClosed,
 };
 
 const FOLDER_COLORS = {
   "All": "#00D4FF",
-  "Banking": "#10B981",
-  "Licenses": "#8B5CF6",
-  "Insurance": "#F59E0B",
+  "Bank Account": "#10B981",
+  "LLC Formation": "#8B5CF6",
   "Tax": "#EF4444",
-  "Legal": "#6366F1",
-  "Receipts": "#F97316",
   "Other": "#6B7280",
 };
 
@@ -46,6 +42,13 @@ export default function BusinessFilesPage({ getAuthHeader }) {
   const [previewDoc, setPreviewDoc] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Derive folder name list from API (includes any custom folders)
+  const folderNames = (() => {
+    const fromApi = folders.filter(f => f.name !== "All").map(f => f.name);
+    const merged = [...new Set([...DEFAULT_FOLDERS, ...fromApi])];
+    return merged;
+  })();
 
   // Upload form state
   const [uploadFolder, setUploadFolder] = useState("Other");
@@ -223,23 +226,13 @@ export default function BusinessFilesPage({ getAuthHeader }) {
           <div className="space-y-3">
             <div>
               <label className="text-xs text-white/50 mb-1 block">Folder</label>
-              <div className="flex flex-wrap gap-1.5" data-testid="upload-folder-select">
-                {["Banking", "Licenses", "Insurance", "Tax", "Legal", "Receipts", "Other"].map(f => (
-                  <button
-                    key={f}
-                    type="button"
-                    onClick={() => setUploadFolder(f)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      uploadFolder === f
-                        ? "bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40"
-                        : "bg-white/[0.04] text-white/40 border border-white/[0.08] hover:bg-white/[0.08]"
-                    }`}
-                    data-testid={`upload-folder-option-${f.toLowerCase()}`}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
+              <FolderPicker
+                folders={folderNames}
+                selected={uploadFolder}
+                onSelect={setUploadFolder}
+                onAddFolder={(name) => { setUploadFolder(name); fetchFolders(); }}
+                testIdPrefix="upload"
+              />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -397,9 +390,83 @@ export default function BusinessFilesPage({ getAuthHeader }) {
               getPreviewUrl={getPreviewUrl}
               formatSize={formatSize}
               formatDate={formatDate}
+              folderNames={folderNames}
+              onRefreshFolders={fetchFolders}
             />
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+function FolderPicker({ folders, selected, onSelect, onAddFolder, testIdPrefix }) {
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+
+  const handleAdd = () => {
+    const name = newName.trim();
+    if (name && !folders.includes(name)) {
+      onAddFolder(name);
+      setNewName("");
+      setAdding(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap gap-1.5" data-testid={`${testIdPrefix}-folder-select`}>
+      {folders.map(f => (
+        <button
+          key={f}
+          type="button"
+          onClick={() => onSelect(f)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            selected === f
+              ? "bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40"
+              : "bg-white/[0.04] text-white/40 border border-white/[0.08] hover:bg-white/[0.08]"
+          }`}
+          data-testid={`${testIdPrefix}-folder-option-${f.toLowerCase().replace(/\s+/g, '-')}`}
+        >
+          {f}
+        </button>
+      ))}
+      {adding ? (
+        <div className="flex items-center gap-1">
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); if (e.key === "Escape") setAdding(false); }}
+            placeholder="Folder name"
+            className="bg-white/[0.06] border border-white/[0.12] rounded-lg px-2 py-1 text-xs text-white/80 w-28 placeholder:text-white/25"
+            autoFocus
+            data-testid={`${testIdPrefix}-folder-new-input`}
+          />
+          <button
+            type="button"
+            onClick={handleAdd}
+            className="px-2 py-1 rounded-lg bg-[#10B981]/20 text-[#10B981] text-xs hover:bg-[#10B981]/30"
+            data-testid={`${testIdPrefix}-folder-new-save`}
+          >
+            Add
+          </button>
+          <button
+            type="button"
+            onClick={() => { setAdding(false); setNewName(""); }}
+            className="text-white/30 hover:text-white/60"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="px-2 py-1.5 rounded-lg text-xs text-white/25 border border-dashed border-white/[0.1] hover:border-white/[0.2] hover:text-white/40 transition-all"
+          data-testid={`${testIdPrefix}-folder-add-btn`}
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
       )}
     </div>
   );
@@ -409,6 +476,7 @@ function DocumentRow({
   doc, previewDoc, setPreviewDoc, editingDoc, setEditingDoc,
   deleteConfirm, setDeleteConfirm, onDelete, onUpdate, onPrint,
   getFileUrl, getPreviewUrl, formatSize, formatDate,
+  folderNames, onRefreshFolders,
 }) {
   const [editName, setEditName] = useState(doc.display_name);
   const [editFolder, setEditFolder] = useState(doc.folder);
@@ -555,23 +623,13 @@ function DocumentRow({
           </div>
           <div>
             <label className="text-[10px] text-white/40 block mb-1">Folder</label>
-            <div className="flex flex-wrap gap-1.5" data-testid={`edit-folder-${doc.id}`}>
-              {["Banking", "Licenses", "Insurance", "Tax", "Legal", "Receipts", "Other"].map(f => (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => setEditFolder(f)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    editFolder === f
-                      ? "bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40"
-                      : "bg-white/[0.04] text-white/40 border border-white/[0.08] hover:bg-white/[0.08]"
-                  }`}
-                  data-testid={`edit-folder-option-${f.toLowerCase()}`}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
+            <FolderPicker
+              folders={folderNames}
+              selected={editFolder}
+              onSelect={setEditFolder}
+              onAddFolder={(name) => { setEditFolder(name); onRefreshFolders(); }}
+              testIdPrefix={`edit-${doc.id}`}
+            />
           </div>
           <div>
             <label className="text-[10px] text-white/40 block mb-1">Tags</label>

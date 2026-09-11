@@ -35,7 +35,7 @@ from app.dependencies import get_current_user, get_admin_user
 
 
 # ── Default folder list ──────────────────────────────────────
-DEFAULT_FOLDERS = ["Banking", "Licenses", "Insurance", "Tax", "Legal", "Receipts", "Other"]
+DEFAULT_FOLDERS = ["Bank Account", "LLC Formation", "Tax", "Other"]
 
 
 # ── Upload ────────────────────────────────────────────────────
