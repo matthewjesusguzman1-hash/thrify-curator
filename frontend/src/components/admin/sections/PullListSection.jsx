@@ -124,18 +124,18 @@ export default function PullListSection({ getAuthHeader }) {
     const dateLabel = sinceDate === untilDate ? sinceDate : `${sinceDate} — ${untilDate}`;
     const html = `<!DOCTYPE html><html><head><title>Pull List</title><style>
       body{font-family:-apple-system,system-ui,sans-serif;margin:0;padding:24px 32px;color:#000}
-      h2{font-size:16px;margin:0 0 2px}
-      .sub{font-size:12px;color:#666;margin-bottom:14px}
-      table{width:100%;border-collapse:collapse;font-size:13px}
-      th{text-align:left;border-bottom:2px solid #000;padding:4px 0;font-size:11px;text-transform:uppercase;color:#666}
-      td{padding:5px 8px 5px 0;border-bottom:1px solid #e5e5e5;vertical-align:top}
-      .sku{font-weight:700;font-family:monospace;font-size:13px;white-space:nowrap;width:60px}
-      .plat{color:#888;font-size:11px;text-align:right;white-space:nowrap}
-      .row-hdr td{font-weight:700;font-size:12px;padding:12px 0 4px;border-bottom:1.5px solid #000;letter-spacing:0.5px}
+      h1{font-size:28px;font-weight:800;margin:0 0 4px;letter-spacing:-0.5px}
+      .sub{font-size:14px;color:#555;margin-bottom:20px}
+      table{width:100%;border-collapse:collapse;font-size:14px}
+      th{text-align:left;border-bottom:2px solid #000;padding:6px 0;font-size:12px;text-transform:uppercase;color:#666}
+      td{padding:7px 10px 7px 0;border-bottom:1px solid #e0e0e0;vertical-align:top}
+      .sku{font-weight:800;font-family:'SF Mono',Menlo,monospace;font-size:15px;white-space:nowrap;width:70px}
+      .plat{color:#888;font-size:12px;text-align:right;white-space:nowrap}
+      .row-hdr td{font-weight:800;font-size:14px;padding:16px 0 6px;border-bottom:2px solid #000;letter-spacing:0.5px;text-transform:uppercase}
       .pulled td{text-decoration:line-through;color:#aaa}
       @page{margin:0.5in}
     </style></head><body>
-      <h2>Pull List</h2>
+      <h1>Pull List</h1>
       <div class="sub">${dateLabel} &middot; ${totalCount} item${totalCount !== 1 ? "s" : ""} &middot; ${unpulledCount} to pull</div>
       <table><thead><tr><th>SKU</th><th>Item</th><th style="text-align:right">Platform</th></tr></thead><tbody>${rows.join("")}</tbody></table>
     </body></html>`;
