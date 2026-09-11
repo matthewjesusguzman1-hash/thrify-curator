@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Upload, FileText, Trash2, Image as ImageIcon, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Upload, FileText, Trash2, Image as ImageIcon, Loader2, Check, Tag } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -11,7 +10,10 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [editingSku, setEditingSku] = useState(null); // label id being edited
+  const [skuInput, setSkuInput] = useState("");
   const fileInputRef = useRef(null);
+  const skuInputRef = useRef(null);
 
   const fetchLabels = useCallback(async () => {
     setLoading(true);
@@ -63,6 +65,39 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
       toast.success("Label deleted");
     } catch (err) {
       toast.error("Failed to delete");
+    }
+  };
+
+  const startSkuEdit = (label) => {
+    setEditingSku(label.id);
+    setSkuInput(label.sku_tag || "");
+    setTimeout(() => skuInputRef.current?.focus(), 50);
+  };
+
+  const saveSku = async (labelId) => {
+    try {
+      await axios.patch(
+        `${API}/orders/labels/${labelId}`,
+        { sku_tag: skuInput },
+        getAuthHeader()
+      );
+      setLabels((prev) =>
+        prev.map((l) => l.id === labelId ? { ...l, sku_tag: skuInput.trim().toUpperCase() } : l)
+      );
+      setEditingSku(null);
+      setSkuInput("");
+    } catch (err) {
+      toast.error("Failed to save SKU");
+    }
+  };
+
+  const handleSkuKeyDown = (e, labelId) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      saveSku(labelId);
+    } else if (e.key === "Escape") {
+      setEditingSku(null);
+      setSkuInput("");
     }
   };
 
@@ -133,47 +168,91 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
       ) : labels.length === 0 ? (
         <p className="text-sm text-[#aaa] text-center py-2">No labels uploaded yet</p>
       ) : (
-        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+        <div className="space-y-2 max-h-[400px] overflow-y-auto">
           {labels.map((label) => (
             <div
               key={label.id}
-              className="flex items-center gap-3 p-3 rounded-lg bg-[#f8f8f8] border border-[#eee] group"
+              className="p-3 rounded-lg bg-[#f8f8f8] border border-[#eee] group"
               data-testid={`label-item-${label.id}`}
             >
-              <div className="w-10 h-10 rounded-lg bg-[#FF6B35]/10 flex items-center justify-center flex-shrink-0">
-                {label.content_type?.startsWith("image/") ? (
-                  <ImageIcon className="w-5 h-5 text-[#FF6B35]" />
-                ) : (
-                  <FileText className="w-5 h-5 text-[#FF6B35]" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-[#333] truncate font-medium">{label.filename}</p>
-                <div className="flex items-center gap-2 text-xs text-[#999]">
-                  <span>{formatSize(label.file_size)}</span>
-                  {label.platform_guess && (
-                    <span className="px-1.5 py-0.5 rounded bg-[#f0f0f0] text-[#666] capitalize text-[10px]">
-                      {label.platform_guess}
-                    </span>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#FF6B35]/10 flex items-center justify-center flex-shrink-0">
+                  {label.content_type?.startsWith("image/") ? (
+                    <ImageIcon className="w-5 h-5 text-[#FF6B35]" />
+                  ) : (
+                    <FileText className="w-5 h-5 text-[#FF6B35]" />
                   )}
                 </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-[#333] truncate font-medium">{label.filename}</p>
+                  <div className="flex items-center gap-2 text-xs text-[#999]">
+                    <span>{formatSize(label.file_size)}</span>
+                    {label.platform_guess && (
+                      <span className="px-1.5 py-0.5 rounded bg-[#f0f0f0] text-[#666] capitalize text-[10px]">
+                        {label.platform_guess}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <a
+                  href={`${API}/orders/labels/${label.id}/file?token=${localStorage.getItem("token")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-[#00A8CC] hover:underline flex-shrink-0 font-medium"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  View
+                </a>
+                <button
+                  onClick={() => handleDelete(label.id)}
+                  className="text-[#ccc] hover:text-red-500 transition-colors flex-shrink-0"
+                  data-testid={`delete-label-${label.id}`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-              <a
-                href={`${API}/orders/labels/${label.id}/file?token=${localStorage.getItem("token")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-[#00A8CC] hover:underline flex-shrink-0 font-medium"
-                onClick={(e) => e.stopPropagation()}
-              >
-                View
-              </a>
-              <button
-                onClick={() => handleDelete(label.id)}
-                className="text-[#ccc] hover:text-red-500 transition-colors flex-shrink-0"
-                data-testid={`delete-label-${label.id}`}
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+
+              {/* SKU Tag Row */}
+              <div className="mt-2 flex items-center gap-2">
+                {editingSku === label.id ? (
+                  <>
+                    <Tag className="w-3.5 h-3.5 text-[#8B5CF6] flex-shrink-0" />
+                    <input
+                      ref={skuInputRef}
+                      type="text"
+                      value={skuInput}
+                      onChange={(e) => setSkuInput(e.target.value)}
+                      onKeyDown={(e) => handleSkuKeyDown(e, label.id)}
+                      onBlur={() => { if (skuInput.trim()) saveSku(label.id); else setEditingSku(null); }}
+                      placeholder="e.g. A6"
+                      className="flex-1 bg-white border border-[#8B5CF6]/30 rounded px-2 py-1 text-sm text-[#333] font-mono uppercase focus:outline-none focus:border-[#8B5CF6]"
+                      style={{ maxWidth: 120 }}
+                      autoComplete="off"
+                      data-testid={`sku-input-${label.id}`}
+                    />
+                    <button
+                      onClick={() => saveSku(label.id)}
+                      className="text-[#10B981] hover:text-[#059669]"
+                      data-testid={`sku-save-${label.id}`}
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => startSkuEdit(label)}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ${
+                      label.sku_tag
+                        ? "bg-[#10B981]/10 text-[#10B981] font-bold font-mono"
+                        : "bg-[#f0f0f0] text-[#aaa] hover:text-[#666] hover:bg-[#e8e8e8]"
+                    }`}
+                    data-testid={`sku-tag-${label.id}`}
+                  >
+                    <Tag className="w-3 h-3" />
+                    {label.sku_tag || "Add SKU"}
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

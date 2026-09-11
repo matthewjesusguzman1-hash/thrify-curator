@@ -59,6 +59,7 @@ async def upload_label(
         "extension": ext,
         "extracted_text": extracted_text[:2000] if extracted_text else "",
         "platform_guess": platform_guess,
+        "sku_tag": "",
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
         "uploaded_by": admin.get("email", ""),
     }
@@ -91,6 +92,24 @@ async def delete_label(label_id: str, admin: dict = Depends(get_admin_user)):
         raise HTTPException(status_code=404, detail="Label not found")
     await db.shipping_labels.delete_one({"id": label_id})
     return {"deleted": True}
+
+
+class UpdateLabelRequest(BaseModel):
+    sku_tag: Optional[str] = None
+
+
+@router.patch("/labels/{label_id}")
+async def update_label(label_id: str, req: UpdateLabelRequest, admin: dict = Depends(get_admin_user)):
+    """Update a label's SKU tag."""
+    label = await db.shipping_labels.find_one({"id": label_id}, {"_id": 0})
+    if not label:
+        raise HTTPException(status_code=404, detail="Label not found")
+    updates = {}
+    if req.sku_tag is not None:
+        updates["sku_tag"] = req.sku_tag.strip().upper()
+    if updates:
+        await db.shipping_labels.update_one({"id": label_id}, {"$set": updates})
+    return {"updated": True, "sku_tag": updates.get("sku_tag", label.get("sku_tag", ""))}
 
 
 @router.get("/labels/{label_id}/file")
@@ -383,15 +402,38 @@ def _guess_platform(filename: str, text: str) -> str:
 
 def _auto_match(pull_items: list, labels: list) -> list:
     """
-    Try to match labels to pull list items.
-    Uses platform + title keyword overlap.
+    Match labels to pull list items.
+    Priority: exact SKU tag > fuzzy heuristics.
     Returns list of {label_id, item_id, confidence, reason}.
     """
     matches = []
     matched_items = set()
     matched_labels = set()
 
+    # Pass 1: Exact SKU tag matches (100% confidence)
     for label in labels:
+        sku_tag = (label.get("sku_tag") or "").strip().upper()
+        if not sku_tag:
+            continue
+        for item in pull_items:
+            if item.get("id") in matched_items:
+                continue
+            item_sku = (item.get("sku") or "").strip().upper()
+            if item_sku and item_sku == sku_tag:
+                matches.append({
+                    "label_id": label["id"],
+                    "item_id": item["id"],
+                    "confidence": 100,
+                    "reason": f"SKU match: {sku_tag}",
+                })
+                matched_items.add(item["id"])
+                matched_labels.add(label["id"])
+                break
+
+    # Pass 2: Fuzzy heuristic matches for remaining
+    for label in labels:
+        if label["id"] in matched_labels:
+            continue
         text = (label.get("extracted_text") or "").lower()
         fname = (label.get("filename") or "").lower()
         combined = fname + " " + text
