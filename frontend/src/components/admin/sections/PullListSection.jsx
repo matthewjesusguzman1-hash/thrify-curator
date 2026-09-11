@@ -109,7 +109,41 @@ export default function PullListSection({ getAuthHeader }) {
     });
   };
 
-  // Group by row letter
+  const handlePrint = () => {
+    const rows = [];
+    for (const row of rowKeys) {
+      const rowItems = grouped[row];
+      if (rowKeys.length > 1) {
+        rows.push(`<tr class="row-hdr"><td colspan="3">ROW ${row}</td></tr>`);
+      }
+      for (const item of rowItems) {
+        const cls = item.pulled ? ' class="pulled"' : '';
+        rows.push(`<tr${cls}><td class="sku">${item.sku || "—"}</td><td>${item.title || "Untitled"}</td><td class="plat">${item.platform || ""}</td></tr>`);
+      }
+    }
+    const dateLabel = sinceDate === untilDate ? sinceDate : `${sinceDate} — ${untilDate}`;
+    const html = `<!DOCTYPE html><html><head><title>Pull List</title><style>
+      body{font-family:-apple-system,system-ui,sans-serif;margin:0;padding:24px 32px;color:#000}
+      h2{font-size:16px;margin:0 0 2px}
+      .sub{font-size:12px;color:#666;margin-bottom:14px}
+      table{width:100%;border-collapse:collapse;font-size:13px}
+      th{text-align:left;border-bottom:2px solid #000;padding:4px 0;font-size:11px;text-transform:uppercase;color:#666}
+      td{padding:5px 8px 5px 0;border-bottom:1px solid #e5e5e5;vertical-align:top}
+      .sku{font-weight:700;font-family:monospace;font-size:13px;white-space:nowrap;width:60px}
+      .plat{color:#888;font-size:11px;text-align:right;white-space:nowrap}
+      .row-hdr td{font-weight:700;font-size:12px;padding:12px 0 4px;border-bottom:1.5px solid #000;letter-spacing:0.5px}
+      .pulled td{text-decoration:line-through;color:#aaa}
+      @page{margin:0.5in}
+    </style></head><body>
+      <h2>Pull List</h2>
+      <div class="sub">${dateLabel} &middot; ${totalCount} item${totalCount !== 1 ? "s" : ""} &middot; ${unpulledCount} to pull</div>
+      <table><thead><tr><th>SKU</th><th>Item</th><th style="text-align:right">Platform</th></tr></thead><tbody>${rows.join("")}</tbody></table>
+    </body></html>`;
+    const w = window.open("", "_blank");
+    w.document.write(html);
+    w.document.close();
+    w.onload = () => { w.print(); };
+  };
   const grouped = {};
   items.forEach(item => {
     const sku = item.sku || "?";
@@ -140,7 +174,7 @@ export default function PullListSection({ getAuthHeader }) {
         <Button
           variant="ghost" size="sm"
           className="text-xs text-white/40 hover:text-white/70 h-7 px-2"
-          onClick={() => { window.print(); }}
+          onClick={handlePrint}
           data-testid="pull-list-print-btn"
         >
           <Printer className="w-3.5 h-3.5 mr-1" /> Print
@@ -292,26 +326,6 @@ export default function PullListSection({ getAuthHeader }) {
         )}
       </div>
 
-      {/* Print styles */}
-      <style>{`
-        @media print {
-          body * { visibility: hidden !important; }
-          [data-testid="pull-list-section"],
-          [data-testid="pull-list-section"] * { visibility: visible !important; }
-          [data-testid="pull-list-section"] {
-            position: absolute; left: 0; top: 0; width: 100%;
-            background: white !important; color: black !important; padding: 20px;
-            border: none !important;
-          }
-          [data-testid="pull-list-filters"], [data-testid="pull-list-print-btn"],
-          [data-testid="pull-list-mark-all"] { display: none !important; }
-          [data-testid^="pull-list-item-"] { padding: 6px 8px !important; }
-          .text-white\\/80, .text-white\\/70, .text-white\\/60 { color: #111 !important; }
-          .text-white\\/30, .text-white\\/25 { color: #888 !important; }
-          .border-white\\/10, .border-white\\/\\[0\\.06\\] { border-color: #ddd !important; }
-          .bg-\\[\\#0f0f1a\\] { background: white !important; }
-        }
-      `}</style>
     </div>
   );
 }
