@@ -65,7 +65,8 @@ import {
   ChevronRight,
   Video,
   MoreVertical,
-  Grid3x3
+  Grid3x3,
+  FolderOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,6 +103,7 @@ import AllApplicationsSection from "@/components/admin/sections/AllApplicationsS
 import ShippingLabelsSection from "@/components/admin/sections/ShippingLabelsSection";
 import OrderAssignmentSection from "@/components/admin/sections/OrderAssignmentSection";
 import TrainingSection from "@/components/admin/sections/TrainingSection";
+import BusinessFilesPage from "@/components/admin/sections/BusinessFilesPage";
 import AIAssistant from "@/components/ai/AIAssistant";
 import DashboardGroup from "@/components/admin/DashboardGroup";
 import CompactEmployeeTracker from "@/components/admin/CompactEmployeeTracker";
@@ -3621,6 +3623,7 @@ export default function AdminDashboard() {
                   { id: "messages", label: "Messages", desc: adminUnreadMessageCount > 0 ? `${adminUnreadMessageCount} unread` : "Messaging", icon: MessageSquare, color: "#10B981" },
                   { id: "training", label: "Training", desc: "Materials", icon: Video, color: "#F59E0B" },
                   { id: "ai", label: "AI Assistant", desc: "Listing helper", icon: Monitor, color: "#00D4FF" },
+                  { id: "files", label: "Business Files", desc: "Documents vault", icon: FolderOpen, color: "#10B981" },
                 ].map(tile => (
                   <button
                     key={tile.id}
@@ -3837,6 +3840,10 @@ export default function AdminDashboard() {
               <h2 className="text-lg font-semibold text-white/90">AI Assistant</h2>
               <AIAssistant getAuthHeader={getAuthHeader} />
             </div>
+          )}
+
+          {activePage === "files" && (
+            <BusinessFilesPage getAuthHeader={getAuthHeader} />
           )}
 
           {/* Submission Details Modal */}

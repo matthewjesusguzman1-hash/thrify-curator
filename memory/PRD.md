@@ -98,3 +98,19 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 - Message classification & draft replies
 - Employee message cross-device notification
 - Remote worker geolocation real-device validation
+
+---
+## What's Implemented
+
+### Business Files Document Vault (Sep 11, 2026)
+- **Admin-only** document storage for important business paperwork
+- **Own tile** on admin home page → dedicated page with full document management
+- **Folders**: Banking, Licenses, Insurance, Tax, Legal, Receipts, Other (with counts)
+- **Custom tags**: Comma-separated, filterable tag pills
+- **AI OCR Search**: Gemini Flash vision reads scanned documents; search finds text inside files, display name, tags, folder
+- **Upload**: Drag & drop or tap to select, with folder/name/tags form (supports phone camera scans)
+- **Document rows**: Display name, folder badge, tags, file size, date, expandable preview
+- **Actions**: Print, download, edit (name/folder/tags), delete with confirmation
+- **Preview**: PDFs converted to PNG, images served directly
+- **Object Storage**: Files stored durably via Emergent Object Storage
+- **Backend**: `/api/documents/*` — upload, list, search, folders, tags, update, delete, file/preview serve

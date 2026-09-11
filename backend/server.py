@@ -40,6 +40,7 @@ from app.routers.contractor_agreement import router as contractor_agreement_rout
 from app.routers.video_calls import router as video_calls_router
 from app.routers.ai_assistant import router as ai_assistant_router
 from app.routers.orders import router as orders_router
+from app.routers.documents import router as documents_router
 
 # Configure logging
 logging.basicConfig(
@@ -177,6 +178,7 @@ app.include_router(contractor_agreement_router, prefix="/api")  # Contractor agr
 app.include_router(video_calls_router, prefix="/api")  # Daily.co video calls
 app.include_router(ai_assistant_router, prefix="/api")  # AI Listing Assistant
 app.include_router(orders_router, prefix="/api")  # Orders & shipping labels
+app.include_router(documents_router, prefix="/api")  # Business document vault
 
 
 @app.get("/api/")
