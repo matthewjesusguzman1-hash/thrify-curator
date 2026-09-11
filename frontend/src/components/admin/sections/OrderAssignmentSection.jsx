@@ -138,12 +138,26 @@ export default function OrderAssignmentSection({ getAuthHeader, employees: emplo
           </div>
           <div>
             <label className="text-xs text-[#888] mb-1 block font-medium">Employee</label>
-            <select value={selectedEmployee} onChange={(e) => setSelectedEmployee(e.target.value)}
-              className="w-full bg-white border border-[#ddd] rounded-lg px-3 py-2 text-sm text-[#333] focus:outline-none focus:border-[#8B5CF6]"
-              data-testid="assign-employee-select">
-              <option value="">Select employee...</option>
-              {(employees || []).map((emp) => (<option key={emp.id} value={emp.id}>{emp.name}</option>))}
-            </select>
+            <div className="flex flex-wrap gap-1.5" data-testid="assign-employee-select">
+              {(employees || []).map((emp) => (
+                <button
+                  key={emp.id}
+                  type="button"
+                  onClick={() => setSelectedEmployee(emp.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    selectedEmployee === emp.id
+                      ? "bg-[#8B5CF6]/15 text-[#8B5CF6] border border-[#8B5CF6]/40"
+                      : "bg-white text-[#666] border border-[#ddd] hover:bg-[#f5f5f5]"
+                  }`}
+                  data-testid={`assign-employee-option-${emp.id}`}
+                >
+                  {emp.name}
+                </button>
+              ))}
+              {(!employees || employees.length === 0) && (
+                <span className="text-xs text-[#aaa] italic py-1.5">Loading employees...</span>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
