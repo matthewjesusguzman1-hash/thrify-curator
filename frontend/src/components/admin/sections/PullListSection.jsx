@@ -123,15 +123,15 @@ export default function PullListSection({ getAuthHeader }) {
     }
     const dateLabel = sinceDate === untilDate ? sinceDate : `${sinceDate} — ${untilDate}`;
     const html = `<!DOCTYPE html><html><head><title>Pull List</title><style>
-      body{font-family:-apple-system,system-ui,sans-serif;margin:0;padding:24px 32px;color:#000}
-      h1{font-size:28px;font-weight:800;margin:0 0 4px;letter-spacing:-0.5px}
-      .sub{font-size:14px;color:#555;margin-bottom:20px}
-      table{width:100%;border-collapse:collapse;font-size:14px}
-      th{text-align:left;border-bottom:2px solid #000;padding:6px 0;font-size:12px;text-transform:uppercase;color:#666}
-      td{padding:7px 10px 7px 0;border-bottom:1px solid #e0e0e0;vertical-align:top}
-      .sku{font-weight:800;font-family:'SF Mono',Menlo,monospace;font-size:15px;white-space:nowrap;width:70px}
+      body{font-family:-apple-system,system-ui,sans-serif;margin:0;padding:28px 32px;color:#000}
+      h1{font-size:36px;font-weight:900;margin:0 0 4px;letter-spacing:-0.5px}
+      .sub{font-size:15px;color:#444;margin-bottom:24px}
+      table{width:100%;border-collapse:collapse;font-size:15px}
+      th{text-align:left;border-bottom:2.5px solid #000;padding:8px 0;font-size:13px;text-transform:uppercase;color:#555;font-weight:700}
+      td{padding:8px 12px 8px 0;border-bottom:1px solid #ddd;vertical-align:top}
+      .sku{font-weight:900;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:18px;white-space:nowrap;width:80px;letter-spacing:0.3px}
       .plat{color:#888;font-size:12px;text-align:right;white-space:nowrap}
-      .row-hdr td{font-weight:800;font-size:14px;padding:16px 0 6px;border-bottom:2px solid #000;letter-spacing:0.5px;text-transform:uppercase}
+      .row-hdr td{font-weight:900;font-size:16px;padding:20px 0 6px;border-bottom:2.5px solid #000;letter-spacing:0.5px;text-transform:uppercase}
       .pulled td{text-decoration:line-through;color:#aaa}
       @page{margin:0.5in}
     </style></head><body>
