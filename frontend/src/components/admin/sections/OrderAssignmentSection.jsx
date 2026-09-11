@@ -83,7 +83,9 @@ export default function OrderAssignmentSection({ getAuthHeader, employees: emplo
     }
   };
 
-  const handleCancel = async (id) => {
+  const handleCancel = async (id, empName) => {
+    const ok = window.confirm(`Cancel orders for ${empName}?`);
+    if (!ok) return;
     try {
       await axios.delete(`${API}/orders/assignments/${id}`, getAuthHeader());
       toast.success("Assignment cancelled");
@@ -236,7 +238,7 @@ export default function OrderAssignmentSection({ getAuthHeader, employees: emplo
                   </p>
                 </div>
               </div>
-              <button onClick={() => handleCancel(a.id)} className="text-[#ccc] hover:text-red-500 transition-colors" data-testid={`cancel-assignment-${a.id}`}>
+              <button onClick={() => handleCancel(a.id, a.employee_name)} className="text-[#ccc] hover:text-red-500 transition-colors" data-testid={`cancel-assignment-${a.id}`}>
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>

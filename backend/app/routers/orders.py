@@ -191,14 +191,14 @@ async def assign_orders(req: AssignOrdersRequest, admin: dict = Depends(get_admi
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
 
-    # Check no active assignment for this employee
+    # Auto-replace any existing active assignment for this employee
     existing = await db.order_assignments.find_one(
         {"employee_id": req.employee_id, "status": "active"}, {"_id": 0}
     )
     if existing:
-        raise HTTPException(
-            status_code=400,
-            detail=f"{emp['name']} already has an active order assignment. Complete or cancel it first.",
+        await db.order_assignments.update_one(
+            {"id": existing["id"]},
+            {"$set": {"status": "replaced", "replaced_at": datetime.now(timezone.utc).isoformat()}},
         )
 
     # Fetch pull list items for this range
