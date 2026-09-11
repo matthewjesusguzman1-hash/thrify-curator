@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Upload, FileText, Trash2, Image as ImageIcon, Loader2,
-  Check, Tag, ChevronDown, ChevronUp, Eye
+  Check, Tag, ChevronDown, ChevronUp
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -169,7 +169,7 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
       ) : (
         <div className="space-y-2">
           {labels.map((label) => (
-            <div key={label.id} className="rounded-lg bg-[#f8f8f8] border border-[#eee]" data-testid={`label-item-${label.id}`}>
+            <div key={label.id} className="rounded-lg bg-[#f8f8f8] border border-[#eee] cursor-pointer" data-testid={`label-item-${label.id}`} onClick={() => togglePreview(label)}>
               {/* Label Header Row */}
               <div className="flex items-center gap-3 p-3">
                 <div className="w-10 h-10 rounded-lg bg-[#FF6B35]/10 flex items-center justify-center flex-shrink-0">
@@ -190,17 +190,14 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
                     )}
                   </div>
                 </div>
+                {previewId === label.id && (
+                  <ChevronUp className="w-4 h-4 text-[#FF6B35] flex-shrink-0" />
+                )}
+                {previewId !== label.id && (
+                  <ChevronDown className="w-4 h-4 text-[#aaa] flex-shrink-0" />
+                )}
                 <button
-                  onClick={() => togglePreview(label)}
-                  className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${
-                    previewId === label.id ? "bg-[#FF6B35]/10 text-[#FF6B35]" : "text-[#aaa] hover:text-[#666] hover:bg-[#eee]"
-                  }`}
-                  data-testid={`preview-label-${label.id}`}
-                >
-                  <Eye className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(label.id)}
+                  onClick={(e) => { e.stopPropagation(); handleDelete(label.id); }}
                   className="text-[#ccc] hover:text-red-500 transition-colors flex-shrink-0"
                   data-testid={`delete-label-${label.id}`}
                 >
@@ -209,7 +206,7 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
               </div>
 
               {/* SKU Tag Row */}
-              <div className="px-3 pb-2 flex items-center gap-2">
+              <div className="px-3 pb-2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                 {editingSku === label.id ? (
                   <>
                     <Tag className="w-3.5 h-3.5 text-[#8B5CF6] flex-shrink-0" />

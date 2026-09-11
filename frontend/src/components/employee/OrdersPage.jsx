@@ -99,6 +99,41 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
     win.document.close();
   };
 
+  const printAllLabels = () => {
+    const allLabels = assignment?.labels || [];
+    if (allLabels.length === 0) { toast.error("No labels to print"); return; }
+    const token = localStorage.getItem("token");
+    const win = window.open("", "_blank", "width=600,height=800");
+    if (!win) { toast.error("Pop-up blocked — allow pop-ups to print"); return; }
+    const imgs = allLabels.map((l) =>
+      `<div class="label-page"><img src="${API}/orders/labels/${l.id}/preview?token=${token}" /></div>`
+    ).join("\n");
+    win.document.write(`
+      <html><head><title>Print All Labels</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #fff; }
+        .label-page { page-break-after: always; display: flex; justify-content: center; align-items: flex-start; padding: 0; }
+        .label-page:last-child { page-break-after: auto; }
+        .label-page img { max-width: 100%; height: auto; }
+        @media print { .label-page { padding: 0; } }
+      </style></head><body>
+      ${imgs}
+      <script>
+        var total = ${allLabels.length}, loaded = 0;
+        document.querySelectorAll('img').forEach(function(img) {
+          if (img.complete) { loaded++; } else {
+            img.onload = function() { loaded++; if (loaded >= total) setTimeout(function(){ window.print(); }, 300); };
+            img.onerror = function() { loaded++; if (loaded >= total) setTimeout(function(){ window.print(); }, 300); };
+          }
+        });
+        if (loaded >= total) setTimeout(function(){ window.print(); }, 500);
+      </script>
+      </body></html>
+    `);
+    win.document.close();
+  };
+
   // Build match maps
   const matchByItem = {};   // item_id -> { match, label }
   const matchByLabel = {};  // label_id -> { match, item }
@@ -185,6 +220,18 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
           <p className="text-[10px] text-white/35 uppercase">Matched</p>
         </div>
       </div>
+
+      {/* Print All Labels */}
+      {(assignment.labels?.length || 0) > 0 && (
+        <button
+          onClick={printAllLabels}
+          className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-[#00D4FF]/10 border border-[#00D4FF]/20 text-[#00D4FF] hover:bg-[#00D4FF]/15 transition-colors"
+          data-testid="print-all-labels-btn"
+        >
+          <Printer className="w-4 h-4" />
+          <span className="text-sm font-medium">Print All Labels ({assignment.labels.length})</span>
+        </button>
+      )}
 
       {/* Pull List with Inline Matched Labels */}
       <div className="space-y-2">
