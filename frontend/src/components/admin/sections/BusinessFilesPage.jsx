@@ -226,11 +226,12 @@ export default function BusinessFilesPage({ getAuthHeader }) {
               <select
                 value={uploadFolder}
                 onChange={(e) => setUploadFolder(e.target.value)}
-                className="w-full bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80"
+                className="w-full border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80"
+                style={{ backgroundColor: '#1a1a2e', color: '#e0e0e0' }}
                 data-testid="upload-folder-select"
               >
                 {["Banking", "Licenses", "Insurance", "Tax", "Legal", "Receipts", "Other"].map(f => (
-                  <option key={f} value={f}>{f}</option>
+                  <option key={f} value={f} style={{ backgroundColor: '#fff', color: '#111' }}>{f}</option>
                 ))}
               </select>
             </div>
@@ -550,11 +551,12 @@ function DocumentRow({
               <select
                 value={editFolder}
                 onChange={(e) => setEditFolder(e.target.value)}
-                className="w-full bg-white/[0.06] border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-white/80"
+                className="w-full border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-white/80"
+                style={{ backgroundColor: '#1a1a2e', color: '#e0e0e0' }}
                 data-testid={`edit-folder-${doc.id}`}
               >
                 {["Banking", "Licenses", "Insurance", "Tax", "Legal", "Receipts", "Other"].map(f => (
-                  <option key={f} value={f}>{f}</option>
+                  <option key={f} value={f} style={{ backgroundColor: '#fff', color: '#111' }}>{f}</option>
                 ))}
               </select>
             </div>
