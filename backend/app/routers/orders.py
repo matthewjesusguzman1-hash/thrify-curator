@@ -697,22 +697,26 @@ def _guess_platform(filename: str, text: str) -> str:
 
 
 def _pdf_to_image(pdf_bytes: bytes) -> bytes:
-    """Convert first page of PDF to PNG, redacting marketplace order/buyer metadata."""
+    """Convert first page of PDF to PNG, removing marketplace order/buyer metadata."""
     import fitz  # PyMuPDF
-    from PIL import Image
+    from PIL import Image, ImageDraw
     import io
 
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     page = doc.load_page(0)
 
-    # Redact marketplace metadata lines (Order #, Buyer @) before rendering
+    # Try text-based redaction first (works for text-layer PDFs)
     redact_patterns = ["Order #", "Order#", "Buyer @", "Buyer@", "Buyer:"]
+    found_text = False
     for pattern in redact_patterns:
-        for rect in page.search_for(pattern):
-            # Extend to full page width to blank the entire line
-            full_line = fitz.Rect(0, rect.y0 - 2, page.rect.width, rect.y1 + 2)
-            page.add_redact_annot(full_line, fill=(1, 1, 1))  # white fill
-    page.apply_redactions()
+        hits = page.search_for(pattern)
+        if hits:
+            found_text = True
+            for rect in hits:
+                full_line = fitz.Rect(0, rect.y0 - 2, page.rect.width, rect.y1 + 2)
+                page.add_redact_annot(full_line, fill=(1, 1, 1))
+    if found_text:
+        page.apply_redactions()
 
     # Render at 2x for clarity on mobile
     mat = fitz.Matrix(2, 2)
@@ -720,17 +724,38 @@ def _pdf_to_image(pdf_bytes: bytes) -> bytes:
     raw_bytes = pix.tobytes("png")
     doc.close()
 
-    # Also crop to 4×6 if page extends beyond label area
     img = Image.open(io.BytesIO(raw_bytes))
     w, h = img.size
-    label_h = int(w * 1.5)  # 4:6 aspect ratio
+
+    # For image-based PDFs: use OCR to find and white-out Order/Buyer lines
+    if not found_text:
+        try:
+            import pytesseract
+            ocr = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
+            buyer_y = None
+            # Find "Buyer" text position (most reliably detected by OCR)
+            for i, txt in enumerate(ocr["text"]):
+                if "buyer" in txt.lower():
+                    buyer_y = ocr["top"][i]
+                    break
+            if buyer_y is not None:
+                # White-out both Order line (just above) and Buyer line
+                draw = ImageDraw.Draw(img)
+                margin = int(h * 0.06)  # cover ~6% of image height
+                y_start = max(0, buyer_y - margin)
+                y_end = min(h, buyer_y + int(margin * 0.6))
+                draw.rectangle([0, y_start, w, y_end], fill=(255, 255, 255))
+        except Exception as e:
+            print(f"[LabelCrop] OCR whiteout failed: {e}")
+
+    # Crop to 4×6 if page extends beyond label area
+    label_h = int(w * 1.5)
     if h > label_h:
         img = img.crop((0, 0, w, label_h))
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        return buf.getvalue()
 
-    return raw_bytes
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
 
 
 def _auto_match(pull_items: list, labels: list) -> list:
