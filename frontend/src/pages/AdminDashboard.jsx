@@ -3830,7 +3830,7 @@ export default function AdminDashboard() {
           {activePage === "training" && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold text-white/90">Training</h2>
-              <TrainingSection getAuthHeader={getAuthHeader} />
+              <TrainingSection getAuthHeader={getAuthHeader} isAdmin={true} />
             </div>
           )}
 
