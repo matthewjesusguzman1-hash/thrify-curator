@@ -1,17 +1,38 @@
 # Thrifty Curator - Changelog
 
+## [Sep 12, 2026] - AI Assistant Full-Page Layout Fix
+
+### Fixed
+- **Critical runtime crash**: fullPage branch called undefined functions (renderHistoryList, renderPromptsManager, renderMessages, renderInput) — all replaced with inline JSX
+- **Undefined function**: Sidebar clicked `loadConversation()` (undefined) → fixed to `openConversation()`
+- **Missing props**: AdminDashboard passed `getAuthHeader` instead of `token` and `isDark` — AI API calls would fail with `Bearer undefined`
+
+### Changed
+- **Native page layout**: AI page renders as full-page dashboard section, not a floating widget window
+- **Desktop sidebar**: Persistent conversation list on left side (220px) with delete and clear-all
+- **Mobile layout**: Sidebar hidden, history toggle button in header for mobile access
+- **No widget chrome**: Removed FAB, close (X), and expand/minimize buttons from fullPage mode
+- **Input area**: Full-width with max-width constraint, prompt pills above textarea
+- **Content area**: Welcome screen, messages, prompts manager, and history all properly rendered
+
+### Technical
+- Files modified: `AIAssistant.jsx` (fullPage branch rewrite), `AdminDashboard.jsx` (props fix)
+- Testing: 100% pass (10/10 frontend) — iteration_84
+
+---
+
 ## [Sep 11, 2026] - iOS Date Picker Fix & Preview Count Enhancement
 
 ### Fixed
-- **iOS date capture**: Added `onInput` and `onBlur` handlers alongside `onChange` for date inputs — iOS Safari sometimes fires `input` but not `change` event
-- **0 orders root cause**: User's original assignment stored dates as Sept 11–11 (today only) instead of intended Sept 1–11. Now preview count validates before assigning
+- **iOS date capture**: Added `onInput` and `onBlur` handlers alongside `onChange` for date inputs
+- **0 orders root cause**: User's original assignment stored dates as Sept 11–11 instead of intended Sept 1–11
 - **Employee dropdown**: Replaced native `<select>` with tappable chips for iOS compatibility
 
 ### Added
-- **Live preview count**: Shows order count AND label match count before assigning (e.g., "83 orders found · 5 label matches")
-- **Match preview**: Backend `/api/orders/preview-count` now accepts `label_ids` param and returns `{count, match_count}`
-- **Assign button count**: Shows "Assign 83 Orders" when count available, disabled when count is 0
-- **Zero orders warning**: Red banner "0 orders found for this date range — check your dates"
+- **Live preview count**: Shows order count AND label match count before assigning
+- **Match preview**: Backend `/api/orders/preview-count` now accepts `label_ids` param
+- **Assign button count**: Shows "Assign 83 Orders" when count available
+- **Zero orders warning**: Red banner when 0 orders found
 
 ### Technical
 - Files modified: `OrderAssignmentSection.jsx`, `orders.py`

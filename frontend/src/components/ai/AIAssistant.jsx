@@ -533,10 +533,360 @@ export default function AIAssistant({ token, isDark: isDarkProp, fullPage = fals
   };
 
   // Active view — show input when not in prompts manager.
-  // In expanded mode, history is in sidebar so input should still show.
+  // In fullPage/expanded mode, history is in sidebar so input should still show.
   // In compact mode, history replaces the main area so input hides.
-  const isActiveChat = !showPrompts && (!showHistory || isExpanded);
+  const isActiveChat = !showPrompts && (!showHistory || isExpanded || fullPage);
 
+  // ─── Full-page rendering (admin dashboard) ───
+  if (fullPage) {
+    return (
+      <div
+        className="flex flex-col h-[calc(100vh-120px)] overflow-hidden"
+        data-testid="ai-assistant-panel"
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
+        {/* Header */}
+        <div className={`flex items-center justify-between px-4 py-3 shrink-0 border-b ${isDark ? "border-white/10" : "border-gray-200"}`}>
+          <div className="flex items-center gap-2">
+            {(activeConvId || showHistory || showPrompts) && (
+              <button
+                onClick={() => {
+                  if (showHistory || showPrompts) { setShowHistory(false); setShowPrompts(false); }
+                  else { setActiveConvId(null); setMessages([]); }
+                }}
+                className={`${t.textMuted} p-1`}
+                data-testid="ai-back-btn"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            )}
+            <Sparkles className="w-5 h-5 text-emerald-400" />
+            <span className={`${t.text} font-semibold`}>
+              {showHistory ? "Chat History" : showPrompts ? "Saved Prompts" : "Listing Assistant"}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => { setShowPrompts((v) => !v); setShowHistory(false); }}
+              className={`p-2 rounded-lg transition-colors ${showPrompts ? "text-emerald-400 bg-emerald-400/10" : t.iconBtn}`}
+              title="Saved prompts" data-testid="ai-prompts-btn"
+            >
+              <Bookmark className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => { setShowHistory((v) => !v); setShowPrompts(false); }}
+              className={`sm:hidden p-2 rounded-lg transition-colors ${showHistory ? "text-emerald-400 bg-emerald-400/10" : t.iconBtn}`}
+              title="Chat history" data-testid="ai-history-btn"
+            >
+              <MessageSquare className="w-4 h-4" />
+            </button>
+            <button onClick={startNewChat} className={`${t.iconBtn} p-2 rounded-lg`} title="New chat" data-testid="ai-new-chat-btn">
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Body — sidebar + chat */}
+        <div className="flex-1 flex flex-row overflow-hidden min-h-0">
+          {/* Sidebar — desktop only */}
+          <div className={`hidden sm:flex sm:flex-col w-[220px] shrink-0 border-r ${isDark ? "border-white/10" : "border-gray-200"} overflow-y-auto`} data-testid="ai-sidebar">
+            <div className="p-3 flex-1">
+              <div className="flex items-center justify-between mb-3">
+                <p className={`${t.textMuted} text-xs font-semibold uppercase tracking-wider`}>Recent</p>
+                <button onClick={startNewChat} className={`${t.iconBtn} p-1 rounded`} title="New chat" data-testid="sidebar-new-chat">
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="space-y-1">
+                {conversations.length === 0 ? (
+                  <p className={`${t.textDim} text-xs text-center py-4`}>No chats yet</p>
+                ) : conversations.map((c) => (
+                  <div
+                    key={c.id}
+                    onClick={() => openConversation(c.id)}
+                    className={`flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-colors group ${
+                      activeConvId === c.id
+                        ? isDark ? "bg-emerald-600/20 text-emerald-300" : "bg-emerald-50 text-emerald-700"
+                        : t.cardHover
+                    }`}
+                    data-testid={`sidebar-conv-${c.id}`}
+                  >
+                    <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${activeConvId === c.id ? "" : t.textDim}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-xs font-medium truncate ${activeConvId === c.id ? "" : t.text}`}>{c.title || "Untitled chat"}</p>
+                    </div>
+                    <button
+                      onClick={(e) => deleteConversation(c.id, e)}
+                      className={`${t.textFaint} hover:text-red-400 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0`}
+                      data-testid={`sidebar-delete-${c.id}`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {conversations.length > 0 && (
+                <button
+                  onClick={async () => {
+                    if (!window.confirm("Delete all conversations?")) return;
+                    for (const c of conversations) {
+                      try { await axios.delete(`${API}/api/ai/conversations/${c.id}`, { headers }); } catch {}
+                    }
+                    setActiveConvId(null);
+                    setMessages([]);
+                    loadConversations();
+                    toast.success("All chats cleared");
+                  }}
+                  className="w-full text-center py-2 mt-3 text-[10px] text-red-400/60 hover:text-red-400 transition-colors"
+                  data-testid="sidebar-clear-all"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Main chat area */}
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+            {/* Scrollable content */}
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 relative">
+              {/* Drag overlay */}
+              {isDragging && (
+                <div className={`absolute inset-0 z-10 ${t.dragOverlay} border-2 border-dashed rounded-xl flex flex-col items-center justify-center backdrop-blur-sm`}>
+                  <Upload className="w-10 h-10 text-emerald-400 mb-2" />
+                  <p className="text-emerald-300 font-medium text-sm">Drop images here</p>
+                  <p className="text-emerald-300/60 text-xs mt-1">JPEG, PNG, WEBP up to 5MB</p>
+                </div>
+              )}
+
+              {showPrompts ? (
+                /* Saved Prompts Manager */
+                <div className="space-y-3 max-w-2xl mx-auto">
+                  {isAddingPrompt ? (
+                    <div className={`p-3 rounded-xl ${t.card} space-y-2`}>
+                      <input value={newPromptLabel} onChange={(e) => setNewPromptLabel(e.target.value)} placeholder="Prompt name (e.g. 'Vintage Denim')" className={`w-full ${t.input} rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500/40`} data-testid="new-prompt-label-input" />
+                      <textarea value={newPromptText} onChange={(e) => setNewPromptText(e.target.value)} placeholder="Prompt text that will be sent to the assistant..." rows={3} className={`w-full ${t.input} rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-emerald-500/40`} data-testid="new-prompt-text-input" />
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => { setIsAddingPrompt(false); setNewPromptLabel(""); setNewPromptText(""); }} className={`px-3 py-1.5 rounded-lg ${t.textDim} text-xs ${t.cardHover}`}>Cancel</button>
+                        <button onClick={saveNewPrompt} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs hover:bg-emerald-500" data-testid="save-new-prompt-btn">Save</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setIsAddingPrompt(true)} className={`w-full p-3 rounded-xl border border-dashed ${isDark ? "border-white/20 text-white/50" : "border-gray-300 text-gray-400"} text-sm hover:border-emerald-500/40 hover:text-emerald-300 transition-colors flex items-center justify-center gap-2`} data-testid="add-prompt-btn">
+                      <Plus className="w-4 h-4" /> Create New Prompt
+                    </button>
+                  )}
+                  {savedPrompts.length === 0 && !isAddingPrompt && (
+                    <p className={`${t.textFaint} text-sm text-center mt-6`}>No saved prompts yet. Create one to use it with a single tap.</p>
+                  )}
+                  {savedPrompts.map((p) => (
+                    <div key={p.id} className={`p-3 rounded-xl ${t.card} ${t.cardHover} transition-colors group`} data-testid={`prompt-item-${p.id}`}>
+                      {editingPromptId === p.id ? (
+                        <div className="space-y-2">
+                          <input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} className={`w-full ${t.input} rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-emerald-500/40`} data-testid="edit-prompt-label-input" />
+                          <textarea value={editText} onChange={(e) => setEditText(e.target.value)} rows={3} className={`w-full ${t.input} rounded-lg px-3 py-1.5 text-sm resize-none focus:outline-none focus:border-emerald-500/40`} data-testid="edit-prompt-text-input" />
+                          <div className="flex gap-2 justify-end">
+                            <button onClick={() => setEditingPromptId(null)} className={`px-2 py-1 ${t.textDim} text-xs ${t.cardHover} rounded`}>Cancel</button>
+                            <button onClick={() => updatePrompt(p.id)} className="px-2 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-500" data-testid="confirm-edit-prompt-btn"><Check className="w-3 h-3" /></button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-2">
+                          <button onClick={() => applyPrompt(p.text)} className="text-left flex-1 min-w-0">
+                            <p className={`${t.text} font-medium text-sm truncate`}>{p.label}</p>
+                            <p className={`${t.textDim} text-xs mt-0.5 line-clamp-2`}>{p.text}</p>
+                          </button>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <button onClick={() => { setEditingPromptId(p.id); setEditLabel(p.label); setEditText(p.text); }} className={`p-1 ${t.textFaint} hover:${t.text}`} data-testid={`edit-prompt-${p.id}`}><Edit3 className="w-3.5 h-3.5" /></button>
+                            <button onClick={(e) => deletePrompt(p.id, e)} className={`p-1 ${t.textFaint} hover:text-red-400`} data-testid={`delete-prompt-${p.id}`}><Trash2 className="w-3.5 h-3.5" /></button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : showHistory ? (
+                /* History list — mobile only (desktop uses sidebar) */
+                <div className="space-y-2 max-w-2xl mx-auto">
+                  {conversations.length > 0 && (
+                    <button
+                      onClick={async () => {
+                        if (!window.confirm("Delete all conversations?")) return;
+                        for (const c of conversations) {
+                          try { await axios.delete(`${API}/api/ai/conversations/${c.id}`, { headers }); } catch {}
+                        }
+                        setActiveConvId(null); setMessages([]); loadConversations();
+                        toast.success("All chats cleared");
+                      }}
+                      className="w-full text-center py-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+                      data-testid="clear-all-chats-btn"
+                    >Clear all chats</button>
+                  )}
+                  {conversations.length === 0 ? (
+                    <p className={`${t.textDim} text-sm text-center mt-8`}>No conversations yet</p>
+                  ) : conversations.map((c) => (
+                    <div key={c.id} onClick={() => openConversation(c.id)} className={`flex items-center justify-between p-3 rounded-xl ${t.card} ${t.cardHover} cursor-pointer transition-colors group`} data-testid={`conv-item-${c.id}`}>
+                      <div className="min-w-0 flex-1">
+                        <p className={`${t.text} text-sm font-medium truncate`}>{c.title || "Untitled chat"}</p>
+                        <p className={`${t.textDim} text-xs mt-0.5`}>{new Date(c.updated_at).toLocaleDateString()}</p>
+                      </div>
+                      <button onClick={(e) => deleteConversation(c.id, e)} className={`${t.textFaint} hover:text-red-400 p-1 transition-opacity`} data-testid={`conv-delete-${c.id}`}>
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+                </div>
+              ) : messages.length === 0 && !activeConvId ? (
+                /* Welcome */
+                <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                  <div className="w-14 h-14 rounded-full bg-emerald-600/20 flex items-center justify-center mb-4">
+                    <Sparkles className="w-7 h-7 text-emerald-400" />
+                  </div>
+                  <h3 className={`${t.text} font-semibold text-base mb-1`}>Listing Assistant</h3>
+                  <p className={`${t.textDim} text-sm mb-5 max-w-[300px]`}>
+                    Drop a screenshot or describe an item. I'll write a Vendoo listing for you.
+                  </p>
+                  {savedPrompts.length > 0 && (
+                    <div className="w-full max-w-[320px] mb-4">
+                      <p className={`${t.textFaint} text-xs uppercase tracking-wider mb-2`}>Your prompts</p>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {savedPrompts.slice(0, 6).map((p) => (
+                          <button key={p.id} onClick={() => applyPrompt(p.text)} className={`px-3 py-1.5 rounded-full ${t.card} ${isDark ? "text-white/70" : "text-gray-600"} text-xs hover:bg-emerald-600/20 hover:text-emerald-300 hover:border-emerald-500/30 transition-colors truncate max-w-[140px]`} data-testid={`welcome-prompt-${p.id}`}>
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className={`w-full max-w-[300px] p-4 rounded-xl border border-dashed ${isDark ? "border-white/15 text-white/30" : "border-gray-300 text-gray-400"} text-xs flex flex-col items-center gap-1.5`}>
+                    <Upload className={`w-5 h-5 ${isDark ? "text-white/20" : "text-gray-300"}`} />
+                    Drag & drop screenshots here
+                  </div>
+                </div>
+              ) : (
+                <div className="max-w-3xl mx-auto">
+                  {messages.map(renderMessage)}
+                  {!isStreaming && messages.length >= 2 && messages[messages.length - 1]?.role === "assistant" && (
+                    <div className="flex items-center gap-2 justify-center py-1">
+                      <button onClick={regenerateLastMessage} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs ${t.textDim} ${t.cardHover} transition-colors`} title="Regenerate response" data-testid="ai-regenerate-btn">
+                        <RotateCcw className="w-3.5 h-3.5" /> Retry
+                      </button>
+                      <button onClick={deleteLastExchange} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs ${t.textDim} hover:text-red-400 transition-colors`} title="Delete last exchange" data-testid="ai-delete-last-btn">
+                        <Trash2 className="w-3.5 h-3.5" /> Delete
+                      </button>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+            </div>
+
+            {/* Pending images strip */}
+            {(pendingImages.length > 0 || uploadingCount > 0) && (
+              <div className={`px-3 sm:px-6 py-2 border-t ${isDark ? "border-white/5" : "border-gray-200"} shrink-0`}>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <ImageIcon className={`w-3.5 h-3.5 ${t.textFaint}`} />
+                  <span className={`${t.textDim} text-[11px]`}>
+                    {pendingImages.length} image{pendingImages.length !== 1 ? "s" : ""} attached
+                    {uploadingCount > 0 && ` · uploading ${uploadingCount}...`}
+                  </span>
+                </div>
+                <div className="flex gap-2 flex-wrap max-h-28 overflow-y-auto">
+                  {pendingImages.map((img) => (
+                    <div key={img.id} className="relative shrink-0 group/img">
+                      <img src={img.preview} alt={img.name} className={`w-10 h-10 object-cover rounded-lg border ${isDark ? "border-white/10" : "border-gray-200"}`} />
+                      <button onClick={() => removePendingImage(img.id)} className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover/img:opacity-100 sm:opacity-100 transition-opacity">
+                        <X className="w-2.5 h-2.5 text-white" />
+                      </button>
+                    </div>
+                  ))}
+                  {uploadingCount > 0 && (
+                    <div className="w-10 h-10 rounded-lg border border-dashed border-white/20 flex items-center justify-center">
+                      <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+                    </div>
+                  )}
+                  <button onClick={() => fileInputRef.current?.click()} className={`w-10 h-10 rounded-lg border border-dashed ${isDark ? "border-white/15 text-white/25" : "border-gray-300 text-gray-300"} flex items-center justify-center hover:text-emerald-400 hover:border-emerald-500/30 transition-colors`} title="Add more images" data-testid="ai-add-more-images">
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Input area */}
+            {isActiveChat && (
+              <div className={`px-3 sm:px-6 py-3 border-t ${isDark ? "border-white/10" : "border-gray-200"} shrink-0`}>
+                {savedPrompts.length > 0 && messages.length === 0 && !activeConvId ? null : savedPrompts.length > 0 ? (
+                  <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none">
+                    {savedPrompts.slice(0, 5).map((p) => (
+                      <button key={p.id} onClick={() => applyPrompt(p.text)} className={`px-2.5 py-1 rounded-full ${t.card} ${isDark ? "text-white/50" : "text-gray-500"} text-[11px] hover:bg-emerald-600/20 hover:text-emerald-300 hover:border-emerald-500/30 transition-colors whitespace-nowrap shrink-0`} data-testid={`input-prompt-${p.id}`}>
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="flex flex-col gap-2 max-w-3xl mx-auto">
+                  <textarea
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Describe your item, paste details, or drop a screenshot..."
+                    rows={3}
+                    className={`w-full ${t.input} border rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:border-emerald-500/40 overflow-y-auto`}
+                    data-testid="ai-message-input"
+                  />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/jpeg,image/png,image/webp" multiple className="hidden" data-testid="ai-image-input" />
+                      <button onClick={() => fileInputRef.current?.click()} className={`${t.textDim} hover:text-emerald-400 p-2 transition-colors rounded-lg ${t.cardHover}`} title="Attach image" data-testid="ai-attach-btn">
+                        <ImageIcon className="w-5 h-5" />
+                      </button>
+                      {speech.isSupported && (
+                        <button onClick={speech.toggle} className={`p-2 transition-colors rounded-lg ${speech.isListening ? "text-red-400 bg-red-400/10 animate-pulse" : `${t.textDim} hover:text-emerald-400 ${t.cardHover}`}`} title={speech.isListening ? "Stop listening" : "Voice input"} data-testid="ai-voice-btn">
+                          {speech.isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                        </button>
+                      )}
+                      <span className={`${t.textFaint} text-[10px] hidden sm:inline`}>{speech.isListening ? "Listening..." : "or drag & drop"}</span>
+                    </div>
+                    {isStreaming ? (
+                      <button onClick={stopStreaming} className="px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-500 active:scale-95 transition-all flex items-center gap-2" data-testid="ai-stop-btn">
+                        <Square className="w-4 h-4" /> Stop
+                      </button>
+                    ) : (
+                      <button onClick={() => sendMessage()} disabled={!input.trim() && pendingImages.length === 0} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium disabled:opacity-30 hover:bg-emerald-500 active:scale-95 transition-all flex items-center gap-2" data-testid="ai-send-btn">
+                        <Send className="w-4 h-4" /> Send
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Image lightbox */}
+        <AnimatePresence>
+          {lightboxSrc && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 cursor-pointer" onClick={() => setLightboxSrc(null)} data-testid="image-lightbox">
+              <motion.img initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} src={lightboxSrc} alt="Full size" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()} />
+              <button onClick={() => setLightboxSrc(null)} className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors" data-testid="lightbox-close">
+                <X className="w-6 h-6" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  // ─── Floating widget rendering ───
   return (
     <>
       {/* FAB — hidden in fullPage mode */}

@@ -21,6 +21,15 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 
 ## What's Been Implemented
 
+### AI Assistant Full-Page Layout (Sep 12, 2026) — LATEST
+- **Fixed critical bugs**: fullPage branch was calling undefined render functions (renderHistoryList, renderPromptsManager, renderMessages, renderInput) and undefined `loadConversation()` 
+- **Rewrote fullPage mode**: Native dashboard page layout with sidebar + chat, no floating window chrome
+- **Desktop**: Sidebar shows recent conversations on left, main chat area fills remaining space, input at bottom
+- **Mobile**: Sidebar hidden, history toggle button in header for mobile access
+- **Prop fix**: AdminDashboard now passes `token` and `isDark` props correctly (was passing `getAuthHeader`)
+- **No FAB/close/expand**: Full-page mode has no floating widget controls
+- **Testing**: 100% pass (10/10 frontend tests) — iteration_84
+
 ### Orders & Shipping Labels (Sep 11, 2026)
 - **Backend**: `/api/orders/*` router with label upload, list, delete, SKU tag, preview; order assignment CRUD; employee endpoints
 - **Admin Operations page**: Shipping Labels section (drag-and-drop + file picker, PDF/image support, Emergent Object Storage)
@@ -38,29 +47,21 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 - **Complete flow**: Employee taps "Complete Orders" → assignment marked done → logged in history; unreplaced/uncompleted assignments logged as incomplete
 - **Access control**: Admin assigns, employee sees only when assigned
 
-### iOS Date Picker Fix & Preview Count (Sep 11, 2026) — LATEST
-- **Root cause**: iOS date picker onChange was not reliably capturing date changes. User selected Sept 1–11 but stored dates were Sept 11–11 (0 orders)
+### iOS Date Picker Fix & Preview Count (Sep 11, 2026)
+- **Root cause**: iOS date picker onChange was not reliably capturing date changes
 - **Fix**: Added `onInput` and `onBlur` handlers alongside `onChange` for date inputs on the assignment form
-- **Preview count**: Live preview shows order count AND label match count before assigning (e.g., "83 orders found · 5 label matches")
-- **Backend**: Enhanced `/api/orders/preview-count` to accept `label_ids` param and return `{count, match_count}`
-- **Assign button**: Shows count text (e.g., "Assign 83 Orders") and is disabled when count is 0
-- **Zero orders warning**: Red banner "0 orders found for this date range — check your dates"
-- **Employee chips**: Employee selection uses tappable chips instead of native `<select>` (iOS showed "No Options" with dropdown)
+- **Preview count**: Live preview shows order count AND label match count before assigning
+- **Employee chips**: Employee selection uses tappable chips instead of native `<select>`
 - **Employee filter**: "With Labels" filter on Orders page lets employee show only items with matching labels
 - **Testing**: 100% pass — iteration_79 (preview/assign), iteration_80 (filter)
 
 ### Business Files Document Vault (Sep 11, 2026)
-- **Admin-only** document storage for important business paperwork
-- **Own tile** on admin home page → dedicated page with full document management
-- **Folders**: Bank Account, LLC Formation, Tax, Other (with counts + custom folder creation)
-- **Custom tags**: Comma-separated, filterable tag pills
-- **AI OCR Search**: Gemini Flash vision reads scanned documents; search finds text inside files, display name, tags, folder
-- **Upload**: Drag & drop or tap to select, with folder/name/tags form (supports phone camera scans)
-- **Document rows**: Display name, folder badge, tags, file size, date, expandable preview
-- **Actions**: Print, download, edit (name/folder/tags), delete with confirmation
-- **Multi-page Preview**: Tap a document to expand — swipe left/right or tap arrows to navigate all pages; page dots + "Page X of Y" indicator
-- **Download**: Blob-based download works on any device (phone, desktop) with Content-Disposition: attachment header
-- **Backend**: `/api/documents/*` — upload, list, search, folders, tags, update, delete, file/preview serve (with `?page=N` for multi-page)
+- Admin-only document storage for important business paperwork
+- Own tile on admin home page → dedicated page with full document management
+- Folders: Bank Account, LLC Formation, Tax, Other (with counts + custom folder creation)
+- Custom tags, AI OCR search, upload with metadata
+- Multi-page preview with swipe/arrow navigation
+- Blob-based download, print, edit, delete
 
 ### Admin Dashboard Restructure (Sep 2026)
 - Replaced overloaded one-page admin dashboard with tile-based home page + separate full-page sections
@@ -69,15 +70,24 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 - Back button navigation, header icons preserved
 
 ### Pull List Feature (Sep 2026)
-- **Backend**: `/api/inventory/pull-list` GET, mark-pulled POST, reset POST, mark-all-pulled POST
+- Backend: `/api/inventory/pull-list` GET, mark-pulled POST, reset POST, mark-all-pulled POST
 - Defaults to "Today" — same-day sold items, max 1 week back
 - Clean minimal design: SKU, title, platform only
-- SKU grouping by row, natural sort (A6 < A10 < A25)
+- SKU grouping by row, natural sort
 - Print-friendly PDF via isolated print window
 
 ### AI Assistant
 - Gemini 3.7 Flash for listing assistance
 - Improved hashtag prompt, streaming responses, image context, history
+- Conversation management with sidebar
+- Saved prompts CRUD
+- Voice input support
+- Image upload with drag-and-drop
+
+### Training Section
+- Video generation via Sora 2 (12-second segments, ffmpeg stitching)
+- Segment-based long video generation with retries
+- Admin management, employee completion tracking
 
 ### Other Features
 - Employee time tracking, payroll history, payment records, pay rate snapshots
@@ -91,20 +101,23 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 
 ### P0 — Next Up
 - **Gmail automation for labels**: Auto-retrieve shipping label PDFs from Gmail inbox (requires user credentials/OAuth setup)
-- **Training video section**: Content types, upload flow, video playback (requirements TBD)
 
 ### P1 — Pending User Confirmation
 - Pay rate snapshot: production validation after real rate change
 - GPS header Start Trip & route replay: production device validation
 - AI hashtag quality: real merchant feedback
 - iOS date picker fix: user confirmation from their actual device
+- Label visibility fix: user device confirmation
+- Print blank page fix: user confirmation
+- Training video end-to-end validation (segment stitching)
 
 ### P2 — Known Issues
 - AnyDesk watcher: autostart/remote restart reliability unresolved
 - Platform lint engine error (ESLint works locally, platform check fails)
-- AI composer/autoscroll: not user-confirmed
 
 ### P3 — Future / Backlog
+- Public homepage AI chat bubble (discussed, not approved)
+- Training video style selector
 - Payroll provider integration (Gusto discussed)
 - Daily AI-generated activity summaries
 - Message classification & draft replies

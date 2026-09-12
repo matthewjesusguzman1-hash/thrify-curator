@@ -3836,7 +3836,7 @@ export default function AdminDashboard() {
 
           {/* AI ASSISTANT PAGE */}
           {activePage === "ai" && (
-            <AIAssistant getAuthHeader={getAuthHeader} fullPage={true} />
+            <AIAssistant token={localStorage.getItem("token")} isDark={isDark} fullPage={true} />
           )}
 
           {activePage === "files" && (
