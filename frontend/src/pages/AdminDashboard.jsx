@@ -3836,10 +3836,7 @@ export default function AdminDashboard() {
 
           {/* AI ASSISTANT PAGE */}
           {activePage === "ai" && (
-            <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-white/90">AI Assistant</h2>
-              <AIAssistant getAuthHeader={getAuthHeader} />
-            </div>
+            <AIAssistant getAuthHeader={getAuthHeader} fullPage={true} />
           )}
 
           {activePage === "files" && (

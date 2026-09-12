@@ -31,7 +31,7 @@ import useSpeechRecognition from "@/hooks/useSpeechRecognition";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-export default function AIAssistant({ token, isDark: isDarkProp }) {
+export default function AIAssistant({ token, isDark: isDarkProp, fullPage = false }) {
   // Use prop if provided, otherwise fall back to hook
   const hookTheme = useDashboardTheme();
   const isDark = isDarkProp !== undefined ? isDarkProp : hookTheme.isDark;
@@ -68,7 +68,7 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
     iconBtn: "text-gray-400 hover:text-gray-700 hover:bg-gray-100",
     dragOverlay: "bg-emerald-50 border-emerald-400",
   };
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(fullPage);
   const [conversations, setConversations] = useState([]);
   const [activeConvId, setActiveConvId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -97,7 +97,7 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
   // Drag-and-drop state
   const [isDragging, setIsDragging] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState(null);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(fullPage);
   const [uploadingCount, setUploadingCount] = useState(0);
   const dragCounter = useRef(0);
 
@@ -539,47 +539,55 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
 
   return (
     <>
-      {/* FAB */}
-      <AnimatePresence>
-        {!isOpen && (
-          <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            onClick={() => setIsOpen(true)}
-            className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-900/40 flex items-center justify-center hover:bg-emerald-500 active:scale-95 transition-all"
-            data-testid="ai-assistant-fab"
-          >
-            <Sparkles className="w-6 h-6" />
-          </motion.button>
-        )}
-      </AnimatePresence>
+      {/* FAB — hidden in fullPage mode */}
+      {!fullPage && (
+        <AnimatePresence>
+          {!isOpen && (
+            <motion.button
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              onClick={() => setIsOpen(true)}
+              className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-900/40 flex items-center justify-center hover:bg-emerald-500 active:scale-95 transition-all"
+              data-testid="ai-assistant-fab"
+            >
+              <Sparkles className="w-6 h-6" />
+            </motion.button>
+          )}
+        </AnimatePresence>
+      )}
 
       {/* Panel */}
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Click-outside backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
-              className="fixed inset-0 z-40 bg-black/30"
-              data-testid="ai-backdrop"
-            />
+            {/* Click-outside backdrop — hidden in fullPage mode */}
+            {!fullPage && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsOpen(false)}
+                className="fixed inset-0 z-40 bg-black/30"
+                data-testid="ai-backdrop"
+              />
+            )}
 
             <motion.div
-              initial={{ opacity: 0, y: 40, scale: 0.95 }}
+              initial={fullPage ? { opacity: 1 } : { opacity: 0, y: 40, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 40, scale: 0.95 }}
+              exit={fullPage ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.95 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className={`fixed z-50 flex flex-col ${t.panel} rounded-2xl shadow-2xl border overflow-hidden transition-all duration-300 ${
-                isExpanded
-                  ? "inset-2 sm:inset-auto sm:top-[2vh] sm:left-0 sm:right-0 sm:mx-auto sm:w-[90vw] sm:max-w-[1200px] sm:h-[96vh]"
-                  : "bottom-2 right-2 left-2 sm:left-auto sm:bottom-4 sm:right-4 sm:w-[440px]"
+              className={`flex flex-col ${t.panel} overflow-hidden transition-all duration-300 ${
+                fullPage
+                  ? "w-full h-[calc(100vh-120px)] rounded-xl border"
+                  : `fixed z-50 rounded-2xl shadow-2xl border ${
+                      isExpanded
+                        ? "inset-2 sm:inset-auto sm:top-[2vh] sm:left-0 sm:right-0 sm:mx-auto sm:w-[90vw] sm:max-w-[1200px] sm:h-[96vh]"
+                        : "bottom-2 right-2 left-2 sm:left-auto sm:bottom-4 sm:right-4 sm:w-[440px]"
+                    }`
               }`}
-              style={isExpanded ? {} : { maxHeight: "min(85dvh, 640px)" }}
+              style={fullPage || isExpanded ? {} : { maxHeight: "min(85dvh, 640px)" }}
               data-testid="ai-assistant-panel"
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
@@ -626,17 +634,21 @@ export default function AIAssistant({ token, isDark: isDarkProp }) {
                 <button onClick={startNewChat} className={`${t.iconBtn} p-1.5 rounded-lg`} title="New chat" data-testid="ai-new-chat-btn">
                   <Plus className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={() => setIsExpanded((v) => !v)}
-                  className={`hidden sm:flex ${t.iconBtn} p-1.5 rounded-lg`}
-                  title={isExpanded ? "Collapse" : "Expand"}
-                  data-testid="ai-expand-btn"
-                >
-                  {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                </button>
-                <button onClick={() => setIsOpen(false)} className={`${t.iconBtn} p-1.5 rounded-lg`} data-testid="ai-close-btn">
-                  <X className="w-4 h-4" />
-                </button>
+                {!fullPage && (
+                  <button
+                    onClick={() => setIsExpanded((v) => !v)}
+                    className={`hidden sm:flex ${t.iconBtn} p-1.5 rounded-lg`}
+                    title={isExpanded ? "Collapse" : "Expand"}
+                    data-testid="ai-expand-btn"
+                  >
+                    {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                  </button>
+                )}
+                {!fullPage && (
+                  <button onClick={() => setIsOpen(false)} className={`${t.iconBtn} p-1.5 rounded-lg`} data-testid="ai-close-btn">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
 
