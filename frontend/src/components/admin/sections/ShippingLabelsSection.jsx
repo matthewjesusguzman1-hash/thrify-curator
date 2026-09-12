@@ -94,8 +94,8 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
     setPreviewBlob(null);
     try {
       const token = localStorage.getItem("token");
-      const url = `${API}/orders/labels/${label.id}/preview?token=${token}`;
-      const res = await fetch(url);
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${API}/orders/labels/${label.id}/preview`, { headers });
       if (!res.ok) throw new Error("Failed");
       const blob = await res.blob();
       setPreviewBlob(URL.createObjectURL(blob));
@@ -105,67 +105,79 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
     }
   };
 
-  const getLabelUrl = (labelId) =>
-    `${API}/orders/labels/${labelId}/file?token=${localStorage.getItem("token")}`;
-
-  const getPreviewUrl = (labelId) =>
-    `${API}/orders/labels/${labelId}/preview?token=${localStorage.getItem("token")}`;
-
-  const printLabel = (label) => {
-    const url = getLabelUrl(label.id);
-    const isImg = label.content_type?.startsWith("image/");
-    const win = window.open("", "_blank", "width=600,height=800");
-    if (!win) { toast.error("Pop-up blocked — allow pop-ups to print"); return; }
-    win.document.write(`
-      <html><head><title>Print Label</title>
-      <style>
-        @page { margin: 0; }
-        html, body { margin: 0; padding: 0; }
-        body { display: flex; justify-content: center; align-items: flex-start; background: #fff; }
-        img { display: block; width: 4in; height: 6in; object-fit: contain; }
-        iframe { width: 100%; height: 100vh; border: none; }
-      </style></head><body>
-      ${isImg
-        ? `<img src="${url}" onload="setTimeout(()=>{window.print();},300)" />`
-        : `<iframe src="${url}" onload="setTimeout(()=>{window.print();},500)"></iframe>`
-      }
-      </body></html>
-    `);
-    win.document.close();
+  const fetchLabelDataUrl = async (labelId) => {
+    const token = localStorage.getItem("token");
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const res = await fetch(`${API}/orders/labels/${labelId}/preview`, { headers });
+    if (!res.ok) throw new Error("Failed to fetch label");
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
   };
 
-  const printAllLabels = () => {
+  const printLabel = async (label) => {
+    try {
+      toast.info("Preparing label...");
+      const dataUrl = await fetchLabelDataUrl(label.id);
+      const win = window.open("", "_blank", "width=600,height=800");
+      if (!win) { toast.error("Pop-up blocked — allow pop-ups to print"); return; }
+      win.document.write(`
+        <html><head><title>Print Label</title>
+        <style>
+          @page { margin: 0; }
+          html, body { margin: 0; padding: 0; }
+          body { display: flex; justify-content: center; align-items: flex-start; background: #fff; }
+          img { display: block; width: 4in; height: 6in; object-fit: contain; }
+        </style></head><body>
+        <img src="${dataUrl}" onload="setTimeout(()=>{window.print();},300)" />
+        </body></html>
+      `);
+      win.document.close();
+    } catch {
+      toast.error("Failed to load label for printing");
+    }
+  };
+
+  const printAllLabels = async () => {
     if (labels.length === 0) { toast.error("No labels to print"); return; }
-    const token = localStorage.getItem("token");
-    const win = window.open("", "_blank", "width=600,height=800");
-    if (!win) { toast.error("Pop-up blocked — allow pop-ups to print"); return; }
-    const imgs = labels.map((l) =>
-      `<div class="label-page"><img src="${API}/orders/labels/${l.id}/preview?token=${token}" /></div>`
-    ).join("\n");
-    win.document.write(`
-      <html><head><title>Print All Labels</title>
-      <style>
-        @page { margin: 0; }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #fff; }
-        .label-page { page-break-after: always; page-break-inside: avoid; text-align: center; }
-        .label-page:last-child { page-break-after: auto; }
-        .label-page img { display: block; width: 4in; height: 6in; object-fit: contain; margin: 0 auto; }
-      </style></head><body>
-      ${imgs}
-      <script>
-        var total = ${labels.length}, loaded = 0;
-        document.querySelectorAll('img').forEach(function(img) {
-          if (img.complete) { loaded++; } else {
-            img.onload = function() { loaded++; if (loaded >= total) setTimeout(function(){ window.print(); }, 300); };
-            img.onerror = function() { loaded++; if (loaded >= total) setTimeout(function(){ window.print(); }, 300); };
-          }
-        });
-        if (loaded >= total) setTimeout(function(){ window.print(); }, 500);
-      </script>
-      </body></html>
-    `);
-    win.document.close();
+    try {
+      toast.info("Preparing all labels...");
+      const dataUrls = await Promise.all(labels.map((l) => fetchLabelDataUrl(l.id)));
+      const win = window.open("", "_blank", "width=600,height=800");
+      if (!win) { toast.error("Pop-up blocked — allow pop-ups to print"); return; }
+      const imgs = dataUrls.map((url) =>
+        `<div class="label-page"><img src="${url}" /></div>`
+      ).join("\n");
+      win.document.write(`
+        <html><head><title>Print All Labels</title>
+        <style>
+          @page { margin: 0; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { background: #fff; }
+          .label-page { page-break-after: always; page-break-inside: avoid; text-align: center; }
+          .label-page:last-child { page-break-after: auto; }
+          .label-page img { display: block; width: 4in; height: 6in; object-fit: contain; margin: 0 auto; }
+        </style></head><body>
+        ${imgs}
+        <script>
+          var total = ${labels.length}, loaded = 0;
+          document.querySelectorAll('img').forEach(function(img) {
+            if (img.complete) { loaded++; } else {
+              img.onload = function() { loaded++; if (loaded >= total) setTimeout(function(){ window.print(); }, 300); };
+              img.onerror = function() { loaded++; if (loaded >= total) setTimeout(function(){ window.print(); }, 300); };
+            }
+          });
+          if (loaded >= total) setTimeout(function(){ window.print(); }, 500);
+        </script>
+        </body></html>
+      `);
+      win.document.close();
+    } catch {
+      toast.error("Failed to load labels for printing");
+    }
   };
 
   const formatSize = (bytes) => {
