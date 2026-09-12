@@ -124,12 +124,11 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
         <html><head><title>Print Label</title>
         <style>
           @page { margin: 0; }
-          html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
-          body { display: flex; justify-content: center; align-items: flex-start; }
-          img { max-width: 100%; max-height: 100vh; object-fit: contain; page-break-inside: avoid; }
+          html, body { margin: 0; padding: 0; }
+          body { display: flex; justify-content: center; align-items: flex-start; background: #fff; }
+          img { display: block; max-width: 100%; page-break-inside: avoid; }
           @media print {
-            body { margin: 0; padding: 0; }
-            img { max-width: 100%; max-height: 100vh; }
+            img { max-width: 100%; max-height: 10in; width: auto; object-fit: contain; }
           }
         </style></head><body>
         <img src="${dataUrl}" onload="setTimeout(()=>{window.print();},300)" />
@@ -158,12 +157,11 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
           @page { margin: 0; }
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { background: #fff; }
-          .label-page { page-break-after: always; page-break-inside: avoid; display: flex; justify-content: center; align-items: flex-start; height: 100vh; padding: 0; }
+          .label-page { page-break-after: always; page-break-inside: avoid; text-align: center; }
           .label-page:last-child { page-break-after: auto; }
-          .label-page img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+          .label-page img { display: block; max-width: 100%; margin: 0 auto; }
           @media print {
-            .label-page { height: 100vh; padding: 0; }
-            .label-page img { max-width: 100%; max-height: 100vh; }
+            .label-page img { max-width: 100%; max-height: 10in; width: auto; object-fit: contain; }
           }
         </style></head><body>
         ${imgs}
