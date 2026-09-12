@@ -109,6 +109,9 @@ async def update_time_entry(entry_id: str, update_data: EditTimeEntryRequest, ad
     if update_data.admin_note is not None:
         update_fields["admin_note"] = update_data.admin_note if update_data.admin_note.strip() else None
     
+    if update_data.hourly_rate is not None:
+        update_fields["hourly_rate"] = update_data.hourly_rate
+    
     if not update_fields:
         raise HTTPException(status_code=400, detail="No valid fields to update")
     
@@ -152,6 +155,9 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
         employee_display_name = "Administrator" if employee.get("role") == "admin" else employee["name"]
         admin_display_name = "Administrator" if admin.get("role") == "admin" else admin["name"]
         
+        # Snapshot hourly rate at clock-in time
+        current_rate = employee.get("hourly_rate")
+        
         entry_id = str(uuid.uuid4())
         entry = {
             "id": entry_id,
@@ -163,6 +169,7 @@ async def admin_clock_employee(employee_id: str, action: dict, admin: dict = Dep
             "last_clock_in": now_iso,
             "accumulated_hours": 0.0,
             "total_hours": None,
+            "hourly_rate": current_rate,
             "admin_clocked": True,
             "admin_id": admin["id"],
             "admin_name": admin_display_name

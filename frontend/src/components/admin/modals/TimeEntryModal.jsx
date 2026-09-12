@@ -31,7 +31,8 @@ export default function TimeEntryModal({
     clock_in: "",
     clock_out: "",
     total_hours: "",
-    admin_note: ""
+    admin_note: "",
+    hourly_rate: ""
   });
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState("times"); // 'times' or 'hours'
@@ -57,7 +58,8 @@ export default function TimeEntryModal({
         clock_in: formatForInput(entry.clock_in),
         clock_out: formatForInput(entry.clock_out),
         total_hours: entry.total_hours?.toString() || "",
-        admin_note: entry.admin_note || ""
+        admin_note: entry.admin_note || "",
+        hourly_rate: entry.hourly_rate?.toString() || ""
       });
       setEditMode("times"); // Default to times mode
     } else if (mode === 'add') {
@@ -66,7 +68,8 @@ export default function TimeEntryModal({
         clock_in: "",
         clock_out: "",
         total_hours: "",
-        admin_note: ""
+        admin_note: "",
+        hourly_rate: ""
       });
       setEditMode("times");
     }
@@ -100,6 +103,11 @@ export default function TimeEntryModal({
           updatePayload.total_hours = parseFloat(formData.total_hours);
           // Include admin note when adjusting hours
           updatePayload.admin_note = formData.admin_note || null;
+        }
+        
+        // Include hourly rate if changed
+        if (formData.hourly_rate && parseFloat(formData.hourly_rate) > 0) {
+          updatePayload.hourly_rate = parseFloat(formData.hourly_rate);
         }
         
         await axios.put(`${API}/admin/time-entries/${entry.id}`, updatePayload, getAuthHeader());
@@ -155,6 +163,33 @@ export default function TimeEntryModal({
           <div className="mb-4 p-3 bg-[#F9F6F7] rounded-xl">
             <p className="text-sm text-[#666]">Employee</p>
             <p className="font-semibold text-[#333]">{entry.user_name}</p>
+          </div>
+        )}
+
+        {/* Pay Rate — always visible in edit mode */}
+        {isEdit && (
+          <div className="mb-4">
+            <Label className="form-label flex items-center gap-2">
+              <span className="text-[#10B981]">$</span> Pay Rate (per hour)
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888] text-sm">$</span>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.hourly_rate}
+                onChange={(e) => setFormData({ ...formData, hourly_rate: e.target.value })}
+                placeholder={entry?.hourly_rate ? entry.hourly_rate.toFixed(2) : "Not set"}
+                className="form-input pl-7"
+                data-testid="edit-hourly-rate"
+              />
+            </div>
+            <p className="text-xs text-[#888] mt-1">
+              {entry?.hourly_rate 
+                ? `Current shift rate: $${entry.hourly_rate.toFixed(2)}/hr` 
+                : "No rate recorded for this shift — uses employee's default rate"}
+            </p>
           </div>
         )}
 

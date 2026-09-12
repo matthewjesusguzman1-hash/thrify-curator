@@ -2259,12 +2259,46 @@ export default function EmployeeDashboard({
                 </div>
               </div>
 
-              {/* Rate Info */}
-              {summary.hourly_rate !== null && (
-                <div className="mt-4 pt-4 border-t border-gray-100 text-center">
-                  <p className="text-xs sm:text-sm text-gray-500">
-                    Rate: <span className="font-semibold text-[#1A1A2E]">{formatCurrency(summary.hourly_rate)}/hr</span>
-                  </p>
+              {/* Rate Breakdown */}
+              {summary.rate_breakdown && summary.rate_breakdown.length > 1 ? (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  {summary.hourly_rate !== null && (
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs text-gray-400 uppercase tracking-wider">Current Rate</p>
+                      <p className="text-sm font-semibold text-[#1A1A2E]">{formatCurrency(summary.hourly_rate)}/hr</p>
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Pay Breakdown</p>
+                  <div className="space-y-1.5">
+                    {summary.rate_breakdown.map((rb, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs sm:text-sm">
+                        <span className="text-gray-500">
+                          {formatHoursToHMS(rb.hours)} @ <span className="font-semibold text-[#1A1A2E]">{formatCurrency(rb.rate)}/hr</span>
+                        </span>
+                        <span className="font-medium text-[#1A1A2E]">{formatCurrency(rb.subtotal)}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between text-xs sm:text-sm pt-1.5 border-t border-gray-100">
+                      <span className="text-gray-500 font-medium">Total</span>
+                      <span className="font-bold text-[#FF1493]">{formatCurrency(summary.estimated_pay)}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  {summary.hourly_rate !== null && (
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs text-gray-400 uppercase tracking-wider">Current Rate</p>
+                      <p className="text-sm font-semibold text-[#1A1A2E]">{formatCurrency(summary.hourly_rate)}/hr</p>
+                    </div>
+                  )}
+                  {summary.rate_breakdown && summary.rate_breakdown.length === 1 ? (
+                    <p className="text-xs sm:text-sm text-gray-500 text-center mt-2">
+                      {formatHoursToHMS(summary.rate_breakdown[0].hours)} @ {formatCurrency(summary.rate_breakdown[0].rate)}/hr
+                      {' = '}
+                      <span className="font-semibold text-[#FF1493]">{formatCurrency(summary.estimated_pay)}</span>
+                    </p>
+                  ) : null}
                 </div>
               )}
 
@@ -2389,6 +2423,11 @@ export default function EmployeeDashboard({
                                 <Clock className="w-3 h-3" />
                                 {formatHoursToHMS(entry.total_hours)}
                               </span>
+                              {entry.hourly_rate ? (
+                                <span className="text-[10px] text-gray-400">${entry.hourly_rate.toFixed(2)}/hr</span>
+                              ) : summary.hourly_rate ? (
+                                <span className="text-[10px] text-gray-400">${Number(summary.hourly_rate).toFixed(2)}/hr</span>
+                              ) : null}
                               {entry.anydesk_auto_clocked_out && (
                                 <span className="text-[10px] text-purple-600 font-medium">AnyDesk Auto-Out</span>
                               )}

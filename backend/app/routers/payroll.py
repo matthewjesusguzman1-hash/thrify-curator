@@ -100,21 +100,26 @@ async def get_payroll_summary(
     # Calculate wages owed
     # Strategy: Sum raw hours per employee first, then round UP the total (benefits employee)
     current_period_hours = 0
-    prev_period_hours_by_emp = {}  # {emp_id: (hours, rate)}
-    current_period_hours_by_emp = {}  # {emp_id: (hours, rate)}
+    prev_period_hours_by_emp = {}  # {emp_id: (hours, earnings)}
+    current_period_hours_by_emp = {}  # {emp_id: (hours, earnings)}
+    current_period_rate_breakdown = {}  # {emp_id: {rate: hours}}
     
     for emp in employees:
         emp_id = emp.get("id")
         if not emp_id:
             continue
-        hourly_rate = emp.get("hourly_rate") or default_rate
+        emp_global_rate = emp.get("hourly_rate") or default_rate
         entries = await db.time_entries.find({"user_id": emp_id}, {"_id": 0}).to_list(1000)
         
+        emp_current_earnings = 0
+        emp_prev_earnings = 0
         emp_current_hours = 0
         emp_prev_hours = 0
+        rate_hours = {}  # {rate: hours} for current period
         
         for e in entries:
             hours = e.get("total_hours", 0) or 0
+            shift_rate = e.get("hourly_rate") or emp_global_rate
             clock_in_str = e.get("clock_in", "")
             if not clock_in_str:
                 continue
@@ -122,27 +127,30 @@ async def get_payroll_summary(
                 clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
                 if period_start <= clock_in_dt <= period_end:
                     emp_current_hours += hours
+                    emp_current_earnings += hours * shift_rate
+                    rate_hours[shift_rate] = rate_hours.get(shift_rate, 0) + hours
                 elif prev_period_start <= clock_in_dt <= prev_period_end:
                     emp_prev_hours += hours
+                    emp_prev_earnings += hours * shift_rate
             except (ValueError, TypeError, KeyError):
                 continue
         
         if emp_current_hours > 0:
-            current_period_hours_by_emp[emp_id] = (emp_current_hours, hourly_rate)
+            current_period_hours_by_emp[emp_id] = (emp_current_hours, emp_current_earnings)
             current_period_hours += emp_current_hours
+            if len(rate_hours) > 0:
+                current_period_rate_breakdown[emp_id] = rate_hours
         if emp_prev_hours > 0:
-            prev_period_hours_by_emp[emp_id] = (emp_prev_hours, hourly_rate)
+            prev_period_hours_by_emp[emp_id] = (emp_prev_hours, emp_prev_earnings)
     
-    # Now calculate amounts by rounding UP each employee's TOTAL hours (not individual entries)
+    # Now calculate amounts using per-shift rates (already summed per employee)
     current_period_amount = 0
-    for emp_id, (hours, rate) in current_period_hours_by_emp.items():
-        rounded_hours = round_hours_up_to_minute(hours)
-        current_period_amount += rounded_hours * rate
+    for emp_id, (hours, earnings) in current_period_hours_by_emp.items():
+        current_period_amount += earnings
     
     prev_period_amount = 0
-    for emp_id, (hours, rate) in prev_period_hours_by_emp.items():
-        rounded_hours = round_hours_up_to_minute(hours)
-        prev_period_amount += rounded_hours * rate
+    for emp_id, (hours, earnings) in prev_period_hours_by_emp.items():
+        prev_period_amount += earnings
     
     # Get ALL employee payment records (no name filtering here - count everything)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -238,14 +246,28 @@ async def get_payroll_summary(
     for emp in employees:
         emp_id = emp.get("id")
         if emp_id and emp_id in current_period_hours_by_emp:
-            hours, rate = current_period_hours_by_emp[emp_id]
+            hours, earnings = current_period_hours_by_emp[emp_id]
+            emp_global_rate = emp.get("hourly_rate") or default_rate
             rounded_hours = round_hours_up_to_minute(hours)
+            
+            # Build rate breakdown: [{rate, hours, subtotal}]
+            rate_breakdown = []
+            rate_hours_map = current_period_rate_breakdown.get(emp_id, {})
+            for rate_val, rate_hrs in sorted(rate_hours_map.items()):
+                rate_breakdown.append({
+                    "rate": rate_val,
+                    "hours": round(rate_hrs, 2),
+                    "subtotal": round(rate_hrs * rate_val, 2)
+                })
+            
             employee_breakdown.append({
                 "user_id": emp_id,
                 "name": emp.get("name", "Unknown"),
                 "hours": round(rounded_hours, 2),
-                "hourly_rate": rate,
-                "amount": round(rounded_hours * rate, 2)
+                "hourly_rate": emp_global_rate,
+                "amount": round(earnings, 2),
+                "has_multiple_rates": len(rate_breakdown) > 1,
+                "rate_breakdown": rate_breakdown
             })
     
     return {
@@ -330,17 +352,21 @@ async def generate_payroll_report(request: PayrollReportRequest, admin: dict = D
                 "shifts": [],
                 "daily_totals": {},
                 "hourly_rate": emp_rate,
-                "has_custom_rate": employee_rates.get(uid) is not None
+                "has_custom_rate": employee_rates.get(uid) is not None,
+                "gross_wages_accumulated": 0
             }
         
         hours = entry.get("total_hours", 0)
+        shift_rate = entry.get("hourly_rate") or employee_data[uid]["hourly_rate"]
         employee_data[uid]["total_hours"] += hours
         employee_data[uid]["total_shifts"] += 1
+        employee_data[uid]["gross_wages_accumulated"] += hours * shift_rate
         
         employee_data[uid]["shifts"].append({
             "clock_in": entry["clock_in"],
             "clock_out": entry["clock_out"],
-            "hours": hours
+            "hours": hours,
+            "hourly_rate": shift_rate
         })
         
         shift_date = entry["clock_in"][:10]
@@ -350,15 +376,26 @@ async def generate_payroll_report(request: PayrollReportRequest, admin: dict = D
     
     for uid, data in employee_data.items():
         data["total_hours"] = round(data["total_hours"], 2)
-        emp_rate = data["hourly_rate"]
-        # Use rounded hours for pay calculation to match displayed time
-        rounded_total = round_hours_up_to_minute(data["total_hours"])
-        data["gross_wages"] = round(rounded_total * emp_rate, 2)
+        # Use accumulated per-shift earnings
+        data["gross_wages"] = round(data["gross_wages_accumulated"], 2)
+        del data["gross_wages_accumulated"]
         # Also store the formatted time for display
         data["total_hours_formatted"] = format_hours_hms(data["total_hours"])
         data["daily_totals"] = dict(sorted(data["daily_totals"].items()))
         for date in data["daily_totals"]:
             data["daily_totals"][date] = round(data["daily_totals"][date], 2)
+        
+        # Build rate breakdown from shifts
+        rate_hours_map = {}
+        for s in data["shifts"]:
+            r = s.get("hourly_rate", data["hourly_rate"])
+            h = s.get("hours", 0)
+            rate_hours_map[r] = rate_hours_map.get(r, 0) + h
+        data["rate_breakdown"] = [
+            {"rate": r, "hours": round(h, 2), "subtotal": round(h * r, 2)}
+            for r, h in sorted(rate_hours_map.items())
+        ]
+        data["has_multiple_rates"] = len(data["rate_breakdown"]) > 1
     
     total_hours = sum(e["total_hours"] for e in employee_data.values())
     # Sum gross_wages which already uses rounded hours
@@ -438,16 +475,20 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
                 "total_hours": 0,
                 "total_shifts": 0,
                 "shifts": [],
-                "hourly_rate": emp_rate
+                "hourly_rate": emp_rate,
+                "gross_wages_accumulated": 0
             }
         
         hours = entry.get("total_hours", 0)
+        shift_rate = entry.get("hourly_rate") or employee_data[uid]["hourly_rate"]
         employee_data[uid]["total_hours"] += hours
         employee_data[uid]["total_shifts"] += 1
+        employee_data[uid]["gross_wages_accumulated"] += hours * shift_rate
         employee_data[uid]["shifts"].append({
             "clock_in": entry["clock_in"],
             "clock_out": entry["clock_out"],
-            "hours": hours
+            "hours": hours,
+            "hourly_rate": shift_rate
         })
     
     buffer = io.BytesIO()
@@ -545,8 +586,8 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
     elements.append(Spacer(1, 10))
     
     total_hours = sum(e["total_hours"] for e in employee_data.values())
-    # Use rounded hours for pay calculation to match displayed time
-    total_wages = sum(round_hours_up_to_minute(e["total_hours"]) * e["hourly_rate"] for e in employee_data.values())
+    # Use per-shift accumulated wages
+    total_wages = sum(e["gross_wages_accumulated"] for e in employee_data.values())
     total_shifts = sum(e["total_shifts"] for e in employee_data.values())
     
     # SUMMARY section
@@ -578,8 +619,7 @@ async def generate_payroll_pdf(request: PayrollReportRequest, admin: dict = Depe
         for uid, data in employee_data.items():
             hours = data["total_hours"]
             emp_rate = data["hourly_rate"]
-            rounded_hours = round_hours_up_to_minute(hours)
-            wages = round(rounded_hours * emp_rate, 2)
+            wages = round(data["gross_wages_accumulated"], 2)
             
             # Employee name as sub-header
             emp_name_style = ParagraphStyle('EmpName', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold', textColor=BLACK, leftIndent=10)
@@ -1128,7 +1168,7 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
     # Get settings
     settings = await db.payroll_settings.find_one({"id": "payroll_settings"}, {"_id": 0})
     default_rate = settings.get("default_hourly_rate", 20.00) if settings else 20.00
-    hourly_rate = employee.get("hourly_rate") or default_rate
+    employee_global_rate = employee.get("hourly_rate") or default_rate
     
     # Get all time entries for this employee
     entries = await db.time_entries.find({"user_id": employee_id}, {"_id": 0}).to_list(1000)
@@ -1162,9 +1202,10 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
         if period_end.tzinfo is None:
             period_end = period_end.replace(tzinfo=timezone.utc)
         
-        # Calculate hours worked in this period
+        # Calculate hours worked and earnings in this period (using per-shift rates)
         period_hours = 0
         period_shifts = 0
+        period_earnings = 0
         
         for e in entries:
             clock_in_str = e.get("clock_in", "")
@@ -1178,10 +1219,12 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
                 
                 if period_start <= clock_in_dt <= period_end:
                     entry_hours = e.get("total_hours", 0) or 0
+                    shift_rate = e.get("hourly_rate") or employee_global_rate
                     period_hours += entry_hours
+                    period_earnings += entry_hours * shift_rate
                     period_shifts += 1
                     if period_index == 0:  # Debug for current period
-                        print(f"[PayrollHistory] Current period entry found: clock_in={clock_in_str}, hours={entry_hours}")
+                        print(f"[PayrollHistory] Current period entry found: clock_in={clock_in_str}, hours={entry_hours}, rate=${shift_rate}")
             except (ValueError, TypeError) as ex:
                 print(f"[PayrollHistory] Error parsing clock_in: {clock_in_str}, error: {ex}")
                 continue
@@ -1189,9 +1232,8 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
         if period_index == 0:
             print(f"[PayrollHistory] Current period ({period_start} to {period_end}): {period_hours} hours, {period_shifts} shifts")
         
-        # Calculate amount owed (round to minute first, like Employee Portal)
-        rounded_hours = round_hours_up_to_minute(period_hours)
-        amount_owed = round(rounded_hours * hourly_rate, 2)
+        # Amount owed uses per-shift accumulated earnings
+        amount_owed = round(period_earnings, 2)
         
         # Calculate amount paid FOR THIS PERIOD (using pay_periods field, NOT check_date)
         amount_paid = 0
@@ -1239,7 +1281,7 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
                 "hours": round(period_hours, 2),
                 "hours_display": format_hours_hms(period_hours),
                 "shifts": period_shifts,
-                "hourly_rate": hourly_rate,
+                "hourly_rate": employee_global_rate,
                 "amount_owed": amount_owed,
                 "amount_paid": amount_paid,
                 "balance": balance
@@ -1254,7 +1296,7 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
                 "hours": 0,
                 "hours_display": "0h 0m",
                 "shifts": 0,
-                "hourly_rate": hourly_rate,
+                "hourly_rate": employee_global_rate,
                 "amount_owed": 0,
                 "amount_paid": 0,
                 "balance": 0
@@ -1269,6 +1311,7 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
     
     month_hours = 0
     month_shifts = 0
+    month_earnings = 0
     for e in entries:
         clock_in_str = e.get("clock_in", "")
         if not clock_in_str:
@@ -1276,12 +1319,15 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
         try:
             clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
             if month_start <= clock_in_dt <= month_end:
-                month_hours += e.get("total_hours", 0) or 0
+                entry_hours = e.get("total_hours", 0) or 0
+                shift_rate = e.get("hourly_rate") or employee_global_rate
+                month_hours += entry_hours
+                month_earnings += entry_hours * shift_rate
                 month_shifts += 1
         except (ValueError, TypeError):
             continue
     
-    month_owed = round(round_hours_up_to_minute(month_hours) * hourly_rate, 2)
+    month_owed = round(month_earnings, 2)
     
     month_paid = 0
     for p in employee_payments:
@@ -1302,6 +1348,7 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
     
     year_hours = 0
     year_shifts = 0
+    year_earnings = 0
     for e in entries:
         clock_in_str = e.get("clock_in", "")
         if not clock_in_str:
@@ -1309,12 +1356,15 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
         try:
             clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
             if year_start <= clock_in_dt <= year_end:
-                year_hours += e.get("total_hours", 0) or 0
+                entry_hours = e.get("total_hours", 0) or 0
+                shift_rate = e.get("hourly_rate") or employee_global_rate
+                year_hours += entry_hours
+                year_earnings += entry_hours * shift_rate
                 year_shifts += 1
         except (ValueError, TypeError):
             continue
     
-    year_owed = round(round_hours_up_to_minute(year_hours) * hourly_rate, 2)
+    year_owed = round(year_earnings, 2)
     
     year_paid = 0
     for p in employee_payments:
@@ -1334,7 +1384,7 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
             "id": employee_id,
             "name": employee_name,
             "email": employee.get("email", ""),
-            "hourly_rate": hourly_rate
+            "hourly_rate": employee_global_rate
         },
         "current_period": periods[0] if periods else None,
         "periods": periods,

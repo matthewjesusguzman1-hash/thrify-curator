@@ -2672,7 +2672,18 @@ export default function AdminDashboard() {
                               </div>
                               <div>
                                 <p className="text-sm font-semibold" style={{ color: '#111827' }}>{emp.name}</p>
-                                <p className="text-xs" style={{ color: '#4B5563' }}>{formatHoursToHMS(emp.hours || 0)} × ${emp.hourly_rate}/hr</p>
+                                {emp.rate_breakdown && emp.rate_breakdown.length > 0 ? (
+                                  <div className="text-xs" style={{ color: '#4B5563' }}>
+                                    {emp.rate_breakdown.map((rb, i) => (
+                                      <span key={i}>
+                                        {i > 0 && ' + '}
+                                        {formatHoursToHMS(rb.hours)} @ ${rb.rate.toFixed(2)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs" style={{ color: '#4B5563' }}>{formatHoursToHMS(emp.hours || 0)} × ${emp.hourly_rate}/hr</p>
+                                )}
                               </div>
                             </div>
                             <span className="text-base font-bold" style={{ color: '#059669' }}>${emp.amount?.toFixed(2)}</span>
@@ -3469,6 +3480,7 @@ export default function AdminDashboard() {
                             <th>Clock In</th>
                             <th>Clock Out</th>
                             <th>Hours</th>
+                            <th>Rate</th>
                             <th>Edit</th>
                           </tr>
                         </thead>
@@ -3487,6 +3499,12 @@ export default function AdminDashboard() {
                                 {shift.total_hours 
                                   ? formatHoursToHMS(shift.total_hours)
                                   : '-'
+                                }
+                              </td>
+                              <td>
+                                {shift.hourly_rate 
+                                  ? <span className="text-[#10B981] font-medium">${shift.hourly_rate.toFixed(2)}</span>
+                                  : <span className="text-[#888] text-xs" title="Using employee's current rate">${(selectedEmployee?.hourly_rate || payrollSettings?.default_hourly_rate || 20).toFixed(2)}</span>
                                 }
                               </td>
                               <td>
@@ -4101,7 +4119,7 @@ export default function AdminDashboard() {
                               <th>Employee</th>
                               <th>Hours</th>
                               <th>Shifts</th>
-                              <th>Rate</th>
+                              <th>Rate Breakdown</th>
                               <th>Gross Wages</th>
                             </tr>
                           </thead>
@@ -4124,7 +4142,20 @@ export default function AdminDashboard() {
                                 <td>{formatHoursToHMS(emp.total_hours)}</td>
                                 <td>{emp.total_shifts}</td>
                                 <td className={emp.has_custom_rate ? 'text-[#C5A065] font-medium' : ''}>
-                                  ${emp.hourly_rate.toFixed(2)}
+                                  {emp.rate_breakdown && emp.rate_breakdown.length > 0 ? (
+                                    <div className="space-y-0.5">
+                                      {emp.rate_breakdown.map((rb, i) => (
+                                        <div key={i} className="text-xs">
+                                          <span className="font-medium">{formatHoursToHMS(rb.hours)}</span>
+                                          <span className="text-[#888]"> @ </span>
+                                          <span className="text-[#C5A065]">${rb.rate.toFixed(2)}</span>
+                                          <span className="text-[#888]"> = ${rb.subtotal.toFixed(2)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span>${emp.hourly_rate.toFixed(2)}</span>
+                                  )}
                                 </td>
                                 <td className="font-semibold text-[#C5A065]">${emp.gross_wages.toFixed(2)}</td>
                               </tr>

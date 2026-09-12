@@ -443,11 +443,19 @@ async def get_time_summary(user: dict = Depends(get_current_user), user_id: str 
     
     # Calculate estimated pay per-shift using each shift's stored rate
     estimated_pay = 0.0
+    rate_hours_map = {}  # {rate: hours} for rate breakdown
     for entry in period_entries:
         shift_hours = entry.get("total_hours", 0) or 0
         shift_rate = entry.get("hourly_rate") if entry.get("hourly_rate") is not None else hourly_rate
         estimated_pay += round_up_to_minute(shift_hours * 3600) * shift_rate
+        rate_hours_map[shift_rate] = rate_hours_map.get(shift_rate, 0) + shift_hours
     estimated_pay = round(estimated_pay, 2)
+    
+    # Build rate breakdown
+    rate_breakdown = [
+        {"rate": r, "hours": round(h, 2), "subtotal": round(h * r, 2)}
+        for r, h in sorted(rate_hours_map.items())
+    ]
     
     # Get YTD actual payments from payment records for this employee
     year_start = today.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -486,6 +494,8 @@ async def get_time_summary(user: dict = Depends(get_current_user), user_id: str 
         "period_start": period_start.isoformat() if hasattr(period_start, 'isoformat') else str(period_start),
         "period_end": period_end.isoformat() if hasattr(period_end, 'isoformat') else str(period_end),
         "is_previous_period": is_previous_period,
+        "rate_breakdown": rate_breakdown,
+        "has_multiple_rates": len(rate_breakdown) > 1,
         "ytd_paid": round(ytd_paid, 2),
         "ytd_payment_count": ytd_payment_count
     }
@@ -773,16 +783,28 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
         }
     }, {"_id": 0}).to_list(500)
     
-    # Calculate period hours
+    # Calculate period hours and earnings using per-shift rates
     period_hours = 0
+    period_earnings = 0
+    rate_hours_map = {}  # {rate: hours} for rate breakdown
     for entry in period_entries:
         if entry.get("clock_out"):
             try:
                 cin = datetime.fromisoformat(entry["clock_in"].replace('Z', '+00:00'))
                 cout = datetime.fromisoformat(entry["clock_out"].replace('Z', '+00:00'))
-                period_hours += (cout - cin).total_seconds() / 3600
+                entry_hours = (cout - cin).total_seconds() / 3600
+                shift_rate = entry.get("hourly_rate") or hourly_rate
+                period_hours += entry_hours
+                period_earnings += entry_hours * shift_rate
+                rate_hours_map[shift_rate] = rate_hours_map.get(shift_rate, 0) + entry_hours
             except (ValueError, KeyError):
                 pass
+    
+    # Build rate breakdown
+    rate_breakdown = [
+        {"rate": r, "hours": round(h, 2), "subtotal": round(h * r, 2)}
+        for r, h in sorted(rate_hours_map.items())
+    ]
     
     # Get total entries
     all_entries = await db.time_entries.find({"user_id": employee_id}, {"_id": 0}).to_list(1000)
@@ -803,10 +825,12 @@ async def get_employee_summary_admin(employee_id: str, admin: dict = Depends(get
         "total_hours": round(total_hours, 2),
         "total_shifts": len(all_entries),
         "hourly_rate": hourly_rate,
-        "estimated_pay": round(period_hours * hourly_rate, 2),
+        "estimated_pay": round(period_earnings, 2),
         "period_start": period_start.isoformat(),
         "period_end": period_end.isoformat(),
         "is_previous_period": False,
+        "rate_breakdown": rate_breakdown,
+        "has_multiple_rates": len(rate_breakdown) > 1,
         "ytd_paid": 0,
         "ytd_payment_count": 0
     }

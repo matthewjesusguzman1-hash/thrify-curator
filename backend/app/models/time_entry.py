@@ -34,6 +34,7 @@ class EditTimeEntryRequest(BaseModel):
     clock_out: Optional[str] = None
     total_hours: Optional[float] = None
     admin_note: Optional[str] = None  # Note for admin reference
+    hourly_rate: Optional[float] = None  # Per-shift rate override
 
 
 class CreateTimeEntryRequest(BaseModel):
