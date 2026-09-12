@@ -128,9 +128,8 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
         <html><head><title>Print Label</title>
         <style>
           @page { margin: 0; }
-          html, body { margin: 0; padding: 0; }
-          body { display: flex; justify-content: center; align-items: flex-start; background: #fff; }
-          img { display: block; width: 4in; height: 6in; object-fit: contain; }
+          html, body { margin: 0; padding: 0; height: auto; }
+          img { display: block; width: 4in; height: 6in; object-fit: contain; margin: 0 auto; }
         </style></head><body>
         <img src="${dataUrl}" onload="setTimeout(()=>{window.print();},300)" />
         </body></html>
