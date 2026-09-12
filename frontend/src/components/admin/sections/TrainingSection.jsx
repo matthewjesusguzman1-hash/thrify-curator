@@ -84,8 +84,27 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
         axios.get(`${API}/training/modules`, getAuthHeader()),
         axios.get(`${API}/training/my-progress`, getAuthHeader())
       ]);
-      setModules(modulesRes.data.modules);
+      const fetchedModules = modulesRes.data.modules;
+      setModules(fetchedModules);
       setProgress(progressRes.data);
+
+      // Sync local generating state with actual backend status
+      setGeneratingVideos(prev => {
+        const updated = { ...prev };
+        let changed = false;
+        for (const m of fetchedModules) {
+          if (updated[m.id] && (m.generation_status !== "generating" || m.video_exists)) {
+            delete updated[m.id];
+            changed = true;
+            if (m.video_exists) {
+              toast.success(`Video ready: ${m.title}`);
+            } else if (m.generation_status === "failed") {
+              toast.error(`Video failed: ${m.title} — ${m.generation_error || "Unknown error"}`);
+            }
+          }
+        }
+        return changed ? updated : prev;
+      });
     } catch (error) {
       console.error("Failed to fetch training data:", error);
       toast.error("Failed to load training modules");
@@ -110,7 +129,7 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
     // Poll for video generation status if admin
     if (isAdmin) {
       fetchEmployeeProgress();
-      const interval = setInterval(fetchData, 10000); // Every 10 seconds
+      const interval = setInterval(fetchData, 5000); // Every 5 seconds
       return () => clearInterval(interval);
     }
   }, []);

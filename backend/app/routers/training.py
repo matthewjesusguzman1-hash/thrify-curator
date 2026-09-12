@@ -253,12 +253,12 @@ async def generate_video_task(module_id: str, prompt: str):
         # Add animation style instruction to the prompt - be very explicit about full animation
         animated_prompt = f"Create a fully animated 2D cartoon video, similar to explainer videos or Pixar-style animation. NO live action footage, NO real people, NO realistic video. Use cartoon characters, illustrated backgrounds, and smooth 2D/3D animation throughout. The content should show: {prompt}"
         
-        # Generate 20-second animated video in landscape format (max single clip duration)
+        # Generate 12-second animated video in landscape format (max supported by library)
         video_bytes = video_gen.text_to_video(
             prompt=animated_prompt,
             model="sora-2",
             size="1280x720",
-            duration=20,
+            duration=12,
             max_wait_time=900
         )
         
