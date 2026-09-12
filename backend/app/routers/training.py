@@ -282,16 +282,33 @@ async def generate_video_task(module_id: str, prompt: str):
 
             animated_prompt = f"Create a fully animated 2D cartoon video, similar to explainer videos or Pixar-style animation. NO live action footage, NO real people, NO realistic video. Use cartoon characters, illustrated backgrounds, and smooth 2D/3D animation throughout. The content should show: {seg_prompt}"
 
-            video_bytes = video_gen.text_to_video(
-                prompt=animated_prompt,
-                model="sora-2",
-                size="1280x720",
-                duration=12,
-                max_wait_time=900
-            )
+            video_bytes = None
+            last_error = None
+            for attempt in range(3):
+                try:
+                    video_bytes = video_gen.text_to_video(
+                        prompt=animated_prompt,
+                        model="sora-2",
+                        size="1280x720",
+                        duration=12,
+                        max_wait_time=900
+                    )
+                    if video_bytes:
+                        break
+                except Exception as gen_err:
+                    last_error = gen_err
+                    print(f"[Training] Segment {seg_num} attempt {attempt+1} failed: {gen_err}")
+
+                if attempt < 2:
+                    await db.training_video_status.update_one(
+                        {"module_id": module_id},
+                        {"$set": {"segment_status": f"Retrying segment {seg_num} (attempt {attempt+2}/3)..."}}
+                    )
+                    import asyncio as _aio
+                    await _aio.sleep(5)
 
             if not video_bytes:
-                raise Exception(f"Segment {seg_num} returned no data")
+                raise Exception(f"Segment {seg_num} failed after 3 attempts{': ' + str(last_error) if last_error else ''}")
 
             seg_path = os.path.join(VIDEOS_DIR, f"{module_id}_seg{seg_num}.mp4")
             video_gen.save_video(video_bytes, seg_path)
