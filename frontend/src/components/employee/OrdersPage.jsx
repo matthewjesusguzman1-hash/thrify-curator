@@ -123,9 +123,14 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
       win.document.write(`
         <html><head><title>Print Label</title>
         <style>
-          body { margin: 0; display: flex; justify-content: center; align-items: flex-start; }
-          img { max-width: 100%; height: auto; }
-          @media print { body { margin: 0; } }
+          @page { margin: 0; }
+          html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+          body { display: flex; justify-content: center; align-items: flex-start; }
+          img { max-width: 100%; max-height: 100vh; object-fit: contain; page-break-inside: avoid; }
+          @media print {
+            body { margin: 0; padding: 0; }
+            img { max-width: 100%; max-height: 100vh; }
+          }
         </style></head><body>
         <img src="${dataUrl}" onload="setTimeout(()=>{window.print();},300)" />
         </body></html>
@@ -150,12 +155,16 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
       win.document.write(`
         <html><head><title>Print All Labels</title>
         <style>
+          @page { margin: 0; }
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { background: #fff; }
-          .label-page { page-break-after: always; display: flex; justify-content: center; align-items: flex-start; padding: 0; }
+          .label-page { page-break-after: always; page-break-inside: avoid; display: flex; justify-content: center; align-items: flex-start; height: 100vh; padding: 0; }
           .label-page:last-child { page-break-after: auto; }
-          .label-page img { max-width: 100%; height: auto; }
-          @media print { .label-page { padding: 0; } }
+          .label-page img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+          @media print {
+            .label-page { height: 100vh; padding: 0; }
+            .label-page img { max-width: 100%; max-height: 100vh; }
+          }
         </style></head><body>
         ${imgs}
         <script>

@@ -119,10 +119,15 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
     win.document.write(`
       <html><head><title>Print Label</title>
       <style>
-        body { margin: 0; display: flex; justify-content: center; align-items: flex-start; }
-        img { max-width: 100%; height: auto; }
+        @page { margin: 0; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+        body { display: flex; justify-content: center; align-items: flex-start; }
+        img { max-width: 100%; max-height: 100vh; object-fit: contain; page-break-inside: avoid; }
         iframe { width: 100%; height: 100vh; border: none; }
-        @media print { body { margin: 0; } }
+        @media print {
+          body { margin: 0; padding: 0; }
+          img { max-width: 100%; max-height: 100vh; }
+        }
       </style></head><body>
       ${isImg
         ? `<img src="${url}" onload="setTimeout(()=>{window.print();},300)" />`
@@ -144,12 +149,16 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
     win.document.write(`
       <html><head><title>Print All Labels</title>
       <style>
+        @page { margin: 0; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #fff; }
-        .label-page { page-break-after: always; display: flex; justify-content: center; align-items: flex-start; padding: 0; }
+        .label-page { page-break-after: always; page-break-inside: avoid; display: flex; justify-content: center; align-items: flex-start; height: 100vh; padding: 0; }
         .label-page:last-child { page-break-after: auto; }
-        .label-page img { max-width: 100%; height: auto; }
-        @media print { .label-page { padding: 0; } }
+        .label-page img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+        @media print {
+          .label-page { height: 100vh; padding: 0; }
+          .label-page img { max-width: 100%; max-height: 100vh; }
+        }
       </style></head><body>
       ${imgs}
       <script>
