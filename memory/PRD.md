@@ -21,36 +21,26 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 
 ## What's Been Implemented
 
-### Per-Shift Pay Rate Editing (Sep 12, 2026) — LATEST
-- **Edit rate per shift**: Admin can change hourly rate on any individual time entry via the Edit Time Entry modal
-- **Rate column**: Admin shift table shows per-shift rate for each entry
-- **Rate persistence**: Once a rate is set on a shift, changing the employee's global rate does NOT overwrite it
-- **Rate snapshotting**: Clock-in (both employee and admin-initiated) snapshots the current rate onto the entry
-- **Backfill protection**: Global rate changes only backfill entries with `hourly_rate=None`, preserving explicitly set rates
-- **Payroll integration**: All payroll calculations (summary, report, PDF, employee history, employee dashboard) use per-shift stored rates with fallback to employee global rate
-- **Backend**: `EditTimeEntryRequest` includes `hourly_rate`, PUT endpoint accepts it, payroll endpoints refactored
-- **Testing**: 100% backend (7/7), frontend verified — iteration_85
+### AnyDesk Watcher False Disconnect Fix (Sep 12, 2026) — LATEST
+- Root cause: trace file mtime check (2-min window) failed during normal idle sessions
+- Fix 1: Network-based detection via lsof/netstat for actual TCP connections
+- Fix 2: Backend grace period increased 2min → 10min
+- Fix 3: Removed aggressive ctrl_tcp disconnect pattern from session-end regex
+- Note: Remote worker needs updated watcher script after deploy
+
+### Per-Shift Pay Rate Editing (Sep 12, 2026)
+- Edit rate per shift via TimeEntryModal, rate column in shift tables
+- Rate persistence: explicit rates survive global rate changes
+- Rate snapshotting at clock-in (employee and admin-initiated)
+- Rate breakdown in payroll (summary, report, PDF, employee history)
+- Employee dashboard: shows "Current Rate" + per-rate pay breakdown
+- Per-shift rate shown on all shifts in employee Recent Shifts list
 
 ### AI Assistant Full-Page Layout (Sep 12, 2026)
-- Fixed critical bugs: fullPage branch called undefined render functions
-- Rewrote fullPage mode as native dashboard page with sidebar + chat layout
-- Testing: 100% pass (10/10 frontend) — iteration_84
+- Fixed critical bugs in fullPage mode (undefined render functions)
+- Native dashboard page with sidebar + chat layout
 
-### Orders & Shipping Labels (Sep 11, 2026)
-- Full label upload/preview/SKU tagging/auto-name via AI OCR
-- Order assignment to employees with date range + labels
-- Employee Orders page with matched labels and print
-- Assignment history (active/completed/incomplete)
-
-### Business Files Document Vault (Sep 11, 2026)
-- Admin-only document storage with folders, tags, OCR search
-- Multi-page preview with navigation, blob-based download
-
-### Admin Dashboard Restructure (Sep 2026)
-- Tile-based home page + separate full-page sections
-- Operations, Team, Hiring, Messages, Training, AI tiles
-
-### Pull List, AI Assistant, Training Videos, GPS, Payroll, etc.
+### Orders & Shipping Labels, Business Files, Pull List, Training, GPS, etc.
 - See CHANGELOG.md for full history
 
 ## Prioritized Backlog
@@ -65,10 +55,12 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 - Training video end-to-end validation (segment stitching)
 
 ### P2 — Known Issues
-- AnyDesk watcher autostart reliability
 - Platform lint engine error (local ESLint works, platform check may fail)
 
 ### P3 — Future / Backlog
+- Bulk rate fix (select multiple shifts, update rate at once)
+- Rate change history log
+- Watcher health dashboard (live heartbeat indicator)
 - Public homepage AI chat bubble (discussed, not approved)
 - Training video style selector
 - Payroll provider integration (Gusto discussed)

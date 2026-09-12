@@ -62,11 +62,13 @@ TRACE_LINE_RE = re.compile(
     r"^\s*(Incoming|Outgoing)\s+(\d{4}-\d{2}-\d{2}),?\s+(\d{2}:\d{2}(?::\d{2})?)\s+(\S+)\s*(\S*)\s*(\S*)\s*$"
 )
 # Session-end detection in trace files (multiple patterns)
+# NOTE: Removed "Client disconnected" (ctrl_tcp) — it fires on brief TCP reconnections
+# during normal operation and causes false session-end alerts. Only match definitive
+# session closure events from backend_session and app.session.
 SVC_END_RE = re.compile(
     r"(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}).*?(?:"
     r"app\.backend_session\s*-\s*[Ss]ession (?:closed|stopped|ended|removed)"
     r"|app\.session\s*-\s*(?:[Rr]emoving session|[Ss]ession terminated|[Cc]lient session terminated)"
-    r"|app\.ctrl_tcp\s*-\s*[Cc]lient disconnected"
     r"|app\.backend_session\s*-\s*[Cc]losing session"
     r")"
 )
@@ -344,6 +346,39 @@ def ack_command(cfg, command_id, success):
         pass
 
 
+def check_active_anydesk_connections():
+    """Check if AnyDesk has active remote connections via network state.
+    This is more reliable than trace file mtime since AnyDesk maintains
+    TCP connections throughout an active session."""
+    import subprocess
+    try:
+        if IS_MAC:
+            # lsof shows all open network connections — look for AnyDesk ESTABLISHED connections
+            result = subprocess.run(
+                ["lsof", "-i", "-n", "-P", "-c", "AnyDesk"],
+                capture_output=True, text=True, timeout=10
+            )
+            for line in result.stdout.splitlines():
+                if "ESTABLISHED" in line:
+                    log.debug(f"Active AnyDesk connection: {line.strip()}")
+                    return True
+        else:
+            # Windows: use netstat to check for AnyDesk connections
+            result = subprocess.run(
+                ["netstat", "-b", "-n"],
+                capture_output=True, text=True, timeout=10
+            )
+            lines = result.stdout.splitlines()
+            for i, line in enumerate(lines):
+                if "ESTABLISHED" in line:
+                    # The process name appears on the next line in netstat -b output
+                    if i + 1 < len(lines) and "AnyDesk" in lines[i + 1]:
+                        return True
+    except Exception as e:
+        log.debug(f"Network connection check failed: {e}")
+    return False
+
+
 def send_heartbeat(cfg):
     """Report watcher status + whether AnyDesk has active connections to the backend.
     If AnyDesk is running but has no active sessions, backend closes open session records."""
@@ -357,20 +392,24 @@ def send_heartbeat(cfg):
             result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq AnyDesk.exe"], capture_output=True, text=True, timeout=5)
             anydesk_running = "AnyDesk.exe" in result.stdout
 
-        # Check if there are active remote sessions by looking at trace file recency
-        # If the service trace was written to in the last 2 minutes, a session may be active
+        # Check if there are active remote sessions
+        # Method 1: Check actual network connections (most reliable)
+        # Method 2: Fall back to trace file recency
         has_active_sessions = False
         if anydesk_running:
-            for path in cfg.get("service_trace_files", []):
-                try:
-                    if os.path.exists(path):
-                        mtime = os.path.getmtime(path)
-                        age = time.time() - mtime
-                        if age < 120:  # trace active in last 2 minutes
-                            has_active_sessions = True
-                            break
-                except OSError:
-                    pass
+            has_active_sessions = check_active_anydesk_connections()
+            if not has_active_sessions:
+                # Fallback: check trace file recency (less reliable, use generous window)
+                for path in cfg.get("service_trace_files", []):
+                    try:
+                        if os.path.exists(path):
+                            mtime = os.path.getmtime(path)
+                            age = time.time() - mtime
+                            if age < 900:  # 15 minutes — trace files aren't written continuously
+                                has_active_sessions = True
+                                break
+                    except OSError:
+                        pass
 
         url = f"{cfg['backend_url']}/api/remote-sessions/heartbeat"
         resp = requests.post(url, json={

@@ -1230,7 +1230,8 @@ async def watcher_heartbeat(data: dict, _: bool = Depends(verify_watcher_key)):
             print(f"[Heartbeat] AnyDesk not running on {host} — closed {closed} active session(s)")
 
     # Also close stuck sessions if AnyDesk IS running but has no active connections
-    # Use a grace period: only close if no_active_since > 2 minutes ago
+    # Use a generous grace period: only close after 10 minutes of confirmed inactivity
+    # to avoid false alerts from trace file staleness
     elif anydesk_running and not has_active_sessions:
         watcher_doc = await db.anydesk_watcher_status.find_one({"host": host})
         no_active_since = watcher_doc.get("no_active_since") if watcher_doc else None
@@ -1252,7 +1253,7 @@ async def watcher_heartbeat(data: dict, _: bool = Depends(verify_watcher_key)):
             except (ValueError, TypeError):
                 inactive_seconds = 0
 
-            if inactive_seconds >= 120:  # 2 minutes of no active sessions
+            if inactive_seconds >= 600:  # 10 minutes of no active sessions before closing
                 staleness_cutoff = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
                 result = await db.anydesk_sessions.update_many(
                     {"host": host, "ended_at": None, "started_at": {"$gte": staleness_cutoff}},
