@@ -21,7 +21,12 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 
 ## What's Been Implemented
 
-### Operations Page Tiles + GPS Improvements (Sep 12, 2026) — LATEST
+### Shipping Label PDF Crop (Sep 12, 2026) — LATEST
+- Crop rendered PDF labels to 4×6 aspect ratio, removing marketplace order/buyer metadata below label
+- Preserves all label content (barcode, tracking, addresses, 0001 identifier)
+- SKU overlay applied after crop so it stays visible
+
+### Operations Page Tiles + GPS Improvements (Sep 12, 2026)
 - Operations page restructured with 4 tiles: Orders & Pull List, Mileage, Sales Data, Taxes
 - Each tile opens its own sub-page with back navigation
 - Removed business/personal classification from GPS trips (all business)
@@ -49,6 +54,7 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 ## Prioritized Backlog
 
 ### P0 — Next Up
+- Label crop fix: awaiting user confirmation on real printer/device
 - Gmail automation for labels (requires user OAuth setup)
 
 ### P1 — Pending User Confirmation
