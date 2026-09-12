@@ -122,11 +122,8 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
         @page { margin: 0; }
         html, body { margin: 0; padding: 0; }
         body { display: flex; justify-content: center; align-items: flex-start; background: #fff; }
-        img { display: block; max-width: 100%; page-break-inside: avoid; }
+        img { display: block; width: 4in; height: 6in; object-fit: contain; }
         iframe { width: 100%; height: 100vh; border: none; }
-        @media print {
-          img { max-width: 100%; max-height: 10in; width: auto; object-fit: contain; }
-        }
       </style></head><body>
       ${isImg
         ? `<img src="${url}" onload="setTimeout(()=>{window.print();},300)" />`
@@ -153,10 +150,7 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
         body { background: #fff; }
         .label-page { page-break-after: always; page-break-inside: avoid; text-align: center; }
         .label-page:last-child { page-break-after: auto; }
-        .label-page img { display: block; max-width: 100%; margin: 0 auto; }
-        @media print {
-          .label-page img { max-width: 100%; max-height: 10in; width: auto; object-fit: contain; }
-        }
+        .label-page img { display: block; width: 4in; height: 6in; object-fit: contain; margin: 0 auto; }
       </style></head><body>
       ${imgs}
       <script>

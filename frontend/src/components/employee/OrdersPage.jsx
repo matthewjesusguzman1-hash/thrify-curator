@@ -126,10 +126,7 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
           @page { margin: 0; }
           html, body { margin: 0; padding: 0; }
           body { display: flex; justify-content: center; align-items: flex-start; background: #fff; }
-          img { display: block; max-width: 100%; page-break-inside: avoid; }
-          @media print {
-            img { max-width: 100%; max-height: 10in; width: auto; object-fit: contain; }
-          }
+          img { display: block; width: 4in; height: 6in; object-fit: contain; }
         </style></head><body>
         <img src="${dataUrl}" onload="setTimeout(()=>{window.print();},300)" />
         </body></html>
@@ -159,10 +156,7 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
           body { background: #fff; }
           .label-page { page-break-after: always; page-break-inside: avoid; text-align: center; }
           .label-page:last-child { page-break-after: auto; }
-          .label-page img { display: block; max-width: 100%; margin: 0 auto; }
-          @media print {
-            .label-page img { max-width: 100%; max-height: 10in; width: auto; object-fit: contain; }
-          }
+          .label-page img { display: block; width: 4in; height: 6in; object-fit: contain; margin: 0 auto; }
         </style></head><body>
         ${imgs}
         <script>
