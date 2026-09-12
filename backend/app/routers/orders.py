@@ -9,6 +9,58 @@ from app.database import db
 from app.dependencies import get_admin_user, get_current_user
 from app.services.object_storage import put_object, get_object, APP_NAME
 
+
+def _overlay_sku_on_image(img_bytes: bytes, sku_text: str) -> bytes:
+    """Overlay SKU text onto a label image (bottom-right corner, bold, readable)."""
+    from PIL import Image, ImageDraw, ImageFont
+    import io
+
+    img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
+    w, h = img.size
+
+    # Create overlay layer
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+
+    # Scale font size based on image dimensions (target ~4% of height)
+    font_size = max(24, int(h * 0.04))
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+    except (OSError, IOError):
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", font_size)
+        except (OSError, IOError):
+            font = ImageFont.load_default()
+
+    # Measure text
+    bbox = draw.textbbox((0, 0), sku_text, font=font)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+
+    # Position: bottom-right with padding
+    padding = int(font_size * 0.5)
+    x = w - tw - padding * 2
+    y = h - th - padding * 2
+
+    # Draw semi-transparent white background
+    draw.rectangle(
+        [x - padding, y - padding, x + tw + padding, y + th + padding],
+        fill=(255, 255, 255, 220)
+    )
+    # Draw black border
+    draw.rectangle(
+        [x - padding, y - padding, x + tw + padding, y + th + padding],
+        outline=(0, 0, 0, 180), width=2
+    )
+    # Draw SKU text
+    draw.text((x, y), sku_text, font=font, fill=(0, 0, 0, 255))
+
+    # Composite and convert back to PNG bytes
+    result = Image.alpha_composite(img, overlay).convert("RGB")
+    buf = io.BytesIO()
+    result.save(buf, format="PNG")
+    return buf.getvalue()
+
+
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 # ============== MODELS ==============
@@ -183,27 +235,37 @@ async def get_label_preview(
     token: Optional[str] = Query(None),
     authorization: Optional[str] = Header(None),
 ):
-    """Render first page of a PDF label as a PNG image preview."""
+    """Render first page of a PDF label as a PNG image preview, with SKU overlay if tagged."""
     _extract_token(token, authorization)
 
     label = await db.shipping_labels.find_one({"id": label_id}, {"_id": 0})
     if not label:
         raise HTTPException(status_code=404, detail="Label not found")
 
-    # If it's already an image, serve it directly
-    if label.get("content_type", "").startswith("image/"):
-        from fastapi.responses import Response
-        data, ct = get_object(label["storage_path"])
-        return Response(content=data, media_type=ct)
+    sku_tag = (label.get("sku_tag") or "").strip()
 
-    # Convert PDF first page to image
-    try:
-        data, _ = get_object(label["storage_path"])
-        img_bytes = _pdf_to_image(data)
-        from fastapi.responses import Response
-        return Response(content=img_bytes, media_type="image/png")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Preview generation failed: {str(e)}")
+    # Get the base image bytes
+    if label.get("content_type", "").startswith("image/"):
+        data, ct = get_object(label["storage_path"])
+        img_bytes = data
+    else:
+        # Convert PDF first page to image
+        try:
+            data, _ = get_object(label["storage_path"])
+            img_bytes = _pdf_to_image(data)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Preview generation failed: {str(e)}")
+
+    # Overlay SKU if present
+    if sku_tag:
+        try:
+            img_bytes = _overlay_sku_on_image(img_bytes, sku_tag)
+        except Exception as e:
+            print(f"[LabelPreview] SKU overlay failed: {e}")
+            # Return image without overlay on failure
+
+    from fastapi.responses import Response
+    return Response(content=img_bytes, media_type="image/png")
 
 
 # ============== ORDER ASSIGNMENTS ==============
