@@ -36,9 +36,9 @@ def _overlay_sku_on_image(img_bytes: bytes, sku_text: str) -> bytes:
     bbox = draw.textbbox((0, 0), sku_text, font=font)
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
 
-    # Position: bottom-right with padding
+    # Position: bottom-left with padding
     padding = int(font_size * 0.5)
-    x = w - tw - padding * 2
+    x = padding * 2
     y = h - th - padding * 2
 
     # Draw semi-transparent white background
