@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query, Depends, Header
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timezone
@@ -136,23 +136,33 @@ async def update_label(label_id: str, req: UpdateLabelRequest, admin: dict = Dep
     return {"updated": True, "sku_tag": updates.get("sku_tag", label.get("sku_tag", ""))}
 
 
-@router.get("/labels/{label_id}/file")
-async def get_label_file(
-    label_id: str,
-    token: Optional[str] = Query(None, description="Auth token for direct links"),
-):
-    """Serve a label file. Auth via ?token= query param."""
+def _extract_token(token_query: Optional[str], authorization: Optional[str]) -> str:
+    """Extract JWT from query param or Authorization header."""
     import jwt as pyjwt
     from app.config import JWT_SECRET, JWT_ALGORITHM
 
-    if not token:
-        raise HTTPException(status_code=401, detail="Token required (?token=...)")
+    raw = token_query
+    if not raw and authorization and authorization.startswith("Bearer "):
+        raw = authorization[7:]
+    if not raw:
+        raise HTTPException(status_code=401, detail="Token required")
     try:
-        payload = pyjwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = pyjwt.decode(raw, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         if not payload.get("sub"):
             raise HTTPException(status_code=401, detail="Invalid token")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return raw
+
+
+@router.get("/labels/{label_id}/file")
+async def get_label_file(
+    label_id: str,
+    token: Optional[str] = Query(None, description="Auth token for direct links"),
+    authorization: Optional[str] = Header(None),
+):
+    """Serve a label file. Auth via ?token= query param or Authorization header."""
+    _extract_token(token, authorization)
 
     label = await db.shipping_labels.find_one({"id": label_id}, {"_id": 0})
     if not label:
@@ -171,19 +181,10 @@ async def get_label_file(
 async def get_label_preview(
     label_id: str,
     token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
 ):
     """Render first page of a PDF label as a PNG image preview."""
-    import jwt as pyjwt
-    from app.config import JWT_SECRET, JWT_ALGORITHM
-
-    if not token:
-        raise HTTPException(status_code=401, detail="Token required")
-    try:
-        payload = pyjwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        if not payload.get("sub"):
-            raise HTTPException(status_code=401, detail="Invalid token")
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    _extract_token(token, authorization)
 
     label = await db.shipping_labels.find_one({"id": label_id}, {"_id": 0})
     if not label:
