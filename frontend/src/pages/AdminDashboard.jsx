@@ -95,6 +95,7 @@ import PasswordManagementSection from "@/components/admin/sections/PasswordManag
 import FinancialsSection from "@/components/admin/sections/FinancialsSection";
 import TaxReturnsArchiveSection from "@/components/admin/sections/TaxReturnsArchiveSection";
 import SalesDataSection from "@/components/admin/sections/SalesDataSection";
+import CSVUpdateButton from "@/components/admin/sections/CSVUpdateButton";
 import PullListSection from "@/components/admin/sections/PullListSection";
 import TaxesSection from "@/components/admin/sections/TaxesSection";
 import InterviewSchedulerSection from "@/components/admin/sections/InterviewSchedulerSection";
@@ -3790,7 +3791,7 @@ export default function AdminDashboard() {
                   {operationsSubPage === "orders" && (
                     <div className="space-y-6">
                       <h2 className="text-lg font-semibold text-white/90">Orders & Pull List</h2>
-                      <SalesDataSection getAuthHeader={getAuthHeader} />
+                      <CSVUpdateButton getAuthHeader={getAuthHeader} />
                       <ShippingLabelsSection getAuthHeader={getAuthHeader} />
                       <OrderAssignmentSection getAuthHeader={getAuthHeader} employees={employees} />
                       <PullListSection getAuthHeader={getAuthHeader} />
