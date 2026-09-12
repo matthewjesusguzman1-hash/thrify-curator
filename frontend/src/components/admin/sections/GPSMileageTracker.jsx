@@ -208,25 +208,32 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
         setQuickTripId(null);
         setQuickTripStartAddr("");
         setQuickTripMiles(0);
-        setLastTripResult({
-          start_address: data.start_address || "",
-          end_address: data.end_address || "",
-          total_miles: data.total_miles,
-          tax_deduction: data.tax_deduction,
-          legs_count: data.legs_count || 1,
-        });
         toast.success(data.message);
         fetchTripHistory();
         fetchSummary();
-        // Expand and scroll to show trip result
-        setIsExpanded(true);
-        setTimeout(() => {
-          if (containerRef.current) {
-            containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Open edit modal so user can add trip details
+        if (data.trip_id) {
+          const tripResp = await axios.get(`${API}/admin/gps-trips/trip/${data.trip_id}`, getAuthHeader());
+          if (tripResp.data) {
+            handleEditTrip(tripResp.data);
           }
-        }, 300);
-        // Auto-clear result after 30 seconds
-        setTimeout(() => setLastTripResult(null), 30000);
+        } else {
+          // Fallback: show result summary
+          setLastTripResult({
+            start_address: data.start_address || "",
+            end_address: data.end_address || "",
+            total_miles: data.total_miles,
+            tax_deduction: data.tax_deduction,
+            legs_count: data.legs_count || 1,
+          });
+          setIsExpanded(true);
+          setTimeout(() => {
+            if (containerRef.current) {
+              containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }, 300);
+          setTimeout(() => setLastTripResult(null), 30000);
+        }
       } else {
         toast.error(data.message || "Failed to end trip");
       }
@@ -1571,19 +1578,6 @@ const GPSMileageTracker = forwardRef(function GPSMileageTracker({ getAuthHeader,
                     Tax Deduction: ${((editTripData.classification || "business") === "business" ? (parseFloat(editTripData.miles) * IRS_RATE_2026).toFixed(2) : "0.00")}
                   </p>
                 )}
-              </div>
-
-              {/* Classification */}
-              <div>
-                <Label className="text-sm font-medium text-gray-700">Classification</Label>
-                <div className="flex gap-2 mt-1">
-                  <button type="button" onClick={() => setEditTripData(prev => ({ ...prev, classification: "business" }))} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${(editTripData.classification || "business") === "business" ? "bg-green-100 text-green-700 border-2 border-green-300" : "bg-gray-50 text-gray-500 border border-gray-200"}`} data-testid="edit-trip-business-btn">
-                    Business
-                  </button>
-                  <button type="button" onClick={() => setEditTripData(prev => ({ ...prev, classification: "personal" }))} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${(editTripData.classification || "business") !== "business" ? "bg-gray-200 text-gray-700 border-2 border-gray-400" : "bg-gray-50 text-gray-500 border border-gray-200"}`} data-testid="edit-trip-personal-btn">
-                    Personal
-                  </button>
-                </div>
               </div>
 
               {/* Purpose */}

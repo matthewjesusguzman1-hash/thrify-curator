@@ -57,17 +57,6 @@ const TripRow = ({
         </div>
       </div>
       <div className="flex items-center gap-0.5 flex-shrink-0">
-        {/* Business/Personal toggle */}
-        {onClassify && (
-          <button
-            onClick={() => onClassify(trip.id, classification === "business" ? "personal" : "business")}
-            className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${classification === "business" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}
-            title={`Mark as ${classification === "business" ? "personal" : "business"}`}
-            data-testid={`classify-btn-${trip.id}`}
-          >
-            {classification === "business" ? "Biz" : "Per"}
-          </button>
-        )}
         {!trip.is_manual && (
           <Button
             size="sm"

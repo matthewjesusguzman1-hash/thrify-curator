@@ -66,7 +66,10 @@ import {
   Video,
   MoreVertical,
   Grid3x3,
-  FolderOpen
+  FolderOpen,
+  Car,
+  BarChart3,
+  Receipt
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -397,7 +400,14 @@ export default function AdminDashboard() {
   const titleClickTimer = useRef(null);
 
   // Page navigation state for multi-page dashboard
-  const [activePage, setActivePage] = useState("home");
+  const [activePage, setActivePageRaw] = useState("home");
+  const [operationsSubPage, setOperationsSubPage] = useState(null); // null = tiles, "orders", "mileage", "sales", "taxes"
+  
+  // Wrap setActivePage to reset operations sub-page when navigating
+  const setActivePage = useCallback((page) => {
+    setActivePageRaw(page);
+    if (page !== "operations") setOperationsSubPage(null);
+  }, []);
 
   // Business owner emails - only these users can assign admin roles
   const OWNER_EMAILS = ["matthewjesusguzman1@gmail.com", "euniceguzman@thriftycurator.com"];
@@ -3768,18 +3778,76 @@ export default function AdminDashboard() {
           {/* OPERATIONS PAGE */}
           {activePage === "operations" && (
             <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-white/90">Operations</h2>
-              <ShippingLabelsSection getAuthHeader={getAuthHeader} />
-              <OrderAssignmentSection getAuthHeader={getAuthHeader} employees={employees} />
-              <GPSMileageTracker 
-                ref={gpsTrackerRef}
-                getAuthHeader={getAuthHeader}
-                onTripStateChange={setTripState}
-              />
-              <PullListSection getAuthHeader={getAuthHeader} />
-              <SalesDataSection getAuthHeader={getAuthHeader} />
-              <TaxesSection getAuthHeader={getAuthHeader} />
-              <TaxReturnsArchiveSection getAuthHeader={getAuthHeader} />
+              {/* Back to tiles when in a sub-page */}
+              {operationsSubPage ? (
+                <>
+                  <button 
+                    onClick={() => setOperationsSubPage(null)} 
+                    className="flex items-center gap-2 text-white/60 hover:text-white/90 text-sm transition-colors"
+                    data-testid="ops-back-to-tiles"
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Operations
+                  </button>
+                  
+                  {operationsSubPage === "orders" && (
+                    <div className="space-y-6">
+                      <h2 className="text-lg font-semibold text-white/90">Orders & Pull List</h2>
+                      <ShippingLabelsSection getAuthHeader={getAuthHeader} />
+                      <OrderAssignmentSection getAuthHeader={getAuthHeader} employees={employees} />
+                      <PullListSection getAuthHeader={getAuthHeader} />
+                    </div>
+                  )}
+                  
+                  {operationsSubPage === "mileage" && (
+                    <div className="space-y-6">
+                      <h2 className="text-lg font-semibold text-white/90">Mileage Tracker</h2>
+                      <GPSMileageTracker 
+                        ref={gpsTrackerRef}
+                        getAuthHeader={getAuthHeader}
+                        onTripStateChange={setTripState}
+                      />
+                    </div>
+                  )}
+                  
+                  {operationsSubPage === "sales" && (
+                    <div className="space-y-6">
+                      <h2 className="text-lg font-semibold text-white/90">Sales Data</h2>
+                      <SalesDataSection getAuthHeader={getAuthHeader} />
+                    </div>
+                  )}
+                  
+                  {operationsSubPage === "taxes" && (
+                    <div className="space-y-6">
+                      <h2 className="text-lg font-semibold text-white/90">Taxes</h2>
+                      <TaxesSection getAuthHeader={getAuthHeader} />
+                      <TaxReturnsArchiveSection getAuthHeader={getAuthHeader} />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h2 className="text-lg font-semibold text-white/90">Operations</h2>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { id: "orders", label: "Orders & Pull List", Icon: Package, desc: "Labels, assignments, pull list" },
+                      { id: "mileage", label: "Mileage", Icon: Car, desc: "GPS trips & tax deductions" },
+                      { id: "sales", label: "Sales Data", Icon: BarChart3, desc: "CSV import & analytics" },
+                      { id: "taxes", label: "Taxes", Icon: Receipt, desc: "Tax reports & returns" },
+                    ].map(tile => (
+                      <button
+                        key={tile.id}
+                        onClick={() => setOperationsSubPage(tile.id)}
+                        className="flex flex-col items-center gap-2 p-5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-2xl transition-all text-center group"
+                        data-testid={`ops-tile-${tile.id}`}
+                      >
+                        <tile.Icon className="w-6 h-6 text-emerald-400" />
+                        <span className="text-sm font-semibold text-white/90 group-hover:text-white">{tile.label}</span>
+                        <span className="text-xs text-white/40">{tile.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
 
