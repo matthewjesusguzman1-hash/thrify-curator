@@ -21,10 +21,11 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 
 ## What's Been Implemented
 
-### Shipping Label PDF Crop (Sep 12, 2026) — LATEST
-- Crop rendered PDF labels to 4×6 aspect ratio, removing marketplace order/buyer metadata below label
-- Preserves all label content (barcode, tracking, addresses, 0001 identifier)
-- SKU overlay applied after crop so it stays visible
+### Shipping Label PDF Redaction + Crop (Sep 12, 2026) — LATEST
+- Redacts marketplace metadata (Order #, Buyer @) from PDF labels before rendering
+- Also crops to 4×6 aspect ratio if page extends beyond label area
+- Preserves all real label content (barcode, tracking, addresses, service type)
+- SKU overlay applied after redaction/crop
 
 ### Operations Page Tiles + GPS Improvements (Sep 12, 2026)
 - Operations page restructured with 4 tiles: Orders & Pull List, Mileage, Sales Data, Taxes

@@ -697,24 +697,33 @@ def _guess_platform(filename: str, text: str) -> str:
 
 
 def _pdf_to_image(pdf_bytes: bytes) -> bytes:
-    """Convert first page of PDF to PNG image bytes, cropped to 4×6 label area."""
+    """Convert first page of PDF to PNG, redacting marketplace order/buyer metadata."""
     import fitz  # PyMuPDF
     from PIL import Image
     import io
 
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     page = doc.load_page(0)
+
+    # Redact marketplace metadata lines (Order #, Buyer @) before rendering
+    redact_patterns = ["Order #", "Order#", "Buyer @", "Buyer@", "Buyer:"]
+    for pattern in redact_patterns:
+        for rect in page.search_for(pattern):
+            # Extend to full page width to blank the entire line
+            full_line = fitz.Rect(0, rect.y0 - 2, page.rect.width, rect.y1 + 2)
+            page.add_redact_annot(full_line, fill=(1, 1, 1))  # white fill
+    page.apply_redactions()
+
     # Render at 2x for clarity on mobile
     mat = fitz.Matrix(2, 2)
     pix = page.get_pixmap(matrix=mat)
     raw_bytes = pix.tobytes("png")
     doc.close()
 
-    # Crop to 4×6 shipping-label area (removes order/buyer metadata below label)
+    # Also crop to 4×6 if page extends beyond label area
     img = Image.open(io.BytesIO(raw_bytes))
     w, h = img.size
-    label_h = int(w * 1.5)  # 4:6 aspect ratio → height = width × 1.5
-
+    label_h = int(w * 1.5)  # 4:6 aspect ratio
     if h > label_h:
         img = img.crop((0, 0, w, label_h))
         buf = io.BytesIO()
