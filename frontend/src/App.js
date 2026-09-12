@@ -1,6 +1,6 @@
 import "@/App.css";
 import { useState, useEffect, useCallback } from "react";
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { Toaster, toast } from "@/components/ui/sonner";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -174,6 +174,16 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Redirect logged-in users past the landing page
+function AuthRedirect({ children }) {
+  const token = localStorage.getItem("token");
+  const user = (() => { try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; } })();
+  if (token && user.role) {
+    return <Navigate to={user.role === "admin" ? "/admin" : "/dashboard"} replace />;
+  }
+  return children;
+}
+
 // Animated Routes component
 function AnimatedRoutes() {
   const location = useLocation();
@@ -184,7 +194,7 @@ function AnimatedRoutes() {
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={
             <PageTransition>
-              <LandingPage />
+              <AuthRedirect><LandingPage /></AuthRedirect>
             </PageTransition>
           } />
         <Route path="/job-application" element={
