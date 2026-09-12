@@ -15,14 +15,35 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
   const [expandedLabels, setExpandedLabels] = useState(new Set());
+  const [labelPreviews, setLabelPreviews] = useState({});
 
-  const toggleLabelPreview = (labelId) => {
+  const toggleLabelPreview = async (labelId) => {
     setExpandedLabels((prev) => {
       const next = new Set(prev);
-      if (next.has(labelId)) next.delete(labelId);
-      else next.add(labelId);
+      if (next.has(labelId)) {
+        next.delete(labelId);
+      } else {
+        next.add(labelId);
+        // Fetch blob if not already loaded
+        if (!labelPreviews[labelId]) {
+          fetchLabelPreview(labelId);
+        }
+      }
       return next;
     });
+  };
+
+  const fetchLabelPreview = async (labelId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API}/orders/labels/${labelId}/preview?token=${token}`);
+      if (!res.ok) throw new Error("Failed");
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setLabelPreviews((prev) => ({ ...prev, [labelId]: blobUrl }));
+    } catch {
+      toast.error("Failed to load label preview");
+    }
   };
   const [filterMatched, setFilterMatched] = useState(false);
 
@@ -83,9 +104,6 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
 
   const getLabelUrl = (labelId) =>
     `${API}/orders/labels/${labelId}/file?token=${localStorage.getItem("token")}`;
-
-  const getPreviewUrl = (labelId) =>
-    `${API}/orders/labels/${labelId}/preview?token=${localStorage.getItem("token")}`;
 
   const printLabel = (label) => {
     const url = getLabelUrl(label.id);
@@ -324,7 +342,7 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-white/60 truncate">{linked.label.filename}</p>
+                        <p className="text-xs text-white/60 truncate">{linked.label.display_name || linked.label.filename}</p>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <Tag className="w-2.5 h-2.5 text-[#10B981]" />
                           <span className="text-[10px] text-[#10B981] font-mono font-bold">
@@ -355,7 +373,13 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
                     {/* Inline Preview */}
                     {expandedLabels.has(linked.label.id) && (
                       <div className="mt-2 rounded-lg overflow-hidden bg-white/[0.03] border border-white/[0.06]">
-                        <img src={getPreviewUrl(linked.label.id)} alt="Label" className="w-full max-h-[300px] object-contain" />
+                        {labelPreviews[linked.label.id] ? (
+                          <img src={labelPreviews[linked.label.id]} alt="Label" className="w-full max-h-[300px] object-contain" />
+                        ) : (
+                          <div className="flex justify-center py-6">
+                            <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -386,7 +410,7 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-white/70 truncate">{label.filename}</p>
+                  <p className="text-sm text-white/70 truncate">{label.display_name || label.filename}</p>
                   {label.sku_tag && (
                     <span className="text-[10px] text-[#F59E0B] font-mono font-bold">SKU: {label.sku_tag}</span>
                   )}
@@ -412,7 +436,13 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
               {expandedLabels.has(label.id) && (
                 <div className="px-3 pb-3">
                   <div className="rounded-lg overflow-hidden bg-white/[0.03] border border-white/[0.06]">
-                    <img src={getPreviewUrl(label.id)} alt="Label" className="w-full max-h-[300px] object-contain" />
+                    {labelPreviews[label.id] ? (
+                      <img src={labelPreviews[label.id]} alt="Label" className="w-full max-h-[300px] object-contain" />
+                    ) : (
+                      <div className="flex justify-center py-6">
+                        <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
