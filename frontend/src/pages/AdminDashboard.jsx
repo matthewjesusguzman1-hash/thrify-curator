@@ -3600,7 +3600,13 @@ export default function AdminDashboard() {
           {/* Back button when not on home */}
           {activePage !== "home" && (
             <button
-              onClick={() => setActivePage("home")}
+              onClick={() => {
+                if (activePage === "operations" && operationsSubPage) {
+                  setOperationsSubPage(null);
+                } else {
+                  setActivePage("home");
+                }
+              }}
               className="flex items-center gap-2 text-sm text-white/50 hover:text-white/80 transition-colors mb-4"
               data-testid="admin-back-btn"
             >
@@ -3781,17 +3787,10 @@ export default function AdminDashboard() {
               {/* Back to tiles when in a sub-page */}
               {operationsSubPage ? (
                 <>
-                  <button 
-                    onClick={() => setOperationsSubPage(null)} 
-                    className="flex items-center gap-2 text-white/60 hover:text-white/90 text-sm transition-colors"
-                    data-testid="ops-back-to-tiles"
-                  >
-                    <ChevronLeft className="w-4 h-4" /> Operations
-                  </button>
-                  
                   {operationsSubPage === "orders" && (
                     <div className="space-y-6">
                       <h2 className="text-lg font-semibold text-white/90">Orders & Pull List</h2>
+                      <SalesDataSection getAuthHeader={getAuthHeader} />
                       <ShippingLabelsSection getAuthHeader={getAuthHeader} />
                       <OrderAssignmentSection getAuthHeader={getAuthHeader} employees={employees} />
                       <PullListSection getAuthHeader={getAuthHeader} />
