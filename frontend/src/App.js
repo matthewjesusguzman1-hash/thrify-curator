@@ -39,7 +39,7 @@ import { initShortcutHandler } from "@/utils/shortcutHandler";
 const APP_VERSION = "1.1.4";
 
 // Session timeout in milliseconds (1 hour)
-const SESSION_TIMEOUT = 60 * 60 * 1000;
+const SESSION_TIMEOUT = 3 * 60 * 60 * 1000;
 
 // Check if running in native app
 const isNativeApp = () => {
