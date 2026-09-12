@@ -14,7 +14,16 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
   const [assignment, setAssignment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
-  const [expandedLabel, setExpandedLabel] = useState(null);
+  const [expandedLabels, setExpandedLabels] = useState(new Set());
+
+  const toggleLabelPreview = (labelId) => {
+    setExpandedLabels((prev) => {
+      const next = new Set(prev);
+      if (next.has(labelId)) next.delete(labelId);
+      else next.add(labelId);
+      return next;
+    });
+  };
   const [filterMatched, setFilterMatched] = useState(false);
 
   const fetchAssignment = useCallback(async () => {
@@ -325,8 +334,12 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
                         </div>
                       </div>
                       <button
-                        onClick={(e) => { e.stopPropagation(); setExpandedLabel(expandedLabel === linked.label.id ? null : linked.label.id); }}
-                        className="p-1.5 rounded-md text-white/30 hover:text-white/60 hover:bg-white/[0.05] transition-colors"
+                        onClick={(e) => { e.stopPropagation(); toggleLabelPreview(linked.label.id); }}
+                        className={`p-1.5 rounded-md transition-colors ${
+                          expandedLabels.has(linked.label.id)
+                            ? "text-[#00D4FF] bg-[#00D4FF]/10"
+                            : "text-white/30 hover:text-white/60 hover:bg-white/[0.05]"
+                        }`}
                         data-testid={`preview-matched-${linked.label.id}`}
                       >
                         <Eye className="w-3.5 h-3.5" />
@@ -340,7 +353,7 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
                       </button>
                     </div>
                     {/* Inline Preview */}
-                    {expandedLabel === linked.label.id && (
+                    {expandedLabels.has(linked.label.id) && (
                       <div className="mt-2 rounded-lg overflow-hidden bg-white/[0.03] border border-white/[0.06]">
                         <img src={getPreviewUrl(linked.label.id)} alt="Label" className="w-full max-h-[300px] object-contain" />
                       </div>
@@ -379,8 +392,12 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
                   )}
                 </div>
                 <button
-                  onClick={() => setExpandedLabel(expandedLabel === label.id ? null : label.id)}
-                  className="p-1.5 rounded-md text-white/30 hover:text-white/60 hover:bg-white/[0.05] transition-colors"
+                  onClick={() => toggleLabelPreview(label.id)}
+                  className={`p-1.5 rounded-md transition-colors ${
+                    expandedLabels.has(label.id)
+                      ? "text-[#00D4FF] bg-[#00D4FF]/10"
+                      : "text-white/30 hover:text-white/60 hover:bg-white/[0.05]"
+                  }`}
                 >
                   <Eye className="w-3.5 h-3.5" />
                 </button>
@@ -392,7 +409,7 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
                   <Printer className="w-3.5 h-3.5" />
                 </button>
               </div>
-              {expandedLabel === label.id && (
+              {expandedLabels.has(label.id) && (
                 <div className="px-3 pb-3">
                   <div className="rounded-lg overflow-hidden bg-white/[0.03] border border-white/[0.06]">
                     <img src={getPreviewUrl(label.id)} alt="Label" className="w-full max-h-[300px] object-contain" />
