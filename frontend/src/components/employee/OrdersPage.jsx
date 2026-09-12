@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Package, Check, CheckCircle, ChevronLeft, FileText,
   Image as ImageIcon, Loader2, AlertTriangle, Link2,
-  Printer, Eye, Tag, Filter
+  Printer, Eye, Tag, Filter, ChevronsDownUp, ChevronsUpDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -219,6 +219,20 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
     );
   }
 
+  const allLabelIds = (assignment?.labels || []).map((l) => l.id);
+  const allExpanded = allLabelIds.length > 0 && allLabelIds.every((id) => expandedLabels.has(id));
+
+  const toggleExpandAll = () => {
+    if (allExpanded) {
+      setExpandedLabels(new Set());
+    } else {
+      setExpandedLabels(new Set(allLabelIds));
+      allLabelIds.forEach((id) => {
+        if (!labelPreviews[id]) fetchLabelPreview(id);
+      });
+    }
+  };
+
   const isImage = (ct) => ct && ct.startsWith("image/");
 
   return (
@@ -263,16 +277,30 @@ export default function OrdersPage({ user, getAuthHeader, onBack }) {
         </div>
       </div>
 
-      {/* Print All Labels */}
+      {/* Print All & Expand All Labels */}
       {(assignment.labels?.length || 0) > 0 && (
-        <button
-          onClick={printAllLabels}
-          className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-[#00D4FF]/10 border border-[#00D4FF]/20 text-[#00D4FF] hover:bg-[#00D4FF]/15 transition-colors"
-          data-testid="print-all-labels-btn"
-        >
-          <Printer className="w-4 h-4" />
-          <span className="text-sm font-medium">Print All Labels ({assignment.labels.length})</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={printAllLabels}
+            className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl bg-[#00D4FF]/10 border border-[#00D4FF]/20 text-[#00D4FF] hover:bg-[#00D4FF]/15 transition-colors"
+            data-testid="print-all-labels-btn"
+          >
+            <Printer className="w-4 h-4" />
+            <span className="text-sm font-medium">Print All ({assignment.labels.length})</span>
+          </button>
+          <button
+            onClick={toggleExpandAll}
+            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-colors ${
+              allExpanded
+                ? "bg-[#00D4FF]/10 border-[#00D4FF]/30 text-[#00D4FF]"
+                : "bg-white/[0.03] border-white/[0.08] text-white/50 hover:bg-white/[0.06]"
+            }`}
+            data-testid="expand-all-labels-btn"
+          >
+            {allExpanded ? <ChevronsDownUp className="w-4 h-4" /> : <ChevronsUpDown className="w-4 h-4" />}
+            <span className="text-sm font-medium">{allExpanded ? "Collapse" : "Expand"}</span>
+          </button>
+        </div>
       )}
 
       {/* Filter Chips */}
