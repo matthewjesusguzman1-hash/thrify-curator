@@ -7,13 +7,17 @@
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>anydesk_session_watcher.py</string>
+        <string>WATCHER_DIR_PLACEHOLDER/anydesk_session_watcher.py</string>
     </array>
     <key>WorkingDirectory</key>
     <string>WATCHER_DIR_PLACEHOLDER</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
+    <true/>
+    <key>ProcessType</key>
+    <string>Background</string>
+    <key>LowPriorityIO</key>
     <true/>
     <key>StandardOutPath</key>
     <string>WATCHER_DIR_PLACEHOLDER/watcher.log</string>
