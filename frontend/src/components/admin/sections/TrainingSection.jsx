@@ -694,12 +694,12 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
                 </button>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Video Prompt</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Video Prompt <span className="text-xs text-gray-400 font-normal">(one line per 12s segment)</span></label>
                 <textarea
                   value={newModule.video_prompt}
                   onChange={(e) => setNewModule(prev => ({ ...prev, video_prompt: e.target.value }))}
                   className="w-full p-2 border rounded-lg h-32 resize-none"
-                  placeholder="Describe the video you want AI to generate..."
+                  placeholder={"Describe each segment on its own line for longer videos, e.g.:\nEmployee walks into the stockroom and finds the shelf\nEmployee scans the item barcode and checks the screen\nEmployee places the item in the shipping box"}
                 />
               </div>
             </div>
@@ -772,7 +772,9 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="flex items-center gap-1 text-amber-600 text-sm">
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          Generating...
+                          <span className="max-w-[140px] truncate">
+                            {module.segment_status || "Generating..."}
+                          </span>
                         </span>
                         {isAdmin && (
                           <>
@@ -1015,7 +1017,7 @@ export default function TrainingSection({ getAuthHeader, isAdmin = false }) {
                               value={promptText}
                               onChange={(e) => setPromptText(e.target.value)}
                               className="w-full h-32 p-3 text-sm border rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                              placeholder="Enter video prompt..."
+                              placeholder={"One line per 12-second segment, e.g.:\nEmployee walks into the stockroom and finds the shelf\nEmployee scans the item barcode and checks the screen"}
                             />
                           ) : (
                             <p className="text-sm text-gray-600 whitespace-pre-wrap">

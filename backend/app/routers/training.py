@@ -205,7 +205,10 @@ async def get_training_modules(user: dict = Depends(get_current_user)):
             "video_url": f"/api/training/video/{module['id']}" if video_exists else None,
             "video_exists": video_exists,
             "generation_status": status_doc.get("status") if status_doc else None,
-            "generation_error": status_doc.get("error") if status_doc else None
+            "generation_error": status_doc.get("error") if status_doc else None,
+            "total_segments": status_doc.get("total_segments") if status_doc else None,
+            "current_segment": status_doc.get("current_segment") if status_doc else None,
+            "segment_status": status_doc.get("segment_status") if status_doc else None,
         })
     
     return {"modules": modules_with_status}
@@ -227,67 +230,133 @@ async def get_training_video(module_id: str):
 
 
 async def generate_video_task(module_id: str, prompt: str):
-    """Background task to generate a training video"""
+    """Background task to generate a training video with multi-segment stitching."""
     try:
+        # Parse segments: split by newlines with "Segment N:" prefix, or treat as single segment
+        segments = []
+        lines = [l.strip() for l in prompt.strip().split("\n") if l.strip()]
+        for line in lines:
+            # Strip "Segment 1:", "Part 1:", "1.", "1)" prefixes
+            import re
+            cleaned = re.sub(r'^(segment\s*\d+\s*[:.\-]|part\s*\d+\s*[:.\-]|\d+[.)]\s*)', '', line, flags=re.IGNORECASE).strip()
+            if cleaned:
+                segments.append(cleaned)
+        if not segments:
+            segments = [prompt]
+
+        total_segments = len(segments)
+
         # Update status to generating
         await db.training_video_status.update_one(
             {"module_id": module_id},
             {"$set": {
                 "status": "generating",
                 "started_at": datetime.now(timezone.utc).isoformat(),
-                "error": None
+                "error": None,
+                "total_segments": total_segments,
+                "current_segment": 1,
+                "segment_status": "starting"
             }},
             upsert=True
         )
-        
-        # Import and use Sora 2
+
         from dotenv import load_dotenv
         load_dotenv()
-        
+
         from emergentintegrations.llm.openai.video_generation import OpenAIVideoGeneration
-        
+
         video_gen = OpenAIVideoGeneration(api_key=os.environ['EMERGENT_LLM_KEY'])
-        
+
         output_path = os.path.join(VIDEOS_DIR, f"{module_id}.mp4")
-        
-        # Add animation style instruction to the prompt - be very explicit about full animation
-        animated_prompt = f"Create a fully animated 2D cartoon video, similar to explainer videos or Pixar-style animation. NO live action footage, NO real people, NO realistic video. Use cartoon characters, illustrated backgrounds, and smooth 2D/3D animation throughout. The content should show: {prompt}"
-        
-        # Generate 12-second animated video in landscape format (max supported by library)
-        video_bytes = video_gen.text_to_video(
-            prompt=animated_prompt,
-            model="sora-2",
-            size="1280x720",
-            duration=12,
-            max_wait_time=900
-        )
-        
-        if video_bytes:
-            video_gen.save_video(video_bytes, output_path)
-            
-            # Update status to complete - use sync update to ensure it completes
-            try:
-                await db.training_video_status.update_one(
-                    {"module_id": module_id},
-                    {"$set": {
-                        "status": "complete",
-                        "completed_at": datetime.now(timezone.utc).isoformat()
-                    }}
-                )
-                print(f"[Training] Video generation complete for {module_id}")
-            except Exception as status_error:
-                print(f"[Training] Failed to update status for {module_id}: {status_error}")
+        segment_paths = []
+
+        for i, seg_prompt in enumerate(segments):
+            seg_num = i + 1
+            await db.training_video_status.update_one(
+                {"module_id": module_id},
+                {"$set": {
+                    "current_segment": seg_num,
+                    "segment_status": f"Generating segment {seg_num} of {total_segments}"
+                }}
+            )
+
+            animated_prompt = f"Create a fully animated 2D cartoon video, similar to explainer videos or Pixar-style animation. NO live action footage, NO real people, NO realistic video. Use cartoon characters, illustrated backgrounds, and smooth 2D/3D animation throughout. The content should show: {seg_prompt}"
+
+            video_bytes = video_gen.text_to_video(
+                prompt=animated_prompt,
+                model="sora-2",
+                size="1280x720",
+                duration=12,
+                max_wait_time=900
+            )
+
+            if not video_bytes:
+                raise Exception(f"Segment {seg_num} returned no data")
+
+            seg_path = os.path.join(VIDEOS_DIR, f"{module_id}_seg{seg_num}.mp4")
+            video_gen.save_video(video_bytes, seg_path)
+            segment_paths.append(seg_path)
+
+        # Stitch segments if multiple
+        if len(segment_paths) == 1:
+            import shutil
+            shutil.move(segment_paths[0], output_path)
         else:
-            raise Exception("Video generation returned no data")
-            
+            await db.training_video_status.update_one(
+                {"module_id": module_id},
+                {"$set": {"segment_status": "Stitching segments together..."}}
+            )
+            # Create ffmpeg concat file
+            concat_path = os.path.join(VIDEOS_DIR, f"{module_id}_concat.txt")
+            with open(concat_path, "w") as f:
+                for sp in segment_paths:
+                    f.write(f"file '{sp}'\n")
+
+            import subprocess
+            result = subprocess.run(
+                ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", concat_path, "-c", "copy", output_path],
+                capture_output=True, text=True, timeout=120
+            )
+
+            # Clean up segment files and concat list
+            os.remove(concat_path)
+            for sp in segment_paths:
+                if os.path.exists(sp):
+                    os.remove(sp)
+
+            if result.returncode != 0:
+                raise Exception(f"ffmpeg stitch failed: {result.stderr[:200]}")
+
+        # Update status to complete
+        await db.training_video_status.update_one(
+            {"module_id": module_id},
+            {"$set": {
+                "status": "complete",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "total_segments": total_segments,
+                "segment_status": None,
+                "current_segment": None
+            }}
+        )
+        print(f"[Training] Video generation complete for {module_id} ({total_segments} segments)")
+
     except Exception as e:
-        # Update status to failed
+        # Clean up any leftover segment files
+        for sp in [os.path.join(VIDEOS_DIR, f"{module_id}_seg{i}.mp4") for i in range(1, 20)]:
+            if os.path.exists(sp):
+                os.remove(sp)
+        concat_path = os.path.join(VIDEOS_DIR, f"{module_id}_concat.txt")
+        if os.path.exists(concat_path):
+            os.remove(concat_path)
+
         await db.training_video_status.update_one(
             {"module_id": module_id},
             {"$set": {
                 "status": "failed",
                 "error": str(e),
-                "failed_at": datetime.now(timezone.utc).isoformat()
+                "failed_at": datetime.now(timezone.utc).isoformat(),
+                "segment_status": None,
+                "current_segment": None
             }}
         )
 
