@@ -42,6 +42,7 @@ from app.routers.ai_assistant import router as ai_assistant_router
 from app.routers.orders import router as orders_router
 from app.routers.documents import router as documents_router
 from app.routers.gmail import router as gmail_router
+from app.routers.training_assignments import router as training_assignments_router
 
 # Configure logging
 logging.basicConfig(
@@ -181,6 +182,7 @@ app.include_router(ai_assistant_router, prefix="/api")  # AI Listing Assistant
 app.include_router(orders_router, prefix="/api")  # Orders & shipping labels
 app.include_router(documents_router, prefix="/api")  # Business document vault
 app.include_router(gmail_router, prefix="/api")  # Gmail label import
+app.include_router(training_assignments_router, prefix="/api")  # Training assignments
 
 
 @app.get("/api/")

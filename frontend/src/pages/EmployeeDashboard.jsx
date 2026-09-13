@@ -45,7 +45,8 @@ import {
   Sun,
   Moon,
   Video,
-  Package
+  Package,
+  Monitor
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +65,7 @@ import PullToRefresh from "@/components/PullToRefresh";
 import EmployeeWalkthrough, { useEmployeeWalkthrough } from "@/components/employee/EmployeeWalkthrough";
 import AIAssistant from "@/components/ai/AIAssistant";
 import OrdersPage from "@/components/employee/OrdersPage";
+import EmployeeTrainingView from "@/components/employee/EmployeeTrainingView";
 import { useDashboardTheme } from "@/hooks/useDashboardTheme";
 
 // Check if running in Capacitor native app
@@ -303,6 +305,11 @@ export default function EmployeeDashboard({
   // Orders page state
   const [showOrdersPage, setShowOrdersPage] = useState(false);
   const [hasActiveOrders, setHasActiveOrders] = useState(false);
+  
+  // Tile navigation state (employee dashboard)
+  const [activeTile, setActiveTile] = useState(null);
+  const [hasTrainingAssigned, setHasTrainingAssigned] = useState(false);
+  
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [hasPassword, setHasPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -1044,6 +1051,16 @@ export default function EmployeeDashboard({
           setHasActiveOrders(!!ordersRes.data?.assignment);
         } catch (err) {
           setHasActiveOrders(false);
+        }
+      }
+
+      // Check for training assignments
+      if (!isAdminView) {
+        try {
+          const trainingRes = await axios.get(`${API}/training-assignments/my`, getAuthHeader());
+          setHasTrainingAssigned((trainingRes.data.assignments || []).length > 0);
+        } catch {
+          setHasTrainingAssigned(false);
         }
       }
       
@@ -2203,8 +2220,8 @@ export default function EmployeeDashboard({
             </div>
           </div>
 
-          {/* Messages - Quick Access - Hide in admin view */}
-          {!isAdminView && (
+          {/* Messages - behind tile now */}
+          {!isAdminView && activeTile === "messages" && (
             <MessagingSection
               userType="employee"
               userId={user?.id || user?.email}
@@ -2447,6 +2464,99 @@ export default function EmployeeDashboard({
             </div>
           </div>
 
+          {/* ─── TILE NAVIGATION ─── */}
+          {!isAdminView && !activeTile && (
+            <div className="grid grid-cols-2 gap-3" data-testid="employee-tiles">
+              {/* Messages Tile */}
+              <button
+                onClick={() => setActiveTile("messages")}
+                className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left border border-white/10 hover:border-white/25 transition-all active:scale-[0.98]"
+                data-testid="tile-messages"
+              >
+                <MessageSquare className="w-6 h-6 text-[#00D4FF] mb-2" />
+                <span className="block text-sm font-medium text-white">Messages</span>
+                {unreadMessageCount > 0 && (
+                  <span className="inline-flex items-center justify-center w-5 h-5 bg-red-500 rounded-full text-[10px] text-white font-bold mt-1">{unreadMessageCount}</span>
+                )}
+              </button>
+
+              {/* Forms Tile */}
+              <button
+                onClick={() => setActiveTile("forms")}
+                className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left border border-white/10 hover:border-white/25 transition-all active:scale-[0.98]"
+                data-testid="tile-forms"
+              >
+                <FileText className="w-6 h-6 text-[#8B5CF6] mb-2" />
+                <span className="block text-sm font-medium text-white">Forms</span>
+                <span className="text-[10px] text-white/50">Tax & Agreements</span>
+              </button>
+
+              {/* Remote Work Tile (only for remote workers) */}
+              {isRemoteWorker() && (
+                <button
+                  onClick={() => setActiveTile("remote")}
+                  className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left border border-white/10 hover:border-white/25 transition-all active:scale-[0.98]"
+                  data-testid="tile-remote"
+                >
+                  <Monitor className="w-6 h-6 text-[#FF6B35] mb-2" />
+                  <span className="block text-sm font-medium text-white">Remote Work</span>
+                  <span className="text-[10px] text-white/50">AnyDesk Setup</span>
+                </button>
+              )}
+
+              {/* Orders Tile (only if assigned) */}
+              {hasActiveOrders && (
+                <button
+                  onClick={() => { setActiveTile(null); setShowOrdersPage(true); }}
+                  className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left border border-white/10 hover:border-white/25 transition-all active:scale-[0.98]"
+                  data-testid="tile-orders"
+                >
+                  <Package className="w-6 h-6 text-[#FF1493] mb-2" />
+                  <span className="block text-sm font-medium text-white">Orders</span>
+                  <span className="text-[10px] text-white/50">Pull List & Ship</span>
+                </button>
+              )}
+
+              {/* Training Tile (only if assigned) */}
+              {hasTrainingAssigned && (
+                <button
+                  onClick={() => setActiveTile("training")}
+                  className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left border border-white/10 hover:border-white/25 transition-all active:scale-[0.98]"
+                  data-testid="tile-training"
+                >
+                  <GraduationCap className="w-6 h-6 text-[#10B981] mb-2" />
+                  <span className="block text-sm font-medium text-white">Training</span>
+                  <span className="text-[10px] text-white/50">Guides & Reference</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Back button when inside a tile */}
+          {!isAdminView && activeTile && (
+            <button
+              onClick={() => setActiveTile(null)}
+              className="flex items-center gap-1.5 text-white/60 hover:text-white text-sm transition-colors mb-2"
+              data-testid="tile-back-btn"
+            >
+              <ChevronDown className="w-4 h-4 rotate-90" />
+              Back to Dashboard
+            </button>
+          )}
+
+          {/* Training Tile Content */}
+          {!isAdminView && activeTile === "training" && (
+            <EmployeeTrainingView
+              getAuthHeader={() => ({
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+              })}
+              onBack={() => setActiveTile(null)}
+            />
+          )}
+
+          {/* Forms Tile Content */}
+          {(!isAdminView ? activeTile === "forms" : true) && (
+          <>
           {/* W-9 Tax Form Section - Collapsible (Hidden for remote workers who use W-8BEN instead) */}
           {!isRemoteWorker() && (
           <Collapsible open={w9Expanded} onOpenChange={setW9Expanded}>
@@ -2765,6 +2875,13 @@ export default function EmployeeDashboard({
           </Collapsible>
           )}
 
+          {/* ── END FORMS TILE CONTENT (W-9 above) ── */}
+          </>
+          )}
+
+          {/* ── REMOTE WORK TILE CONTENT (AnyDesk) ── */}
+          {(!isAdminView ? activeTile === "remote" : true) && (
+          <>
           {/* AnyDesk Setup Section - Only for Remote Workers - Placed BEFORE Agreement and W-8BEN */}
           {isRemoteWorker() && (
             <Collapsible defaultOpen={true}>
@@ -2959,7 +3076,13 @@ export default function EmployeeDashboard({
               </div>
             </Collapsible>
           )}
+          {/* ── END REMOTE WORK TILE ── */}
+          </>
+          )}
 
+          {/* ── FORMS TILE CONTENT (Contractor Agreement, W-8BEN, 1099) ── */}
+          {(!isAdminView ? activeTile === "forms" : true) && (
+          <>
           {/* Contractor Agreement Section - Only for Remote Workers */}
           {isRemoteWorker() && (
           <Collapsible open={contractorAgreementExpanded} onOpenChange={setContractorAgreementExpanded}>
@@ -3803,6 +3926,9 @@ export default function EmployeeDashboard({
                 </CollapsibleContent>
               </div>
             </Collapsible>
+          )}
+          {/* ── END FORMS TILE CONTENT ── */}
+          </>
           )}
           
         </motion.div>

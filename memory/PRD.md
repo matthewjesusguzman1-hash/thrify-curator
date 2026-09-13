@@ -21,7 +21,17 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 
 ## What's Been Implemented
 
-### Gmail Label Import Integration (Sep 13, 2026) — LATEST
+### Training Overhaul + Employee Dashboard Tiles (Sep 13, 2026) — LATEST
+- Removed all video generation from Training section
+- Split training into Photography and Listing (Vendoo cross-listing) reference guides
+- Admin can assign training to employees by name
+- Employee dashboard restructured with tile navigation:
+  - Always visible: Header, Clock In/Out, Pay Period, Recent Shifts, Timezone toggle
+  - Tiles: Messages, Forms, Remote Work (remote only), Orders (if assigned), Training (if assigned)
+- Header messages button unchanged (still opens full-screen page)
+- Backend: new /api/training-assignments endpoints for assign/list/remove
+
+### Gmail Label Import Integration (Sep 13, 2026)
 - Gmail OAuth2 connection flow (connect/disconnect from admin dashboard)
 - Scans inbox for shipping emails from Poshmark, Mercari, eBay, Depop
 - Extracts PDF label attachments + follows Depop download links
