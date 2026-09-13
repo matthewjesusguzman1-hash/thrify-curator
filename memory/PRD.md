@@ -21,7 +21,16 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 
 ## What's Been Implemented
 
-### Shipping Label PDF Redaction + Crop (Sep 12, 2026) — LATEST
+### Gmail Label Import Integration (Sep 13, 2026) — LATEST
+- Gmail OAuth2 connection flow (connect/disconnect from admin dashboard)
+- Scans inbox for shipping emails from Poshmark, Mercari, eBay, Depop
+- Extracts PDF label attachments + follows Depop download links
+- Parses email body for SKU; falls back to inventory title matching for Depop
+- Auto-uploads labels with SKU tags attached (existing overlay continues working)
+- Duplicate detection (won't re-import same email)
+- Frontend: Gmail import panel in Shipping Labels section with scan/select/import flow
+
+### Shipping Label PDF Redaction + Crop (Sep 12, 2026)
 - Redacts marketplace metadata (Order #, Buyer @) from PDF labels before rendering
 - Also crops to 4×6 aspect ratio if page extends beyond label area
 - Preserves all real label content (barcode, tracking, addresses, service type)
@@ -55,8 +64,9 @@ Build a comprehensive operations dashboard for a resale/consignment business sup
 ## Prioritized Backlog
 
 ### P0 — Next Up
-- Label crop fix: awaiting user confirmation on real printer/device
-- Gmail automation for labels (requires user OAuth setup)
+- Gmail integration: user needs to deploy and connect Gmail account (euni.deleon1@gmail.com)
+- Test real email scanning + label import across platforms
+- Fine-tune email parsing patterns per marketplace format
 
 ### P1 — Pending User Confirmation
 - Label visibility fix: user device confirmation

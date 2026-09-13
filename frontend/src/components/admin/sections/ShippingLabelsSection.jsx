@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
+import GmailLabelImport from "./GmailLabelImport";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -240,6 +241,11 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
             <p className="text-xs text-[#bbb]">PDF, PNG, JPG — up to 25MB each</p>
           </div>
         )}
+      </div>
+
+      {/* Gmail Import */}
+      <div className="mb-4">
+        <GmailLabelImport getAuthHeader={getAuthHeader} onImported={fetchLabels} />
       </div>
 
       {/* Labels List */}

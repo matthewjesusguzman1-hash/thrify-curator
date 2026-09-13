@@ -38,6 +38,7 @@ google-api-core==2.29.0
 google-api-python-client==2.190.0
 google-auth==2.49.0.dev0
 google-auth-httplib2==0.3.0
+google-auth-oauthlib==1.4.1
 google-cloud-core==2.5.0
 google-cloud-firestore==2.24.0
 google-cloud-storage==3.9.0
