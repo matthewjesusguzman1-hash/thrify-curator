@@ -14,6 +14,10 @@ from googleapiclient.discovery import build
 from app.database import db
 from app.dependencies import get_admin_user
 from app.services.object_storage import put_object, APP_NAME
+from dotenv import load_dotenv
+from pathlib import Path
+
+load_dotenv(Path(__file__).parent.parent.parent / '.env')
 
 router = APIRouter(prefix="/gmail", tags=["gmail"])
 
