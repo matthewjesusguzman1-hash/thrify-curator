@@ -73,10 +73,18 @@ PLATFORM_FILTERS = {
         "name": "eBay",
     },
     "depop": {
-        "query": '(from:depop.com OR subject:("on Depop")) subject:(ship OR sold OR label OR "sale confirmation")',
+        "query": '(from:depop.com OR subject:("on Depop" OR "sale confirmation")) subject:(ship OR sold OR label OR "sale confirmation")',
         "name": "Depop",
     },
 }
+
+# Broad catch-all query for scan — picks up forwarded emails too
+BROAD_QUERY = (
+    'subject:("just sold" OR "shipping label" OR "ship now" OR '
+    '"sale confirmation" OR "made the sale" OR '
+    '"on Poshmark" OR "on Mercari" OR "on eBay" OR "on Depop" OR '
+    '"sold to @" OR "Download Shipping Label")'
+)
 
 
 def _build_flow(state: str = None) -> Flow:
@@ -204,24 +212,39 @@ async def debug_scan(
     days: int = Query(14, ge=1, le=60),
     admin: dict = Depends(get_admin_user),
 ):
-    """Debug: show raw Gmail search results per platform."""
+    """Debug: show raw Gmail search results per platform + broad catch-all."""
     creds = await _get_gmail_creds(admin["id"])
     service = _get_service(creds)
     debug_results = {}
 
+    # Platform-specific queries
     for pf, filt in PLATFORM_FILTERS.items():
         query = f'{filt["query"]} newer_than:{days}d'
         try:
             resp = service.users().messages().list(userId="me", q=query, maxResults=10).execute()
             msgs = resp.get("messages", [])
-            subjects = []
+            samples = []
             for m in msgs[:5]:
                 msg = service.users().messages().get(userId="me", id=m["id"], format="metadata", metadataHeaders=["Subject", "From"]).execute()
                 headers = {h["name"].lower(): h["value"] for h in msg.get("payload", {}).get("headers", [])}
-                subjects.append({"from": headers.get("from", ""), "subject": headers.get("subject", "")})
-            debug_results[pf] = {"query": query, "total_found": len(msgs), "samples": subjects}
+                samples.append({"from": headers.get("from", ""), "subject": headers.get("subject", "")})
+            debug_results[pf] = {"query": query, "total_found": len(msgs), "samples": samples}
         except Exception as e:
             debug_results[pf] = {"query": query, "error": str(e)}
+
+    # Broad catch-all
+    query = f'{BROAD_QUERY} newer_than:{days}d'
+    try:
+        resp = service.users().messages().list(userId="me", q=query, maxResults=10).execute()
+        msgs = resp.get("messages", [])
+        samples = []
+        for m in msgs[:5]:
+            msg = service.users().messages().get(userId="me", id=m["id"], format="metadata", metadataHeaders=["Subject", "From"]).execute()
+            headers = {h["name"].lower(): h["value"] for h in msg.get("payload", {}).get("headers", [])}
+            samples.append({"from": headers.get("from", ""), "subject": headers.get("subject", "")})
+        debug_results["_broad_catchall"] = {"query": query, "total_found": len(msgs), "samples": samples}
+    except Exception as e:
+        debug_results["_broad_catchall"] = {"query": query, "error": str(e)}
 
     return debug_results
 
@@ -259,39 +282,54 @@ def _get_service(creds: Credentials):
 @router.get("/scan")
 async def scan_emails(
     platform: Optional[str] = Query(None),
-    days: int = Query(7, ge=1, le=30),
+    days: int = Query(14, ge=1, le=60),
     admin: dict = Depends(get_admin_user),
 ):
-    """Scan Gmail for shipping label emails. Returns list of found emails with metadata."""
+    """Scan Gmail for shipping label emails using broad search. Detects platform from content."""
     creds = await _get_gmail_creds(admin["id"])
     service = _get_service(creds)
-
-    platforms = [platform] if platform else list(PLATFORM_FILTERS.keys())
     results = []
+    seen_ids = set()
 
-    for pf in platforms:
-        filt = PLATFORM_FILTERS.get(pf)
-        if not filt:
-            continue
-        query = f'{filt["query"]} newer_than:{days}d'
+    queries = []
+    if platform and platform in PLATFORM_FILTERS:
+        queries.append(PLATFORM_FILTERS[platform]["query"])
+    else:
+        # Run platform-specific queries + the broad catch-all
+        for filt in PLATFORM_FILTERS.values():
+            queries.append(filt["query"])
+        queries.append(BROAD_QUERY)
+
+    for query_str in queries:
+        query = f'{query_str} newer_than:{days}d'
         try:
             resp = service.users().messages().list(userId="me", q=query, maxResults=50).execute()
             msg_ids = [m["id"] for m in resp.get("messages", [])]
         except Exception as e:
-            print(f"[Gmail] Error scanning {pf}: {e}")
+            print(f"[Gmail] Error scanning: {e}")
             continue
 
         for mid in msg_ids:
+            if mid in seen_ids:
+                continue
+            seen_ids.add(mid)
             try:
                 msg = service.users().messages().get(userId="me", id=mid, format="full").execute()
-                info = _parse_email(msg, pf)
+                headers = {h["name"].lower(): h["value"] for h in msg.get("payload", {}).get("headers", [])}
+                from_addr = headers.get("from", "").lower()
+                subject = headers.get("subject", "")
+                body_html = _get_body_html(msg.get("payload", {}))
+
+                # Detect platform from all available signals
+                detected = _detect_platform(from_addr, subject, body_html)
+
+                info = _parse_email(msg, detected)
                 if info:
-                    # Check if already imported
                     existing = await db.shipping_labels.find_one({"gmail_message_id": mid})
                     info["already_imported"] = existing is not None
                     info["message_id"] = mid
-                    info["platform"] = pf
-                    info["platform_name"] = filt["name"]
+                    info["platform"] = detected
+                    info["platform_name"] = PLATFORM_FILTERS.get(detected, {}).get("name", detected.title() if detected else "Unknown")
                     results.append(info)
             except Exception as e:
                 print(f"[Gmail] Error reading message {mid}: {e}")
@@ -398,23 +436,40 @@ def _extract_sku(text: str, platform: str, subject: str) -> str:
 
 
 def _extract_item_title(text: str, platform: str, subject: str) -> str:
-    """Extract item title from email."""
-    if not text:
-        return subject
-    clean = re.sub(r"<[^>]+>", " ", text)
-    clean = re.sub(r"\s+", " ", clean)
+    """Extract item title from email subject/body."""
+    # Poshmark: "Item Title Here" just sold to @buyer on Poshmark!
+    m = re.search(r'"([^"]{5,}?)"\s*just\s+sold', subject)
+    if m:
+        return m.group(1).strip()
 
-    # Platform-specific title patterns
-    if platform == "poshmark":
-        m = re.search(r"(?:item|listing)[:\s]+(.{5,80}?)(?:\s*-|\s*\(|\s*SKU|\s*$)", clean, re.IGNORECASE)
-        if m:
-            return m.group(1).strip()
-    elif platform == "depop":
-        m = re.search(r"(?:sold|item)[:\s]+(.{5,80}?)(?:\s*-|\s*\(|\s*for\s*\$|\s*$)", clean, re.IGNORECASE)
-        if m:
-            return m.group(1).strip()
+    # eBay: You made the sale for Item Title Here - Get a shipping label
+    m = re.search(r'made the sale for\s+(.+?)(?:\s*-\s*Get|\s*$)', subject, re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
 
-    return subject
+    # Depop: title is usually in the email body, not subject
+    # Subject is like: "Your USPS shipping label and sale confirmation for @buyer"
+    # Need to look in body for the item title
+    if text and platform == "depop":
+        clean = re.sub(r"<[^>]+>", " ", text)
+        clean = re.sub(r"\s+", " ", clean)
+        # Look for item/listing title patterns in body
+        for pattern in [
+            r'(?:item|listing|product)[:\s]+["\']?(.{5,80}?)["\']?\s*(?:for\s*\$|was\s*sold|has\s*been)',
+            r'(?:sold|purchased)[:\s]+["\']?(.{5,80}?)["\']?\s*(?:for\s*\$|\s*-\s*)',
+        ]:
+            m = re.search(pattern, clean, re.IGNORECASE)
+            if m:
+                return m.group(1).strip()
+
+    # Mercari: check subject for title patterns
+    m = re.search(r'(?:sold|order)[:\s]+(.{5,80}?)(?:\s*-|\s*on\s+Mercari|\s*$)', subject, re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+
+    # Fallback: use subject but strip common prefixes/suffixes
+    cleaned_subject = re.sub(r'^(?:Fwd?:\s*|Re:\s*)', '', subject, flags=re.IGNORECASE).strip()
+    return cleaned_subject
 
 
 # ── Import labels ────────────────────────────────────────────
@@ -444,9 +499,9 @@ async def import_labels(
             body_html = _get_body_html(msg.get("payload", {}))
             snippet = msg.get("snippet", "")
 
-            # Determine platform
+            # Determine platform from all signals
             from_addr = headers.get("from", "").lower()
-            platform = _detect_platform_from_email(from_addr)
+            platform = _detect_platform(from_addr, subject, body_html)
 
             # Extract SKU from email
             sku = _extract_sku(body_html or snippet, platform, subject)
@@ -526,7 +581,11 @@ async def import_labels(
     return {"imported": imported, "errors": errors}
 
 
-def _detect_platform_from_email(from_addr: str) -> str:
+def _detect_platform(from_addr: str, subject: str = "", body_html: str = "") -> str:
+    """Detect platform from email from-address, subject, and body content."""
+    text = f"{from_addr} {subject} {body_html}".lower()
+
+    # Check from address first (most reliable for direct emails)
     if "poshmark" in from_addr:
         return "poshmark"
     if "mercari" in from_addr:
@@ -535,7 +594,24 @@ def _detect_platform_from_email(from_addr: str) -> str:
         return "ebay"
     if "depop" in from_addr:
         return "depop"
+
+    # For forwarded emails: check subject and body
+    sub_lower = subject.lower()
+    if "poshmark" in sub_lower or "on poshmark" in text:
+        return "poshmark"
+    if "mercari" in sub_lower or "on mercari" in text:
+        return "mercari"
+    if "ebay" in sub_lower or "on ebay" in text:
+        return "ebay"
+    if "depop" in sub_lower or "on depop" in text or "sale confirmation for @" in sub_lower:
+        return "depop"
+
     return ""
+
+
+def _detect_platform_from_email(from_addr: str) -> str:
+    """Legacy wrapper."""
+    return _detect_platform(from_addr)
 
 
 async def _get_label_from_email(

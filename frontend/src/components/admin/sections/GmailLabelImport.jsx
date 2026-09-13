@@ -11,7 +11,7 @@ export default function GmailLabelImport({ getAuthHeader, onImported }) {
   const [importing, setImporting] = useState(false);
   const [emails, setEmails] = useState([]);
   const [selected, setSelected] = useState(new Set());
-  const [days, setDays] = useState(7);
+  const [days, setDays] = useState(30);
   const [showPanel, setShowPanel] = useState(false);
 
   useEffect(() => {
