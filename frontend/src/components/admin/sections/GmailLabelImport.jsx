@@ -345,6 +345,15 @@ export default function GmailLabelImport({ getAuthHeader, onImported }) {
                       <p className="text-[#999] truncate mt-0.5">Item: {email.item_title}</p>
                     )}
                     <p className="text-[#bbb] mt-0.5">{email.date}</p>
+                    {/* Depop debug: show found links if no label detected */}
+                    {email._debug_links && email._debug_links.length > 0 && (
+                      <div className="mt-1 text-[10px] text-amber-600 space-y-0.5">
+                        <span className="font-medium">Links found in email:</span>
+                        {email._debug_links.map((link, i) => (
+                          <p key={i} className="truncate text-[#aaa]">{link}</p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

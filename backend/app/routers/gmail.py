@@ -398,6 +398,10 @@ async def scan_emails(
 
                 info = _parse_email(msg, detected)
                 if info:
+                    # Skip non-label emails unless Depop (which may use download links)
+                    if not info["has_label"] and detected != "depop":
+                        continue
+
                     # Auto-fill SKU from inventory when email doesn't contain one
                     if not info.get("sku") and info.get("item_title"):
                         matched_sku, match_source = await _match_sku_from_inventory(
@@ -442,10 +446,10 @@ def _parse_email(msg: dict, platform: str) -> Optional[dict]:
     attachments = []
     _find_attachments(msg.get("payload", {}), attachments)
 
-    # Find download links (for Depop)
+    # Find download links (for Depop or any email without attachments)
     body_html = _get_body_html(msg.get("payload", {}))
     download_link = None
-    if platform == "depop" and body_html:
+    if body_html:
         download_link = _find_depop_download_link(body_html)
 
     # Extract SKU from email body
@@ -456,7 +460,7 @@ def _parse_email(msg: dict, platform: str) -> Optional[dict]:
 
     has_label = len(attachments) > 0 or download_link is not None
 
-    return {
+    result = {
         "subject": subject,
         "date": date,
         "snippet": snippet[:200],
@@ -466,6 +470,18 @@ def _parse_email(msg: dict, platform: str) -> Optional[dict]:
         "sku": sku,
         "item_title": item_title,
     }
+
+    # For Depop without a label, include debug info about links found
+    if platform == "depop" and not has_label and body_html:
+        all_links = _get_all_links(body_html)
+        # Show only non-tracking, non-unsubscribe links (safe subset)
+        useful_links = [
+            l[:100] for l in all_links
+            if "unsubscribe" not in l.lower() and "mailto:" not in l.lower()
+        ][:5]
+        result["_debug_links"] = useful_links
+
+    return result
 
 
 def _find_attachments(part: dict, result: list):
@@ -496,17 +512,40 @@ def _get_body_html(part: dict) -> str:
 
 def _find_depop_download_link(html: str) -> Optional[str]:
     """Find the shipping label download link in Depop emails."""
-    # Look for links containing 'shipping' or 'label' or 'download'
-    patterns = [
-        r'href=["\']([^"\']*(?:shipping|label|download)[^"\']*)["\']',
-        r'href=["\']([^"\']*depop[^"\']*label[^"\']*)["\']',
-        r'href=["\']([^"\']*depop[^"\']*download[^"\']*)["\']',
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, html, re.IGNORECASE)
-        if match:
-            return match.group(1)
+    # Extract ALL links from the email
+    all_links = re.findall(r'href=["\']([^"\']+)["\']', html, re.IGNORECASE)
+
+    # Priority 1: links with clear label/shipping keywords
+    for link in all_links:
+        link_lower = link.lower()
+        if any(kw in link_lower for kw in ["shipping-label", "shippinglabel", "download-label", "print-label"]):
+            return link
+
+    # Priority 2: links containing 'label' or 'ship' in path (not just tracking)
+    for link in all_links:
+        link_lower = link.lower()
+        if ("label" in link_lower or "shipping" in link_lower) and "track" not in link_lower and "unsubscribe" not in link_lower:
+            return link
+
+    # Priority 3: Depop-specific domains with shipment/label paths
+    for link in all_links:
+        link_lower = link.lower()
+        if "depop" in link_lower and ("ship" in link_lower or "label" in link_lower or "download" in link_lower):
+            return link
+
+    # Priority 4: direct PDF links
+    for link in all_links:
+        if link.lower().endswith(".pdf"):
+            return link
+
     return None
+
+
+def _get_all_links(html: str) -> list[str]:
+    """Extract all href links from HTML (for debugging)."""
+    if not html:
+        return []
+    return re.findall(r'href=["\']([^"\']+)["\']', html, re.IGNORECASE)
 
 
 def _extract_sku(text: str, platform: str, subject: str) -> str:
@@ -549,12 +588,23 @@ def _extract_item_title(text: str, platform: str, subject: str) -> str:
         clean = re.sub(r"\s+", " ", clean)
         # Look for item/listing title patterns in body
         for pattern in [
-            r'(?:item|listing|product)[:\s]+["\']?(.{5,80}?)["\']?\s*(?:for\s*\$|was\s*sold|has\s*been)',
-            r'(?:sold|purchased)[:\s]+["\']?(.{5,80}?)["\']?\s*(?:for\s*\$|\s*-\s*)',
+            # "Item: Title Here" or "Listing: Title"
+            r'(?:item|listing|product)\s*[:\-]\s*["\']?(.{5,120}?)["\']?\s*(?:for\s*\$|was\s*sold|has\s*been|\s*size\s*:|\n)',
+            # Text before a price like "$XX.XX"
+            r'(?:sold|purchased)\s*[:\-]\s*["\']?(.{5,120}?)["\']?\s*(?:for\s*\$|\$\d)',
+            # Bold/strong text that looks like a product name (common in Depop HTML)
+            r'<(?:b|strong)[^>]*>([^<]{5,120}?)</(?:b|strong)>',
+            # Title-case text near price patterns
+            r'([A-Z][A-Za-z\s\d/\-]{4,80}?)\s*(?:\$\d|Size\s*:)',
         ]:
-            m = re.search(pattern, clean, re.IGNORECASE)
+            m = re.search(pattern, text if "<" in text else clean, re.IGNORECASE)
             if m:
-                return m.group(1).strip()
+                title = m.group(1).strip()
+                # Clean up HTML entities and tags
+                title = re.sub(r"<[^>]+>", "", title).strip()
+                title = re.sub(r"\s+", " ", title)
+                if len(title) >= 5 and not title.lower().startswith(("your ", "hi ", "dear ", "thank")):
+                    return title
 
     # Mercari: check subject for title patterns
     m = re.search(r'(?:sold|order)[:\s]+(.{5,80}?)(?:\s*-|\s*on\s+Mercari|\s*$)', subject, re.IGNORECASE)
