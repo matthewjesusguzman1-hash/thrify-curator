@@ -14,45 +14,46 @@ router = APIRouter(prefix="/training-content", tags=["training-content"])
 
 DEFAULT_PHOTOGRAPHY = [
     {"title": "1. Prep the Item", "icon": "Package", "steps": [
-        "Remove items from storage bags/bins",
-        "Steam or lint-roll wrinkled items",
-        "Check for stains, damage, or missing parts — note everything"
+        "Remove items from the storage rack",
+        "Place items on the lay-flat station with hangar",
+        "Inspect for stains, damage, or missing parts and if necessary notify supervisor",
+        "Steam to remove wrinkles.",
+        "Use a lint roller as needed."
     ]},
     {"title": "2. Set Up for Photos", "icon": "Camera", "steps": [
-        "Use natural light or a lightbox/ring light",
-        "Use a clean, solid-color background (white or neutral)",
+        "Use lighting equipment provided",
+        "Ensure the item is framed inside the background of the lay flat station",
         "Avoid shadows, clutter, or uneven lighting"
     ]},
     {"title": "3. Take Required Photos", "icon": "FileText", "steps": [
         "Front view (full item, centered)",
-        "Back view",
-        "Close-up of brand/label tag",
-        "Close-up of size tag",
-        "Any flaws or damage (stains, holes, pilling)",
-        "Close-up of fabric content/care tag",
-        "Detail shots (zippers, buttons, embroidery, hardware)",
-        "Measurement photo with tape measure (if needed)"
+        "Close-up (details/ flaws)",
+        "Close-up of brand/ size tag",
+        "Close-up of material tag",
+        "Full view back",
+        "Close-up back"
     ]},
     {"title": "4. Capture Measurements", "icon": "Tag", "steps": [
-        "Lay item flat on a clean surface",
-        "Use a soft measuring tape",
+        "Open Vendoo",
+        "Select + Item, then start with template and choose the correct category",
+        "Use measuring tape or yard stick",
         "Common measurements: pit-to-pit (chest), length, sleeve length, waist, inseam, rise",
-        "Record in inches and note if flat or stretched",
-        "For shoes: outsole length, width, insole measurement"
+        "Record in inches"
     ]},
-    {"title": "5. Photo Description", "icon": "FileText", "steps": [
-        "Log item brand, size, color, fabric, and condition in notes or a shared document",
-        "Flag anything notable: stains, missing buttons, stretched elastic"
+    {"title": "5. Add Photo/ Description", "icon": "FileText", "steps": [
+        "Upload photos",
+        "Add measurements",
+        "List ALL flaws or anything noteworthy"
     ]},
     {"title": "6. SKU & Cost Tracking", "icon": "Tag", "steps": [
-        "Assign an internal SKU or lot number",
-        "Record purchase price/cost for profit tracking",
-        "Label storage bins with SKU references"
+        "Assign SKU number",
+        "Add Cost of Goods (Goodwill or Thrift World = Price Tag)",
+        "No tag = $0"
     ]},
     {"title": "7. Bag & Store", "icon": "FolderOpen", "steps": [
-        "Place item in a clear poly bag or labeled storage bin",
-        "Store in a way that keeps it accessible for shipping",
-        "Organize by category, size, or SKU for easy retrieval"
+        "Fold neatly",
+        "Place clear poly mailer",
+        "Place in box"
     ]}
 ]
 
