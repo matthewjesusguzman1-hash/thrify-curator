@@ -86,34 +86,39 @@ async def gmail_auth(admin: dict = Depends(get_admin_user)):
 @router.get("/callback")
 async def gmail_callback(code: str = Query(...), state: str = Query(...)):
     """Handle Google OAuth callback."""
-    doc = await db.gmail_oauth_states.find_one({"state": state})
-    if not doc:
-        raise HTTPException(400, "Invalid OAuth state")
-    admin_id = doc["admin_id"]
-    await db.gmail_oauth_states.delete_one({"state": state})
+    try:
+        doc = await db.gmail_oauth_states.find_one({"state": state})
+        if not doc:
+            print(f"[Gmail] Callback: state not found in DB")
+            return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=error&reason=invalid_state")
+        admin_id = doc["admin_id"]
+        await db.gmail_oauth_states.delete_one({"state": state})
 
-    flow = _build_flow(state=state)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        flow.fetch_token(code=code)
+        print(f"[Gmail] Callback: exchanging code, redirect_uri={REDIRECT_URI}")
+        flow = _build_flow(state=state)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            flow.fetch_token(code=code)
 
-    creds = flow.credentials
-    await db.gmail_tokens.update_one(
-        {"admin_id": admin_id},
-        {"$set": {
-            "admin_id": admin_id,
-            "access_token": creds.token,
-            "refresh_token": creds.refresh_token,
-            "token_uri": creds.token_uri,
-            "client_id": creds.client_id,
-            "client_secret": creds.client_secret,
-            "expires_at": creds.expiry.isoformat() if creds.expiry else None,
-            "connected_at": datetime.now(timezone.utc).isoformat(),
-        }},
-        upsert=True,
-    )
-    # Redirect back to the admin dashboard
-    return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=connected")
+        creds = flow.credentials
+        await db.gmail_tokens.update_one(
+            {"admin_id": admin_id},
+            {"$set": {
+                "admin_id": admin_id,
+                "access_token": creds.token,
+                "refresh_token": creds.refresh_token,
+                "token_uri": creds.token_uri,
+                "client_id": creds.client_id,
+                "client_secret": creds.client_secret,
+                "expires_at": creds.expiry.isoformat() if creds.expiry else None,
+                "connected_at": datetime.now(timezone.utc).isoformat(),
+            }},
+            upsert=True,
+        )
+        return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=connected")
+    except Exception as e:
+        print(f"[Gmail] Callback error: {type(e).__name__}: {e}")
+        return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=error&reason=callback_failed")
 
 
 @router.get("/status")

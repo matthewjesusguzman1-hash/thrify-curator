@@ -18,11 +18,15 @@ export default function GmailLabelImport({ getAuthHeader, onImported }) {
     checkStatus();
   }, []);
 
-  // Check for ?gmail=connected in URL after OAuth redirect
+  // Check for ?gmail=connected or ?gmail=error in URL after OAuth redirect
   useEffect(() => {
-    if (window.location.search.includes("gmail=connected")) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("gmail") === "connected") {
       setConnected(true);
       toast.success("Gmail connected!");
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("gmail") === "error") {
+      toast.error("Gmail connection failed — please try again");
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
