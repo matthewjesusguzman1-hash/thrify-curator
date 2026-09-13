@@ -47,7 +47,8 @@ import {
   Video,
   Package,
   Monitor,
-  Bot
+  Bot,
+  Minus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -308,7 +309,8 @@ export default function EmployeeDashboard({
   const [hasActiveOrders, setHasActiveOrders] = useState(false);
   
   // Tile navigation state (employee dashboard)
-  const [activeTile, setActiveTile] = useState(null);
+  const [activeTile, setActiveTile] = useState(null); // morph tiles: "messages" | "shifts"
+  const [empPage, setEmpPage] = useState(null); // full pages: "forms" | "ai" | "training" | "remote"
   const [hasTrainingAssigned, setHasTrainingAssigned] = useState(false);
   
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -1660,12 +1662,54 @@ export default function EmployeeDashboard({
     );
   }
 
+  // Full-page tile views (AI, Training)
+  if (empPage === "ai") {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="employee-dashboard" data-theme={isDark ? "dark" : "light"}>
+        <div className="flex-1 px-4 pt-6 pb-4 max-w-2xl mx-auto w-full" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)' }}>
+          <button
+            onClick={() => setEmpPage(null)}
+            className="flex items-center gap-1.5 text-white/60 hover:text-white text-sm transition-colors mb-4"
+            data-testid="emp-page-back"
+          >
+            <ChevronDown className="w-4 h-4 rotate-90" />
+            Back to Dashboard
+          </button>
+          <AIAssistant
+            token={localStorage.getItem("token")}
+            isDark={isDark}
+            fullPage={true}
+          />
+        </div>
+        {!isAdminView && (
+          <AIAssistant token={localStorage.getItem("token")} isDark={isDark} />
+        )}
+      </div>
+    );
+  }
+
+  if (empPage === "training") {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="employee-dashboard" data-theme={isDark ? "dark" : "light"}>
+        <div className="flex-1 px-4 pt-6 pb-4 max-w-2xl mx-auto w-full" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)' }}>
+          <EmployeeTrainingView
+            getAuthHeader={() => ({
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+            })}
+            onBack={() => setEmpPage(null)}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="employee-dashboard" data-theme={isDark ? "dark" : "light"}>
-      {/* Header */}
+
+      {/* Header - hidden when employee is on a full page */}
       <header 
         className="bg-[#1A1A2E] border-b border-white/20 px-4 pb-3 flex-shrink-0" 
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)', display: (empPage && !isAdminView) ? 'none' : undefined }}
       >
         <div className="max-w-2xl mx-auto">
           {/* Name centered on top */}
@@ -1811,7 +1855,7 @@ export default function EmployeeDashboard({
       </header>
 
       {/* Timezone Toggle for Remote Workers */}
-      {isRemoteWorker() && !isAdminView && (
+      {isRemoteWorker() && !isAdminView && !empPage && (
         <div className="bg-[#1A1A2E]/80 border-b border-white/10 px-4 py-2">
           <div className="max-w-2xl mx-auto flex items-center justify-center gap-3">
             <span className="text-white/60 text-xs">Display times in:</span>
@@ -1865,6 +1909,9 @@ export default function EmployeeDashboard({
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
+
+          {/* Dashboard body sections - hidden when employee is on a full page */}
+          <div style={{ display: (empPage && !isAdminView) ? 'none' : undefined }}>
           
           {/* PWA Install Banner - Only show on MOBILE, if not installed and not in admin view */}
           {!isAdminView && !isDesktop && showInstallBanner && !isStandalone && (
@@ -2221,21 +2268,35 @@ export default function EmployeeDashboard({
             </div>
           </div>
 
-          {/* Messages - behind tile now */}
+          {/* Messages Morph Section (employee only) */}
           {!isAdminView && activeTile === "messages" && (
+            <>
+            <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl overflow-hidden border border-white/10">
+              <button
+                onClick={() => setActiveTile(null)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+                data-testid="messages-minimize"
+              >
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-[#00D4FF]" />
+                  <span className="text-sm font-medium text-white">Messages</span>
+                </div>
+                <Minus className="w-4 h-4 text-white/50" />
+              </button>
+            </div>
             <MessagingSection
-              userType="employee"
-              userId={user?.id || user?.email}
-              userName={user?.name || user?.email}
-              userEmail={user?.email}
               getAuthHeader={() => ({
                 headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
               })}
-              autoExpand={autoExpandMessages}
+              userId={user?.id}
+              userName={user?.name || "Employee"}
+              userRole={user?.role || "employee"}
+              isDark={isDark}
             />
+            </>
           )}
 
-          {/* Pay Period Summary Card */}
+          {/* Pay Period Summary Card - always visible */}
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-[#FF1493] to-[#8B5CF6]" />
             <div className="p-4 sm:p-6">
@@ -2337,7 +2398,25 @@ export default function EmployeeDashboard({
             </div>
           </div>
 
-          {/* Recent Shifts */}
+          {/* Recent Shifts - behind morph tile for employee, always for admin */}
+          {(isAdminView || activeTile === "shifts") && (
+          <>
+          {/* Shifts Minimize Bar (employee morph) */}
+          {!isAdminView && activeTile === "shifts" && (
+            <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl overflow-hidden border border-white/10">
+              <button
+                onClick={() => setActiveTile(null)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+                data-testid="shifts-minimize"
+              >
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#8B5CF6]" />
+                  <span className="text-sm font-medium text-white">Recent Shifts</span>
+                </div>
+                <Minus className="w-4 h-4 text-white/50" />
+              </button>
+            </div>
+          )}
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9]" />
             <div className="p-4 sm:p-6">
@@ -2465,9 +2544,12 @@ export default function EmployeeDashboard({
             </div>
           </div>
 
+          </>
+          )}
+
           {/* ─── TILE NAVIGATION ─── */}
           {!isAdminView && !activeTile && (
-            <div className="grid grid-cols-2 gap-3" data-testid="employee-tiles">
+            <div className="grid grid-cols-2 gap-3" data-testid="tile-grid">
               {/* Messages Tile */}
               <button
                 onClick={() => setActiveTile("messages")}
@@ -2481,9 +2563,20 @@ export default function EmployeeDashboard({
                 )}
               </button>
 
+              {/* Pay Period & Shifts Tile */}
+              <button
+                onClick={() => setActiveTile("shifts")}
+                className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left border border-white/10 hover:border-white/25 transition-all active:scale-[0.98]"
+                data-testid="tile-shifts"
+              >
+                <Calendar className="w-6 h-6 text-[#8B5CF6] mb-2" />
+                <span className="block text-sm font-medium text-white">Recent Shifts</span>
+                <span className="text-[10px] text-white/50">Period History</span>
+              </button>
+
               {/* Forms Tile */}
               <button
-                onClick={() => setActiveTile("forms")}
+                onClick={() => setEmpPage("forms")}
                 className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left border border-white/10 hover:border-white/25 transition-all active:scale-[0.98]"
                 data-testid="tile-forms"
               >
@@ -2495,7 +2588,7 @@ export default function EmployeeDashboard({
               {/* Remote Work Tile (only for remote workers) */}
               {isRemoteWorker() && (
                 <button
-                  onClick={() => setActiveTile("remote")}
+                  onClick={() => setEmpPage("remote")}
                   className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left border border-white/10 hover:border-white/25 transition-all active:scale-[0.98]"
                   data-testid="tile-remote"
                 >
@@ -2508,7 +2601,7 @@ export default function EmployeeDashboard({
               {/* Orders Tile (only if assigned) */}
               {hasActiveOrders && (
                 <button
-                  onClick={() => { setActiveTile(null); setShowOrdersPage(true); }}
+                  onClick={() => setShowOrdersPage(true)}
                   className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left border border-white/10 hover:border-white/25 transition-all active:scale-[0.98]"
                   data-testid="tile-orders"
                 >
@@ -2521,7 +2614,7 @@ export default function EmployeeDashboard({
               {/* Training Tile (only if assigned) */}
               {hasTrainingAssigned && (
                 <button
-                  onClick={() => setActiveTile("training")}
+                  onClick={() => setEmpPage("training")}
                   className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left border border-white/10 hover:border-white/25 transition-all active:scale-[0.98]"
                   data-testid="tile-training"
                 >
@@ -2533,7 +2626,7 @@ export default function EmployeeDashboard({
 
               {/* AI Assistant Tile */}
               <button
-                onClick={() => setActiveTile("ai")}
+                onClick={() => setEmpPage("ai")}
                 className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left border border-white/10 hover:border-white/25 transition-all active:scale-[0.98]"
                 data-testid="tile-ai"
               >
@@ -2544,39 +2637,26 @@ export default function EmployeeDashboard({
             </div>
           )}
 
-          {/* Back button when inside a tile */}
-          {!isAdminView && activeTile && (
-            <button
-              onClick={() => setActiveTile(null)}
-              className="flex items-center gap-1.5 text-white/60 hover:text-white text-sm transition-colors mb-2"
-              data-testid="tile-back-btn"
-            >
-              <ChevronDown className="w-4 h-4 rotate-90" />
-              Back to Dashboard
-            </button>
-          )}
+          </div>
+          {/* ═══ END DASHBOARD BODY HIDING DIV ═══ */}
 
-          {/* Training Tile Content */}
-          {!isAdminView && activeTile === "training" && (
-            <EmployeeTrainingView
-              getAuthHeader={() => ({
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-              })}
-              onBack={() => setActiveTile(null)}
-            />
-          )}
-
-          {/* AI Assistant Tile Content */}
-          {!isAdminView && activeTile === "ai" && (
-            <AIAssistant
-              token={localStorage.getItem("token")}
-              isDark={isDark}
-              fullPage={true}
-            />
+          {/* ═══ FULL-PAGE: FORMS ═══ */}
+          {empPage === "forms" && !isAdminView && (
+            <div className="mb-4">
+              <button
+                onClick={() => { setEmpPage(null); setActiveTile(null); }}
+                className="flex items-center gap-1.5 text-white/60 hover:text-white text-sm transition-colors mb-3"
+                data-testid="emp-page-back"
+              >
+                <ChevronDown className="w-4 h-4 rotate-90" />
+                Back to Dashboard
+              </button>
+              <h2 className="text-lg font-semibold text-white">Forms</h2>
+            </div>
           )}
 
           {/* Forms Tile Content */}
-          {(!isAdminView ? activeTile === "forms" : true) && (
+          {(!isAdminView ? empPage === "forms" : true) && (
           <>
           {/* W-9 Tax Form Section - Collapsible (Hidden for remote workers who use W-8BEN instead) */}
           {!isRemoteWorker() && (
@@ -2900,8 +2980,23 @@ export default function EmployeeDashboard({
           </>
           )}
 
+          {/* ═══ FULL-PAGE: REMOTE WORK ═══ */}
+          {empPage === "remote" && !isAdminView && (
+            <div className="mb-4">
+              <button
+                onClick={() => { setEmpPage(null); setActiveTile(null); }}
+                className="flex items-center gap-1.5 text-white/60 hover:text-white text-sm transition-colors mb-3"
+                data-testid="emp-page-back-remote"
+              >
+                <ChevronDown className="w-4 h-4 rotate-90" />
+                Back to Dashboard
+              </button>
+              <h2 className="text-lg font-semibold text-white">Remote Work Setup</h2>
+            </div>
+          )}
+
           {/* ── REMOTE WORK TILE CONTENT (AnyDesk) ── */}
-          {(!isAdminView ? activeTile === "remote" : true) && (
+          {(!isAdminView ? empPage === "remote" : true) && (
           <>
           {/* AnyDesk Setup Section - Only for Remote Workers - Placed BEFORE Agreement and W-8BEN */}
           {isRemoteWorker() && (
@@ -3102,7 +3197,7 @@ export default function EmployeeDashboard({
           )}
 
           {/* ── FORMS TILE CONTENT (Contractor Agreement, W-8BEN, 1099) ── */}
-          {(!isAdminView ? activeTile === "forms" : true) && (
+          {(!isAdminView ? empPage === "forms" : true) && (
           <>
           {/* Contractor Agreement Section - Only for Remote Workers */}
           {isRemoteWorker() && (

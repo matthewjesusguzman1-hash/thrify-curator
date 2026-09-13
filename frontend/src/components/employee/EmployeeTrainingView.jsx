@@ -22,12 +22,49 @@ const PHOTOGRAPHY_STEPS = [
 ];
 
 const LISTING_STEPS = [
-  { title: "1. Preparing Items in Vendoo", icon: Package, steps: ["Log into Vendoo (vendoo.co) — the central hub for all cross-listing", "Click 'List an Item' to create a new listing", "Upload all photos taken during the Photography phase", "Fill in: Title, Description, Category, Brand, Size, Color, Condition", "Add SKU number and purchase price for tracking", "Use Vendoo's AI Description feature to auto-generate descriptions"] },
-  { title: "2. Cross-List to Poshmark", icon: ShoppingBag, steps: ["In Vendoo, select Poshmark as a marketplace to list on", "Set the listing price (Poshmark takes 20% commission)", "Select the correct category and subcategory", "Add relevant style tags for search visibility", "Set shipping: Poshmark provides a prepaid label for standard packages", "Review and click 'List' — Vendoo pushes the listing to Poshmark"] },
-  { title: "3. Cross-List to eBay", icon: Monitor, steps: ["In Vendoo, select eBay as a marketplace", "Choose listing format: Fixed Price (Buy It Now) or Auction", "Set your price — eBay final value fee is ~13%", "Select condition: 'Pre-owned', 'New with tags', etc.", "Fill in item specifics: Brand, Size, Color, Material, Style", "Set shipping: Calculated or flat rate (USPS, FedEx, UPS)", "Add return policy (recommended: 30-day returns for better visibility)", "Review and click 'List'"] },
-  { title: "4. Cross-List to Mercari", icon: ShoppingBag, steps: ["In Vendoo, select Mercari as a marketplace", "Set your price — Mercari takes 10% commission", "Select brand, category, and condition", "Choose shipping: Mercari prepaid label or ship on your own", "Smart Pricing: optionally enable auto-price drops for faster sales", "Review and click 'List'"] },
-  { title: "5. Cross-List to Depop", icon: ShoppingBag, steps: ["In Vendoo, select Depop as a marketplace", "Set your price — Depop charges no seller fees (buyer pays)", "Add hashtags and style descriptors popular with Depop's audience", "Category and subcategory should match the item type", "Shipping: Set via Depop's shipping options (USPS typically)", "Review and click 'List'"] },
-  { title: "6. After Listing — Manage & Delist", icon: FileText, steps: ["When an item sells on one platform, use Vendoo to delist from all others", "Click 'Mark as Sold' in Vendoo — this removes it from active platforms", "Track your sales data in Vendoo's analytics dashboard", "Ship within the required window (typically 3 business days)", "Update inventory CSV if using the Thrifty Curator sales import"] }
+  { title: "1. Starting in Vendoo", icon: Package, steps: [
+    "Go to Vendoo and open the Drafts section",
+    "Open one of the listings — if the listing has a price entered, it is ready to list",
+    "Once you have opened the listing, start with the eBay tab"
+  ]},
+  { title: "2. eBay", icon: Monitor, steps: [
+    "Scroll down and make sure the category is correct",
+    "Complete any category/item specifics that eBay requires:",
+    "Department: Select Women or Men depending on the item",
+    "Exterior Color: Look at the item and select the closest matching color. If the exact color is not available, choose the option that matches best",
+    "Material, Silhouette, Shape, etc.: If you do not know the answer, select Other when that option is available. Do not guess",
+    "Style: Start typing the appropriate style and select the correct option when it populates. For example, if the purse is a crossbody, type Crossbody and select it",
+    "Once everything required is completed, scroll down and click List on eBay"
+  ]},
+  { title: "3. Poshmark", icon: ShoppingBag, steps: [
+    "Next, go to the Poshmark tab",
+    "Everything should already be populated, so double-check that the information is correct",
+    "If everything looks good, click List on Poshmark"
+  ]},
+  { title: "4. Mercari", icon: ShoppingBag, steps: [
+    "Next, go to the Mercari tab",
+    "Check the information and fix anything Mercari does not accept",
+    "For example, Mercari may not accept Vintage as a brand — if this happens, select No Brand/Not Sure and continue",
+    "Next, check the shipping",
+    "Always choose the cheapest appropriate shipping option",
+    "For most items, use USPS Ground Advantage — this will usually be one of the first/top shipping options",
+    "If the item is heavy, UPS may be the better option. However, most items will ship using USPS Ground Advantage",
+    "Once everything is correct, click List on Mercari"
+  ]},
+  { title: "5. Depop", icon: ShoppingBag, steps: [
+    "Next, go to the Depop tab",
+    "Most of the information should automatically populate",
+    "Check for anything that did not populate correctly. For example, if the brand is Vintage and Depop does not recognize it, select Other for the brand",
+    "Make sure the size is entered",
+    "You will also need to select the correct package weight/shipping weight",
+    "If you are unsure of the item's weight, go back to the main Vendoo form and scroll down — the package weight will be listed there",
+    "Use that weight to select the appropriate shipping option on Depop. For example, if the package weighs one pound, select the appropriate up to/under one-pound option",
+    "Once everything is correct, list the item on Depop"
+  ]},
+  { title: "6. Finish", icon: FileText, steps: [
+    "After the listing has been posted to all of the platforms, go back to Inventory in Vendoo",
+    "Then move on to the next item and repeat the process"
+  ]}
 ];
 
 function StepSection({ section, color }) {
