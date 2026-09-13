@@ -84,8 +84,23 @@ async def gmail_auth(admin: dict = Depends(get_admin_user)):
 
 
 @router.get("/callback")
-async def gmail_callback(code: str = Query(...), state: str = Query(...)):
+async def gmail_callback(
+    code: str = Query(None),
+    state: str = Query(None),
+    error: str = Query(None),
+):
     """Handle Google OAuth callback."""
+    from urllib.parse import quote
+    import httpx
+
+    # Google may redirect with an error instead of a code
+    if error:
+        print(f"[Gmail] Google returned error: {error}")
+        return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=error&reason={quote(error)}")
+
+    if not code or not state:
+        return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=error&reason=missing_code_or_state")
+
     try:
         doc = await db.gmail_oauth_states.find_one({"state": state})
         if not doc:
@@ -94,23 +109,32 @@ async def gmail_callback(code: str = Query(...), state: str = Query(...)):
         admin_id = doc["admin_id"]
         await db.gmail_oauth_states.delete_one({"state": state})
 
-        print(f"[Gmail] Callback: exchanging code, redirect_uri={REDIRECT_URI}")
-        flow = _build_flow(state=state)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            flow.fetch_token(code=code)
+        # Exchange code for tokens via direct HTTP (more reliable than library)
+        async with httpx.AsyncClient() as client:
+            resp = await client.post("https://oauth2.googleapis.com/token", data={
+                "code": code,
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "redirect_uri": REDIRECT_URI,
+                "grant_type": "authorization_code",
+            })
+            token_data = resp.json()
 
-        creds = flow.credentials
+        if "error" in token_data:
+            err = token_data.get("error_description", token_data["error"])
+            print(f"[Gmail] Token exchange failed: {err}")
+            return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=error&reason={quote(err)}")
+
         await db.gmail_tokens.update_one(
             {"admin_id": admin_id},
             {"$set": {
                 "admin_id": admin_id,
-                "access_token": creds.token,
-                "refresh_token": creds.refresh_token,
-                "token_uri": creds.token_uri,
-                "client_id": creds.client_id,
-                "client_secret": creds.client_secret,
-                "expires_at": creds.expiry.isoformat() if creds.expiry else None,
+                "access_token": token_data.get("access_token"),
+                "refresh_token": token_data.get("refresh_token"),
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "expires_in": token_data.get("expires_in"),
                 "connected_at": datetime.now(timezone.utc).isoformat(),
             }},
             upsert=True,
@@ -118,11 +142,8 @@ async def gmail_callback(code: str = Query(...), state: str = Query(...)):
         return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=connected")
     except Exception as e:
         import traceback
-        err_msg = f"{type(e).__name__}: {e}"
-        print(f"[Gmail] Callback error: {err_msg}")
+        print(f"[Gmail] Callback error: {type(e).__name__}: {e}")
         traceback.print_exc()
-        # Pass error detail in URL so frontend can display it
-        from urllib.parse import quote
         safe_msg = quote(str(e)[:200])
         return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=error&reason={safe_msg}")
 
