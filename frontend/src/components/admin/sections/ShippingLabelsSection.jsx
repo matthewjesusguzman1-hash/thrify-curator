@@ -243,10 +243,10 @@ export default function ShippingLabelsSection({ getAuthHeader }) {
         )}
       </div>
 
-      {/* Gmail Import */}
-      <div className="mb-4">
+      {/* Gmail Import — hidden for now, using manual upload + SKU tagging */}
+      {/* <div className="mb-4">
         <GmailLabelImport getAuthHeader={getAuthHeader} onImported={fetchLabels} />
-      </div>
+      </div> */}
 
       {/* Labels List */}
       {loading ? (
