@@ -566,12 +566,19 @@ def _extract_item_title(text: str, platform: str, subject: str) -> str:
     return cleaned_subject
 
 
+from pydantic import BaseModel
+
+
+class ImportRequest(BaseModel):
+    message_ids: list[str] = []
+
+
 # ── Import labels ────────────────────────────────────────────
 
 @router.post("/import")
 async def import_labels(
+    body: ImportRequest,
     admin: dict = Depends(get_admin_user),
-    message_ids: list[str] = [],
 ):
     """Import shipping labels from selected Gmail messages."""
     creds = await _get_gmail_creds(admin["id"])
@@ -579,7 +586,7 @@ async def import_labels(
     imported = []
     errors = []
 
-    for mid in message_ids:
+    for mid in body.message_ids:
         try:
             # Skip already imported
             existing = await db.shipping_labels.find_one({"gmail_message_id": mid})
