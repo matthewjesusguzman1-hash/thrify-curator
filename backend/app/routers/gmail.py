@@ -97,9 +97,11 @@ async def gmail_auth(admin: dict = Depends(get_admin_user)):
         raise HTTPException(400, "Gmail integration not configured")
     flow = _build_flow()
     url, state = flow.authorization_url(access_type="offline", prompt="consent")
+    # Save state + PKCE code_verifier for the callback
     await db.gmail_oauth_states.insert_one({
         "state": state,
         "admin_id": admin["id"],
+        "code_verifier": flow.code_verifier,
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
     return {"auth_url": url}
@@ -131,21 +133,26 @@ async def gmail_callback(
             print(f"[Gmail] Callback: state not found in DB")
             return RedirectResponse(f"{cred_frontend}/admin?gmail=error&reason=invalid_state")
         admin_id = doc["admin_id"]
+        code_verifier = doc.get("code_verifier")
         await db.gmail_oauth_states.delete_one({"state": state})
 
         # Read credentials fresh at request time
-        cred_id, cred_secret, cred_frontend, cred_redirect = _get_google_creds()
-        print(f"[Gmail] Token exchange: secret_len={len(cred_secret)}, secret_end=...{cred_secret[-4:] if cred_secret else 'EMPTY'}, redirect={cred_redirect}")
+        cred_id, cred_secret, _, cred_redirect = _get_google_creds()
+        print(f"[Gmail] Token exchange: secret_len={len(cred_secret)}, secret_end=...{cred_secret[-4:] if cred_secret else 'EMPTY'}, redirect={cred_redirect}, has_verifier={bool(code_verifier)}")
 
-        # Exchange code for tokens via direct HTTP (more reliable than library)
+        # Exchange code for tokens via direct HTTP
+        token_payload = {
+            "code": code,
+            "client_id": cred_id,
+            "client_secret": cred_secret,
+            "redirect_uri": cred_redirect,
+            "grant_type": "authorization_code",
+        }
+        if code_verifier:
+            token_payload["code_verifier"] = code_verifier
+
         async with httpx.AsyncClient() as client:
-            resp = await client.post("https://oauth2.googleapis.com/token", data={
-                "code": code,
-                "client_id": cred_id,
-                "client_secret": cred_secret,
-                "redirect_uri": cred_redirect,
-                "grant_type": "authorization_code",
-            })
+            resp = await client.post("https://oauth2.googleapis.com/token", data=token_payload)
             token_data = resp.json()
 
         if "error" in token_data:
