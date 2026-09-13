@@ -61,19 +61,19 @@ def _get_client_config():
 # Platform email senders and subject patterns
 PLATFORM_FILTERS = {
     "poshmark": {
-        "query": 'from:(shipment-noreply@poshmark.com) subject:("Ship Now")',
+        "query": 'from:poshmark.com subject:(ship OR label OR sold OR order)',
         "name": "Poshmark",
     },
     "mercari": {
-        "query": 'from:(no-reply@mercari.com) subject:("shipping label")',
+        "query": 'from:mercari.com subject:(ship OR label OR sold OR order)',
         "name": "Mercari",
     },
     "ebay": {
-        "query": 'from:(ebay@ebay.com) subject:("shipping label")',
+        "query": 'from:ebay.com subject:(ship OR label OR sold OR order)',
         "name": "eBay",
     },
     "depop": {
-        "query": 'from:(no-reply@depop.com) subject:("sold" OR "shipping")',
+        "query": 'from:depop.com subject:(ship OR label OR sold OR order OR download)',
         "name": "Depop",
     },
 }
@@ -197,6 +197,34 @@ async def gmail_disconnect(admin: dict = Depends(get_admin_user)):
     """Disconnect Gmail."""
     await db.gmail_tokens.delete_one({"admin_id": admin["id"]})
     return {"ok": True}
+
+
+@router.get("/debug-scan")
+async def debug_scan(
+    days: int = Query(14, ge=1, le=60),
+    admin: dict = Depends(get_admin_user),
+):
+    """Debug: show raw Gmail search results per platform."""
+    creds = await _get_gmail_creds(admin["id"])
+    service = _get_service(creds)
+    debug_results = {}
+
+    for pf, filt in PLATFORM_FILTERS.items():
+        query = f'{filt["query"]} newer_than:{days}d'
+        try:
+            resp = service.users().messages().list(userId="me", q=query, maxResults=10).execute()
+            msgs = resp.get("messages", [])
+            subjects = []
+            for m in msgs[:5]:
+                msg = service.users().messages().get(userId="me", id=m["id"], format="metadata", metadataHeaders=["Subject", "From"]).execute()
+                headers = {h["name"].lower(): h["value"] for h in msg.get("payload", {}).get("headers", [])}
+                subjects.append({"from": headers.get("from", ""), "subject": headers.get("subject", "")})
+            debug_results[pf] = {"query": query, "total_found": len(msgs), "samples": subjects}
+        except Exception as e:
+            debug_results[pf] = {"query": query, "error": str(e)}
+
+    return debug_results
+
 
 
 # ── Credentials helper ───────────────────────────────────────
