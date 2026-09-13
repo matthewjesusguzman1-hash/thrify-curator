@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.responses import RedirectResponse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 import os, uuid, base64, re, warnings
 
@@ -320,9 +320,16 @@ async def scan_emails(
     seen_ids = set()
 
     # ── Date filter ──────────────────────────────────────────
+    # Gmail's before: is EXCLUSIVE (before start of that day), so add +1 day
+    # to include emails from the "To" date itself.
     date_filter = ""
     if after and before:
-        date_filter = f" after:{after} before:{before}"
+        try:
+            before_dt = datetime.strptime(before, "%Y-%m-%d") + timedelta(days=1)
+            before_inclusive = before_dt.strftime("%Y-%m-%d")
+        except ValueError:
+            before_inclusive = before
+        date_filter = f" after:{after} before:{before_inclusive}"
     elif after:
         date_filter = f" after:{after}"
     elif days:
