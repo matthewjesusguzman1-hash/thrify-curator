@@ -326,9 +326,14 @@ export default function GmailLabelImport({ getAuthHeader, onImported }) {
                         </span>
                       )}
                       {email.sku && (
-                        <span className="text-[10px] text-purple-600 flex items-center gap-0.5">
+                        <span className="text-[10px] text-purple-600 flex items-center gap-0.5" title={email.sku_source ? `Matched from Vendoo CSV (${email.sku_source})` : "From email"}>
                           <Tag className="w-3 h-3" />
                           {email.sku}
+                          {email.sku_source && (
+                            <span className="text-[9px] text-purple-400 ml-0.5">
+                              (CSV {email.sku_source})
+                            </span>
+                          )}
                         </span>
                       )}
                       {email.already_imported && (

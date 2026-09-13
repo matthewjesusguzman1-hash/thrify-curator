@@ -372,6 +372,15 @@ async def scan_emails(
 
                 info = _parse_email(msg, detected)
                 if info:
+                    # Auto-fill SKU from inventory when email doesn't contain one
+                    if not info.get("sku") and info.get("item_title"):
+                        matched_sku, match_source = await _match_sku_from_inventory(
+                            info["item_title"], detected
+                        )
+                        if matched_sku:
+                            info["sku"] = matched_sku
+                            info["sku_source"] = match_source
+
                     existing = await db.shipping_labels.find_one({"gmail_message_id": mid})
                     info["already_imported"] = existing is not None
                     info["message_id"] = mid
@@ -570,7 +579,8 @@ async def import_labels(
 
             # If no SKU and we have a title, try matching from CSV/inventory
             if not sku and item_title:
-                sku = await _match_sku_from_inventory(item_title, platform)
+                matched_sku, _ = await _match_sku_from_inventory(item_title, platform)
+                sku = matched_sku
 
             # Get the label PDF
             label_bytes, filename, content_type = await _get_label_from_email(
@@ -707,39 +717,92 @@ async def _get_label_from_email(
     return None, "", ""
 
 
-async def _match_sku_from_inventory(title: str, platform: str) -> str:
-    """Match item title against imported inventory to find SKU."""
+async def _match_sku_from_inventory(title: str, platform: str) -> tuple[str, str]:
+    """Match item title against imported inventory (Vendoo CSV) to find SKU.
+
+    Returns (sku, match_source) where match_source describes how the match was
+    made: "exact", "prefix", "substring", or "fuzzy".
+    """
     if not title or len(title) < 3:
-        return ""
+        return "", ""
 
     title_lower = title.strip().lower()
 
-    # Search inventory for items whose title starts with or contains the email title
-    # The email title may be truncated, so we check if any inventory title starts with it
+    # 1. Exact match (case-insensitive)
+    exact = await db.inventory_items.find_one(
+        {"title": {"$regex": f"^{re.escape(title_lower)}$", "$options": "i"}},
+        {"_id": 0, "sku": 1},
+    )
+    if exact and exact.get("sku"):
+        return exact["sku"], "exact"
+
+    # 2. Prefix match — email title starts inventory title or vice versa
     cursor = db.inventory_items.find(
         {"title": {"$regex": f"^{re.escape(title_lower)}", "$options": "i"}},
         {"_id": 0, "sku": 1, "title": 1},
     ).limit(5)
-
     matches = await cursor.to_list(5)
+    if len(matches) == 1 and matches[0].get("sku"):
+        return matches[0]["sku"], "prefix"
 
-    if len(matches) == 1:
-        return matches[0].get("sku", "")
-
-    # If multiple matches or no prefix match, try substring containment
+    # Also check: inventory title is a prefix of email title
     if not matches:
-        cursor = db.inventory_items.find(
-            {"title": {"$regex": re.escape(title_lower), "$options": "i"}},
-            {"_id": 0, "sku": 1, "title": 1},
-        ).limit(5)
-        matches = await cursor.to_list(5)
+        # Can't do this purely in Mongo — grab candidates with shared first word
+        first_word = title_lower.split()[0] if title_lower.split() else ""
+        if first_word and len(first_word) >= 3:
+            cursor = db.inventory_items.find(
+                {"title": {"$regex": f"^{re.escape(first_word)}", "$options": "i"}},
+                {"_id": 0, "sku": 1, "title": 1},
+            ).limit(20)
+            matches = await cursor.to_list(20)
+            # Filter to cases where inventory title is a prefix of email title
+            prefix_matches = [
+                m for m in matches
+                if title_lower.startswith(m.get("title", "").lower())
+            ]
+            if len(prefix_matches) == 1 and prefix_matches[0].get("sku"):
+                return prefix_matches[0]["sku"], "prefix"
 
-    if len(matches) == 1:
-        return matches[0].get("sku", "")
+    # 3. Substring containment
+    cursor = db.inventory_items.find(
+        {"title": {"$regex": re.escape(title_lower), "$options": "i"}},
+        {"_id": 0, "sku": 1, "title": 1},
+    ).limit(5)
+    matches = await cursor.to_list(5)
+    if len(matches) == 1 and matches[0].get("sku"):
+        return matches[0]["sku"], "substring"
 
-    # Multiple matches — return the best one (shortest title that contains the search)
-    if matches:
-        matches.sort(key=lambda m: len(m.get("title", "")))
-        return matches[0].get("sku", "")
+    # 4. Fuzzy word-overlap matching
+    # Tokenize the email title into significant words (skip short/common ones)
+    stop_words = {"the", "a", "an", "in", "on", "at", "for", "and", "or", "of", "to", "with", "by", "new", "nwt", "size"}
+    title_words = {w for w in re.findall(r'[a-z0-9]+', title_lower) if len(w) >= 2 and w not in stop_words}
+    if not title_words:
+        return "", ""
 
-    return ""
+    # Pull a broader set of candidates sharing at least one significant word
+    word_patterns = [{"title": {"$regex": re.escape(w), "$options": "i"}} for w in list(title_words)[:5]]
+    cursor = db.inventory_items.find(
+        {"$or": word_patterns},
+        {"_id": 0, "sku": 1, "title": 1},
+    ).limit(50)
+    candidates = await cursor.to_list(50)
+
+    best_sku = ""
+    best_score = 0.0
+    for c in candidates:
+        inv_title = (c.get("title") or "").lower()
+        inv_words = {w for w in re.findall(r'[a-z0-9]+', inv_title) if len(w) >= 2 and w not in stop_words}
+        if not inv_words:
+            continue
+        overlap = title_words & inv_words
+        # Jaccard-like score: overlap / union
+        union = title_words | inv_words
+        score = len(overlap) / len(union) if union else 0
+        if score > best_score and score >= 0.4 and c.get("sku"):
+            best_score = score
+            best_sku = c["sku"]
+
+    if best_sku:
+        return best_sku, "fuzzy"
+
+    return "", ""
