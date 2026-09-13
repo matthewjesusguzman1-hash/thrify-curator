@@ -1,13 +1,13 @@
 /**
- * Training Section — Reference guides for Photography and Listing
- * Admin can view guides and assign training to employees by name
+ * Training Section — Admin view with editable guides + AI cleanup
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Camera, BookOpen, GraduationCap, Users, Plus, X, Trash2,
   ChevronDown, ChevronUp, Package, Tag, FileText, FolderOpen,
-  Monitor, ShoppingBag, Loader2, Check, UserPlus
+  Monitor, ShoppingBag, Loader2, Check, UserPlus, Pencil, Save,
+  Sparkles, RotateCcw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -15,173 +15,182 @@ import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// ── Photography Training Content ──────────────────────────
+const ICON_MAP = {
+  Package, Camera, FileText, Tag, FolderOpen, Monitor, ShoppingBag, BookOpen
+};
 
-const PHOTOGRAPHY_STEPS = [
-  {
-    title: "1. Prep the Item",
-    icon: Package,
-    steps: [
-      "Remove items from storage bags/bins",
-      "Steam or lint-roll wrinkled items",
-      "Check for stains, damage, or missing parts — note everything"
-    ]
-  },
-  {
-    title: "2. Set Up for Photos",
-    icon: Camera,
-    steps: [
-      "Use natural light or a lightbox/ring light",
-      "Use a clean, solid-color background (white or neutral)",
-      "Avoid shadows, clutter, or uneven lighting"
-    ]
-  },
-  {
-    title: "3. Take Required Photos",
-    icon: FileText,
-    steps: [
-      "Front view (full item, centered)",
-      "Back view",
-      "Close-up of brand/label tag",
-      "Close-up of size tag",
-      "Any flaws or damage (stains, holes, pilling)",
-      "Close-up of fabric content/care tag",
-      "Detail shots (zippers, buttons, embroidery, hardware)",
-      "Measurement photo with tape measure (if needed)"
-    ]
-  },
-  {
-    title: "4. Capture Measurements",
-    icon: Tag,
-    steps: [
-      "Lay item flat on a clean surface",
-      "Use a soft measuring tape",
-      "Common measurements: pit-to-pit (chest), length, sleeve length, waist, inseam, rise",
-      "Record in inches and note if flat or stretched",
-      "For shoes: outsole length, width, insole measurement"
-    ]
-  },
-  {
-    title: "5. Photo Description",
-    icon: FileText,
-    steps: [
-      "Log item brand, size, color, fabric, and condition in notes or a shared document",
-      "Flag anything notable: stains, missing buttons, stretched elastic"
-    ]
-  },
-  {
-    title: "6. SKU & Cost Tracking",
-    icon: Tag,
-    steps: [
-      "Assign an internal SKU or lot number",
-      "Record purchase price/cost for profit tracking",
-      "Label storage bins with SKU references"
-    ]
-  },
-  {
-    title: "7. Bag & Store",
-    icon: FolderOpen,
-    steps: [
-      "Place item in a clear poly bag or labeled storage bin",
-      "Store in a way that keeps it accessible for shipping",
-      "Organize by category, size, or SKU for easy retrieval"
-    ]
+function StepSection({ section, color, isEditing, onUpdate }) {
+  const IconComp = ICON_MAP[section.icon] || FileText;
+
+  if (!isEditing) {
+    return (
+      <div className="bg-[#fafafa] rounded-lg p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <IconComp className="w-4 h-4" style={{ color }} />
+          <h4 className="font-medium text-sm text-[#333]">{section.title}</h4>
+        </div>
+        <ul className="space-y-1.5 ml-6">
+          {section.steps.map((step, j) => (
+            <li key={j} className="text-xs text-[#555] flex items-start gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#ccc] mt-1.5 flex-shrink-0" />
+              {step}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
   }
-];
-
-// ── Listing Training Content (from Vendoo Guide) ─────────
-
-const LISTING_STEPS = [
-  {
-    title: "1. Preparing Items in Vendoo",
-    icon: Package,
-    steps: [
-      "Log into Vendoo (vendoo.co) — the central hub for all cross-listing",
-      "Click 'List an Item' to create a new listing",
-      "Upload all photos taken during the Photography phase",
-      "Fill in: Title, Description, Category, Brand, Size, Color, Condition",
-      "Add SKU number and purchase price for tracking",
-      "Use Vendoo's AI Description feature to auto-generate descriptions"
-    ]
-  },
-  {
-    title: "2. Cross-List to Poshmark",
-    icon: ShoppingBag,
-    steps: [
-      "In Vendoo, select Poshmark as a marketplace to list on",
-      "Set the listing price (Poshmark takes 20% commission)",
-      "Select the correct category and subcategory",
-      "Add relevant style tags for search visibility",
-      "Set shipping: Poshmark provides a prepaid label for standard packages",
-      "Review and click 'List' — Vendoo pushes the listing to Poshmark"
-    ]
-  },
-  {
-    title: "3. Cross-List to eBay",
-    icon: Monitor,
-    steps: [
-      "In Vendoo, select eBay as a marketplace",
-      "Choose listing format: Fixed Price (Buy It Now) or Auction",
-      "Set your price — eBay final value fee is ~13%",
-      "Select condition: 'Pre-owned', 'New with tags', etc.",
-      "Fill in item specifics: Brand, Size, Color, Material, Style",
-      "Set shipping: Calculated or flat rate (USPS, FedEx, UPS)",
-      "Add return policy (recommended: 30-day returns for better visibility)",
-      "Review and click 'List'"
-    ]
-  },
-  {
-    title: "4. Cross-List to Mercari",
-    icon: ShoppingBag,
-    steps: [
-      "In Vendoo, select Mercari as a marketplace",
-      "Set your price — Mercari takes 10% commission",
-      "Select brand, category, and condition",
-      "Choose shipping: Mercari prepaid label or ship on your own",
-      "Smart Pricing: optionally enable auto-price drops for faster sales",
-      "Review and click 'List'"
-    ]
-  },
-  {
-    title: "5. Cross-List to Depop",
-    icon: ShoppingBag,
-    steps: [
-      "In Vendoo, select Depop as a marketplace",
-      "Set your price — Depop charges no seller fees (buyer pays)",
-      "Add hashtags and style descriptors popular with Depop's audience",
-      "Category and subcategory should match the item type",
-      "Shipping: Set via Depop's shipping options (USPS typically)",
-      "Review and click 'List'"
-    ]
-  },
-  {
-    title: "6. After Listing — Manage & Delist",
-    icon: FileText,
-    steps: [
-      "When an item sells on one platform, use Vendoo to delist from all others",
-      "Click 'Mark as Sold' in Vendoo — this removes it from active platforms",
-      "Track your sales data in Vendoo's analytics dashboard",
-      "Ship within the required window (typically 3 business days)",
-      "Update inventory CSV if using the Thrifty Curator sales import"
-    ]
-  }
-];
-
-function TrainingGuide({ title, icon: Icon, steps, color }) {
-  const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="border border-[#e5e5e5] rounded-xl overflow-hidden bg-white">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 p-4 hover:bg-[#fafafa] transition-colors"
-      >
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${color}15` }}>
-          <Icon className="w-4.5 h-4.5" style={{ color }} />
-        </div>
-        <span className="font-medium text-sm text-[#333] flex-1 text-left">{title}</span>
-        {expanded ? <ChevronUp className="w-4 h-4 text-[#aaa]" /> : <ChevronDown className="w-4 h-4 text-[#aaa]" />}
-      </button>
+    <div className="bg-[#f5f3ff] rounded-lg p-3 border border-[#8B5CF6]/20">
+      <div className="flex items-center gap-2 mb-2">
+        <IconComp className="w-4 h-4" style={{ color }} />
+        <input
+          value={section.title}
+          onChange={(e) => onUpdate({ ...section, title: e.target.value })}
+          className="font-medium text-sm text-[#333] bg-white border border-[#ddd] rounded px-2 py-1 flex-1"
+          data-testid={`edit-section-title`}
+        />
+      </div>
+      <textarea
+        value={section.steps.join("\n")}
+        onChange={(e) => onUpdate({ ...section, steps: e.target.value.split("\n") })}
+        className="w-full text-xs text-[#555] bg-white border border-[#ddd] rounded px-2 py-1.5 min-h-[80px] resize-y font-mono leading-relaxed"
+        placeholder="One step per line..."
+        data-testid={`edit-section-steps`}
+      />
+    </div>
+  );
+}
+
+function EditableGuide({ guide, color, getAuthHeader, onSaved }) {
+  const [expanded, setExpanded] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editSections, setEditSections] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [cleaningIdx, setCleaningIdx] = useState(null);
+  const [cleaningAll, setCleaningAll] = useState(false);
+
+  const IconComp = guide.guide_type === "photography" ? Camera : BookOpen;
+
+  const startEdit = () => {
+    setEditSections(JSON.parse(JSON.stringify(guide.sections)));
+    setIsEditing(true);
+    if (!expanded) setExpanded(true);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setEditSections([]);
+  };
+
+  const saveEdit = async () => {
+    setSaving(true);
+    try {
+      // Filter out empty steps
+      const cleaned = editSections.map(s => ({
+        ...s,
+        steps: s.steps.filter(st => st.trim() !== "")
+      }));
+      await axios.put(
+        `${API}/training-content/${guide.guide_type}`,
+        { sections: cleaned },
+        getAuthHeader()
+      );
+      toast.success("Training guide saved");
+      setIsEditing(false);
+      onSaved();
+    } catch (err) {
+      toast.error("Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const aiCleanupSection = async (idx) => {
+    const section = editSections[idx];
+    const text = `Section: ${section.title}\n${section.steps.join("\n")}`;
+    setCleaningIdx(idx);
+    try {
+      const res = await axios.post(
+        `${API}/training-content/ai-cleanup`,
+        { text },
+        getAuthHeader()
+      );
+      const lines = res.data.cleaned_text.split("\n").filter(l => l.trim());
+      // First line might be the title if it starts with a number or "Section:"
+      let newTitle = section.title;
+      let newSteps = lines;
+      if (lines[0] && (lines[0].startsWith("Section:") || /^\d+\./.test(lines[0]))) {
+        newTitle = lines[0].replace(/^Section:\s*/, "");
+        newSteps = lines.slice(1);
+      }
+      const updated = [...editSections];
+      updated[idx] = { ...section, title: newTitle, steps: newSteps };
+      setEditSections(updated);
+      toast.success("Section cleaned up");
+    } catch {
+      toast.error("AI cleanup failed");
+    } finally {
+      setCleaningIdx(null);
+    }
+  };
+
+  const aiCleanupAll = async () => {
+    setCleaningAll(true);
+    try {
+      for (let i = 0; i < editSections.length; i++) {
+        await aiCleanupSection(i);
+      }
+      toast.success("All sections cleaned up");
+    } catch {
+      toast.error("AI cleanup failed");
+    } finally {
+      setCleaningAll(false);
+    }
+  };
+
+  const addSection = () => {
+    setEditSections([...editSections, { title: "New Section", icon: "FileText", steps: [""] }]);
+  };
+
+  const removeSection = (idx) => {
+    setEditSections(editSections.filter((_, i) => i !== idx));
+  };
+
+  const updateSection = (idx, updated) => {
+    const copy = [...editSections];
+    copy[idx] = updated;
+    setEditSections(copy);
+  };
+
+  const sections = isEditing ? editSections : guide.sections;
+
+  return (
+    <div className="border border-[#e5e5e5] rounded-xl overflow-hidden bg-white" data-testid={`guide-${guide.guide_type}`}>
+      <div className="flex items-center">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex-1 flex items-center gap-3 p-4 hover:bg-[#fafafa] transition-colors"
+        >
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${color}15` }}>
+            <IconComp className="w-4.5 h-4.5" style={{ color }} />
+          </div>
+          <span className="font-medium text-sm text-[#333] flex-1 text-left">{guide.title}</span>
+          {expanded ? <ChevronUp className="w-4 h-4 text-[#aaa]" /> : <ChevronDown className="w-4 h-4 text-[#aaa]" />}
+        </button>
+        {!isEditing && (
+          <button
+            onClick={startEdit}
+            className="mr-3 p-2 rounded-lg hover:bg-[#f5f3ff] text-[#8B5CF6] transition-colors"
+            title="Edit guide"
+            data-testid={`edit-guide-${guide.guide_type}`}
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -190,21 +199,83 @@ function TrainingGuide({ title, icon: Icon, steps, color }) {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 space-y-4">
-              {steps.map((section, i) => (
-                <div key={i} className="bg-[#fafafa] rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <section.icon className="w-4 h-4" style={{ color }} />
-                    <h4 className="font-medium text-sm text-[#333]">{section.title}</h4>
-                  </div>
-                  <ul className="space-y-1.5 ml-6">
-                    {section.steps.map((step, j) => (
-                      <li key={j} className="text-xs text-[#555] flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#ccc] mt-1.5 flex-shrink-0" />
-                        {step}
-                      </li>
-                    ))}
-                  </ul>
+            {/* Edit toolbar */}
+            {isEditing && (
+              <div className="px-4 pb-2 flex items-center gap-2 flex-wrap border-b border-[#eee] mb-2 pt-1">
+                <Button
+                  size="sm"
+                  onClick={saveEdit}
+                  disabled={saving}
+                  className="bg-[#10B981] hover:bg-[#059669] text-white text-xs gap-1"
+                  data-testid={`save-guide-${guide.guide_type}`}
+                >
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={cancelEdit}
+                  className="text-xs gap-1"
+                  data-testid={`cancel-edit-${guide.guide_type}`}
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Cancel
+                </Button>
+                <div className="flex-1" />
+                <Button
+                  size="sm"
+                  onClick={aiCleanupAll}
+                  disabled={cleaningAll || cleaningIdx !== null}
+                  className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white text-xs gap-1"
+                  data-testid={`ai-cleanup-all-${guide.guide_type}`}
+                >
+                  {cleaningAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  AI Cleanup All
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={addSection}
+                  className="text-xs gap-1"
+                  data-testid={`add-section-${guide.guide_type}`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Section
+                </Button>
+              </div>
+            )}
+
+            <div className="px-4 pb-4 space-y-3">
+              {sections.map((section, i) => (
+                <div key={i} className="relative">
+                  <StepSection
+                    section={section}
+                    color={color}
+                    isEditing={isEditing}
+                    onUpdate={(updated) => updateSection(i, updated)}
+                  />
+                  {isEditing && (
+                    <div className="flex items-center gap-1 mt-1 justify-end">
+                      <button
+                        onClick={() => aiCleanupSection(i)}
+                        disabled={cleaningIdx === i}
+                        className="text-[10px] text-[#8B5CF6] hover:text-[#7C3AED] flex items-center gap-1 px-2 py-1 rounded hover:bg-[#f5f3ff] transition-colors disabled:opacity-50"
+                        data-testid={`ai-cleanup-section-${i}`}
+                      >
+                        {cleaningIdx === i ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                        AI Cleanup
+                      </button>
+                      <button
+                        onClick={() => removeSection(i)}
+                        className="text-[10px] text-[#ccc] hover:text-red-500 flex items-center gap-1 px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                        data-testid={`remove-section-${i}`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Remove
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -278,7 +349,6 @@ function AssignmentPanel({ getAuthHeader }) {
         <h3 className="font-medium text-sm text-[#333]">Assign Training</h3>
       </div>
 
-      {/* Assign form */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         <select
           value={selectedEmp}
@@ -312,7 +382,6 @@ function AssignmentPanel({ getAuthHeader }) {
         </Button>
       </div>
 
-      {/* Current assignments */}
       {assignments.length === 0 ? (
         <p className="text-xs text-[#aaa] text-center py-2">No training assigned yet</p>
       ) : (
@@ -339,26 +408,53 @@ function AssignmentPanel({ getAuthHeader }) {
 }
 
 export default function TrainingSection({ getAuthHeader, isAdmin }) {
+  const [guides, setGuides] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchGuides = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/training-content/`, getAuthHeader());
+      setGuides(res.data.guides || []);
+    } catch {
+      toast.error("Failed to load training guides");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchGuides(); }, [fetchGuides]);
+
+  const photoGuide = guides.find(g => g.guide_type === "photography");
+  const listingGuide = guides.find(g => g.guide_type === "listing");
+
   return (
     <div className="space-y-4" data-testid="training-section">
-      {/* Assign training (admin only) */}
       {isAdmin && <AssignmentPanel getAuthHeader={getAuthHeader} />}
 
-      {/* Photography Guide */}
-      <TrainingGuide
-        title="Photography Training"
-        icon={Camera}
-        steps={PHOTOGRAPHY_STEPS}
-        color="#F59E0B"
-      />
-
-      {/* Listing Guide */}
-      <TrainingGuide
-        title="Listing Training (Vendoo Cross-Listing)"
-        icon={BookOpen}
-        steps={LISTING_STEPS}
-        color="#3B82F6"
-      />
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-[#aaa]" />
+        </div>
+      ) : (
+        <>
+          {photoGuide && (
+            <EditableGuide
+              guide={photoGuide}
+              color="#F59E0B"
+              getAuthHeader={getAuthHeader}
+              onSaved={fetchGuides}
+            />
+          )}
+          {listingGuide && (
+            <EditableGuide
+              guide={listingGuide}
+              color="#3B82F6"
+              getAuthHeader={getAuthHeader}
+              onSaved={fetchGuides}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }

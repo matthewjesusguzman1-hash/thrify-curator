@@ -42,7 +42,11 @@ Operational dashboard for a resale/consignment business. React + FastAPI + Mongo
 - Reference-only (no completion tracking)
 - Photography: 7-step guide (Prep, Setup, Photos, Measurements, Description, SKU, Bag & Store)
 - Listing: Vendoo Cross-Listing workflow (Starting in Vendoo, eBay, Poshmark, Mercari, Depop, Finish)
-- Admin assigns training to employees by name
+- Admin assigns training to employees by name via UI panel
+- Admin can edit any training guide section inline with Save/Cancel
+- AI Cleanup: Gemini-powered button to professionalize rough text per-section or all at once
+- Admin can add/remove sections from any guide
+- Training content stored in MongoDB, loaded dynamically by both views
 - Employees only see training tile when assigned
 
 ## Pending/Backlog
