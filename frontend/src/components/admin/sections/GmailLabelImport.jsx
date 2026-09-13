@@ -26,7 +26,8 @@ export default function GmailLabelImport({ getAuthHeader, onImported }) {
       toast.success("Gmail connected!");
       window.history.replaceState({}, "", window.location.pathname);
     } else if (params.get("gmail") === "error") {
-      toast.error("Gmail connection failed — please try again");
+      const reason = params.get("reason") || "Unknown error";
+      toast.error("Gmail connection failed: " + decodeURIComponent(reason));
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);

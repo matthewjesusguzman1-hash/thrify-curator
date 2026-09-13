@@ -117,8 +117,14 @@ async def gmail_callback(code: str = Query(...), state: str = Query(...)):
         )
         return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=connected")
     except Exception as e:
-        print(f"[Gmail] Callback error: {type(e).__name__}: {e}")
-        return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=error&reason=callback_failed")
+        import traceback
+        err_msg = f"{type(e).__name__}: {e}"
+        print(f"[Gmail] Callback error: {err_msg}")
+        traceback.print_exc()
+        # Pass error detail in URL so frontend can display it
+        from urllib.parse import quote
+        safe_msg = quote(str(e)[:200])
+        return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=error&reason={safe_msg}")
 
 
 @router.get("/status")
