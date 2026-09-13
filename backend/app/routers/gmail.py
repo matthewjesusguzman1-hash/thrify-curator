@@ -104,7 +104,11 @@ async def gmail_auth(admin: dict = Depends(get_admin_user)):
     if not cid:
         raise HTTPException(400, "Gmail integration not configured")
     flow = _build_flow()
-    url, state = flow.authorization_url(access_type="offline", prompt="consent")
+    url, state = flow.authorization_url(
+        access_type="offline",
+        prompt="consent",
+        include_granted_scopes="true",
+    )
     # Save state + PKCE code_verifier for the callback
     await db.gmail_oauth_states.insert_one({
         "state": state,
@@ -202,7 +206,22 @@ async def gmail_status(admin: dict = Depends(get_admin_user)):
 
 @router.delete("/disconnect")
 async def gmail_disconnect(admin: dict = Depends(get_admin_user)):
-    """Disconnect Gmail."""
+    """Disconnect Gmail and revoke the Google token so re-auth prompts fresh scopes."""
+    token = await db.gmail_tokens.find_one({"admin_id": admin["id"]})
+    if token and token.get("access_token"):
+        try:
+            import httpx
+            # Revoke the token at Google so next connect gets a fresh consent screen
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    "https://oauth2.googleapis.com/revoke",
+                    params={"token": token["access_token"]},
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    timeout=10,
+                )
+                print("[Gmail] Token revoked at Google")
+        except Exception as e:
+            print(f"[Gmail] Token revoke failed (non-critical): {e}")
     await db.gmail_tokens.delete_one({"admin_id": admin["id"]})
     return {"ok": True}
 
