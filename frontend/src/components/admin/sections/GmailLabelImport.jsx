@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Mail, RefreshCw, Loader2, Download, Check, AlertCircle, Link2, Tag, X } from "lucide-react";
+import { Mail, RefreshCw, Loader2, Download, Check, AlertCircle, Link2, Tag, X, FileText, Bug } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -17,6 +17,8 @@ export default function GmailLabelImport({ getAuthHeader, onImported }) {
   });
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [showPanel, setShowPanel] = useState(false);
+  const [debugInfo, setDebugInfo] = useState(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => {
     checkStatus();
@@ -69,12 +71,14 @@ export default function GmailLabelImport({ getAuthHeader, onImported }) {
     setScanning(true);
     setEmails([]);
     setSelected(new Set());
+    setDebugInfo(null);
     try {
       const { data } = await axios.get(`${API}/gmail/scan`, {
         ...getAuthHeader(),
         params: { after: dateFrom, before: dateTo },
       });
       setEmails(data.emails || []);
+      if (data.debug) setDebugInfo(data.debug);
       // Auto-select all that have labels and aren't imported yet
       const autoSelect = new Set();
       (data.emails || []).forEach((e) => {
@@ -242,6 +246,38 @@ export default function GmailLabelImport({ getAuthHeader, onImported }) {
               Disconnect
             </button>
           </div>
+
+          {/* Debug diagnostics — togglable */}
+          {debugInfo && (
+            <div className="mb-3">
+              <button
+                onClick={() => setShowDebug((v) => !v)}
+                className="flex items-center gap-1 text-[10px] text-[#aaa] hover:text-[#FF6B35] transition-colors"
+                data-testid="gmail-toggle-debug"
+              >
+                <Bug className="w-3 h-3" />
+                {showDebug ? "Hide" : "Show"} scan diagnostics
+              </button>
+              {showDebug && (
+                <div className="mt-1.5 p-2.5 rounded-lg bg-[#f8f8f8] border border-[#eee] text-[11px] font-mono text-[#666] space-y-1.5" data-testid="gmail-debug-panel">
+                  <div><span className="text-[#999]">Date filter:</span> {debugInfo.date_filter}</div>
+                  <div><span className="text-[#999]">Platform:</span> {debugInfo.platform_filter}</div>
+                  <div><span className="text-[#999]">Total candidates:</span> {debugInfo.total_candidates}</div>
+                  <div><span className="text-[#999]">Parsed results:</span> {debugInfo.parsed_results}</div>
+                  {debugInfo.queries?.map((q, i) => (
+                    <div key={i} className="pl-2 border-l-2 border-[#ddd]">
+                      <div className="text-[#888] font-semibold">{q.label}</div>
+                      <div className="truncate text-[#aaa]">{q.query}</div>
+                      {q.error
+                        ? <div className="text-red-500">Error: {q.error}</div>
+                        : <div>Found: {q.total_found} ({q.new_unique} new)</div>
+                      }
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Email results */}
           {emails.length > 0 && (

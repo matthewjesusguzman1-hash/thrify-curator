@@ -1,63 +1,71 @@
 # Thrifty Curator - Product Requirements Document
 
 ## Overview
-Operational dashboard for a resale/consignment business. React + FastAPI + MongoDB.
+Operations dashboard for a resale/consignment business. React frontend + FastAPI backend + MongoDB.
 
-## Core Features (Implemented)
-- Admin Dashboard with state-based navigation (inventory, employees, orders, payroll, sales data, shipping labels, training)
-- Employee Dashboard with tile-based navigation
-- Authentication (email-based login, admin code verification)
-- Clock In/Out with GPS tracking
-- Pay Period tracking with rate breakdowns
-- Messaging system (admin-employee)
-- Inventory management with Vendoo CSV import
-- Shipping labels with SKU overlay
-- W-9/W-8BEN/Contractor Agreement forms
-- Remote Work (AnyDesk setup) for remote workers
-- AI Assistant (Gemini-powered)
-- Training system (Photography + Listing guides, admin-assigned)
-- Notifications (web push, APNs)
+## Core Modules
+
+### 1. Employee Dashboard
+- Tile-based layout with morph/minimize for Messages and Recent Shifts
+- Dedicated pages for Forms, Training, AI Assistant, Remote Work, Orders
+- Pay Period summary always visible
+- Conditional tiles: Orders (when assigned), Remote Work (remote workers), Training (when assigned)
+
+### 2. Admin Dashboard
+- State-based navigation (`activePage`)
+- Sections: Team, Payroll, Operations, Forms, Hiring, Messages, Training, AI Assistant, Business Files
+- Operations sub-sections: Orders & Pull List, Mileage, Sales Data, Taxes
+
+### 3. Training System
+- Admin assigns Photography/Listing training by employee
+- Editable training content stored in MongoDB
+- AI cleanup for text (Gemini via emergentintegrations)
+- Employee view loads saved DB content
+- Reference-only, no videos, no completion tracking
+
+### 4. Gmail Label Import (IN PROGRESS)
+- Google OAuth connects admin's Gmail
+- **Current scan strategy**: Find all PDFs in date range, detect platform from content
+  - Query 1: `has:attachment filename:pdf` (most reliable)
+  - Query 2: Depop-specific emails (download link style)
+  - Query 3: Broad marketplace keywords (forwarded emails)
+- Custom From/To date range picker
+- Debug diagnostics panel in scan UI
+- Platform detection from from-address, subject, and body content
+- Depop: shipping-label download link + title-to-SKU matching via Vendoo CSV
+- Duplicate prevention via gmail_message_id
+- Status: OAuth works on production, scan logic rewritten, debug diagnostics added. Needs production validation.
+
+### 5. Shipping Labels
+- Drag & drop upload + Gmail import
+- SKU overlay on labels (bottom-left)
+- PDF-to-PNG conversion (no OCR/redaction/cropping)
+- Print individual or all labels
+
+### 6. Orders & Pull List
+- CSV update for orders
+- Order assignments to employees
+- Pull list with date range filters
+
+### 7. Other Features
+- Consignment agreement portal (magic link auth)
+- Mileage/trip tracking
+- Sales data CSV import
+- AnyDesk remote session watcher
 - Video calls (Daily.co)
-- Password management
-- Session timeout (3 hours)
-- Root redirect (logged-in → dashboard/admin)
+- Push notifications
+- 3-hour session timeout
 
-## Employee Dashboard Architecture (Current)
-### Tile Navigation System
-- **Always Visible**: Pay Period Summary Card (hours, shifts, est pay, rate, pay breakdown)
-- **Morph Tiles** (expand inline with minimize bar):
-  - Messages → expands MessagingSection with minimize
-  - Recent Shifts → expands shift history with minimize
-- **Full-Page Tiles** (separate page with Back to Dashboard):
-  - Forms → W-9, W-8BEN, Contractor Agreement
-  - Training → Photography + Listing guides (only when assigned)
-  - AI Assistant → full-page Gemini AI chat
-  - Remote Work → AnyDesk setup (only for remote workers)
-  - Orders → pull list & shipping (only when assigned)
-- **Conditional Tiles**: Training (admin-assigned), Remote Work (remote workers only), Orders (when assigned)
-- **Header**: Unchanged — Home, Refresh, Messages, Calls, Security, Logout, theme toggle
-- **AI Floating Bubble**: Always visible on all views
+## Architecture
+- Frontend: React + Tailwind + Shadcn UI (port 3000)
+- Backend: FastAPI (port 8001, all routes /api prefixed)
+- Database: MongoDB
+- Storage: Emergent Object Storage
+- AI: Gemini via emergentintegrations + Emergent LLM Key
 
-### Training System
-- Reference-only (no completion tracking)
-- Photography: 7-step guide (Prep, Setup, Photos, Measurements, Description, SKU, Bag & Store)
-- Listing: Vendoo Cross-Listing workflow (Starting in Vendoo, eBay, Poshmark, Mercari, Depop, Finish)
-- Admin assigns training to employees by name via UI panel
-- Admin can edit any training guide section inline with Save/Cancel
-- AI Cleanup: Gemini-powered button to professionalize rough text per-section or all at once
-- Admin can add/remove sections from any guide
-- Training content stored in MongoDB, loaded dynamically by both views
-- Employees only see training tile when assigned
-
-## Pending/Backlog
-- Gmail OAuth label import (blocked — needs valid Google client secret)
-- Depop title→SKU matching via Gmail
-- AnyDesk watcher autostart verification
-- Bulk rate fix, rate change history log
-- Trip summary card (monthly mileage/deduction)
-
-## Tech Stack
-- Frontend: React + TailwindCSS + Shadcn/UI + Framer Motion
-- Backend: FastAPI + MongoDB
-- Integrations: Gemini AI (Emergent LLM Key), Daily.co, Resend, Capacitor (iOS/Android)
-- Storage: Emergent Object Storage for labels/media
+## Key Constraints
+- Production: https://reseller-dashboard-11.emergent.host (agent cannot access)
+- Preview: https://curator-app-3.preview.emergentagent.com
+- Admin login: email + 4-digit access code
+- Header Messages = full-screen overlay; Body Messages = tile/morph
+- Never expose credentials/tokens in responses

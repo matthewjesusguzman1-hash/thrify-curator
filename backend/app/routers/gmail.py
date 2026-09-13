@@ -287,13 +287,20 @@ async def scan_emails(
     before: Optional[str] = Query(None),
     admin: dict = Depends(get_admin_user),
 ):
-    """Scan Gmail for shipping label emails using broad search. Detects platform from content."""
+    """Scan Gmail for shipping label emails.
+
+    Strategy: find all emails with PDF attachments in the date range,
+    then detect marketplace platform from content.  The only PDFs in a
+    resale inbox are shipping labels, so this is the most reliable filter.
+    A secondary query catches Depop-style emails that use a download link
+    instead of an attachment.
+    """
     creds = await _get_gmail_creds(admin["id"])
     service = _get_service(creds)
     results = []
     seen_ids = set()
 
-    # Build date filter
+    # ── Date filter ──────────────────────────────────────────
     date_filter = ""
     if after and before:
         date_filter = f" after:{after} before:{before}"
@@ -304,36 +311,64 @@ async def scan_emails(
     else:
         date_filter = " newer_than:30d"
 
-    queries = []
-    if platform and platform in PLATFORM_FILTERS:
-        queries.append(PLATFORM_FILTERS[platform]["query"])
-    else:
-        for filt in PLATFORM_FILTERS.values():
-            queries.append(filt["query"])
-        queries.append(BROAD_QUERY)
+    debug_log = []
 
-    for query_str in queries:
-        query = f'{query_str}{date_filter}'
+    # ── Query 1: every email with a PDF attachment ───────────
+    queries = [
+        ("pdf_attachments", f"has:attachment filename:pdf{date_filter}"),
+    ]
+    # ── Query 2: Depop download-link emails (no attachment) ──
+    queries.append(
+        ("depop_links", f'(from:depop.com OR subject:depop OR subject:"sale confirmation"){date_filter}')
+    )
+    # ── Query 3: broad marketplace keywords (catches forwarded) ─
+    queries.append(
+        ("broad_keywords", f'{BROAD_QUERY}{date_filter}')
+    )
+
+    for label, query in queries:
         try:
-            resp = service.users().messages().list(userId="me", q=query, maxResults=50).execute()
-            msg_ids = [m["id"] for m in resp.get("messages", [])]
+            all_msg_ids = []
+            page_token = None
+            # Paginate to get all results
+            while True:
+                kw = {"userId": "me", "q": query, "maxResults": 100}
+                if page_token:
+                    kw["pageToken"] = page_token
+                resp = service.users().messages().list(**kw).execute()
+                all_msg_ids.extend(m["id"] for m in resp.get("messages", []))
+                page_token = resp.get("nextPageToken")
+                if not page_token:
+                    break
+
+            new_ids = [mid for mid in all_msg_ids if mid not in seen_ids]
+            debug_log.append({
+                "label": label,
+                "query": query[:150],
+                "total_found": len(all_msg_ids),
+                "new_unique": len(new_ids),
+            })
         except Exception as e:
-            print(f"[Gmail] Error scanning: {e}")
+            print(f"[Gmail] Error scanning ({label}): {e}")
+            debug_log.append({"label": label, "query": query[:150], "error": str(e)})
             continue
 
-        for mid in msg_ids:
-            if mid in seen_ids:
-                continue
+        for mid in new_ids:
             seen_ids.add(mid)
             try:
                 msg = service.users().messages().get(userId="me", id=mid, format="full").execute()
-                headers = {h["name"].lower(): h["value"] for h in msg.get("payload", {}).get("headers", [])}
+                headers = {h["name"].lower(): h["value"]
+                           for h in msg.get("payload", {}).get("headers", [])}
                 from_addr = headers.get("from", "").lower()
                 subject = headers.get("subject", "")
                 body_html = _get_body_html(msg.get("payload", {}))
 
-                # Detect platform from all available signals
+                # Detect marketplace platform
                 detected = _detect_platform(from_addr, subject, body_html)
+
+                # If platform filter was requested, skip non-matching
+                if platform and detected != platform:
+                    continue
 
                 info = _parse_email(msg, detected)
                 if info:
@@ -341,12 +376,24 @@ async def scan_emails(
                     info["already_imported"] = existing is not None
                     info["message_id"] = mid
                     info["platform"] = detected
-                    info["platform_name"] = PLATFORM_FILTERS.get(detected, {}).get("name", detected.title() if detected else "Unknown")
+                    info["platform_name"] = PLATFORM_FILTERS.get(
+                        detected, {}
+                    ).get("name", detected.title() if detected else "Unknown")
                     results.append(info)
             except Exception as e:
                 print(f"[Gmail] Error reading message {mid}: {e}")
 
-    return {"emails": results, "count": len(results)}
+    return {
+        "emails": results,
+        "count": len(results),
+        "debug": {
+            "queries": debug_log,
+            "total_candidates": len(seen_ids),
+            "parsed_results": len(results),
+            "date_filter": date_filter.strip(),
+            "platform_filter": platform or "all",
+        },
+    }
 
 
 def _parse_email(msg: dict, platform: str) -> Optional[dict]:
