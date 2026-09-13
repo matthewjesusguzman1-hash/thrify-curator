@@ -11,7 +11,11 @@ export default function GmailLabelImport({ getAuthHeader, onImported }) {
   const [importing, setImporting] = useState(false);
   const [emails, setEmails] = useState([]);
   const [selected, setSelected] = useState(new Set());
-  const [days, setDays] = useState(30);
+  const [dateFrom, setDateFrom] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() - 30);
+    return d.toISOString().slice(0, 10);
+  });
+  const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [showPanel, setShowPanel] = useState(false);
 
   useEffect(() => {
@@ -68,7 +72,7 @@ export default function GmailLabelImport({ getAuthHeader, onImported }) {
     try {
       const { data } = await axios.get(`${API}/gmail/scan`, {
         ...getAuthHeader(),
-        params: { days },
+        params: { after: dateFrom, before: dateTo },
       });
       setEmails(data.emails || []);
       // Auto-select all that have labels and aren't imported yet
@@ -78,7 +82,7 @@ export default function GmailLabelImport({ getAuthHeader, onImported }) {
       });
       setSelected(autoSelect);
       if (data.emails?.length === 0) {
-        toast.info("No shipping label emails found in the last " + days + " days");
+        toast.info(`No shipping label emails found between ${dateFrom} and ${dateTo}`);
       } else {
         toast.success(`Found ${data.emails.length} shipping email(s)`);
       }
@@ -189,18 +193,27 @@ export default function GmailLabelImport({ getAuthHeader, onImported }) {
       {/* Connected — scan controls */}
       {connected && (
         <>
-          <div className="flex items-center gap-2 mb-3">
-            <select
-              value={days}
-              onChange={(e) => setDays(Number(e.target.value))}
-              className="text-xs border border-[#ddd] rounded-lg px-2 py-1.5 bg-white"
-              data-testid="gmail-days-select"
-            >
-              <option value={3}>Last 3 days</option>
-              <option value={7}>Last 7 days</option>
-              <option value={14}>Last 14 days</option>
-              <option value={30}>Last 30 days</option>
-            </select>
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <label className="text-[10px] text-[#888] font-medium">From</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="text-xs border border-[#ddd] rounded-lg px-2 py-1.5 bg-white"
+                data-testid="gmail-date-from"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <label className="text-[10px] text-[#888] font-medium">To</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="text-xs border border-[#ddd] rounded-lg px-2 py-1.5 bg-white"
+                data-testid="gmail-date-to"
+              />
+            </div>
             <button
               onClick={scanEmails}
               disabled={scanning}
@@ -208,7 +221,7 @@ export default function GmailLabelImport({ getAuthHeader, onImported }) {
               data-testid="gmail-scan-btn"
             >
               {scanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-              {scanning ? "Scanning..." : "Scan Emails"}
+              {scanning ? "Scanning..." : "Scan"}
             </button>
             {selected.size > 0 && (
               <button

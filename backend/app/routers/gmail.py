@@ -282,7 +282,9 @@ def _get_service(creds: Credentials):
 @router.get("/scan")
 async def scan_emails(
     platform: Optional[str] = Query(None),
-    days: int = Query(14, ge=1, le=60),
+    days: int = Query(None, ge=1, le=60),
+    after: Optional[str] = Query(None),
+    before: Optional[str] = Query(None),
     admin: dict = Depends(get_admin_user),
 ):
     """Scan Gmail for shipping label emails using broad search. Detects platform from content."""
@@ -291,17 +293,27 @@ async def scan_emails(
     results = []
     seen_ids = set()
 
+    # Build date filter
+    date_filter = ""
+    if after and before:
+        date_filter = f" after:{after} before:{before}"
+    elif after:
+        date_filter = f" after:{after}"
+    elif days:
+        date_filter = f" newer_than:{days}d"
+    else:
+        date_filter = " newer_than:30d"
+
     queries = []
     if platform and platform in PLATFORM_FILTERS:
         queries.append(PLATFORM_FILTERS[platform]["query"])
     else:
-        # Run platform-specific queries + the broad catch-all
         for filt in PLATFORM_FILTERS.values():
             queries.append(filt["query"])
         queries.append(BROAD_QUERY)
 
     for query_str in queries:
-        query = f'{query_str} newer_than:{days}d'
+        query = f'{query_str}{date_filter}'
         try:
             resp = service.users().messages().list(userId="me", q=query, maxResults=50).execute()
             msg_ids = [m["id"] for m in resp.get("messages", [])]
