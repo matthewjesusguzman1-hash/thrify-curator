@@ -17,9 +17,21 @@ from app.services.object_storage import put_object, APP_NAME
 from dotenv import load_dotenv
 from pathlib import Path
 
-load_dotenv(Path(__file__).parent.parent.parent / '.env')
+_env_path = Path(__file__).parent.parent.parent / '.env'
+load_dotenv(_env_path, override=True)
 
 router = APIRouter(prefix="/gmail", tags=["gmail"])
+
+
+def _get_google_creds():
+    """Read Google OAuth creds fresh from env (handles late .env loading)."""
+    load_dotenv(_env_path, override=True)
+    client_id = os.environ.get("GOOGLE_CLIENT_ID", "")
+    client_secret = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+    frontend_url = os.environ.get("FRONTEND_URL", "")
+    redirect_uri = f"{frontend_url}/api/gmail/callback"
+    return client_id, client_secret, frontend_url, redirect_uri
+
 
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
@@ -33,14 +45,18 @@ SCOPES = [
     "https://www.googleapis.com/auth/userinfo.profile",
 ]
 
-CLIENT_CONFIG = {
-    "web": {
-        "client_id": GOOGLE_CLIENT_ID,
-        "client_secret": GOOGLE_CLIENT_SECRET,
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
+CLIENT_CONFIG = None  # Built dynamically via _get_client_config()
+
+def _get_client_config():
+    cid, csecret, _, _ = _get_google_creds()
+    return {
+        "web": {
+            "client_id": cid,
+            "client_secret": csecret,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+        }
     }
-}
 
 # Platform email senders and subject patterns
 PLATFORM_FILTERS = {
@@ -64,7 +80,8 @@ PLATFORM_FILTERS = {
 
 
 def _build_flow(state: str = None) -> Flow:
-    flow = Flow.from_client_config(CLIENT_CONFIG, scopes=SCOPES, redirect_uri=REDIRECT_URI)
+    _, _, _, redirect_uri = _get_google_creds()
+    flow = Flow.from_client_config(_get_client_config(), scopes=SCOPES, redirect_uri=redirect_uri)
     if state:
         flow.state = state
     return flow
@@ -75,7 +92,8 @@ def _build_flow(state: str = None) -> Flow:
 @router.get("/auth")
 async def gmail_auth(admin: dict = Depends(get_admin_user)):
     """Start Gmail OAuth flow."""
-    if not GOOGLE_CLIENT_ID:
+    cid, _, _, _ = _get_google_creds()
+    if not cid:
         raise HTTPException(400, "Gmail integration not configured")
     flow = _build_flow()
     url, state = flow.authorization_url(access_type="offline", prompt="consent")
@@ -97,29 +115,35 @@ async def gmail_callback(
     from urllib.parse import quote
     import httpx
 
+    _, _, cred_frontend, _ = _get_google_creds()
+
     # Google may redirect with an error instead of a code
     if error:
         print(f"[Gmail] Google returned error: {error}")
-        return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=error&reason={quote(error)}")
+        return RedirectResponse(f"{cred_frontend}/admin?gmail=error&reason={quote(error)}")
 
     if not code or not state:
-        return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=error&reason=missing_code_or_state")
+        return RedirectResponse(f"{cred_frontend}/admin?gmail=error&reason=missing_code_or_state")
 
     try:
         doc = await db.gmail_oauth_states.find_one({"state": state})
         if not doc:
             print(f"[Gmail] Callback: state not found in DB")
-            return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=error&reason=invalid_state")
+            return RedirectResponse(f"{cred_frontend}/admin?gmail=error&reason=invalid_state")
         admin_id = doc["admin_id"]
         await db.gmail_oauth_states.delete_one({"state": state})
+
+        # Read credentials fresh at request time
+        cred_id, cred_secret, cred_frontend, cred_redirect = _get_google_creds()
+        print(f"[Gmail] Token exchange: secret_len={len(cred_secret)}, secret_end=...{cred_secret[-4:] if cred_secret else 'EMPTY'}, redirect={cred_redirect}")
 
         # Exchange code for tokens via direct HTTP (more reliable than library)
         async with httpx.AsyncClient() as client:
             resp = await client.post("https://oauth2.googleapis.com/token", data={
                 "code": code,
-                "client_id": GOOGLE_CLIENT_ID,
-                "client_secret": GOOGLE_CLIENT_SECRET,
-                "redirect_uri": REDIRECT_URI,
+                "client_id": cred_id,
+                "client_secret": cred_secret,
+                "redirect_uri": cred_redirect,
                 "grant_type": "authorization_code",
             })
             token_data = resp.json()
@@ -127,7 +151,7 @@ async def gmail_callback(
         if "error" in token_data:
             err = token_data.get("error_description", token_data["error"])
             print(f"[Gmail] Token exchange failed: {err}")
-            return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=error&reason={quote(err)}")
+            return RedirectResponse(f"{cred_frontend}/admin?gmail=error&reason={quote(err)}")
 
         await db.gmail_tokens.update_one(
             {"admin_id": admin_id},
@@ -136,20 +160,20 @@ async def gmail_callback(
                 "access_token": token_data.get("access_token"),
                 "refresh_token": token_data.get("refresh_token"),
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "client_id": GOOGLE_CLIENT_ID,
-                "client_secret": GOOGLE_CLIENT_SECRET,
+                "client_id": cred_id,
+                "client_secret": cred_secret,
                 "expires_in": token_data.get("expires_in"),
                 "connected_at": datetime.now(timezone.utc).isoformat(),
             }},
             upsert=True,
         )
-        return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=connected")
+        return RedirectResponse(f"{cred_frontend}/admin?gmail=connected")
     except Exception as e:
         import traceback
         print(f"[Gmail] Callback error: {type(e).__name__}: {e}")
         traceback.print_exc()
         safe_msg = quote(str(e)[:200])
-        return RedirectResponse(f"{FRONTEND_URL}/admin?gmail=error&reason={safe_msg}")
+        return RedirectResponse(f"{cred_frontend}/admin?gmail=error&reason={safe_msg}")
 
 
 @router.get("/status")
