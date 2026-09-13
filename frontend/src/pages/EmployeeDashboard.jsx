@@ -46,7 +46,8 @@ import {
   Moon,
   Video,
   Package,
-  Monitor
+  Monitor,
+  Bot
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -2529,6 +2530,17 @@ export default function EmployeeDashboard({
                   <span className="text-[10px] text-white/50">Guides & Reference</span>
                 </button>
               )}
+
+              {/* AI Assistant Tile */}
+              <button
+                onClick={() => setActiveTile("ai")}
+                className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left border border-white/10 hover:border-white/25 transition-all active:scale-[0.98]"
+                data-testid="tile-ai"
+              >
+                <Bot className="w-6 h-6 text-[#00D4FF] mb-2" />
+                <span className="block text-sm font-medium text-white">AI Assistant</span>
+                <span className="text-[10px] text-white/50">Listing Helper</span>
+              </button>
             </div>
           )}
 
@@ -2551,6 +2563,15 @@ export default function EmployeeDashboard({
                 headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
               })}
               onBack={() => setActiveTile(null)}
+            />
+          )}
+
+          {/* AI Assistant Tile Content */}
+          {!isAdminView && activeTile === "ai" && (
+            <AIAssistant
+              token={localStorage.getItem("token")}
+              isDark={isDark}
+              fullPage={true}
             />
           )}
 
