@@ -61,19 +61,19 @@ def _get_client_config():
 # Platform email senders and subject patterns
 PLATFORM_FILTERS = {
     "poshmark": {
-        "query": 'from:poshmark.com subject:(ship OR label OR sold OR order)',
+        "query": '(from:poshmark.com OR subject:("on Poshmark" OR "sold to @")) subject:("just sold" OR "shipping label" OR "ship now")',
         "name": "Poshmark",
     },
     "mercari": {
-        "query": 'from:mercari.com subject:(ship OR label OR sold OR order)',
+        "query": '(from:mercari.com OR subject:("on Mercari")) subject:(ship OR sold OR label OR order)',
         "name": "Mercari",
     },
     "ebay": {
-        "query": 'from:ebay.com subject:(ship OR label OR sold OR order)',
+        "query": '(from:ebay.com OR subject:("on eBay")) subject:("made the sale" OR "shipping label" OR "sold")',
         "name": "eBay",
     },
     "depop": {
-        "query": 'from:depop.com subject:(ship OR label OR sold OR order OR download)',
+        "query": '(from:depop.com OR subject:("on Depop")) subject:(ship OR sold OR label OR "sale confirmation")',
         "name": "Depop",
     },
 }
