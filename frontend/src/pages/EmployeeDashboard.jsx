@@ -1666,7 +1666,7 @@ export default function EmployeeDashboard({
   if (empPage === "ai") {
     return (
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460]" data-testid="employee-dashboard" data-theme={isDark ? "dark" : "light"}>
-        <div className="flex-1 px-4 pt-6 pb-4 max-w-2xl mx-auto w-full" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)' }}>
+        <div className="flex-1 px-4 pt-6 pb-4 w-full" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)' }}>
           <button
             onClick={() => setEmpPage(null)}
             className="flex items-center gap-1.5 text-white/60 hover:text-white text-sm transition-colors mb-4"
