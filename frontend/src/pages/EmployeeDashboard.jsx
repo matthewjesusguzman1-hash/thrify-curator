@@ -2355,6 +2355,52 @@ export default function EmployeeDashboard({
 
           {/* Tile grid and morph sections below */}
 
+          {/* ─── MORPH SECTIONS (appear below tiles when active) ─── */}
+          {!isAdminView && activeTile === "messages" && (
+            <>
+              <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl overflow-hidden border border-white/10">
+                <button
+                  onClick={() => setActiveTile(null)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+                  data-testid="messages-minimize"
+                >
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-[#00D4FF]" />
+                    <span className="text-sm font-medium text-white">Messages</span>
+                  </div>
+                  <Minus className="w-4 h-4 text-white/50" />
+                </button>
+              </div>
+              <MessagingSection
+                getAuthHeader={() => ({
+                  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+                })}
+                userType="employee"
+                userId={user?.id}
+                userName={user?.name || "Employee"}
+                autoExpand={true}
+                isDark={isDark}
+              />
+            </>
+          )}
+
+          {!isAdminView && activeTile === "shifts" && (
+            <>
+              <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl overflow-hidden border border-white/10">
+                <button
+                  onClick={() => setActiveTile(null)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+                  data-testid="shifts-minimize"
+                >
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-[#8B5CF6]" />
+                    <span className="text-sm font-medium text-white">Recent Shifts</span>
+                  </div>
+                  <Minus className="w-4 h-4 text-white/50" />
+                </button>
+              </div>
+            </>
+          )}
           {/* ─── TILE NAVIGATION ─── */}
 
 
@@ -2458,52 +2504,6 @@ export default function EmployeeDashboard({
             </div>
           )}
 
-          {/* ─── MORPH SECTIONS (appear below tiles when active) ─── */}
-          {!isAdminView && activeTile === "messages" && (
-            <>
-              <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl overflow-hidden border border-white/10">
-                <button
-                  onClick={() => setActiveTile(null)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
-                  data-testid="messages-minimize"
-                >
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-[#00D4FF]" />
-                    <span className="text-sm font-medium text-white">Messages</span>
-                  </div>
-                  <Minus className="w-4 h-4 text-white/50" />
-                </button>
-              </div>
-              <MessagingSection
-                getAuthHeader={() => ({
-                  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-                })}
-                userType="employee"
-                userId={user?.id}
-                userName={user?.name || "Employee"}
-                autoExpand={true}
-                isDark={isDark}
-              />
-            </>
-          )}
-
-          {!isAdminView && activeTile === "shifts" && (
-            <>
-              <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl overflow-hidden border border-white/10">
-                <button
-                  onClick={() => setActiveTile(null)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
-                  data-testid="shifts-minimize"
-                >
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-[#8B5CF6]" />
-                    <span className="text-sm font-medium text-white">Recent Shifts</span>
-                  </div>
-                  <Minus className="w-4 h-4 text-white/50" />
-                </button>
-              </div>
-            </>
-          )}
 
           {/* Recent Shifts content — admin always, employee when shifts tile active */}
           {(isAdminView || activeTile === "shifts") && (
