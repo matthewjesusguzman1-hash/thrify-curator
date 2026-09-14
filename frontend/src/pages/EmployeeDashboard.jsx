@@ -2271,9 +2271,10 @@ export default function EmployeeDashboard({
               getAuthHeader={() => ({
                 headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
               })}
+              userType="employee"
               userId={user?.id}
               userName={user?.name || "Employee"}
-              userRole={user?.role || "employee"}
+              autoExpand={true}
               isDark={isDark}
             />
             </>
