@@ -1713,7 +1713,7 @@ export default function EmployeeDashboard({
           </div>
           {/* Navigation buttons below, centered */}
           <div className="flex items-center justify-center gap-1 flex-wrap">
-            <Link to="/" onClick={() => lightTap()}>
+            <Link to="/dashboard" onClick={() => { lightTap(); setEmpPage(null); setActiveTile(null); window.scrollTo(0, 0); }}>
               <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 px-2" data-testid="home-btn">
                 <Home className="w-4 h-4 mr-1" />
                 Home
