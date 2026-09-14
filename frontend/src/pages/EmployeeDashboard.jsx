@@ -2353,183 +2353,10 @@ export default function EmployeeDashboard({
             </div>
           </div>
 
-          {/* Messages Morph Section (employee only) — appears AFTER pay period */}
-          {!isAdminView && activeTile === "messages" && (
-            <>
-            <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl overflow-hidden border border-white/10">
-              <button
-                onClick={() => setActiveTile(null)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
-                data-testid="messages-minimize"
-              >
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-[#00D4FF]" />
-                  <span className="text-sm font-medium text-white">Messages</span>
-                </div>
-                <Minus className="w-4 h-4 text-white/50" />
-              </button>
-            </div>
-            <MessagingSection
-              getAuthHeader={() => ({
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-              })}
-              userType="employee"
-              userId={user?.id}
-              userName={user?.name || "Employee"}
-              autoExpand={true}
-              isDark={isDark}
-            />
-            </>
-          )}
+          {/* Tile grid and morph sections below */}
 
-          {/* Recent Shifts - behind morph tile for employee, always for admin */}
-          {(isAdminView || activeTile === "shifts") && (
-          <>
-          {/* Shifts Minimize Bar (employee morph) */}
-          {!isAdminView && activeTile === "shifts" && (
-            <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl overflow-hidden border border-white/10">
-              <button
-                onClick={() => setActiveTile(null)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
-                data-testid="shifts-minimize"
-              >
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[#8B5CF6]" />
-                  <span className="text-sm font-medium text-white">Recent Shifts</span>
-                </div>
-                <Minus className="w-4 h-4 text-white/50" />
-              </button>
-            </div>
-          )}
-          <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
-            <div className="h-1.5 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9]" />
-            <div className="p-4 sm:p-6">
-              <h2 className="font-poppins text-sm sm:text-lg font-semibold text-[#1A1A2E] mb-4">
-                {(() => {
-                  if (!summary?.period_start || !summary?.period_end) return "Recent Shifts";
-                  const periodStart = new Date(summary.period_start);
-                  const periodEnd = new Date(summary.period_end);
-                  // Use timezone-aware formatting for remote workers
-                  const timezone = isRemoteWorker() && showPhilippineTime ? 'Asia/Manila' : 'America/Chicago';
-                  // Check if any entries in current period
-                  const currentPeriodEntries = entries.filter(entry => {
-                    const clockIn = new Date(entry.clock_in);
-                    return clockIn >= periodStart && clockIn <= periodEnd;
-                  });
-                  const startStr = periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
-                  const endStr = periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
-                  if (currentPeriodEntries.length > 0) {
-                    return (
-                      <span className="block">
-                        <span className="block sm:inline">Pay Period Shifts</span>
-                        <span className="block sm:inline text-xs sm:text-sm font-normal text-gray-500 sm:ml-2">({startStr} - {endStr})</span>
-                      </span>
-                    );
-                  }
-                  // Show previous period label
-                  const prevStart = new Date(periodStart);
-                  prevStart.setDate(prevStart.getDate() - 14);
-                  const prevEnd = new Date(periodEnd);
-                  prevEnd.setDate(prevEnd.getDate() - 14);
-                  const prevStartStr = prevStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
-                  const prevEndStr = prevEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
-                  return (
-                    <span className="block">
-                      <span className="block sm:inline">Previous Period</span>
-                      <span className="block sm:inline text-xs sm:text-sm font-normal text-gray-500 sm:ml-2">({prevStartStr} - {prevEndStr})</span>
-                    </span>
-                  );
-                })()}
-              </h2>
-              {(() => {
-                // Get shifts for display based on pay period
-                let shiftsToShow = [];
-                if (summary?.period_start && summary?.period_end) {
-                  const periodStart = new Date(summary.period_start);
-                  const periodEnd = new Date(summary.period_end);
-                  
-                  // Get current period entries
-                  const currentPeriodEntries = entries.filter(entry => {
-                    const clockIn = new Date(entry.clock_in);
-                    return clockIn >= periodStart && clockIn <= periodEnd;
-                  });
-                  
-                  if (currentPeriodEntries.length > 0) {
-                    shiftsToShow = currentPeriodEntries;
-                  } else {
-                    // Get previous period entries
-                    const prevStart = new Date(periodStart);
-                    prevStart.setDate(prevStart.getDate() - 14);
-                    const prevEnd = new Date(periodEnd);
-                    prevEnd.setDate(prevEnd.getDate() - 14);
-                    
-                    shiftsToShow = entries.filter(entry => {
-                      const clockIn = new Date(entry.clock_in);
-                      return clockIn >= prevStart && clockIn <= prevEnd;
-                    });
-                  }
-                } else {
-                  shiftsToShow = entries;
-                }
-                
-                // Sort by clock_in descending
-                shiftsToShow.sort((a, b) => new Date(b.clock_in) - new Date(a.clock_in));
-                
-                return shiftsToShow.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">No shifts recorded for this pay period</p>
-                ) : (
-                  <div 
-                    className="space-y-3 max-h-[320px] overflow-y-auto pr-2" 
-                    style={{ scrollbarWidth: 'thin' }}
-                    data-testid="shifts-list"
-                  >
-                    {shiftsToShow.map((entry) => (
-                      <div 
-                        key={entry.id} 
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                        data-testid={`shift-entry-${entry.id}`}
-                      >
-                        <div>
-                          <p className="font-medium text-[#1A1A2E]">
-                            {formatDateTime(entry.clock_in)}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {entry.clock_out ? `Out: ${formatDateTime(entry.clock_out)}` : 'In progress...'}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          {entry.clock_out ? (
-                            <div className="flex flex-col items-end gap-1">
-                              <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#00D4FF]/10 rounded-full text-sm font-medium text-[#0891B2]">
-                                <Clock className="w-3 h-3" />
-                                {formatHoursToHMS(entry.total_hours)}
-                              </span>
-                              {entry.hourly_rate ? (
-                                <span className="text-[10px] text-gray-400">${entry.hourly_rate.toFixed(2)}/hr</span>
-                              ) : summary.hourly_rate ? (
-                                <span className="text-[10px] text-gray-400">${Number(summary.hourly_rate).toFixed(2)}/hr</span>
-                              ) : null}
-                              {entry.anydesk_auto_clocked_out && (
-                                <span className="text-[10px] text-purple-600 font-medium">AnyDesk Auto-Out</span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 rounded-full text-sm font-medium text-green-700">
-                              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                              Active
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
+          {/* ─── TILE NAVIGATION ─── */}
 
-          </>
-          )}
 
           {/* ─── TILE NAVIGATION ─── */}
           {!isAdminView && (
@@ -2631,8 +2458,143 @@ export default function EmployeeDashboard({
             </div>
           )}
 
+          {/* ─── MORPH SECTIONS (appear below tiles when active) ─── */}
+          {!isAdminView && activeTile === "messages" && (
+            <>
+              <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl overflow-hidden border border-white/10">
+                <button
+                  onClick={() => setActiveTile(null)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+                  data-testid="messages-minimize"
+                >
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-[#00D4FF]" />
+                    <span className="text-sm font-medium text-white">Messages</span>
+                  </div>
+                  <Minus className="w-4 h-4 text-white/50" />
+                </button>
+              </div>
+              <MessagingSection
+                getAuthHeader={() => ({
+                  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+                })}
+                userType="employee"
+                userId={user?.id}
+                userName={user?.name || "Employee"}
+                autoExpand={true}
+                isDark={isDark}
+              />
+            </>
+          )}
+
+          {!isAdminView && activeTile === "shifts" && (
+            <>
+              <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl overflow-hidden border border-white/10">
+                <button
+                  onClick={() => setActiveTile(null)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+                  data-testid="shifts-minimize"
+                >
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-[#8B5CF6]" />
+                    <span className="text-sm font-medium text-white">Recent Shifts</span>
+                  </div>
+                  <Minus className="w-4 h-4 text-white/50" />
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Recent Shifts content — admin always, employee when shifts tile active */}
+          {(isAdminView || activeTile === "shifts") && (
+          <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
+            <div className="h-1.5 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9]" />
+            <div className="p-4 sm:p-6">
+              <h2 className="font-poppins text-sm sm:text-lg font-semibold text-[#1A1A2E] mb-4">
+                {(() => {
+                  if (!summary?.period_start || !summary?.period_end) return "Recent Shifts";
+                  const periodStart = new Date(summary.period_start);
+                  const periodEnd = new Date(summary.period_end);
+                  const timezone = isRemoteWorker() && showPhilippineTime ? 'Asia/Manila' : 'America/Chicago';
+                  const currentPeriodEntries = entries.filter(entry => {
+                    const clockIn = new Date(entry.clock_in);
+                    return clockIn >= periodStart && clockIn <= periodEnd;
+                  });
+                  const startStr = periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
+                  const endStr = periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
+                  if (currentPeriodEntries.length > 0) {
+                    return (
+                      <span className="block">
+                        <span className="block sm:inline">Pay Period Shifts</span>
+                        <span className="block sm:inline text-xs sm:text-sm font-normal text-gray-500 sm:ml-2">({startStr} - {endStr})</span>
+                      </span>
+                    );
+                  }
+                  const prevStart = new Date(periodStart); prevStart.setDate(prevStart.getDate() - 14);
+                  const prevEnd = new Date(periodEnd); prevEnd.setDate(prevEnd.getDate() - 14);
+                  const prevStartStr = prevStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
+                  const prevEndStr = prevEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
+                  return (
+                    <span className="block">
+                      <span className="block sm:inline">Previous Period</span>
+                      <span className="block sm:inline text-xs sm:text-sm font-normal text-gray-500 sm:ml-2">({prevStartStr} - {prevEndStr})</span>
+                    </span>
+                  );
+                })()}
+              </h2>
+              {(() => {
+                if (!entries || entries.length === 0) {
+                  return (
+                    <div className="text-center py-8">
+                      <Clock className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                      <p className="text-sm text-gray-400 font-medium">No time entries yet</p>
+                      <p className="text-xs text-gray-300 mt-1">Clock in to start tracking</p>
+                    </div>
+                  );
+                }
+                const sortedEntries = [...entries].sort((a, b) => new Date(b.clock_in) - new Date(a.clock_in));
+                const timezone = isRemoteWorker() && showPhilippineTime ? 'Asia/Manila' : 'America/Chicago';
+                return (
+                  <div className="space-y-3">
+                    {sortedEntries.map((entry, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {new Date(entry.clock_in).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: timezone })}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(entry.clock_in).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: timezone })}
+                            {entry.clock_out ? (
+                              <> → {new Date(entry.clock_out).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: timezone })}</>
+                            ) : ' → Active'}
+                          </p>
+                          {entry.was_auto_clocked_out && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <AlertCircle className="w-3 h-3 text-purple-600" />
+                              <span className="text-[10px] text-amber-600 font-medium">Auto-Out</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          {entry.clock_out ? (
+                            <span className="text-sm font-semibold text-[#8B5CF6]">{entry.total_hours?.toFixed(2) || '0.00'}h</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 rounded-full text-sm font-medium text-green-700">
+                              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" /> Active
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
-          {/* ═══ END DASHBOARD BODY HIDING DIV ═══ */}
+          )}
+
+          </div>
+          {/* ═══ END DASHBOARD BODY ═══ */}
 
           {/* ═══ FULL-PAGE: FORMS ═══ */}
           {empPage === "forms" && !isAdminView && (
