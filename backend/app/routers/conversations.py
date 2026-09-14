@@ -287,6 +287,24 @@ async def send_other_admins_notification(sending_admin_id: str, sending_admin_na
 
 # ============ EMPLOYEE MESSAGING ============
 
+
+@router.get("/employee/unread-count")
+async def get_employee_unread_count(user: dict = Depends(get_current_user)):
+    """Get unread message count WITHOUT marking messages as read."""
+    user_id = user.get("id") or user.get("email")
+    conversation = await db.conversations.find_one(
+        {"participant_type": "employee", "participant_id": user_id, "deleted_at": {"$exists": False}},
+        {"messages": 1, "_id": 0},
+    )
+    if not conversation or not conversation.get("messages"):
+        return {"unread_count": 0}
+    unread = sum(
+        1 for m in conversation["messages"]
+        if m.get("sender_type") == "admin" and not m.get("read") and not m.get("deleted_at")
+    )
+    return {"unread_count": unread}
+
+
 @router.get("/employee/my-conversation")
 async def get_employee_conversation(user: dict = Depends(get_current_user)):
     """Get or create the employee's conversation with admin"""

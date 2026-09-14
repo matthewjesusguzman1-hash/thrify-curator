@@ -709,23 +709,17 @@ export default function EmployeeDashboard({
     
     const checkMessages = async () => {
       try {
-        const msgRes = await axios.get(`${API}/conversations/employee/my-conversation`, getAuthHeader());
-        const messages = msgRes.data?.messages || [];
-        const unread = messages.filter(m => m.sender_type === 'admin' && !m.read).length;
+        const { data } = await axios.get(`${API}/conversations/employee/unread-count`, getAuthHeader());
+        const unread = data.unread_count || 0;
         setUnreadMessageCount(unread);
         
         // Show desktop notification if new unread messages appeared
         if (unread > lastUnreadCountRef.current && unread > 0) {
-          // Find the latest unread admin message
-          const latestUnread = [...messages]
-            .filter(m => m.sender_type === 'admin' && !m.read)
-            .sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at))[0];
-          
           // Browser notification
           if ('Notification' in window && Notification.permission === 'granted') {
             try {
               const notif = new Notification('New message from admin', {
-                body: latestUnread?.content?.substring(0, 100) || 'You have a new message',
+                body: 'You have a new message',
                 icon: '/favicon.ico',
                 tag: 'admin-message',
                 renotify: true,
