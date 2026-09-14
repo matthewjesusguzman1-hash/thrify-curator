@@ -74,10 +74,9 @@ export default function MessagingSection({
     isAtBottomRef.current = checkIfAtBottom();
   };
   
-  // Focus input when expanded and scroll to bottom initially
+  // Scroll to bottom initially when expanded (don't auto-focus input — let user tap it)
   useEffect(() => {
     if (expanded) {
-      inputRef.current?.focus();
       // Initial scroll to bottom when opening
       setTimeout(() => {
         if (messagesContainerRef.current) {
