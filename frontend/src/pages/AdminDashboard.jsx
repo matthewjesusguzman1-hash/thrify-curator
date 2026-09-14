@@ -850,7 +850,7 @@ export default function AdminDashboard() {
     };
     registerPush();
     
-    // Poll for new notifications and data every 30 seconds
+    // Poll for new notifications and data every 15 seconds
     const pollInterval = setInterval(() => {
       fetchNotifications();
       fetchMessageUnreadCount(); // Also poll for new messages
@@ -863,7 +863,7 @@ export default function AdminDashboard() {
       axios.get(`${API}/video-calls/call-requests/pending`, getAuthHeader())
         .then(res => setPendingVideoCallCount((res.data.requests || []).length))
         .catch(() => {});
-    }, 30000);
+    }, 15000);
     // Initial remote badge fetch
     axios.get(`${API}/remote-sessions/unread-count`, getAuthHeader())
       .then(res => { setRemoteAlertCount(res.data.alert_count || 0); setRemoteActiveCount(res.data.active_sessions || 0); })
