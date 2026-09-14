@@ -1756,10 +1756,14 @@ export default function EmployeeDashboard({
                     lightTap();
                     setShowFullScreenMessages(true);
                   }}
-                  className="text-white/70 hover:text-white hover:bg-white/10 px-2 relative"
+                  className={`hover:text-white hover:bg-white/10 px-2 relative ${
+                    unreadMessageCount > 0
+                      ? "text-[#00D4FF] bg-[#00D4FF]/10"
+                      : "text-white/70"
+                  }`}
                   data-testid="messages-shortcut-btn"
                 >
-                  <MessageSquare className="w-4 h-4 mr-1" />
+                  <MessageSquare className={`w-4 h-4 mr-1 ${unreadMessageCount > 0 ? "drop-shadow-[0_0_4px_rgba(0,212,255,0.6)]" : ""}`} />
                   Messages
                   {unreadMessageCount > 0 && (
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold animate-pulse">
@@ -2553,13 +2557,17 @@ export default function EmployeeDashboard({
               {/* Messages Tile */}
               <button
                 onClick={() => setActiveTile("messages")}
-                className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left border border-white/10 hover:border-white/25 transition-all active:scale-[0.98]"
+                className={`bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left transition-all active:scale-[0.98] ${
+                  unreadMessageCount > 0
+                    ? "border-2 border-[#00D4FF] shadow-[0_0_12px_rgba(0,212,255,0.35)] animate-pulse-subtle"
+                    : "border border-white/10 hover:border-white/25"
+                }`}
                 data-testid="tile-messages"
               >
-                <MessageSquare className="w-6 h-6 text-[#00D4FF] mb-2" />
+                <MessageSquare className={`w-6 h-6 mb-2 ${unreadMessageCount > 0 ? "text-[#00D4FF] drop-shadow-[0_0_6px_rgba(0,212,255,0.6)]" : "text-[#00D4FF]"}`} />
                 <span className="block text-sm font-medium text-white">Messages</span>
                 {unreadMessageCount > 0 && (
-                  <span className="inline-flex items-center justify-center w-5 h-5 bg-red-500 rounded-full text-[10px] text-white font-bold mt-1">{unreadMessageCount}</span>
+                  <span className="inline-flex items-center justify-center w-5 h-5 bg-red-500 rounded-full text-[10px] text-white font-bold mt-1 animate-bounce">{unreadMessageCount}</span>
                 )}
               </button>
 

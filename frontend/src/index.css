@@ -806,3 +806,12 @@ table tbody tr:hover {
 [data-theme="light"] [data-testid="notification-dropdown"] * {
   color: #152238;
 }
+
+
+@keyframes pulse-subtle {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 212, 255, 0.25); }
+  50% { box-shadow: 0 0 16px rgba(0, 212, 255, 0.5); }
+}
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
