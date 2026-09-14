@@ -39,7 +39,11 @@ export default function CSVUpdateButton({ getAuthHeader }) {
 
       const data = await resp.json();
       if (resp.ok) {
-        toast.success(`CSV updated — ${data.imported || data.total_imported || 0} items imported`);
+        const count = data.details?.rows_processed || data.imported || data.total_imported || 0;
+        toast.success(`CSV updated — ${count} items imported`);
+        if (data.warnings && data.warnings.length > 0) {
+          data.warnings.forEach(w => toast.warning(w, { duration: 10000 }));
+        }
       } else {
         toast.error(data.detail || "Import failed");
       }

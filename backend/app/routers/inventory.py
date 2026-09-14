@@ -108,8 +108,8 @@ VENDOO_COLUMN_MAPPINGS = {
     "title": ["title", "item_name", "name", "item_title", "listing_title"],
     "sku": ["sku", "item_sku", "listing_sku", "id", "item_id"],
     "platform": ["platform", "sold_platform", "sold platform", "platform_sold", "marketplace", "sold_on", "listed_on", "listing_platforms", "listing platforms"],
-    "status": ["status", "listing_status", "item_status", "state"],
-    "sold_date": ["sold_date", "sold date", "date_sold", "sale_date", "sold_on_date", "sold"],
+    "status": ["status", "listing_status", "item_status", "state", "listing_state", "item_state", "sell_status"],
+    "sold_date": ["sold_date", "sold date", "date_sold", "sale_date", "sold_on_date", "sold", "sold_on", "date", "order_date", "order date", "sold_at", "sale_completed", "completed_date", "completed date"],
     "listed_date": ["listed_date", "listed date", "date_listed", "list_date", "listed_on", "listing_date"],
     "created_date": ["created_date", "date_created", "created", "created_at", "date_added"],
     "price_listed": ["listed_price", "price_listed", "price", "list_price", "asking_price"],
@@ -279,10 +279,18 @@ async def import_inventory_csv(
             }
         }
         
+        # Check for critical unmapped columns and warn
+        warnings = []
+        critical_fields = {"sku": "SKU", "status": "Status", "sold_date": "Sold Date", "title": "Title"}
+        for field, label in critical_fields.items():
+            if not detected_columns["mapped_fields"].get(field):
+                warnings.append(f"'{label}' column not found — pull list and orders may not work correctly. CSV columns: {', '.join(reader.fieldnames[:15])}")
+        
         return {
             "success": True,
             "message": f"Imported {rows_processed} items ({rows_new} new, {rows_updated} updated)",
             "batch_id": batch_id,
+            "warnings": warnings,
             "details": {
                 "rows_processed": rows_processed,
                 "rows_new": rows_new,
