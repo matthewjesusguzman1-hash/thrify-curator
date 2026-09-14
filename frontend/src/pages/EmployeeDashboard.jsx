@@ -2251,35 +2251,6 @@ export default function EmployeeDashboard({
             </div>
           </div>
 
-          {/* Messages Morph Section (employee only) */}
-          {!isAdminView && activeTile === "messages" && (
-            <>
-            <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl overflow-hidden border border-white/10">
-              <button
-                onClick={() => setActiveTile(null)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
-                data-testid="messages-minimize"
-              >
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-[#00D4FF]" />
-                  <span className="text-sm font-medium text-white">Messages</span>
-                </div>
-                <Minus className="w-4 h-4 text-white/50" />
-              </button>
-            </div>
-            <MessagingSection
-              getAuthHeader={() => ({
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-              })}
-              userType="employee"
-              userId={user?.id}
-              userName={user?.name || "Employee"}
-              autoExpand={true}
-              isDark={isDark}
-            />
-            </>
-          )}
-
           {/* Pay Period Summary Card - always visible */}
           <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-[#FF1493] to-[#8B5CF6]" />
@@ -2381,6 +2352,35 @@ export default function EmployeeDashboard({
               )}
             </div>
           </div>
+
+          {/* Messages Morph Section (employee only) — appears AFTER pay period */}
+          {!isAdminView && activeTile === "messages" && (
+            <>
+            <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl overflow-hidden border border-white/10">
+              <button
+                onClick={() => setActiveTile(null)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+                data-testid="messages-minimize"
+              >
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-[#00D4FF]" />
+                  <span className="text-sm font-medium text-white">Messages</span>
+                </div>
+                <Minus className="w-4 h-4 text-white/50" />
+              </button>
+            </div>
+            <MessagingSection
+              getAuthHeader={() => ({
+                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+              })}
+              userType="employee"
+              userId={user?.id}
+              userName={user?.name || "Employee"}
+              autoExpand={true}
+              isDark={isDark}
+            />
+            </>
+          )}
 
           {/* Recent Shifts - behind morph tile for employee, always for admin */}
           {(isAdminView || activeTile === "shifts") && (
@@ -2532,19 +2532,21 @@ export default function EmployeeDashboard({
           )}
 
           {/* ─── TILE NAVIGATION ─── */}
-          {!isAdminView && !activeTile && (
+          {!isAdminView && (
             <div className="grid grid-cols-2 gap-3" data-testid="tile-grid">
               {/* Messages Tile */}
               <button
-                onClick={() => setActiveTile("messages")}
+                onClick={() => setActiveTile(activeTile === "messages" ? null : "messages")}
                 className={`bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left transition-all active:scale-[0.98] ${
-                  unreadMessageCount > 0
-                    ? "border-2 border-[#00D4FF] shadow-[0_0_12px_rgba(0,212,255,0.35)] animate-pulse-subtle"
-                    : "border border-white/10 hover:border-white/25"
+                  activeTile === "messages"
+                    ? "border-2 border-[#00D4FF] shadow-[0_0_12px_rgba(0,212,255,0.35)]"
+                    : unreadMessageCount > 0
+                      ? "border-2 border-[#00D4FF] shadow-[0_0_12px_rgba(0,212,255,0.35)] animate-pulse-subtle"
+                      : "border border-white/10 hover:border-white/25"
                 }`}
                 data-testid="tile-messages"
               >
-                <MessageSquare className={`w-6 h-6 mb-2 ${unreadMessageCount > 0 ? "text-[#00D4FF] drop-shadow-[0_0_6px_rgba(0,212,255,0.6)]" : "text-[#00D4FF]"}`} />
+                <MessageSquare className={`w-6 h-6 mb-2 ${unreadMessageCount > 0 || activeTile === "messages" ? "text-[#00D4FF] drop-shadow-[0_0_6px_rgba(0,212,255,0.6)]" : "text-[#00D4FF]"}`} />
                 <span className="block text-sm font-medium text-white">Messages</span>
                 {unreadMessageCount > 0 && (
                   <span className="inline-flex items-center justify-center w-5 h-5 bg-red-500 rounded-full text-[10px] text-white font-bold mt-1 animate-bounce">{unreadMessageCount}</span>
@@ -2553,8 +2555,12 @@ export default function EmployeeDashboard({
 
               {/* Pay Period & Shifts Tile */}
               <button
-                onClick={() => setActiveTile("shifts")}
-                className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left border border-white/10 hover:border-white/25 transition-all active:scale-[0.98]"
+                onClick={() => setActiveTile(activeTile === "shifts" ? null : "shifts")}
+                className={`bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl p-4 text-left transition-all active:scale-[0.98] ${
+                  activeTile === "shifts"
+                    ? "border-2 border-[#8B5CF6] shadow-[0_0_12px_rgba(139,92,246,0.35)]"
+                    : "border border-white/10 hover:border-white/25"
+                }`}
                 data-testid="tile-shifts"
               >
                 <Calendar className="w-6 h-6 text-[#8B5CF6] mb-2" />
