@@ -1076,13 +1076,11 @@ export default function EmployeeDashboard({
         liveActivityStartedRef.current = false;
       }
       
-      // Fetch unread message count for header badge
+      // Fetch unread message count for header badge (use lightweight endpoint that doesn't mark read)
       if (!isAdminView) {
         try {
-          const msgRes = await axios.get(`${API}/conversations/employee/my-conversation`, getAuthHeader());
-          const messages = msgRes.data?.messages || [];
-          const unread = messages.filter(m => m.sender_type === 'admin' && !m.read).length;
-          setUnreadMessageCount(unread);
+          const { data } = await axios.get(`${API}/conversations/employee/unread-count`, getAuthHeader());
+          setUnreadMessageCount(data.unread_count || 0);
         } catch (err) {
           // No conversation yet, that's ok
         }
