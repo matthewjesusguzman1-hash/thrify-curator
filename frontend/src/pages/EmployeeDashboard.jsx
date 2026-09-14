@@ -2401,6 +2401,93 @@ export default function EmployeeDashboard({
               </div>
             </>
           )}
+          {/* Recent Shifts content — admin always, employee when shifts tile active */}
+          {(isAdminView || activeTile === "shifts") && (
+          <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
+            <div className="h-1.5 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9]" />
+            <div className="p-4 sm:p-6">
+              <h2 className="font-poppins text-sm sm:text-lg font-semibold text-[#1A1A2E] mb-4">
+                {(() => {
+                  if (!summary?.period_start || !summary?.period_end) return "Recent Shifts";
+                  const periodStart = new Date(summary.period_start);
+                  const periodEnd = new Date(summary.period_end);
+                  const timezone = isRemoteWorker() && showPhilippineTime ? 'Asia/Manila' : 'America/Chicago';
+                  const currentPeriodEntries = entries.filter(entry => {
+                    const clockIn = new Date(entry.clock_in);
+                    return clockIn >= periodStart && clockIn <= periodEnd;
+                  });
+                  const startStr = periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
+                  const endStr = periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
+                  if (currentPeriodEntries.length > 0) {
+                    return (
+                      <span className="block">
+                        <span className="block sm:inline">Pay Period Shifts</span>
+                        <span className="block sm:inline text-xs sm:text-sm font-normal text-gray-500 sm:ml-2">({startStr} - {endStr})</span>
+                      </span>
+                    );
+                  }
+                  const prevStart = new Date(periodStart); prevStart.setDate(prevStart.getDate() - 14);
+                  const prevEnd = new Date(periodEnd); prevEnd.setDate(prevEnd.getDate() - 14);
+                  const prevStartStr = prevStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
+                  const prevEndStr = prevEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
+                  return (
+                    <span className="block">
+                      <span className="block sm:inline">Previous Period</span>
+                      <span className="block sm:inline text-xs sm:text-sm font-normal text-gray-500 sm:ml-2">({prevStartStr} - {prevEndStr})</span>
+                    </span>
+                  );
+                })()}
+              </h2>
+              {(() => {
+                if (!entries || entries.length === 0) {
+                  return (
+                    <div className="text-center py-8">
+                      <Clock className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                      <p className="text-sm text-gray-400 font-medium">No time entries yet</p>
+                      <p className="text-xs text-gray-300 mt-1">Clock in to start tracking</p>
+                    </div>
+                  );
+                }
+                const sortedEntries = [...entries].sort((a, b) => new Date(b.clock_in) - new Date(a.clock_in));
+                const timezone = isRemoteWorker() && showPhilippineTime ? 'Asia/Manila' : 'America/Chicago';
+                return (
+                  <div className="space-y-3">
+                    {sortedEntries.map((entry, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {new Date(entry.clock_in).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: timezone })}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(entry.clock_in).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: timezone })}
+                            {entry.clock_out ? (
+                              <> → {new Date(entry.clock_out).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: timezone })}</>
+                            ) : ' → Active'}
+                          </p>
+                          {entry.was_auto_clocked_out && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <AlertCircle className="w-3 h-3 text-purple-600" />
+                              <span className="text-[10px] text-amber-600 font-medium">Auto-Out</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          {entry.clock_out ? (
+                            <span className="text-sm font-semibold text-[#8B5CF6]">{entry.total_hours?.toFixed(2) || '0.00'}h</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 rounded-full text-sm font-medium text-green-700">
+                              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" /> Active
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+          )}
           {/* ─── TILE NAVIGATION ─── */}
 
 
@@ -2505,93 +2592,6 @@ export default function EmployeeDashboard({
           )}
 
 
-          {/* Recent Shifts content — admin always, employee when shifts tile active */}
-          {(isAdminView || activeTile === "shifts") && (
-          <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
-            <div className="h-1.5 bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9]" />
-            <div className="p-4 sm:p-6">
-              <h2 className="font-poppins text-sm sm:text-lg font-semibold text-[#1A1A2E] mb-4">
-                {(() => {
-                  if (!summary?.period_start || !summary?.period_end) return "Recent Shifts";
-                  const periodStart = new Date(summary.period_start);
-                  const periodEnd = new Date(summary.period_end);
-                  const timezone = isRemoteWorker() && showPhilippineTime ? 'Asia/Manila' : 'America/Chicago';
-                  const currentPeriodEntries = entries.filter(entry => {
-                    const clockIn = new Date(entry.clock_in);
-                    return clockIn >= periodStart && clockIn <= periodEnd;
-                  });
-                  const startStr = periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
-                  const endStr = periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
-                  if (currentPeriodEntries.length > 0) {
-                    return (
-                      <span className="block">
-                        <span className="block sm:inline">Pay Period Shifts</span>
-                        <span className="block sm:inline text-xs sm:text-sm font-normal text-gray-500 sm:ml-2">({startStr} - {endStr})</span>
-                      </span>
-                    );
-                  }
-                  const prevStart = new Date(periodStart); prevStart.setDate(prevStart.getDate() - 14);
-                  const prevEnd = new Date(periodEnd); prevEnd.setDate(prevEnd.getDate() - 14);
-                  const prevStartStr = prevStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
-                  const prevEndStr = prevEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone });
-                  return (
-                    <span className="block">
-                      <span className="block sm:inline">Previous Period</span>
-                      <span className="block sm:inline text-xs sm:text-sm font-normal text-gray-500 sm:ml-2">({prevStartStr} - {prevEndStr})</span>
-                    </span>
-                  );
-                })()}
-              </h2>
-              {(() => {
-                if (!entries || entries.length === 0) {
-                  return (
-                    <div className="text-center py-8">
-                      <Clock className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-                      <p className="text-sm text-gray-400 font-medium">No time entries yet</p>
-                      <p className="text-xs text-gray-300 mt-1">Clock in to start tracking</p>
-                    </div>
-                  );
-                }
-                const sortedEntries = [...entries].sort((a, b) => new Date(b.clock_in) - new Date(a.clock_in));
-                const timezone = isRemoteWorker() && showPhilippineTime ? 'Asia/Manila' : 'America/Chicago';
-                return (
-                  <div className="space-y-3">
-                    {sortedEntries.map((entry, idx) => (
-                      <div key={idx} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            {new Date(entry.clock_in).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: timezone })}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(entry.clock_in).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: timezone })}
-                            {entry.clock_out ? (
-                              <> → {new Date(entry.clock_out).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: timezone })}</>
-                            ) : ' → Active'}
-                          </p>
-                          {entry.was_auto_clocked_out && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <AlertCircle className="w-3 h-3 text-purple-600" />
-                              <span className="text-[10px] text-amber-600 font-medium">Auto-Out</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          {entry.clock_out ? (
-                            <span className="text-sm font-semibold text-[#8B5CF6]">{entry.total_hours?.toFixed(2) || '0.00'}h</span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 rounded-full text-sm font-medium text-green-700">
-                              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" /> Active
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-          )}
 
           </div>
           {/* ═══ END DASHBOARD BODY ═══ */}
