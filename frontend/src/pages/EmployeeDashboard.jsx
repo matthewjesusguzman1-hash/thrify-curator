@@ -2353,9 +2353,10 @@ export default function EmployeeDashboard({
             </div>
           </div>
 
-          {/* Tile grid and morph sections below */}
+          {/* Gap between pay period and morph/tiles */}
+          <div className="mt-4" />
 
-          {/* ─── MORPH SECTIONS (appear below tiles when active) ─── */}
+          {/* ─── MORPH SECTIONS (appear between pay and tiles) ─── */}
           {!isAdminView && activeTile === "messages" && (
             <>
               <div className="bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] rounded-xl overflow-hidden border border-white/10">

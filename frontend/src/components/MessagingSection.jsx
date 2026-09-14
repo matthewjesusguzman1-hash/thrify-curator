@@ -44,6 +44,15 @@ export default function MessagingSection({
   const messagesContainerRef = useRef(null);
   const previousMessageCountRef = useRef(0);
   const isAtBottomRef = useRef(true);
+
+  // Auto-scroll section into view when opened
+  useEffect(() => {
+    if (autoExpand && sectionRef.current) {
+      setTimeout(() => {
+        sectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    }
+  }, [autoExpand]);
   
   // Check if user is scrolled to bottom of messages
   const checkIfAtBottom = () => {
@@ -416,6 +425,12 @@ export default function MessagingSection({
                     // Auto-expand textarea
                     e.target.style.height = 'auto';
                     e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                  }}
+                  onFocus={(e) => {
+                    // Scroll input into view when keyboard opens on mobile
+                    setTimeout(() => {
+                      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
                   }}
                   placeholder="Type a message..."
                   rows={1}
