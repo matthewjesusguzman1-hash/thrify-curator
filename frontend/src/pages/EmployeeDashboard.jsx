@@ -1713,7 +1713,7 @@ export default function EmployeeDashboard({
           </div>
           {/* Navigation buttons below, centered */}
           <div className="flex items-center justify-center gap-1 flex-wrap">
-            <Link to="/dashboard" onClick={() => { lightTap(); setEmpPage(null); setActiveTile(null); window.scrollTo(0, 0); }}>
+            <Link to="/" onClick={() => { lightTap(); setEmpPage(null); setActiveTile(null); }}>
               <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 px-2" data-testid="home-btn">
                 <Home className="w-4 h-4 mr-1" />
                 Home
@@ -1830,19 +1830,6 @@ export default function EmployeeDashboard({
                   title="Show walkthrough"
                 >
                   <HelpCircle className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    lightTap();
-                    toggleTheme();
-                  }}
-                  className="text-white/70 hover:text-white hover:bg-white/10 px-2"
-                  data-testid="dashboard-theme-toggle"
-                  title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-                >
-                  {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </Button>
               </>
             )}

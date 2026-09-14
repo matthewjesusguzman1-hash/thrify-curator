@@ -194,7 +194,7 @@ function AnimatedRoutes() {
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={
             <PageTransition>
-              <AuthRedirect><LandingPage /></AuthRedirect>
+              <LandingPage />
             </PageTransition>
           } />
         <Route path="/job-application" element={
