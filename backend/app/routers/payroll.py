@@ -1302,83 +1302,53 @@ async def get_employee_payroll_history(employee_id: str, admin: dict = Depends(g
                 "balance": 0
             })
     
-    # Calculate monthly totals (current month)
+    # Calculate monthly and yearly totals by aggregating from period-level data.
+    # This avoids mismatches from splitting shifts by clock-in date vs payments by check date,
+    # and ensures rounding is consistent (period totals are the single source of truth).
+    # A period belongs to the month of its END date.
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     if now.month == 12:
         month_end = now.replace(year=now.year + 1, month=1, day=1) - timedelta(seconds=1)
     else:
         month_end = now.replace(month=now.month + 1, day=1) - timedelta(seconds=1)
-    
-    month_hours = 0
-    month_shifts = 0
-    month_earnings = 0
-    for e in entries:
-        clock_in_str = e.get("clock_in", "")
-        if not clock_in_str:
-            continue
-        try:
-            clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
-            if month_start <= clock_in_dt <= month_end:
-                entry_hours = e.get("total_hours", 0) or 0
-                shift_rate = e.get("hourly_rate") or employee_global_rate
-                month_hours += entry_hours
-                month_earnings += entry_hours * shift_rate
-                month_shifts += 1
-        except (ValueError, TypeError):
-            continue
-    
-    month_owed = round(month_earnings, 2)
-    
-    month_paid = 0
-    for p in employee_payments:
-        check_date_str = p.get("check_date", "")
-        if not check_date_str:
-            continue
-        try:
-            check_date = datetime.strptime(check_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            if month_start <= check_date <= month_end:
-                month_paid += p.get("amount", 0) or 0
-        except (ValueError, TypeError):
-            continue
-    month_paid = round(month_paid, 2)
-    
-    # Calculate yearly totals
+
     year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     year_end = now.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
-    
+
+    month_hours = 0
+    month_shifts = 0
+    month_owed = 0
+    month_paid = 0
     year_hours = 0
     year_shifts = 0
-    year_earnings = 0
-    for e in entries:
-        clock_in_str = e.get("clock_in", "")
-        if not clock_in_str:
-            continue
-        try:
-            clock_in_dt = datetime.fromisoformat(clock_in_str.replace('Z', '+00:00'))
-            if year_start <= clock_in_dt <= year_end:
-                entry_hours = e.get("total_hours", 0) or 0
-                shift_rate = e.get("hourly_rate") or employee_global_rate
-                year_hours += entry_hours
-                year_earnings += entry_hours * shift_rate
-                year_shifts += 1
-        except (ValueError, TypeError):
-            continue
-    
-    year_owed = round(year_earnings, 2)
-    
+    year_owed = 0
     year_paid = 0
-    for p in employee_payments:
-        check_date_str = p.get("check_date", "")
-        if not check_date_str:
-            continue
+
+    for p in periods:
         try:
-            check_date = datetime.strptime(check_date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            if year_start <= check_date <= year_end:
-                year_paid += p.get("amount", 0) or 0
+            p_end = datetime.fromisoformat(p["period_end"])
+            if p_end.tzinfo is None:
+                p_end = p_end.replace(tzinfo=timezone.utc)
         except (ValueError, TypeError):
             continue
+
+        if year_start <= p_end <= year_end:
+            year_hours += p.get("hours", 0)
+            year_shifts += p.get("shifts", 0)
+            year_owed += p.get("amount_owed", 0)
+            year_paid += p.get("amount_paid", 0)
+
+        if month_start <= p_end <= month_end:
+            month_hours += p.get("hours", 0)
+            month_shifts += p.get("shifts", 0)
+            month_owed += p.get("amount_owed", 0)
+            month_paid += p.get("amount_paid", 0)
+
+    month_owed = round(month_owed, 2)
+    month_paid = round(month_paid, 2)
+    year_owed = round(year_owed, 2)
     year_paid = round(year_paid, 2)
-    
+
     return {
         "employee": {
             "id": employee_id,
