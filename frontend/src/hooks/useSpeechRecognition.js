@@ -26,6 +26,7 @@ export default function useSpeechRecognition({ onResult, onEnd, continuous = fal
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const recognitionRef = useRef(null);
+  const processedIndexRef = useRef(0);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -40,6 +41,8 @@ export default function useSpeechRecognition({ onResult, onEnd, continuous = fal
       try { recognitionRef.current.abort(); } catch {}
     }
 
+    processedIndexRef.current = 0;
+
     const recognition = new SpeechRecognition();
     recognition.lang = lang;
     recognition.continuous = continuous;
@@ -48,13 +51,18 @@ export default function useSpeechRecognition({ onResult, onEnd, continuous = fal
     recognition.onstart = () => setIsListening(true);
 
     recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map((r) => r[0].transcript)
-        .join(" ")
-        .trim();
-      if (transcript) {
+      // Only process NEW final results (not already-processed ones)
+      let newText = "";
+      for (let i = processedIndexRef.current; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          newText += event.results[i][0].transcript + " ";
+          processedIndexRef.current = i + 1;
+        }
+      }
+      newText = newText.trim();
+      if (newText) {
         playConfirmSound();
-        if (onResult) onResult(transcript);
+        if (onResult) onResult(newText);
       }
     };
 
