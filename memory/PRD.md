@@ -51,7 +51,7 @@ Operations dashboard for a resale/consignment business. React frontend + FastAPI
 - Consignment agreement portal (magic link auth)
 - Mileage/trip tracking
 - Sales data CSV import
-- AnyDesk remote session watcher
+- AnyDesk remote session watcher (v2 — crash-resilient with log rotation, observer recovery, error backoff)
 - Video calls (Daily.co)
 - Push notifications
 - 3-hour session timeout

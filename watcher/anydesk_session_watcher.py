@@ -17,8 +17,10 @@ import time
 import hashlib
 import logging
 import platform
+import traceback
 from datetime import datetime
 from pathlib import Path
+from logging.handlers import RotatingFileHandler
 
 import requests
 from watchdog.observers.polling import PollingObserver
@@ -46,13 +48,14 @@ STATE_PATH = os.path.join(BASE_DIR, "watcher_state.json")
 RETRY_QUEUE_PATH = os.path.join(BASE_DIR, "failed_events.jsonl")
 IS_MAC = platform.system() == "Darwin"
 
+# --- Logging with rotation (max 5 MB, keep 3 backups) ---
+log_path = os.path.join(BASE_DIR, "watcher.log")
+log_handler_file = RotatingFileHandler(log_path, maxBytes=5*1024*1024, backupCount=3, encoding="utf-8")
+log_handler_console = logging.StreamHandler()
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler(os.path.join(BASE_DIR, "watcher.log"), encoding="utf-8"),
-        logging.StreamHandler()
-    ]
+    handlers=[log_handler_file, log_handler_console]
 )
 log = logging.getLogger("anydesk-watcher")
 
@@ -62,9 +65,6 @@ TRACE_LINE_RE = re.compile(
     r"^\s*(Incoming|Outgoing)\s+(\d{4}-\d{2}-\d{2}),?\s+(\d{2}:\d{2}(?::\d{2})?)\s+(\S+)\s*(\S*)\s*(\S*)\s*$"
 )
 # Session-end detection in trace files (multiple patterns)
-# NOTE: Removed "Client disconnected" (ctrl_tcp) — it fires on brief TCP reconnections
-# during normal operation and causes false session-end alerts. Only match definitive
-# session closure events from backend_session and app.session.
 SVC_END_RE = re.compile(
     r"(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}).*?(?:"
     r"app\.backend_session\s*-\s*[Ss]ession (?:closed|stopped|ended|removed)"
@@ -73,7 +73,6 @@ SVC_END_RE = re.compile(
     r")"
 )
 # macOS /var/log/anydesk.trace session start:
-#   info 2026-09-01 22:42:37.609  back  wrk1 ... app.backend_session - Incoming session request: - (1131282862)
 MAC_SESSION_START_RE = re.compile(
     r"(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})\.\d+\s+.*?app\.backend_session\s*-\s*Incoming session request:\s*-?\s*\((\d+)\)"
 )
@@ -87,15 +86,12 @@ def default_trace_paths():
     """Auto-detect AnyDesk connection_trace.txt location (macOS + Windows)."""
     paths = []
     if IS_MAC:
-        # macOS: portable (uninstalled) location
         home = str(Path.home())
         paths.append(os.path.join(home, ".anydesk", "connection_trace.txt"))
-        # macOS: custom client variants
         anydesk_dirs = [d for d in Path(home).glob(".anydesk_ad_*") if d.is_dir()]
         for d in anydesk_dirs:
             paths.append(str(d / "connection_trace.txt"))
     else:
-        # Windows
         appdata = os.environ.get("APPDATA", "")
         if appdata:
             paths.append(os.path.join(appdata, "AnyDesk", "connection_trace.txt"))
@@ -108,17 +104,13 @@ def default_service_trace_paths():
     paths = []
     if IS_MAC:
         home = str(Path.home())
-        # macOS portable
         paths.append(os.path.join(home, ".anydesk", "anydesk.trace"))
-        # macOS installed
         paths.append("/var/log/anydesk.trace")
-        # macOS custom client variants
         anydesk_dirs = [d for d in Path(home).glob(".anydesk_ad_*") if d.is_dir()]
         for d in anydesk_dirs:
             for f in d.glob("anydesk*.trace"):
                 paths.append(str(f))
     else:
-        # Windows
         appdata = os.environ.get("APPDATA", "")
         if appdata:
             paths.append(os.path.join(appdata, "AnyDesk", "ad.trace"))
@@ -167,8 +159,11 @@ class State:
                 log.warning("State file corrupt - starting fresh")
 
     def save(self):
-        with open(STATE_PATH, "w") as f:
-            json.dump({"offsets": self.offsets, "fingerprints": self.fingerprints[-5000:]}, f)
+        try:
+            with open(STATE_PATH, "w") as f:
+                json.dump({"offsets": self.offsets, "fingerprints": self.fingerprints[-5000:]}, f)
+        except OSError as e:
+            log.error(f"Failed to save state: {e}")
 
     def seen(self, fp):
         return fp in self.fingerprints
@@ -182,7 +177,6 @@ def parse_connection_trace_line(line):
     if not m:
         return None
     direction, date_part, time_part, anydesk_id, alias, auth = m.groups()
-    # Handle lines where the alias column is empty (e.g. rejected attempts)
     auth_tokens = {"User", "Passwd", "Token", "REJECTED", "Permanent"}
     if not auth and alias in auth_tokens:
         auth, alias = alias, None
@@ -219,7 +213,6 @@ def parse_mac_trace_start(line):
     if not m:
         return None
     date_part, time_part, anydesk_id = m.groups()
-    # Check for auth method on the same line or nearby (usually a few lines later)
     auth_m = MAC_AUTH_RE.search(line)
     auth_method = auth_m.group(1) if auth_m else None
     return {
@@ -261,12 +254,12 @@ def poll_commands(cfg):
             else:
                 log.warning(f"Unknown command type: {cmd_type}")
                 ack_command(cfg, cmd_id, False)
-    except requests.RequestException as e:
+    except Exception as e:
         log.debug(f"Command poll failed (will retry): {e}")
 
 
 def execute_disconnect():
-    """Admin-initiated: Kill AnyDesk + restart after delay. Used when admin taps Disconnect button."""
+    """Admin-initiated: Kill AnyDesk + restart after delay."""
     import subprocess
     try:
         if IS_MAC:
@@ -316,10 +309,8 @@ def execute_restart():
     try:
         if IS_MAC:
             log.info("Restarting AnyDesk by admin command...")
-            # Kill first to ensure clean state
             subprocess.run(["pkill", "-9", "-x", "AnyDesk"], timeout=5, capture_output=True)
             time.sleep(2)
-            # Try direct app path first
             r = subprocess.run(["open", "/Applications/AnyDesk.app"], timeout=10, capture_output=True, text=True)
             log.info(f"open result: rc={r.returncode} out={r.stdout} err={r.stderr}")
             if r.returncode != 0:
@@ -342,18 +333,15 @@ def ack_command(cfg, command_id, success):
     try:
         requests.post(url, params={"command_id": command_id, "success": success},
                        headers={"X-Watcher-Key": cfg["watcher_key"]}, timeout=10)
-    except requests.RequestException:
+    except Exception:
         pass
 
 
 def check_active_anydesk_connections():
-    """Check if AnyDesk has active remote connections via network state.
-    This is more reliable than trace file mtime since AnyDesk maintains
-    TCP connections throughout an active session."""
+    """Check if AnyDesk has active remote connections via network state."""
     import subprocess
     try:
         if IS_MAC:
-            # lsof shows all open network connections — look for AnyDesk ESTABLISHED connections
             result = subprocess.run(
                 ["lsof", "-i", "-n", "-P", "-c", "AnyDesk"],
                 capture_output=True, text=True, timeout=10
@@ -363,7 +351,6 @@ def check_active_anydesk_connections():
                     log.debug(f"Active AnyDesk connection: {line.strip()}")
                     return True
         else:
-            # Windows: use netstat to check for AnyDesk connections
             result = subprocess.run(
                 ["netstat", "-b", "-n"],
                 capture_output=True, text=True, timeout=10
@@ -371,7 +358,6 @@ def check_active_anydesk_connections():
             lines = result.stdout.splitlines()
             for i, line in enumerate(lines):
                 if "ESTABLISHED" in line:
-                    # The process name appears on the next line in netstat -b output
                     if i + 1 < len(lines) and "AnyDesk" in lines[i + 1]:
                         return True
     except Exception as e:
@@ -380,11 +366,9 @@ def check_active_anydesk_connections():
 
 
 def send_heartbeat(cfg):
-    """Report watcher status + whether AnyDesk has active connections to the backend.
-    If AnyDesk is running but has no active sessions, backend closes open session records."""
+    """Report watcher status + whether AnyDesk has active connections to the backend."""
     import subprocess
     try:
-        # Check if AnyDesk process is running
         if IS_MAC:
             result = subprocess.run(["pgrep", "-x", "AnyDesk"], capture_output=True, timeout=5)
             anydesk_running = result.returncode == 0
@@ -392,20 +376,16 @@ def send_heartbeat(cfg):
             result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq AnyDesk.exe"], capture_output=True, text=True, timeout=5)
             anydesk_running = "AnyDesk.exe" in result.stdout
 
-        # Check if there are active remote sessions
-        # Method 1: Check actual network connections (most reliable)
-        # Method 2: Fall back to trace file recency
         has_active_sessions = False
         if anydesk_running:
             has_active_sessions = check_active_anydesk_connections()
             if not has_active_sessions:
-                # Fallback: check trace file recency (less reliable, use generous window)
                 for path in cfg.get("service_trace_files", []):
                     try:
                         if os.path.exists(path):
                             mtime = os.path.getmtime(path)
                             age = time.time() - mtime
-                            if age < 900:  # 15 minutes — trace files aren't written continuously
+                            if age < 900:
                                 has_active_sessions = True
                                 break
                     except OSError:
@@ -423,7 +403,7 @@ def send_heartbeat(cfg):
         log.warning(f"Heartbeat FAILED: {e}")
 
 
-# ─── FORBIDDEN setting names — NEVER upload values for these ───
+# --- FORBIDDEN setting names — NEVER upload values for these ---
 FORBIDDEN_SETTINGS = frozenset({
     "ad.anynet.cert", "ad.anynet.pkey", "ad.anynet.pwd_hash",
     "ad.anynet.pwd_salt", "ad.anynet.token", "ad.security.password",
@@ -457,8 +437,6 @@ def report_anydesk_config(cfg):
                         line = line.strip()
                         if "=" in line and not line.startswith("#"):
                             name = line.split("=", 1)[0].strip()
-                            # SAFETY: only report the name, NEVER the value
-                            # Double-check: skip forbidden names entirely
                             if name in FORBIDDEN_SETTINGS:
                                 entry["setting_names"].append(f"{name} [REDACTED - private key/hash]")
                             else:
@@ -493,12 +471,15 @@ def post_events(cfg, events):
             log.info(f"Posted {len(events)} event(s): processed={r.get('processed')} dupes={r.get('duplicates')} ends_matched={r.get('matched_ends')}")
             return True
         log.error(f"Backend rejected events: HTTP {resp.status_code} {resp.text[:200]}")
-    except requests.RequestException as e:
+    except Exception as e:
         log.error(f"Failed to reach backend: {e}")
     # queue for retry
-    with open(RETRY_QUEUE_PATH, "a", encoding="utf-8") as f:
-        for ev in events:
-            f.write(json.dumps(ev) + "\n")
+    try:
+        with open(RETRY_QUEUE_PATH, "a", encoding="utf-8") as f:
+            for ev in events:
+                f.write(json.dumps(ev) + "\n")
+    except OSError as e:
+        log.error(f"Failed to write retry queue: {e}")
     return False
 
 
@@ -512,7 +493,11 @@ def retry_failed(cfg):
         return
     if not events:
         return
-    os.remove(RETRY_QUEUE_PATH)
+    try:
+        os.remove(RETRY_QUEUE_PATH)
+    except OSError as e:
+        log.error(f"Failed to remove retry queue file: {e}")
+        return
     log.info(f"Retrying {len(events)} queued event(s)")
     post_events(cfg, events[:200])
 
@@ -545,7 +530,7 @@ def read_new_lines(path, state):
 def scan_all(cfg, state):
     events = []
 
-    # 1. Windows: connection_trace.txt → session starts
+    # 1. connection_trace.txt -> session starts
     for path in cfg["trace_files"]:
         for line in read_new_lines(path, state):
             ev = parse_connection_trace_line(line)
@@ -556,15 +541,14 @@ def scan_all(cfg, state):
                     events.append(ev)
                     log.info(f"Session start: AnyDesk ID {ev['anydesk_id']} ({ev.get('alias') or 'no alias'}) at {ev['timestamp']}")
 
-    # 2. Service trace files → session ends + macOS session starts
+    # 2. Service trace files -> session ends + macOS session starts
     for path in cfg["service_trace_files"]:
-        last_start_ev_index = None  # Track last start event to attach auth retroactively
+        last_start_ev_index = None
         for line in read_new_lines(path, state):
             fp = hashlib.sha256((path + line).encode()).hexdigest()
             if state.seen(fp):
                 continue
 
-            # Check for macOS session start (Incoming session request with AnyDesk ID)
             start_ev = parse_mac_trace_start(line)
             if start_ev:
                 state.mark(fp)
@@ -573,7 +557,6 @@ def scan_all(cfg, state):
                 log.info(f"Session start: AnyDesk ID {start_ev['anydesk_id']} at {start_ev['timestamp']}")
                 continue
 
-            # Auth line comes AFTER the session start — attach to the most recent start
             auth_m = MAC_AUTH_RE.search(line)
             if auth_m and last_start_ev_index is not None:
                 auth_method = auth_m.group(1)
@@ -583,7 +566,6 @@ def scan_all(cfg, state):
                 last_start_ev_index = None
                 continue
 
-            # Check for session end
             end_ev = parse_service_trace_line(line)
             if end_ev:
                 state.mark(fp)
@@ -604,56 +586,134 @@ class TraceHandler(FileSystemEventHandler):
         if event.is_directory:
             return
         name = os.path.basename(event.src_path).lower()
-        # Trigger on any known AnyDesk log file (Windows or macOS names)
         if name in ("connection_trace.txt", "ad.trace", "ad_svc.trace") or name.startswith("anydesk"):
-            scan_all(self.cfg, self.state)
+            try:
+                scan_all(self.cfg, self.state)
+            except Exception as e:
+                log.error(f"scan_all error in file handler: {e}")
+
+
+def ensure_observer_alive(observer, handler, watch_dirs):
+    """Check if the observer thread is still alive; restart it if not."""
+    if observer is not None and observer.is_alive():
+        return observer
+    log.warning("Observer thread died — restarting...")
+    try:
+        if observer is not None:
+            observer.stop()
+    except Exception:
+        pass
+    new_observer = PollingObserver(timeout=2)
+    for d in watch_dirs:
+        new_observer.schedule(handler, d, recursive=False)
+        log.info(f"Re-watching directory: {d}")
+    new_observer.start()
+    return new_observer
 
 
 def main():
     cfg = load_config()
     state = State()
-    log.info(f"AnyDesk watcher starting. Host label: {cfg['host_label']}")
+    log.info(f"AnyDesk watcher starting (v2 — crash-resilient). Host label: {cfg['host_label']}")
     log.info(f"Watching: {cfg['trace_files'] + cfg['service_trace_files']}")
 
     # Report AnyDesk config metadata (names only) to backend on startup
-    report_anydesk_config(cfg)
+    try:
+        report_anydesk_config(cfg)
+    except Exception as e:
+        log.error(f"Config report on startup failed: {e}")
 
-    observer = PollingObserver(timeout=2)
-    # Only watch user-level AnyDesk directories, NOT system dirs like /var/log
-    # (polling /var/log starves the main loop via GIL contention)
-    # The periodic scan_all() every 5 seconds still reads /var/log/anydesk.trace by path.
+    # Build watch directory list (exclude system dirs that cause GIL contention)
     watch_dirs = set()
     for p in cfg["trace_files"] + cfg["service_trace_files"]:
         d = os.path.dirname(p)
         if d and os.path.isdir(d) and not d.startswith("/var") and not d.startswith("/private/var"):
             watch_dirs.add(d)
+
     handler = TraceHandler(cfg, state)
+    observer = PollingObserver(timeout=2)
     for d in watch_dirs:
         observer.schedule(handler, d, recursive=False)
         log.info(f"Watching directory: {d}")
     observer.start()
 
+    consecutive_errors = 0
+    MAX_CONSECUTIVE_ERRORS = 50  # after this many, increase sleep to avoid CPU spin
+
     try:
         last_scan = 0
         last_heartbeat = 0
+        last_observer_check = 0
         while True:
             now = time.time()
-            # Poll for commands every cycle (~2 seconds) for near-instant response
-            poll_commands(cfg)
-            # Full scan every 5 seconds for session detection
+
+            # --- Poll commands (every cycle ~2s) ---
+            try:
+                poll_commands(cfg)
+            except Exception as e:
+                log.error(f"poll_commands error: {e}")
+                consecutive_errors += 1
+
+            # --- Full scan every 5 seconds ---
             if now - last_scan >= 5:
-                scan_all(cfg, state)
-                retry_failed(cfg)
+                try:
+                    scan_all(cfg, state)
+                except Exception as e:
+                    log.error(f"scan_all error: {e}\n{traceback.format_exc()}")
+                    consecutive_errors += 1
+                try:
+                    retry_failed(cfg)
+                except Exception as e:
+                    log.error(f"retry_failed error: {e}")
+                    consecutive_errors += 1
                 last_scan = now
-            # Heartbeat every 30 seconds (closes stale sessions if no active connections)
+
+            # --- Heartbeat every 30 seconds ---
             if now - last_heartbeat >= 30:
-                send_heartbeat(cfg)
+                try:
+                    send_heartbeat(cfg)
+                except Exception as e:
+                    log.error(f"send_heartbeat error: {e}")
+                    consecutive_errors += 1
                 last_heartbeat = now
-            time.sleep(2)
+
+            # --- Check observer thread health every 60 seconds ---
+            if now - last_observer_check >= 60:
+                try:
+                    observer = ensure_observer_alive(observer, handler, watch_dirs)
+                except Exception as e:
+                    log.error(f"Observer health check failed: {e}")
+                last_observer_check = now
+
+            # Reset error counter on any successful cycle
+            if consecutive_errors > 0 and (now - last_scan < 5):
+                # If we got here without an error this cycle, reset
+                consecutive_errors = 0
+
+            # Adaptive sleep: longer if many consecutive errors (avoid CPU spin)
+            if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
+                log.warning(f"{consecutive_errors} consecutive errors — backing off to 30s sleep")
+                time.sleep(30)
+                consecutive_errors = 0  # reset after backoff
+            else:
+                time.sleep(2)
+
     except KeyboardInterrupt:
+        log.info("Shutting down (KeyboardInterrupt)")
         observer.stop()
+    except Exception as e:
+        # Last resort: log and exit cleanly so LaunchAgent can restart us
+        log.critical(f"FATAL unhandled exception: {e}\n{traceback.format_exc()}")
+        try:
+            observer.stop()
+        except Exception:
+            pass
+        state.save()
+        sys.exit(1)
+
     observer.join()
     state.save()
+    log.info("Watcher stopped.")
 
 
 if __name__ == "__main__":

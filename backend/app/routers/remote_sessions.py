@@ -1471,6 +1471,38 @@ async def download_watcher_script(admin: dict = Depends(get_admin_user)):
         raise HTTPException(status_code=404, detail="Watcher script not found")
     return FileResponse(script_path, filename="anydesk_session_watcher.py", media_type="text/x-python")
 
+
+@router.get("/download-watcher-zip")
+async def download_watcher_zip(admin: dict = Depends(get_admin_user)):
+    """Admin: download the complete watcher folder as a zip file."""
+    from fastapi.responses import StreamingResponse
+    import zipfile
+    import io
+    watcher_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "watcher")
+    if not os.path.isdir(watcher_dir):
+        raise HTTPException(status_code=404, detail="Watcher directory not found")
+    include_files = [
+        "anydesk_session_watcher.py",
+        "watcher_config.json",
+        "install_autostart.sh",
+        "README_SETUP.md",
+        "com.thriftycurator.watcher.plist",
+    ]
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for fname in include_files:
+            fpath = os.path.join(watcher_dir, fname)
+            if os.path.exists(fpath):
+                zf.write(fpath, f"watcher/{fname}")
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=thrifty-watcher.zip"}
+    )
+
+
+
 @router.post("/cleanup-stale")
 async def cleanup_stale_sessions(admin: dict = Depends(get_admin_user)):
     """Admin: delete sessions with no end time older than 12 hours (stuck/orphaned records)

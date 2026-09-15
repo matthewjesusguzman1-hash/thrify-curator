@@ -22,16 +22,17 @@ During install, CHECK "Add python.exe to PATH".
 
 ## 2. Install the watcher
 1. Create a folder for the watcher files, e.g.:
-   - **macOS**: `~/thrifty-watcher/`
+   - **macOS**: `~/Desktop/watcher/`
    - **Windows**: `C:\thrifty-watcher\`
-2. Download these 3 files from GitHub into that folder:
+2. Download these files into that folder:
    - `anydesk_session_watcher.py`
    - `watcher_config.json`
+   - `install_autostart.sh` (macOS only)
    - `README_SETUP.md` (this file)
 3. Open Terminal (macOS) or Command Prompt (Windows) and run:
    ```
-   cd ~/thrifty-watcher        # macOS
-   cd C:\thrifty-watcher       # Windows
+   cd ~/Desktop/watcher         # macOS
+   cd C:\thrifty-watcher        # Windows
 
    pip3 install watchdog requests   # macOS
    pip install watchdog requests    # Windows
@@ -51,7 +52,7 @@ Edit `watcher_config.json`:
 
 ## 4. Test it
 ```
-cd ~/thrifty-watcher           # macOS
+cd ~/Desktop/watcher           # macOS
 python3 anydesk_session_watcher.py
 
 cd C:\thrifty-watcher          # Windows
@@ -66,10 +67,19 @@ reports NEW sessions, not historical ones.
 
 ## 5. Run automatically at startup
 
-### macOS — Launch Agent (recommended)
-1. Create a plist file:
+### macOS — Easy Install (recommended)
+1. Open Terminal
+2. Run:
    ```
-   nano ~/Library/LaunchAgents/com.thriftycurator.anydesk-watcher.plist
+   bash ~/Desktop/watcher/install_autostart.sh
+   ```
+3. Done! Close Terminal. The watcher runs invisibly in the background and
+   starts automatically when you log in.
+
+### macOS — Manual plist
+If the install script doesn't work, create the plist manually:
+1. ```
+   nano ~/Library/LaunchAgents/com.thriftycurator.watcher.plist
    ```
 2. Paste this (update paths if different):
    ```xml
@@ -79,31 +89,32 @@ reports NEW sessions, not historical ones.
    <plist version="1.0">
    <dict>
      <key>Label</key>
-     <string>com.thriftycurator.anydesk-watcher</string>
+     <string>com.thriftycurator.watcher</string>
      <key>ProgramArguments</key>
      <array>
        <string>/usr/bin/python3</string>
-       <string>/Users/YOUR_USERNAME/thrifty-watcher/anydesk_session_watcher.py</string>
+       <string>/Users/YOUR_USERNAME/Desktop/watcher/anydesk_session_watcher.py</string>
      </array>
      <key>WorkingDirectory</key>
-     <string>/Users/YOUR_USERNAME/thrifty-watcher</string>
+     <string>/Users/YOUR_USERNAME/Desktop/watcher</string>
      <key>RunAtLoad</key>
      <true/>
      <key>KeepAlive</key>
      <true/>
+     <key>ThrottleInterval</key>
+     <integer>5</integer>
      <key>StandardOutPath</key>
-     <string>/Users/YOUR_USERNAME/thrifty-watcher/stdout.log</string>
+     <string>/Users/YOUR_USERNAME/Desktop/watcher/watcher.log</string>
      <key>StandardErrorPath</key>
-     <string>/Users/YOUR_USERNAME/thrifty-watcher/stderr.log</string>
+     <string>/Users/YOUR_USERNAME/Desktop/watcher/watcher_error.log</string>
    </dict>
    </plist>
    ```
 3. Replace `YOUR_USERNAME` with your actual macOS username
 4. Load it:
    ```
-   launchctl load ~/Library/LaunchAgents/com.thriftycurator.anydesk-watcher.plist
+   launchctl load ~/Library/LaunchAgents/com.thriftycurator.watcher.plist
    ```
-5. To stop: `launchctl unload ~/Library/LaunchAgents/com.thriftycurator.anydesk-watcher.plist`
 
 ### Windows — Task Scheduler
 1. Open Task Scheduler → Create Task
@@ -115,17 +126,66 @@ reports NEW sessions, not historical ones.
    - Start in: `C:\thrifty-watcher`
 5. Settings: check "If the task fails, restart every 1 minute"
 
-## 6. Troubleshooting
-- `watcher.log` in the watcher folder has all activity and errors.
-- Failed uploads (e.g. internet down) are queued in `failed_events.jsonl`
-  and retried automatically every 30 seconds.
-- If `connection_trace.txt` doesn't exist yet, it appears after the first
-  incoming AnyDesk connection.
-- Durations show only when a session END could be detected; the session
-  start (worker logged in) is always recorded.
-- **macOS permissions**: If the watcher can't read AnyDesk files, you may need
-  to grant Terminal (or python3) Full Disk Access in System Settings →
-  Privacy & Security → Full Disk Access.
+## 6. Updating the watcher
+When a new version of the watcher script is available:
+1. Stop the old watcher:
+   ```
+   launchctl unload ~/Library/LaunchAgents/com.thriftycurator.watcher.plist
+   ```
+2. Replace `anydesk_session_watcher.py` in your watcher folder with the new version
+3. Re-run the install script:
+   ```
+   bash ~/Desktop/watcher/install_autostart.sh
+   ```
+   Or reload manually:
+   ```
+   launchctl load ~/Library/LaunchAgents/com.thriftycurator.watcher.plist
+   ```
+
+## 7. Troubleshooting
+
+### Check if watcher is running
+```
+launchctl list | grep thriftycurator
+```
+If nothing shows, it's not running.
+
+### Check logs
+```
+tail -50 ~/Desktop/watcher/watcher.log
+tail -50 ~/Desktop/watcher/watcher_error.log
+```
+`watcher.log` has all activity. `watcher_error.log` catches Python crashes.
+
+### Common issues
+
+**Watcher stops after a while:**
+- Old versions could crash on transient network errors. Update to the latest
+  watcher script (v2+) which has crash protection and auto-recovery.
+- Check `watcher_error.log` for Python tracebacks.
+- Reinstall with `install_autostart.sh` which adds `ThrottleInterval` so macOS
+  restarts the watcher within 5 seconds if it crashes.
+
+**"Missing config file" error:**
+- Make sure `watcher_config.json` is in the same folder as the script.
+- Check the watcher_key isn't still the placeholder text.
+
+**No sessions detected:**
+- Make sure AnyDesk is installed and has had at least one incoming connection
+  (creates the `connection_trace.txt` file).
+- On first run, the watcher only tracks NEW sessions, not historical ones.
+
+**macOS permissions:**
+- If the watcher can't read AnyDesk files, you may need to grant Terminal (or
+  python3) Full Disk Access in System Settings → Privacy & Security → Full Disk Access.
+
+**Failed uploads (internet down):**
+- Events are queued in `failed_events.jsonl` and retried automatically every
+  5 seconds. No events are lost.
+
+**Log files too large:**
+- The watcher now uses log rotation: max 5 MB with 3 backups. Old logs are
+  automatically cleaned up.
 
 ## What gets recorded
 Per session: AnyDesk ID, alias, incoming/outgoing, auth method (password/token/
@@ -142,3 +202,5 @@ name to each AnyDesk ID so sessions show "Maria" instead of "123456789".
 - **Cross-Check Flags**: If a worker has been on AnyDesk for 3+ minutes without
   clocking in, or is clocked in with no active AnyDesk session, admins get a push
   notification (once per hour per flag). Admin-initiated clock-ins are excluded.
+- **Crash Recovery**: If the watcher crashes for any reason, macOS will restart it
+  within 5 seconds. Network errors are retried automatically.
